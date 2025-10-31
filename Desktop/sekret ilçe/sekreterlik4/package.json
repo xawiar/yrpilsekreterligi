@@ -6,7 +6,10 @@
     "build": "cd sekreterlik-app/client && npm install && npm run build",
     "dev:client": "cd sekreterlik-app/client && npm run dev",
     "dev:server": "cd sekreterlik-app/server && npm run dev",
-    "install:all": "cd sekreterlik-app/client && npm install && cd ../server && npm install"
+    "install:all": "cd sekreterlik-app/client && npm install && cd ../server && npm install",
+    "push": "bash scripts/auto-push.sh",
+    "commit-and-push": "npm run commit-and-push:helper",
+    "commit-and-push:helper": "git add -A && git commit -m \"Auto commit: $(date '+%Y-%m-%d %H:%M:%S')\" && bash scripts/auto-push.sh"
   },
   "dependencies": {
     "express": "^5.1.0",
