@@ -39,6 +39,8 @@ export const AuthProvider = ({ children }) => {
 
   // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
   useEffect(() => {
+    let unsubscribe = null;
+    
     // Firebase kullanılıyorsa, Firebase auth state'ini dinle
     if (USE_FIREBASE) {
       // Dynamic import ile Firebase'i yükle
@@ -52,52 +54,51 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
-        const unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
-        if (firebaseUser) {
-          // Firebase user varsa, kullanıcı bilgilerini localStorage'dan al
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
-            try {
-              const userData = JSON.parse(savedUser);
-              // Firebase UID ile eşleşiyorsa kullanıcıyı ayarla
-              if (userData.id === firebaseUser.uid || userData.uid === firebaseUser.uid) {
-                setUser(userData);
-                setIsLoggedIn(true);
-              } else {
-                // UID eşleşmiyorsa logout yap
+        unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
+          if (firebaseUser) {
+            // Firebase user varsa, kullanıcı bilgilerini localStorage'dan al
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+              try {
+                const userData = JSON.parse(savedUser);
+                // Firebase UID ile eşleşiyorsa kullanıcıyı ayarla
+                if (userData.id === firebaseUser.uid || userData.uid === firebaseUser.uid) {
+                  setUser(userData);
+                  setIsLoggedIn(true);
+                } else {
+                  // UID eşleşmiyorsa logout yap
+                  setUser(null);
+                  setIsLoggedIn(false);
+                  localStorage.removeItem('user');
+                  localStorage.removeItem('isLoggedIn');
+                }
+              } catch (error) {
+                console.error('Error parsing saved user data:', error);
                 setUser(null);
                 setIsLoggedIn(false);
                 localStorage.removeItem('user');
                 localStorage.removeItem('isLoggedIn');
               }
-            } catch (error) {
-              console.error('Error parsing saved user data:', error);
-              setUser(null);
-              setIsLoggedIn(false);
-              localStorage.removeItem('user');
-              localStorage.removeItem('isLoggedIn');
             }
+          } else {
+            // Firebase user yoksa logout
+            setUser(null);
+            setIsLoggedIn(false);
+            localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
           }
-        } else {
-          // Firebase user yoksa logout
-          setUser(null);
-          setIsLoggedIn(false);
-          localStorage.removeItem('user');
-          localStorage.removeItem('isLoggedIn');
-        }
-        setLoading(false);
+          setLoading(false);
         });
-
-        // Cleanup function
-        return () => unsubscribe();
       }).catch((error) => {
         console.error('Firebase initialization error:', error);
         setLoading(false);
       });
       
-      // Return cleanup function
+      // Cleanup function - unsubscribe'u çağır
       return () => {
-        // Cleanup will be handled by Promise
+        if (unsubscribe) {
+          unsubscribe();
+        }
       };
     } else {
       // Firebase kullanılmıyorsa, localStorage'dan yükle
