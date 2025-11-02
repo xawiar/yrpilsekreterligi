@@ -133,7 +133,7 @@ class ApiService {
   // Members API
   static async getMembers(archived = false) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.getMembers();
+      return FirebaseApiService.getMembers(archived);
     }
     
     const timestamp = Date.now();
@@ -263,7 +263,7 @@ class ApiService {
   // Meetings API
   static async getMeetings(archived = false) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.getMeetings();
+      return FirebaseApiService.getMeetings(archived);
     }
 
     // Add cache-busting parameter to ensure fresh data
@@ -675,7 +675,7 @@ class ApiService {
   // Events API
   static async getEvents(archived = false) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.getEvents();
+      return FirebaseApiService.getEvents(archived);
     }
 
     // Add cache-busting parameter to ensure fresh data

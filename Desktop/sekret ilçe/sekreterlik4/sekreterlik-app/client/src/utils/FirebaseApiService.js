@@ -288,10 +288,27 @@ class FirebaseApiService {
   }
 
   // Members API
-  static async getMembers() {
+  static async getMembers(archived = false) {
     try {
       const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
-      return members || [];
+      if (!members || members.length === 0) {
+        return [];
+      }
+      
+      // archived parametresine göre filtrele
+      if (archived) {
+        // Arşivlenmiş üyeleri döndür (truthy check)
+        return members.filter(m => {
+          const isArchived = m.archived === true || m.archived === 'true' || m.archived === 1 || m.archived === '1';
+          return isArchived;
+        });
+      } else {
+        // Arşivlenmemiş üyeleri döndür
+        return members.filter(m => {
+          const isArchived = m.archived === true || m.archived === 'true' || m.archived === 1 || m.archived === '1';
+          return !isArchived;
+        });
+      }
     } catch (error) {
       console.error('Get members error:', error);
       return [];
@@ -410,10 +427,27 @@ class FirebaseApiService {
   }
 
   // Meetings API
-  static async getMeetings() {
+  static async getMeetings(archived = false) {
     try {
       const meetings = await FirebaseService.getAll(this.COLLECTIONS.MEETINGS);
-      return meetings || [];
+      if (!meetings || meetings.length === 0) {
+        return [];
+      }
+      
+      // archived parametresine göre filtrele
+      if (archived) {
+        // Arşivlenmiş toplantıları döndür (truthy check)
+        return meetings.filter(m => {
+          const isArchived = m.archived === true || m.archived === 'true' || m.archived === 1 || m.archived === '1';
+          return isArchived;
+        });
+      } else {
+        // Arşivlenmemiş toplantıları döndür
+        return meetings.filter(m => {
+          const isArchived = m.archived === true || m.archived === 'true' || m.archived === 1 || m.archived === '1';
+          return !isArchived;
+        });
+      }
     } catch (error) {
       console.error('Get meetings error:', error);
       return [];
@@ -445,10 +479,27 @@ class FirebaseApiService {
   }
 
   // Events API
-  static async getEvents() {
+  static async getEvents(archived = false) {
     try {
       const events = await FirebaseService.getAll(this.COLLECTIONS.EVENTS);
-      return events || [];
+      if (!events || events.length === 0) {
+        return [];
+      }
+      
+      // archived parametresine göre filtrele
+      if (archived) {
+        // Arşivlenmiş etkinlikleri döndür (truthy check)
+        return events.filter(e => {
+          const isArchived = e.archived === true || e.archived === 'true' || e.archived === 1 || e.archived === '1';
+          return isArchived;
+        });
+      } else {
+        // Arşivlenmemiş etkinlikleri döndür
+        return events.filter(e => {
+          const isArchived = e.archived === true || e.archived === 'true' || e.archived === 1 || e.archived === '1';
+          return !isArchived;
+        });
+      }
     } catch (error) {
       console.error('Get events error:', error);
       return [];
@@ -599,8 +650,9 @@ class FirebaseApiService {
         throw new Error('Arşivlenmiş üye bulunamadı');
       }
       
-      // Arşivlenmiş olup olmadığını kontrol et
-      if (!member.archived) {
+      // Arşivlenmiş olup olmadığını kontrol et (truthy check - boolean, string "true", 1 gibi değerleri kabul et)
+      const isArchived = member.archived === true || member.archived === 'true' || member.archived === 1 || member.archived === '1';
+      if (!isArchived) {
         throw new Error('Bu üye arşivlenmemiş');
       }
       
@@ -640,8 +692,9 @@ class FirebaseApiService {
         throw new Error('Arşivlenmiş toplantı bulunamadı');
       }
       
-      // Arşivlenmiş olup olmadığını kontrol et
-      if (!meeting.archived) {
+      // Arşivlenmiş olup olmadığını kontrol et (truthy check)
+      const isArchived = meeting.archived === true || meeting.archived === 'true' || meeting.archived === 1 || meeting.archived === '1';
+      if (!isArchived) {
         throw new Error('Bu toplantı arşivlenmemiş');
       }
       
