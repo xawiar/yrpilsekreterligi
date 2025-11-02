@@ -7,11 +7,25 @@
     <title>Sekreterlik Uygulaması</title>
     <script>
       // SPA routing için - tüm route'ları index.html'e yönlendir
-      window.location.replace('/index.html' + window.location.pathname + window.location.search + window.location.hash);
+      // Render.com static site routing fix
+      const path = window.location.pathname;
+      const search = window.location.search;
+      const hash = window.location.hash;
+      
+      // Eğer zaten index.html değilse yönlendir
+      if (path !== '/index.html' && path !== '/') {
+        window.location.replace('/index.html' + path + search + hash);
+      } else {
+        // Zaten ana sayfadaysak, React Router'a bırak
+        window.location.replace('/' + search + hash);
+      }
     </script>
   </head>
   <body>
-    <div>Yönlendiriliyor...</div>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+      <h1>Yönlendiriliyor...</h1>
+      <p>Sayfa yükleniyor, lütfen bekleyin.</p>
+    </div>
   </body>
 </html>
 
