@@ -427,55 +427,39 @@ class FirebaseService {
           throw new Error(`FINAL CHECK FAILED: collection length=${validatedCollectionName.length}, id length=${validatedDocId.length}`);
         }
         
-        // Method 1: Try collection() + doc() pattern (recommended)
-        // BUT: collection() might also fail if params are not strings
-        try {
-          // Validate BEFORE collection() call
-          if (typeof validatedCollectionName !== 'string') {
-            throw new Error(`Collection name not string before collection() call: type=${typeof validatedCollectionName}, value=${validatedCollectionName}`);
-          }
-          if (typeof validatedDocId !== 'string') {
-            throw new Error(`Doc ID not string before collection() call: type=${typeof validatedDocId}, value=${validatedDocId}`);
-          }
-          
-          console.error('[FIREBASE DELETE] Calling collection() with:', {
-            collectionName: validatedCollectionName,
-            collectionNameType: typeof validatedCollectionName,
-            collectionNameValue: validatedCollectionName
-          });
-          
-          const collectionRef = collection(db, validatedCollectionName);
-          
-          console.error('[FIREBASE DELETE] collection() succeeded, calling doc() with:', {
-            docId: validatedDocId,
-            docIdType: typeof validatedDocId,
-            docIdValue: validatedDocId
-          });
-          
-          docRef = doc(collectionRef, validatedDocId);
-          console.error('[FIREBASE DELETE] ✅ doc() created using collection() + doc() pattern');
-        } catch (method1Error) {
-          console.error('[FIREBASE DELETE] ⚠️ Method 1 failed:', method1Error.message, method1Error);
-          console.error('[FIREBASE DELETE] Method 1 error stack:', method1Error.stack);
-          
-          // Method 2: Direct doc() call (fallback)
-          // One more validation before direct call
-          if (typeof validatedCollectionName !== 'string' || typeof validatedDocId !== 'string') {
-            throw new Error(`Method 2 validation failed: collection type=${typeof validatedCollectionName}, id type=${typeof validatedDocId}`);
-          }
-          
-          console.error('[FIREBASE DELETE] Trying direct doc() call with:', {
-            collection: validatedCollectionName,
-            collectionType: typeof validatedCollectionName,
-            collectionValue: validatedCollectionName,
-            id: validatedDocId,
-            idType: typeof validatedDocId,
-            idValue: validatedDocId
-          });
-          
-          docRef = doc(db, validatedCollectionName, validatedDocId);
-          console.error('[FIREBASE DELETE] ✅ doc() created using direct doc() call');
+        // FINAL ATTEMPT: Use only direct doc() call with extreme validation
+        // Firebase doc() format: doc(db, collectionPath, documentPath)
+        // All parameters MUST be strings
+        
+        // EXTREME VALIDATION: Create new variables with explicit string conversion
+        const firebaseCollectionName = String(validatedCollectionName).trim();
+        const firebaseDocId = String(validatedDocId).trim();
+        
+        // Validate one more time
+        if (typeof firebaseCollectionName !== 'string' || typeof firebaseDocId !== 'string') {
+          throw new Error(`FIREBASE CALL FAILED: collection type=${typeof firebaseCollectionName}, id type=${typeof firebaseDocId}`);
         }
+        
+        if (firebaseCollectionName.length === 0 || firebaseDocId.length === 0) {
+          throw new Error(`FIREBASE CALL FAILED: collection length=${firebaseCollectionName.length}, id length=${firebaseDocId.length}`);
+        }
+        
+        // Log right before Firebase call
+        console.error('[FIREBASE DELETE] FINAL CALL - doc() with:', JSON.stringify({
+          dbType: typeof db,
+          collection: firebaseCollectionName,
+          collectionType: typeof firebaseCollectionName,
+          collectionLength: firebaseCollectionName.length,
+          id: firebaseDocId,
+          idType: typeof firebaseDocId,
+          idLength: firebaseDocId.length,
+          allStrings: typeof firebaseCollectionName === 'string' && typeof firebaseDocId === 'string'
+        }));
+        
+        // Direct doc() call ONLY - Firebase's official API
+        docRef = doc(db, firebaseCollectionName, firebaseDocId);
+        
+        console.error('[FIREBASE DELETE] ✅ doc() call succeeded');
         
         if (!docRef) {
           throw new Error('DocumentReference oluşturulamadı - docRef null/undefined');
