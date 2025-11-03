@@ -264,7 +264,7 @@ const RegionsSettings = () => {
                 </div>
               ) : (
                 <>
-                  <span className="text-red-600 font-semibold">{region.name}</span>
+                  <span className="text-red-600 font-semibold" style={{color: '#dc2626'}}>{region.name}</span>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => handleEditRegion(region)}
