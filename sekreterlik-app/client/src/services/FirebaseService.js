@@ -453,10 +453,25 @@ class FirebaseService {
         
         // Use EXACTLY the same pattern as create() function:
         // Step 1: collection(db, collectionName) - This works in create()
-        const collectionRef = collection(db, firebaseCollectionName);
+        let collectionRef;
+        try {
+          console.error('[FIREBASE DELETE] Step 1: Calling collection()...');
+          collectionRef = collection(db, firebaseCollectionName);
+          console.error('[FIREBASE DELETE] Step 1: ✅ collection() succeeded');
+        } catch (collectionError) {
+          console.error('[FIREBASE DELETE] Step 1: ❌ collection() failed:', collectionError);
+          throw new Error(`collection() failed: ${collectionError.message}`);
+        }
         
         // Step 2: doc(collectionRef, docId) - This works in create()
-        docRef = doc(collectionRef, firebaseDocId);
+        try {
+          console.error('[FIREBASE DELETE] Step 2: Calling doc()...');
+          docRef = doc(collectionRef, firebaseDocId);
+          console.error('[FIREBASE DELETE] Step 2: ✅ doc() succeeded');
+        } catch (docCallError) {
+          console.error('[FIREBASE DELETE] Step 2: ❌ doc() failed:', docCallError);
+          throw new Error(`doc() failed: ${docCallError.message}`);
+        }
         
         console.error('[FIREBASE DELETE] ✅ doc() call succeeded using create() pattern');
         
