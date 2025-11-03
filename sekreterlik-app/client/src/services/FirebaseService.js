@@ -386,22 +386,28 @@ class FirebaseService {
         }
         
         // Firebase doc() fonksiyonunu çağır
-        // doc(db, collectionPath, documentPath) formatında
-        // Eğer hala hata verirse, path'i manuel oluştur
-        try {
-          // Önce collection referansı oluştur
-          const collectionRef = collection(db, safeCollectionName);
-          
-          // Sonra doc referansı oluştur
-          docRef = doc(collectionRef, safeDocId);
-          
-          console.log(`✅ doc() başarılı (alternatif yöntem), docRef:`, docRef);
-        } catch (altError) {
-          console.error('❌ Alternatif doc() yöntemi de başarısız:', altError);
-          
-          // Son çare: doc() fonksiyonunu direkt çağır
-          docRef = doc(db, safeCollectionName, safeDocId);
+        // Firebase'in doc() fonksiyonu: doc(db, collectionPath, documentPath)
+        // TÜM parametreler string olmalı ve db object olmalı
+        
+        // Path segmentlerini manuel kontrol et
+        const pathSegments = [safeCollectionName, safeDocId];
+        const invalidSegment = pathSegments.find(seg => typeof seg !== 'string' || seg === '');
+        if (invalidSegment) {
+          throw new Error(`Path segment geçersiz: ${JSON.stringify(invalidSegment)} (type: ${typeof invalidSegment})`);
         }
+        
+        console.log(`🔍 Final doc() call params:`, {
+          db: !!db,
+          dbType: typeof db,
+          collectionPath: safeCollectionName,
+          collectionPathType: typeof safeCollectionName,
+          documentPath: safeDocId,
+          documentPathType: typeof safeDocId,
+          allAreStrings: typeof safeCollectionName === 'string' && typeof safeDocId === 'string'
+        });
+        
+        // Firebase doc() fonksiyonunu çağır - doc(db, collectionPath, documentPath)
+        docRef = doc(db, safeCollectionName, safeDocId);
         
         // docRef'in geçerli olduğunu kontrol et
         if (!docRef) {
