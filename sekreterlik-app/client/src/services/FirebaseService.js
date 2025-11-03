@@ -370,17 +370,31 @@ class FirebaseService {
         idIsString: typeof finalDocId === 'string'
       });
       
-      // Firebase doc() fonksiyonunu 3 parametre ile çağır
-      // Format: doc(db, collectionPath, documentPath)
-      // WRAPPER: doc() çağrısını try-catch ile sar ve hata mesajını iyileştir
+      // ALTERNATIVE METHOD: Use collection() then doc() pattern
+      // This is the recommended Firebase pattern and avoids path parsing issues
       let docRef;
       try {
-        // Son kontrol: Parametreler kesinlikle string mi?
+        // Final validation: All params must be strings
         if (typeof finalCollectionName !== 'string' || typeof finalDocId !== 'string') {
           throw new Error(`Params not strings before doc() call: collection=${typeof finalCollectionName}, id=${typeof finalDocId}`);
         }
         
-        docRef = doc(db, finalCollectionName, finalDocId);
+        // Validate string values are not empty
+        if (!finalCollectionName || !finalDocId || finalCollectionName.length === 0 || finalDocId.length === 0) {
+          throw new Error(`Params empty: collection="${finalCollectionName}", id="${finalDocId}"`);
+        }
+        
+        // Method 1: Try collection() + doc() pattern (recommended)
+        try {
+          const collectionRef = collection(db, finalCollectionName);
+          docRef = doc(collectionRef, finalDocId);
+          console.log('✅ doc() created using collection() + doc() pattern');
+        } catch (method1Error) {
+          console.warn('⚠️ Method 1 failed, trying direct doc() call:', method1Error.message);
+          // Method 2: Direct doc() call (fallback)
+          docRef = doc(db, finalCollectionName, finalDocId);
+          console.log('✅ doc() created using direct doc() call');
+        }
         
         if (!docRef) {
           throw new Error('DocumentReference oluşturulamadı - docRef null/undefined');
@@ -390,14 +404,18 @@ class FirebaseService {
         console.error('❌ doc() error details:', {
           db: !!db,
           dbType: typeof db,
+          dbIsNull: db === null,
+          dbIsUndefined: db === undefined,
           collection: finalCollectionName,
           collectionType: typeof finalCollectionName,
           collectionValue: finalCollectionName,
+          collectionLength: finalCollectionName?.length,
           id: finalDocId,
           idType: typeof finalDocId,
           idValue: finalDocId,
+          idLength: finalDocId?.length,
           errorMessage: docError.message,
-          errorStack: docError.stack?.substring(0, 300)
+          errorStack: docError.stack?.substring(0, 500)
         });
         throw new Error(`Firebase doc() hatası: ${docError.message}. Collection: "${finalCollectionName}", ID: "${finalDocId}"`);
       }
