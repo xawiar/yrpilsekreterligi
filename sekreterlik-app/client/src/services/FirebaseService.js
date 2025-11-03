@@ -427,9 +427,9 @@ class FirebaseService {
           throw new Error(`FINAL CHECK FAILED: collection length=${validatedCollectionName.length}, id length=${validatedDocId.length}`);
         }
         
-        // FINAL ATTEMPT: Use only direct doc() call with extreme validation
-        // Firebase doc() format: doc(db, collectionPath, documentPath)
-        // All parameters MUST be strings
+        // CRITICAL: Use the SAME pattern as create() function
+        // create() uses: collection(db, collectionName) then doc(collectionRef, docId)
+        // delete() should use the SAME pattern for consistency
         
         // EXTREME VALIDATION: Create new variables with explicit string conversion
         const firebaseCollectionName = String(validatedCollectionName).trim();
@@ -444,22 +444,21 @@ class FirebaseService {
           throw new Error(`FIREBASE CALL FAILED: collection length=${firebaseCollectionName.length}, id length=${firebaseDocId.length}`);
         }
         
-        // Log right before Firebase call
-        console.error('[FIREBASE DELETE] FINAL CALL - doc() with:', JSON.stringify({
-          dbType: typeof db,
+        console.error('[FIREBASE DELETE] Using SAME pattern as create():', JSON.stringify({
           collection: firebaseCollectionName,
           collectionType: typeof firebaseCollectionName,
-          collectionLength: firebaseCollectionName.length,
           id: firebaseDocId,
-          idType: typeof firebaseDocId,
-          idLength: firebaseDocId.length,
-          allStrings: typeof firebaseCollectionName === 'string' && typeof firebaseDocId === 'string'
+          idType: typeof firebaseDocId
         }));
         
-        // Direct doc() call ONLY - Firebase's official API
-        docRef = doc(db, firebaseCollectionName, firebaseDocId);
+        // Use EXACTLY the same pattern as create() function:
+        // Step 1: collection(db, collectionName) - This works in create()
+        const collectionRef = collection(db, firebaseCollectionName);
         
-        console.error('[FIREBASE DELETE] ✅ doc() call succeeded');
+        // Step 2: doc(collectionRef, docId) - This works in create()
+        docRef = doc(collectionRef, firebaseDocId);
+        
+        console.error('[FIREBASE DELETE] ✅ doc() call succeeded using create() pattern');
         
         if (!docRef) {
           throw new Error('DocumentReference oluşturulamadı - docRef null/undefined');
