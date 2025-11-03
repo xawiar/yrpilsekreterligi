@@ -152,7 +152,19 @@ class FirebaseService {
    */
   static async getById(collectionName, docId, decrypt = true) {
     try {
-      const docRef = doc(db, collectionName, docId);
+      // Ensure collectionName and docId are strings
+      const safeCollectionName = String(collectionName || '').trim();
+      const safeDocId = String(docId || '').trim();
+      
+      if (!safeCollectionName || !safeDocId) {
+        throw new Error(`Invalid params for getById: collection="${safeCollectionName}", id="${safeDocId}"`);
+      }
+      
+      if (typeof safeCollectionName !== 'string' || typeof safeDocId !== 'string') {
+        throw new Error(`Params not strings for getById: collection type=${typeof safeCollectionName}, id type=${typeof safeDocId}`);
+      }
+      
+      const docRef = doc(db, safeCollectionName, safeDocId);
       const docSnap = await getDoc(docRef);
       
       if (!docSnap.exists()) {
@@ -384,15 +396,32 @@ class FirebaseService {
           throw new Error(`Params empty: collection="${finalCollectionName}", id="${finalDocId}"`);
         }
         
+        // CRITICAL: Validate params one more time RIGHT before doc() call
+        // This is the last chance to catch any type issues
+        const validatedCollectionName = String(finalCollectionName).trim();
+        const validatedDocId = String(finalDocId).trim();
+        
+        if (typeof validatedCollectionName !== 'string' || typeof validatedDocId !== 'string') {
+          throw new Error(`FINAL CHECK FAILED: collection type=${typeof validatedCollectionName}, id type=${typeof validatedDocId}`);
+        }
+        
+        if (validatedCollectionName.length === 0 || validatedDocId.length === 0) {
+          throw new Error(`FINAL CHECK FAILED: collection length=${validatedCollectionName.length}, id length=${validatedDocId.length}`);
+        }
+        
         // Method 1: Try collection() + doc() pattern (recommended)
         try {
-          const collectionRef = collection(db, finalCollectionName);
-          docRef = doc(collectionRef, finalDocId);
+          const collectionRef = collection(db, validatedCollectionName);
+          docRef = doc(collectionRef, validatedDocId);
           console.log('✅ doc() created using collection() + doc() pattern');
         } catch (method1Error) {
           console.warn('⚠️ Method 1 failed, trying direct doc() call:', method1Error.message);
           // Method 2: Direct doc() call (fallback)
-          docRef = doc(db, finalCollectionName, finalDocId);
+          // One more validation before direct call
+          if (typeof validatedCollectionName !== 'string' || typeof validatedDocId !== 'string') {
+            throw new Error(`Method 2 validation failed: collection type=${typeof validatedCollectionName}, id type=${typeof validatedDocId}`);
+          }
+          docRef = doc(db, validatedCollectionName, validatedDocId);
           console.log('✅ doc() created using direct doc() call');
         }
         
