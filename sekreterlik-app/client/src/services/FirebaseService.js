@@ -325,14 +325,42 @@ class FirebaseService {
         dbValid: !!db && typeof db === 'object'
       });
       
-      // ALTERNATİF YÖNTEM: collection() ve doc() kombinasyonu kullan
-      // Bu yöntem Firebase'in önerdiği ve daha güvenli yöntem
-      const collectionRef = collection(db, stringCollectionName);
-      const docRef = doc(collectionRef, stringId);
+      // CRITICAL FIX: Firebase'in doc() fonksiyonunu 3 parametre ile çağır
+      // doc(db, collectionPath, documentPath) - TÜM parametreler string olmalı
+      // Bu Firebase'in resmi API'si ve path parsing sorunlarını önler
+      
+      // Son kontrol: Tüm parametreler kesinlikle string ve geçerli mi?
+      const finalCollectionName = String(stringCollectionName).trim();
+      const finalDocId = String(stringId).trim();
+      
+      if (!finalCollectionName || !finalDocId) {
+        throw new Error(`Final params invalid: collection="${finalCollectionName}", id="${finalDocId}"`);
+      }
+      
+      if (typeof finalCollectionName !== 'string' || typeof finalDocId !== 'string') {
+        throw new Error(`Final params not strings: collection type=${typeof finalCollectionName}, id type=${typeof finalDocId}`);
+      }
+      
+      console.log(`🔍 Calling Firebase doc() with:`, {
+        dbType: typeof db,
+        collection: finalCollectionName,
+        collectionType: typeof finalCollectionName,
+        id: finalDocId,
+        idType: typeof finalDocId
+      });
+      
+      // Firebase doc() fonksiyonunu 3 parametre ile çağır
+      // Format: doc(db, collectionPath, documentPath)
+      const docRef = doc(db, finalCollectionName, finalDocId);
+      
+      // docRef kontrolü
+      if (!docRef) {
+        throw new Error('DocumentReference oluşturulamadı');
+      }
       
       // Dokümanı sil
       await deleteDoc(docRef);
-      console.log(`✅ Document deleted from collection "${stringCollectionName}" with ID: ${stringId}`);
+      console.log(`✅ Document deleted from collection "${finalCollectionName}" with ID: ${finalDocId}`);
     } catch (error) {
       console.error(`❌ Error deleting document from ${collectionName}:`, error);
       console.error(`❌ Delete error details:`, {
