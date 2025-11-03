@@ -268,6 +268,12 @@ class FirebaseService {
    */
   static async delete(collectionName, docId) {
     try {
+      // Collection name'i string'e çevir
+      const stringCollectionName = String(collectionName || '').trim();
+      if (!stringCollectionName) {
+        throw new Error(`Geçersiz collection name: ${collectionName}`);
+      }
+      
       // ID'yi mutlaka string'e çevir (Firebase string bekler)
       let stringId;
       
@@ -277,34 +283,52 @@ class FirebaseService {
       
       // ID'nin tipine göre string'e çevir
       if (typeof docId === 'object') {
-        // Eğer ID bir object ise (örneğin DocumentReference), toString() kullan
-        stringId = docId.toString ? docId.toString() : String(docId);
+        // Eğer ID bir object/array ise, JSON.stringify kullan
+        if (Array.isArray(docId)) {
+          throw new Error(`Doküman ID array olamaz: ${JSON.stringify(docId)}`);
+        }
+        // Eğer DocumentReference ise, id property'sini al
+        if (docId.id) {
+          stringId = String(docId.id);
+        } else if (docId.toString) {
+          stringId = docId.toString();
+        } else {
+          stringId = JSON.stringify(docId);
+        }
+      } else if (typeof docId === 'number') {
+        stringId = String(docId);
       } else {
         stringId = String(docId);
       }
       
       // Boş string kontrolü
-      if (!stringId || stringId.trim() === '' || stringId === 'undefined' || stringId === 'null') {
-        throw new Error(`Geçersiz doküman ID: ${docId} (stringId: ${stringId})`);
+      if (!stringId || stringId.trim() === '' || stringId === 'undefined' || stringId === 'null' || stringId === '[object Object]') {
+        throw new Error(`Geçersiz doküman ID: ${docId} (stringId: ${stringId}, type: ${typeof docId})`);
       }
       
-      // Firebase DocumentReference oluştur
-      const docRef = doc(db, collectionName, stringId.trim());
+      // Trim yap ve kontrol et
+      stringId = stringId.trim();
+      
+      // Firebase DocumentReference oluştur - collection name ve docId mutlaka string olmalı
+      console.log(`🔍 Creating doc reference: collection="${stringCollectionName}", id="${stringId}" (types: collection=${typeof stringCollectionName}, id=${typeof stringId})`);
+      const docRef = doc(db, stringCollectionName, stringId);
       
       // Dokümanı sil
       await deleteDoc(docRef);
-      console.log(`✅ Document deleted from collection "${collectionName}" with ID: ${stringId}`);
+      console.log(`✅ Document deleted from collection "${stringCollectionName}" with ID: ${stringId}`);
     } catch (error) {
-      console.error(`Error deleting document from ${collectionName}:`, error);
-      console.error(`Delete error details:`, {
+      console.error(`❌ Error deleting document from ${collectionName}:`, error);
+      console.error(`❌ Delete error details:`, {
         collectionName,
+        collectionNameType: typeof collectionName,
+        collectionNameString: String(collectionName),
         docId,
         docIdType: typeof docId,
         docIdValue: docId,
-        stringId: String(docId),
+        docIdString: String(docId),
         errorMessage: error.message,
         errorCode: error.code,
-        errorStack: error.stack
+        errorStack: error.stack?.substring(0, 500)
       });
       throw error;
     }
