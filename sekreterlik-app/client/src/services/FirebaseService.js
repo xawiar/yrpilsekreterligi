@@ -280,6 +280,22 @@ class FirebaseService {
    */
   static async delete(collectionName, docId) {
     try {
+      // CRITICAL: Log raw parameters BEFORE any conversion
+      console.error('[FIREBASE DELETE] RAW PARAMS:', {
+        collectionName: collectionName,
+        collectionNameType: typeof collectionName,
+        collectionNameValue: collectionName,
+        collectionNameIsNull: collectionName === null,
+        collectionNameIsUndefined: collectionName === undefined,
+        docId: docId,
+        docIdType: typeof docId,
+        docIdValue: docId,
+        docIdIsNull: docId === null,
+        docIdIsUndefined: docId === undefined,
+        docIdIsArray: Array.isArray(docId),
+        docIdIsObject: typeof docId === 'object' && docId !== null
+      });
+      
       // Collection name'i string'e çevir
       const stringCollectionName = String(collectionName || '').trim();
       if (!stringCollectionName) {
