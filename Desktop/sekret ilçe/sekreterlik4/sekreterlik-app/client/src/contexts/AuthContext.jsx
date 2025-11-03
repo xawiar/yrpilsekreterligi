@@ -42,8 +42,7 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
-        try {
-          unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
+        unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
           if (firebaseUser) {
             // Firebase user varsa, kullanıcı bilgilerini localStorage'dan al
             const savedUser = localStorage.getItem('user');
