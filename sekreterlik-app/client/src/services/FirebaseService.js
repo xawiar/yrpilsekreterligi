@@ -317,37 +317,83 @@ class FirebaseService {
         throw new Error(`Document ID string değil! Type: ${typeof stringId}, Value: ${stringId}`);
       }
       
+      // db instance kontrolü
+      if (!db) {
+        throw new Error('Firebase db instance bulunamadı! db:', db);
+      }
+      if (typeof db !== 'object') {
+        throw new Error(`Firebase db instance geçersiz! Type: ${typeof db}, Value: ${db}`);
+      }
+      
       // Firebase DocumentReference oluştur - collection name ve docId mutlaka string olmalı
       console.log(`🔍 Creating doc reference:`, {
+        db: db,
+        dbType: typeof db,
+        dbIsNull: db === null,
+        dbIsUndefined: db === undefined,
         collection: stringCollectionName,
         collectionType: typeof stringCollectionName,
+        collectionValue: stringCollectionName,
         id: stringId,
         idType: typeof stringId,
+        idValue: stringId,
         idLength: stringId.length,
         collectionIsString: typeof stringCollectionName === 'string',
-        idIsString: typeof stringId === 'string'
+        idIsString: typeof stringId === 'string',
+        allParamsValid: typeof db === 'object' && db !== null && typeof stringCollectionName === 'string' && typeof stringId === 'string'
       });
       
-      // Firebase'in doc() fonksiyonunu çağırmadan önce son kontrol
+      // Firebase'in doc() fonksiyonunu çağırmadan önce TÜM parametreleri kontrol et
       // Eğer hala sorun varsa, alternatif yöntem kullan
       let docRef;
       try {
-        // Önce normal yöntemi dene
-        docRef = doc(db, stringCollectionName, stringId);
+        // Parametreleri tek tek kontrol et ve string'e çevir
+        const safeCollectionName = String(stringCollectionName).trim();
+        const safeDocId = String(stringId).trim();
+        
+        // Son kontrol: Tüm parametreler string ve geçerli mi?
+        if (!safeCollectionName || !safeDocId) {
+          throw new Error(`Parametreler geçersiz: collection="${safeCollectionName}", id="${safeDocId}"`);
+        }
+        
+        // db kontrolü
+        if (!db || typeof db !== 'object') {
+          throw new Error(`db instance geçersiz: ${typeof db}`);
+        }
+        
+        console.log(`🔍 Calling doc() with validated params:`, {
+          dbType: typeof db,
+          collection: safeCollectionName,
+          collectionType: typeof safeCollectionName,
+          id: safeDocId,
+          idType: typeof safeDocId
+        });
+        
+        // Firebase doc() fonksiyonunu çağır
+        // doc(db, collectionPath, documentPath) formatında
+        docRef = doc(db, safeCollectionName, safeDocId);
         
         // docRef'in geçerli olduğunu kontrol et
         if (!docRef) {
-          throw new Error('DocumentReference oluşturulamadı');
+          throw new Error('DocumentReference oluşturulamadı - docRef null/undefined');
         }
+        
+        console.log(`✅ doc() başarılı, docRef:`, docRef);
       } catch (docError) {
         console.error('❌ doc() hatası:', docError);
         console.error('❌ doc() hatası detayları:', {
-          db: typeof db,
+          db: db,
+          dbType: typeof db,
+          dbIsNull: db === null,
+          dbIsUndefined: db === undefined,
           collectionName: stringCollectionName,
           collectionNameType: typeof stringCollectionName,
+          collectionNameValue: stringCollectionName,
           docId: stringId,
           docIdType: typeof stringId,
-          error: docError.message
+          docIdValue: stringId,
+          errorMessage: docError.message,
+          errorStack: docError.stack?.substring(0, 500)
         });
         throw new Error(`Firebase doc() hatası: ${docError.message}. Collection: "${stringCollectionName}", ID: "${stringId}"`);
       }
