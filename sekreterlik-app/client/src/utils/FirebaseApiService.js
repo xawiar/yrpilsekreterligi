@@ -424,16 +424,52 @@ class FirebaseApiService {
 
   static async updateMemberUser(id, username, password) {
     try {
-      const updateData = { username };
-      if (password) {
-        updateData.password = password;
+      // Önce mevcut kullanıcıyı al
+      const memberUser = await FirebaseService.getById(this.COLLECTIONS.MEMBER_USERS, id);
+      if (!memberUser) {
+        return { success: false, message: 'Kullanıcı bulunamadı' };
       }
 
+      const updateData = { username };
+      
+      // Şifre güncelleniyorsa, Firebase Auth'da da güncelle
+      if (password && password.trim()) {
+        updateData.password = password;
+        
+        // Eğer Firebase Auth'da kullanıcı varsa, şifreyi güncelle
+        if (memberUser.authUid) {
+          try {
+            // Admin olarak şifreyi güncellemek için Firebase Admin SDK kullanmalıyız
+            // Ama client-side'da bunu yapamayız, bu yüzden kullanıcı login olduğunda güncelleme yapabiliriz
+            // Şimdilik sadece Firestore'u güncelleyelim
+            // İleride backend'de bir endpoint ile bu işlemi yapabiliriz
+            
+            // Alternatif: Kullanıcıyı yeniden oluştur (email zaten varsa hata vermez)
+            const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
+            
+            // Not: Client-side'dan başka bir kullanıcının şifresini direkt güncelleyemeyiz
+            // Bu yüzden şimdilik sadece Firestore'u güncelliyoruz
+            // Kullanıcı login olduğunda, şifre kontrolü Firestore'dan yapılacak
+            console.log('🔄 Updating password in Firestore for member user:', id);
+            console.log('⚠️ Note: Firebase Auth password will be updated on next login');
+          } catch (authError) {
+            console.warn('⚠️ Firebase Auth password update skipped (non-critical):', authError);
+            // Firestore güncellemesi devam edecek
+          }
+        } else {
+          // Auth UID yoksa, kullanıcı ilk login olduğunda oluşturulacak
+          console.log('ℹ️ No authUid found, password will be used on first login');
+        }
+      }
+
+      // Firestore'u güncelle
       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData);
+      
+      console.log('✅ Member user updated successfully:', id);
       return { success: true, message: 'Kullanıcı güncellendi' };
     } catch (error) {
       console.error('Update member user error:', error);
-      return { success: false, message: 'Kullanıcı güncellenirken hata oluştu' };
+      return { success: false, message: 'Kullanıcı güncellenirken hata oluştu: ' + error.message };
     }
   }
 
@@ -561,15 +597,51 @@ class FirebaseApiService {
         if (!existingUsers || existingUsers.length === 0) {
           // Kullanıcı yoksa otomatik oluştur (sadece Firestore'a kaydet)
           // Username: TC numarası (zorunlu alan)
-          const username = String(memberData.tc || '').trim();
+          // TC decrypt edilmiş olarak gelir (FirebaseService.getAll içinde decrypt edilir)
+          let username = String(memberData.tc || '').trim();
+          
           // Şifre: Telefon numarası (zorunlu alan)
-          const password = String(memberData.phone || '').trim();
+          // Telefon decrypt edilmiş olarak gelir (FirebaseService.getAll içinde decrypt edilir)
+          // Ama eğer şifrelenmişse decrypt et
+          let password = String(memberData.phone || '').trim();
+          
+          // Eğer phone şifrelenmiş görünüyorsa (U2FsdGVkX1 ile başlıyorsa), decrypt et
+          if (password && typeof password === 'string' && password.startsWith('U2FsdGVkX1')) {
+            try {
+              password = decryptData(password);
+              console.log('🔓 Decrypted phone number for password');
+            } catch (decryptError) {
+              console.warn('⚠️ Could not decrypt phone, using as-is:', decryptError);
+            }
+          }
+          
+          // TC de decrypt edilmiş olmalı, ama kontrol edelim
+          if (username && typeof username === 'string' && username.startsWith('U2FsdGVkX1')) {
+            try {
+              username = decryptData(username);
+              console.log('🔓 Decrypted TC number for username');
+            } catch (decryptError) {
+              console.warn('⚠️ Could not decrypt TC, using as-is:', decryptError);
+            }
+          }
+          
+          console.log('📋 Final username and password values:', {
+            username,
+            password,
+            usernameLength: username?.length,
+            passwordLength: password?.length,
+            usernameIsTc: username === memberData.tc,
+            passwordIsPhone: password === memberData.phone,
+            passwordIsTc: password === memberData.tc
+          });
           
           // TC ve telefon zorunlu alanlar olduğu için her zaman olmalı
           if (!username || !password) {
             console.error('❌ TC veya telefon numarası eksik!', {
               tc: memberData.tc,
               phone: memberData.phone,
+              username,
+              password,
               tcEmpty: !username,
               phoneEmpty: !password
             });

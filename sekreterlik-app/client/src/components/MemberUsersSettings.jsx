@@ -433,33 +433,48 @@ const MemberUsersSettings = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        // Şifreyi decrypt et
-                        let decryptedPassword = user.password;
-                        if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
-                          try {
-                            decryptedPassword = decryptData(decryptedPassword);
-                          } catch (e) {
-                            // Decrypt hatası - olduğu gibi göster
-                          }
-                        }
-                        const expectedPassword = member?.phone || 'Telefon bulunamadı';
-                        const isCorrect = decryptedPassword === expectedPassword;
-                        
-                        return (
-                          <div>
-                            <div className={`text-sm font-mono ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
-                              {decryptedPassword || '-'}
-                            </div>
-                            <div className="text-xs text-gray-400 mt-1">
-                              (Beklenen: {expectedPassword})
-                              {!isCorrect && decryptedPassword && (
-                                <span className="text-red-500 ml-1">⚠️ Yanlış!</span>
-                              )}
-                            </div>
+                      {editingUser && editingUser.id === user.id ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={editForm.password}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                            placeholder="Yeni şifre (telefon)"
+                          />
+                          <div className="text-xs text-gray-400">
+                            Beklenen: {member?.phone || 'Telefon bulunamadı'}
                           </div>
-                        );
-                      })()}
+                        </div>
+                      ) : (
+                        (() => {
+                          // Şifreyi decrypt et
+                          let decryptedPassword = user.password;
+                          if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
+                            try {
+                              decryptedPassword = decryptData(decryptedPassword);
+                            } catch (e) {
+                              // Decrypt hatası - olduğu gibi göster
+                            }
+                          }
+                          const expectedPassword = member?.phone || 'Telefon bulunamadı';
+                          const isCorrect = decryptedPassword === expectedPassword;
+                          
+                          return (
+                            <div>
+                              <div className={`text-sm font-mono ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                {decryptedPassword || '-'}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                (Beklenen: {expectedPassword})
+                                {!isCorrect && decryptedPassword && (
+                                  <span className="text-red-500 ml-1">⚠️ Yanlış!</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
