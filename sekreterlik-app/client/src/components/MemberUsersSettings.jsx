@@ -401,12 +401,19 @@ const MemberUsersSettings = () => {
                   </td>
                 </tr>
               ) : (
-                memberUsers.map((user) => (
+                memberUsers.map((user) => {
+                  // Üye bilgilerini members array'inden bul
+                  const member = members.find(m => m.id === user.member_id || m.id === user.memberId || String(m.id) === String(user.member_id) || String(m.id) === String(user.memberId));
+                  const memberName = member?.name || 'Bilinmeyen Üye';
+                  const memberRegion = member?.region || member?.region_name || '-';
+                  const memberPosition = member?.position || member?.position_name || '-';
+                  
+                  return (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.region} - {user.position}</div>
+                        <div className="text-sm font-medium text-gray-900">{memberName}</div>
+                        <div className="text-sm text-gray-500">{memberRegion} - {memberPosition}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -423,11 +430,11 @@ const MemberUsersSettings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.is_active 
+                        user.is_active || user.isActive
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {user.is_active ? 'Aktif' : 'Pasif'}
+                        {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -457,12 +464,12 @@ const MemberUsersSettings = () => {
                           <button
                             onClick={() => handleToggleStatus(user.id)}
                             className={`${
-                              user.is_active 
+                              user.is_active || user.isActive
                                 ? 'text-yellow-600 hover:text-yellow-900' 
                                 : 'text-green-600 hover:text-green-900'
                             }`}
                           >
-                            {user.is_active ? 'Pasifleştir' : 'Aktifleştir'}
+                            {user.is_active || user.isActive ? 'Pasifleştir' : 'Aktifleştir'}
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id, user.username)}
@@ -474,7 +481,8 @@ const MemberUsersSettings = () => {
                       )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -485,7 +493,10 @@ const MemberUsersSettings = () => {
       {editingUser && (
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
           <h4 className="text-lg font-semibold text-gray-800 mb-4">
-            {editingUser.name} - Kullanıcı Bilgilerini Düzenle
+            {(() => {
+              const member = members.find(m => m.id === editingUser.member_id || m.id === editingUser.memberId || String(m.id) === String(editingUser.member_id) || String(m.id) === String(editingUser.memberId));
+              return member?.name || editingUser.username || 'Kullanıcı';
+            })()} - Kullanıcı Bilgilerini Düzenle
           </h4>
           <form onSubmit={handleUpdateUser} className="space-y-4">
             <div>
