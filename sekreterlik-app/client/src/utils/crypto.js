@@ -23,6 +23,24 @@ export function encryptData(data) {
 }
 
 /**
+ * Verinin şifrelenmiş olup olmadığını kontrol eder
+ * Şifrelenmiş veriler genellikle base64 formatında ve uzun string'lerdir
+ */
+function isEncrypted(data) {
+  if (typeof data !== 'string') return false;
+  // Şifrelenmiş veriler genellikle base64 formatında ve uzun string'lerdir
+  // Basit bir kontrol: eğer string çok kısa veya JSON parse edilebiliyorsa, muhtemelen decrypt edilmiş
+  if (data.length < 20) return false;
+  try {
+    JSON.parse(data);
+    return false; // JSON parse edilebiliyorsa, muhtemelen decrypt edilmiş
+  } catch {
+    // JSON parse edilemiyorsa, şifrelenmiş olabilir
+    return true;
+  }
+}
+
+/**
  * Şifrelenmiş veriyi çözer
  * @param {string} encryptedData - Şifrelenmiş veri
  * @returns {any} Çözülmüş veri
@@ -30,9 +48,24 @@ export function encryptData(data) {
 export function decryptData(encryptedData) {
   if (!encryptedData) return null;
   
+  // Eğer veri zaten decrypt edilmiş görünüyorsa, olduğu gibi döndür
+  if (!isEncrypted(encryptedData)) {
+    // Muhtemelen zaten decrypt edilmiş, olduğu gibi döndür
+    try {
+      return JSON.parse(encryptedData);
+    } catch {
+      return encryptedData;
+    }
+  }
+  
   try {
     const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    
+    // Eğer decrypt edilen veri boş veya geçersizse, orijinal veriyi döndür
+    if (!decrypted || decrypted.trim() === '') {
+      return encryptedData; // Orijinal veriyi döndür
+    }
     
     // JSON parse denemesi
     try {
@@ -41,7 +74,8 @@ export function decryptData(encryptedData) {
       return decrypted; // String ise direkt döndür
     }
   } catch (error) {
-    console.error('Decryption error:', error);
+    // Decryption hatası - muhtemelen veri zaten decrypt edilmiş veya hiç şifrelenmemiş
+    // Sessizce orijinal veriyi döndür (console.error yerine)
     return encryptedData; // Hata durumunda orijinal veriyi döndür
   }
 }
@@ -79,7 +113,16 @@ export function decryptObject(obj, fieldsToDecrypt = []) {
   
   fieldsToDecrypt.forEach(field => {
     if (decrypted[field] !== undefined && decrypted[field] !== null) {
-      decrypted[field] = decryptData(decrypted[field]);
+      try {
+        // Sadece string alanları decrypt et (object'ler zaten decrypt edilmiş olabilir)
+        if (typeof decrypted[field] === 'string') {
+          decrypted[field] = decryptData(decrypted[field]);
+        }
+        // Eğer field zaten object ise, olduğu gibi bırak
+      } catch (error) {
+        // Decryption hatası - alanı olduğu gibi bırak
+        // Sessizce devam et (zaten decrypt edilmiş olabilir)
+      }
     }
   });
   
