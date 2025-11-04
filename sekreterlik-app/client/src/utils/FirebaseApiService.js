@@ -124,33 +124,93 @@ class FirebaseApiService {
             
             // Şifre doğru mu kontrol et (decrypt edilmiş password veya orijinal password ile karşılaştır)
             if (decryptedPassword === password || memberUser.password === password) {
-              // Şifre doğru, Firebase Auth'da kullanıcı oluştur ve giriş yap
-              console.log('Password correct, creating Firebase Auth user for member:', memberUser.id);
+              // Şifre doğru, Firebase Auth ile senkronize et
+              console.log('Password correct, syncing with Firebase Auth for member:', memberUser.id);
+              
+              // Eğer authUid varsa ama email/username değişmişse, yeni email ile giriş yapmayı dene
+              // Eğer authUid yoksa, yeni kullanıcı oluştur
               
               try {
-                // Firebase Auth'da kullanıcı oluştur
-                userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                user = userCredential.user;
-                
-                // Firestore'daki kullanıcıyı güncelle (authUid ekle)
-                await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                  authUid: user.uid
-                });
-                
-                console.log('Firebase Auth user created for member:', user.uid);
-              } catch (createError) {
-                // Email zaten kullanılıyorsa, giriş yapmaya çalış
-                if (createError.code === 'auth/email-already-in-use') {
-                  console.log('Email already in use, trying to sign in:', email);
-                  userCredential = await signInWithEmailAndPassword(auth, email, password);
+                // Önce mevcut email ile giriş yapmayı dene (eğer authUid varsa)
+                if (memberUser.authUid) {
+                  try {
+                    // Eski email ile giriş yapmayı dene
+                    const oldEmail = memberUser.username.includes('@') ? memberUser.username : `${memberUser.username}@ilsekreterlik.local`;
+                    userCredential = await signInWithEmailAndPassword(auth, oldEmail, password);
+                    user = userCredential.user;
+                    console.log('✅ Firebase Auth login successful with existing user:', user.uid);
+                    
+                    // Firestore'daki kullanıcıyı güncelle (username ve authUid senkronizasyonu)
+                    await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                      authUid: user.uid,
+                      username: username // Username'i güncelle (eğer değiştiyse)
+                    }, false);
+                    
+                    console.log('✅ Firestore synced with Firebase Auth');
+                  } catch (oldEmailError) {
+                    // Eski email ile giriş yapılamadı, yeni email ile dene
+                    console.log('⚠️ Old email login failed, trying with new email:', email);
+                    try {
+                      userCredential = await signInWithEmailAndPassword(auth, email, password);
+                      user = userCredential.user;
+                      console.log('✅ Firebase Auth login successful with new email:', user.uid);
+                      
+                      // Firestore'daki kullanıcıyı güncelle
+                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                        authUid: user.uid,
+                        username: username
+                      }, false);
+                      
+                      console.log('✅ Firestore synced with Firebase Auth (new email)');
+                    } catch (newEmailError) {
+                      // Yeni email ile de giriş yapılamadı, yeni kullanıcı oluştur
+                      console.log('⚠️ New email login failed, creating new user:', newEmailError.code);
+                      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                      user = userCredential.user;
+                      
+                      // Firestore'daki kullanıcıyı güncelle
+                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                        authUid: user.uid,
+                        username: username
+                      }, false);
+                      
+                      console.log('✅ Firebase Auth user created for member:', user.uid);
+                    }
+                  }
+                } else {
+                  // AuthUid yok, yeni kullanıcı oluştur
+                  console.log('Creating new Firebase Auth user for member:', memberUser.id);
+                  userCredential = await createUserWithEmailAndPassword(auth, email, password);
                   user = userCredential.user;
                   
                   // Firestore'daki kullanıcıyı güncelle (authUid ekle)
                   await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                    authUid: user.uid
-                  });
+                    authUid: user.uid,
+                    username: username
+                  }, false);
                   
-                  console.log('Firebase Auth sign in successful for member:', user.uid);
+                  console.log('✅ Firebase Auth user created for member:', user.uid);
+                }
+              } catch (createError) {
+                // Email zaten kullanılıyorsa (başka bir kullanıcı tarafından)
+                if (createError.code === 'auth/email-already-in-use') {
+                  console.log('⚠️ Email already in use by another user, trying to sign in:', email);
+                  try {
+                    userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    user = userCredential.user;
+                    
+                    // Firestore'daki kullanıcıyı güncelle (authUid ekle)
+                    await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                      authUid: user.uid,
+                      username: username
+                    }, false);
+                    
+                    console.log('✅ Firebase Auth sign in successful for member:', user.uid);
+                  } catch (signInError2) {
+                    // Şifre yanlış veya başka bir hata
+                    console.error('❌ Cannot sign in with existing email:', signInError2);
+                    throw new Error('Bu email başka bir kullanıcı tarafından kullanılıyor ve şifre eşleşmiyor');
+                  }
                 } else {
                   throw createError;
                 }
