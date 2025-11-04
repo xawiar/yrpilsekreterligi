@@ -382,6 +382,7 @@ const MembersPage = () => {
         getSortIndicator={getSortIndicator}
         searchTerm={searchTerm}
         selectedRegion={selectedRegion}
+        viewMode={viewMode}
       />
 
       <div className="mt-4 flex items-center justify-between">
