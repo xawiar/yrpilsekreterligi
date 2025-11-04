@@ -523,35 +523,40 @@ class FirebaseApiService {
         
         if (!existingUsers || existingUsers.length === 0) {
           // Kullanıcı yoksa otomatik oluştur (sadece Firestore'a kaydet)
-          // Username: TC numarası veya telefon numarası
-          const username = memberData.tc || memberData.phone || `member_${docId}`;
-          // Şifre: TC numarası (eğer varsa) veya varsayılan şifre
-          const password = memberData.tc || '123456'; // Varsayılan şifre
+          // Username: TC numarası (zorunlu alan)
+          const username = memberData.tc;
+          // Şifre: Telefon numarası (zorunlu alan)
+          const password = memberData.phone;
           
-          // Kullanıcı bilgilerini kaydet (response'a eklenecek)
-          userCredentials = {
-            username: username,
-            password: password
-          };
+          // TC ve telefon zorunlu alanlar olduğu için her zaman olmalı
+          if (!username || !password) {
+            console.warn('⚠️ TC veya telefon numarası eksik, kullanıcı oluşturulamadı');
+          } else {
+            // Kullanıcı bilgilerini kaydet (response'a eklenecek)
+            userCredentials = {
+              username: username,
+              password: password
+            };
           
-          console.log('🔄 Creating automatic user for member (Firestore only):', docId, 'username:', username);
-          
-          // Sadece Firestore'a kaydet, Firebase Auth'a kaydetme
-          // (Firebase Auth'a kaydetme mevcut kullanıcıyı logout eder)
-          const userDocId = await FirebaseService.create(
-            this.COLLECTIONS.MEMBER_USERS,
-            null,
-            {
-              memberId: docId,
-              username,
-              password: password, // Şifreleme FirebaseService içinde yapılacak
-              userType: 'member',
-              isActive: true,
-              authUid: null // Firebase Auth'a kaydetmedik
-            }
-          );
-          
-          console.log('✅ Automatic user created successfully (Firestore only):', userDocId);
+            console.log('🔄 Creating automatic user for member (Firestore only):', docId, 'username:', username);
+            
+            // Sadece Firestore'a kaydet, Firebase Auth'a kaydetme
+            // (Firebase Auth'a kaydetme mevcut kullanıcıyı logout eder)
+            const userDocId = await FirebaseService.create(
+              this.COLLECTIONS.MEMBER_USERS,
+              null,
+              {
+                memberId: docId,
+                username,
+                password: password, // Şifreleme FirebaseService içinde yapılacak
+                userType: 'member',
+                isActive: true,
+                authUid: null // Firebase Auth'a kaydetmedik
+              }
+            );
+            
+            console.log('✅ Automatic user created successfully (Firestore only):', userDocId);
+          }
         } else {
           // Mevcut kullanıcı varsa, bilgilerini al
           const existingUser = existingUsers[0];
@@ -563,7 +568,7 @@ class FirebaseApiService {
           
           userCredentials = {
             username: existingUser.username,
-            password: decryptedPassword || existingUser.password || '123456'
+            password: decryptedPassword || existingUser.password
           };
           
           console.log('ℹ️ User already exists for member:', docId);
