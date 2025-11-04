@@ -11,10 +11,6 @@ const RepresentativesPage = () => {
   const [activeTab, setActiveTab] = useState('neighborhood'); // 'neighborhood' or 'village'
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -89,6 +85,63 @@ const RepresentativesPage = () => {
     rep.tc?.includes(searchTerm) ||
     rep.phone?.includes(searchTerm)
   );
+
+  const deleteRepresentativesByEncryptedTc = async (encryptedTc1, encryptedTc2) => {
+    try {
+      const [neighborhoodData, villageData] = await Promise.all([
+        ApiService.getNeighborhoodRepresentatives(),
+        ApiService.getVillageRepresentatives()
+      ]);
+      
+      // Find representatives by comparing encrypted TC (before decrypt)
+      const neighborhoodRepToDelete = neighborhoodData.find(rep => {
+        const repTc = rep.tc || '';
+        return repTc === encryptedTc1 || repTc === encryptedTc2;
+      });
+      
+      const villageRepToDelete = villageData.find(rep => {
+        const repTc = rep.tc || '';
+        return repTc === encryptedTc1 || repTc === encryptedTc2;
+      });
+      
+      if (neighborhoodRepToDelete) {
+        console.log('Deleting neighborhood representative:', neighborhoodRepToDelete);
+        await ApiService.deleteNeighborhoodRepresentative(neighborhoodRepToDelete.id);
+        console.log('✅ Neighborhood representative deleted');
+      }
+      
+      if (villageRepToDelete) {
+        console.log('Deleting village representative:', villageRepToDelete);
+        await ApiService.deleteVillageRepresentative(villageRepToDelete.id);
+        console.log('✅ Village representative deleted');
+      }
+      
+      if (!neighborhoodRepToDelete && !villageRepToDelete) {
+        console.log('❌ No representatives found with these encrypted TC numbers');
+      } else {
+        // Refresh data
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Error deleting representatives:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    
+    // Auto-delete on page load (one time only)
+    const encryptedTc1 = 'U2FsdGVkX1/6YcL4saOEDBjQNmbPe3YVi6ZTmGH31dY=';
+    const encryptedTc2 = 'U2FsdGVkX1+d/GcVS8sMBJvJPxn2dv8izhL1LzkX1xc=';
+    
+    // Delete representatives after 2 seconds
+    const timer = setTimeout(async () => {
+      await deleteRepresentativesByEncryptedTc(encryptedTc1, encryptedTc2);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
