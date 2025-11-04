@@ -1546,6 +1546,15 @@ class FirebaseApiService {
   }
 
   // District Officials CRUD
+  static async getAllDistrictOfficials() {
+    try {
+      return await FirebaseService.getAll(this.COLLECTIONS.DISTRICT_OFFICIALS);
+    } catch (error) {
+      console.error('Get all district officials error:', error);
+      return [];
+    }
+  }
+
   static async getDistrictOfficials(districtId) {
     try {
       return await FirebaseService.findByField(this.COLLECTIONS.DISTRICT_OFFICIALS, 'district_id', districtId);
@@ -1595,6 +1604,29 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Delete district officials error:', error);
       throw new Error('İlçe yetkilileri silinirken hata oluştu');
+    }
+  }
+
+  // District Deputy Inspectors
+  static async getDistrictDeputyInspectors(districtId) {
+    try {
+      // Deputy inspectors muhtemelen district_officials collection'ında veya ayrı bir collection'da
+      // Önce district_officials içinde arayalım
+      const officials = await FirebaseService.findByField(
+        this.COLLECTIONS.DISTRICT_OFFICIALS, 
+        'district_id', 
+        districtId
+      );
+      // Deputy inspectors'ı filtrele (eğer type field'ı varsa)
+      const deputyInspectors = officials.filter(official => 
+        official.type === 'deputy_inspector' || 
+        official.role === 'deputy_inspector' ||
+        official.position === 'deputy_inspector'
+      );
+      return deputyInspectors;
+    } catch (error) {
+      console.error('Get district deputy inspectors error:', error);
+      return [];
     }
   }
 

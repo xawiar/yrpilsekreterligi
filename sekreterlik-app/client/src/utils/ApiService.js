@@ -1512,6 +1512,15 @@ class ApiService {
 
   // District Officials API
   static async getDistrictOfficials() {
+    if (USE_FIREBASE) {
+      // Firebase'de tüm district officials'ı getir
+      try {
+        return await FirebaseApiService.getAllDistrictOfficials();
+      } catch (error) {
+        console.error('Get all district officials error:', error);
+        return [];
+      }
+    }
     const response = await fetch(`${API_BASE_URL}/district-officials`);
     return response.json();
   }
@@ -1551,6 +1560,15 @@ class ApiService {
   }
 
   static async getDistrictDeputyInspectors(districtId) {
+    if (USE_FIREBASE) {
+      // Firebase'de deputy inspectors'ı getir
+      try {
+        return await FirebaseApiService.getDistrictDeputyInspectors(districtId);
+      } catch (error) {
+        console.error('Get district deputy inspectors error:', error);
+        return [];
+      }
+    }
     const response = await fetch(`${API_BASE_URL}/districts/${districtId}/deputy-inspectors`);
     return response.json();
   }
@@ -2157,6 +2175,11 @@ class ApiService {
   }
 
   static async getAllVisitCounts(locationType) {
+    if (USE_FIREBASE) {
+      // Firebase'de visit counts yok - boş array döndür
+      // TODO: Eğer visit counts Firebase'de implement edilirse buraya ekle
+      return [];
+    }
     const response = await fetch(`${API_BASE_URL}/visits/counts/${locationType}`);
     return response.json();
   }
