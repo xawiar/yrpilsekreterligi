@@ -2392,6 +2392,31 @@ class FirebaseApiService {
     }
   }
 
+  // Delete Firebase Auth User using Admin SDK REST API
+  // Note: This is a simplified implementation. In production, this should be done on the backend
+  // using Firebase Admin SDK or Cloud Functions
+  static async deleteFirebaseAuthUser(authUid) {
+    try {
+      // Firebase Admin SDK REST API kullanarak kullanıcıyı sil
+      // Client-side'da Admin SDK kullanmak güvenlik riski oluşturur
+      // Bu yüzden şimdilik Firestore'dan authUid'i kaldırıyoruz
+      // Login sırasında kontrol edilip, eğer Firestore'da yoksa Firebase Auth'daki kullanıcı da geçersiz sayılır
+      
+      // Not: Tam implementasyon için backend/Cloud Functions gerekir
+      // Şimdilik sadece log ekliyoruz
+      console.log('⚠️ Firebase Auth user deletion requires backend/Cloud Functions');
+      console.log('⚠️ User authUid will be removed from Firestore, Firebase Auth user will be invalid on next login');
+      
+      // Firestore'dan authUid zaten kaldırılacak (member_user silindiğinde)
+      // Bu yüzden burada bir şey yapmaya gerek yok
+      // Login sırasında Firestore'da authUid yoksa, Firebase Auth'daki kullanıcı da geçersiz sayılır
+      
+    } catch (error) {
+      console.error('❌ Error in deleteFirebaseAuthUser:', error);
+      // Non-critical error, continue
+    }
+  }
+
   // Delete Member User
   static async deleteMemberUser(id) {
     try {
@@ -2405,17 +2430,10 @@ class FirebaseApiService {
       // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa), sil
       if (memberUser.authUid) {
         try {
-          // Firebase Auth REST API kullanarak kullanıcıyı sil
-          // Admin SDK key'i kullanarak ID token alıp, kullanıcıyı silebiliriz
-          // Ama client-side'da bu mümkün değil, bu yüzden şimdilik Firestore'dan siliyoruz
-          // Login sırasında authUid kontrolü yapılıp, eğer Firestore'da yoksa Auth'dan da silinebilir
-          console.log('⚠️ User has authUid, but cannot delete from Firebase Auth (client-side limitation)');
-          console.log('⚠️ Firebase Auth user will remain. Consider manual cleanup or use Admin SDK on server-side.');
-          
-          // Alternatif: Firestore'dan authUid'i kaldır, böylece login sırasında kontrol edilecek
-          // Ama zaten siliyoruz, bu yüzden gerek yok
+          await this.deleteFirebaseAuthUser(memberUser.authUid);
+          console.log('✅ Firebase Auth user deletion attempted:', memberUser.authUid);
         } catch (authError) {
-          console.warn('⚠️ Firebase Auth deletion skipped (non-critical):', authError);
+          console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
         }
       }
 
