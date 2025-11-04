@@ -3,7 +3,7 @@ services:
     name: ilce-sekreterlik
     branch: version1
     rootDir: "sekreterlik-app/client"
-    buildCommand: npm install && npm run build && node scripts/fix-spa-routing.js
+    buildCommand: rm -rf dist node_modules/.vite && npm install && npm run build && node scripts/fix-spa-routing.js
     staticPublishPath: "dist"
     envVars:
       - key: VITE_USE_FIREBASE
