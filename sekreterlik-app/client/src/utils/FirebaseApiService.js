@@ -538,7 +538,13 @@ class FirebaseApiService {
               password: password
             };
           
-            console.log('🔄 Creating automatic user for member (Firestore only):', docId, 'username:', username);
+            console.log('🔄 Creating automatic user for member (Firestore only):', {
+              docId,
+              username: username,
+              password: password,
+              memberDataTc: memberData.tc,
+              memberDataPhone: memberData.phone
+            });
             
             // Sadece Firestore'a kaydet, Firebase Auth'a kaydetme
             // (Firebase Auth'a kaydetme mevcut kullanıcıyı logout eder)
@@ -588,6 +594,10 @@ class FirebaseApiService {
       
       // Kullanıcı bilgilerini ekle (eğer oluşturulduysa)
       if (userCredentials) {
+        console.log('📋 User credentials to return:', {
+          username: userCredentials.username,
+          password: userCredentials.password
+        });
         returnData.userCredentials = userCredentials;
       }
       
