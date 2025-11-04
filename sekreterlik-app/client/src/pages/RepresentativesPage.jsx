@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
+import CryptoJS from 'crypto-js';
 
 const RepresentativesPage = () => {
   const [neighborhoodRepresentatives, setNeighborhoodRepresentatives] = useState([]);
@@ -20,18 +21,50 @@ const RepresentativesPage = () => {
       ]);
       
       // Decrypt TC and phone fields
+      const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security';
+      
+      const forceDecrypt = (encryptedValue) => {
+        if (!encryptedValue || typeof encryptedValue !== 'string') return encryptedValue;
+        if (!encryptedValue.startsWith('U2FsdGVkX1')) return encryptedValue; // Not encrypted
+        
+        try {
+          const bytes = CryptoJS.AES.decrypt(encryptedValue, ENCRYPTION_KEY);
+          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+          if (decrypted && decrypted.trim() !== '') {
+            return decrypted;
+          }
+        } catch (e) {
+          // Decrypt failed, try decryptData
+          const result = decryptData(encryptedValue);
+          if (result && typeof result === 'string' && result !== encryptedValue) {
+            return result;
+          }
+        }
+        return encryptedValue;
+      };
+      
       const decryptedNeighborhoodData = neighborhoodData.map(rep => {
         let decryptedTc = rep.tc;
         let decryptedPhone = rep.phone;
         
         if (rep.tc && typeof rep.tc === 'string') {
           const tcResult = decryptData(rep.tc);
-          decryptedTc = typeof tcResult === 'string' ? tcResult : (tcResult ? String(tcResult) : rep.tc);
+          if (typeof tcResult === 'string' && tcResult.length > 0 && tcResult !== rep.tc) {
+            decryptedTc = tcResult;
+          } else if (rep.tc.startsWith('U2FsdGVkX1')) {
+            // Force decrypt if it looks encrypted
+            decryptedTc = forceDecrypt(rep.tc);
+          }
         }
         
         if (rep.phone && typeof rep.phone === 'string') {
           const phoneResult = decryptData(rep.phone);
-          decryptedPhone = typeof phoneResult === 'string' ? phoneResult : (phoneResult ? String(phoneResult) : rep.phone);
+          if (typeof phoneResult === 'string' && phoneResult.length > 0 && phoneResult !== rep.phone) {
+            decryptedPhone = phoneResult;
+          } else if (rep.phone.startsWith('U2FsdGVkX1')) {
+            // Force decrypt if it looks encrypted
+            decryptedPhone = forceDecrypt(rep.phone);
+          }
         }
         
         return {
@@ -47,12 +80,22 @@ const RepresentativesPage = () => {
         
         if (rep.tc && typeof rep.tc === 'string') {
           const tcResult = decryptData(rep.tc);
-          decryptedTc = typeof tcResult === 'string' ? tcResult : (tcResult ? String(tcResult) : rep.tc);
+          if (typeof tcResult === 'string' && tcResult.length > 0 && tcResult !== rep.tc) {
+            decryptedTc = tcResult;
+          } else if (rep.tc.startsWith('U2FsdGVkX1')) {
+            // Force decrypt if it looks encrypted
+            decryptedTc = forceDecrypt(rep.tc);
+          }
         }
         
         if (rep.phone && typeof rep.phone === 'string') {
           const phoneResult = decryptData(rep.phone);
-          decryptedPhone = typeof phoneResult === 'string' ? phoneResult : (phoneResult ? String(phoneResult) : rep.phone);
+          if (typeof phoneResult === 'string' && phoneResult.length > 0 && phoneResult !== rep.phone) {
+            decryptedPhone = phoneResult;
+          } else if (rep.phone.startsWith('U2FsdGVkX1')) {
+            // Force decrypt if it looks encrypted
+            decryptedPhone = forceDecrypt(rep.phone);
+          }
         }
         
         return {
@@ -86,61 +129,8 @@ const RepresentativesPage = () => {
     rep.phone?.includes(searchTerm)
   );
 
-  const deleteRepresentativesByEncryptedTc = async (encryptedTc1, encryptedTc2) => {
-    try {
-      const [neighborhoodData, villageData] = await Promise.all([
-        ApiService.getNeighborhoodRepresentatives(),
-        ApiService.getVillageRepresentatives()
-      ]);
-      
-      // Find representatives by comparing encrypted TC (before decrypt)
-      const neighborhoodRepToDelete = neighborhoodData.find(rep => {
-        const repTc = rep.tc || '';
-        return repTc === encryptedTc1 || repTc === encryptedTc2;
-      });
-      
-      const villageRepToDelete = villageData.find(rep => {
-        const repTc = rep.tc || '';
-        return repTc === encryptedTc1 || repTc === encryptedTc2;
-      });
-      
-      if (neighborhoodRepToDelete) {
-        console.log('Deleting neighborhood representative:', neighborhoodRepToDelete);
-        await ApiService.deleteNeighborhoodRepresentative(neighborhoodRepToDelete.id);
-        console.log('✅ Neighborhood representative deleted');
-      }
-      
-      if (villageRepToDelete) {
-        console.log('Deleting village representative:', villageRepToDelete);
-        await ApiService.deleteVillageRepresentative(villageRepToDelete.id);
-        console.log('✅ Village representative deleted');
-      }
-      
-      if (!neighborhoodRepToDelete && !villageRepToDelete) {
-        console.log('❌ No representatives found with these encrypted TC numbers');
-      } else {
-        // Refresh data
-        await fetchData();
-      }
-    } catch (error) {
-      console.error('Error deleting representatives:', error);
-    }
-  };
-
   useEffect(() => {
     fetchData();
-    
-    // Auto-delete on page load (one time only)
-    const encryptedTc1 = 'U2FsdGVkX1/6YcL4saOEDBjQNmbPe3YVi6ZTmGH31dY=';
-    const encryptedTc2 = 'U2FsdGVkX1+d/GcVS8sMBJvJPxn2dv8izhL1LzkX1xc=';
-    
-    // Delete representatives after 2 seconds
-    const timer = setTimeout(async () => {
-      await deleteRepresentativesByEncryptedTc(encryptedTc1, encryptedTc2);
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
