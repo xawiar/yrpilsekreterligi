@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sekreterlik-v3-force-refresh-2025';
+const CACHE_NAME = 'sekreterlik-v4-archive-fix-2025';
 // Vite geliştirme ortamında sabit bundle yolları yok; yalnızca güvenli, mevcut dosyaları önbelleğe al
 const urlsToCache = [
   '/',
@@ -37,8 +37,10 @@ self.addEventListener('fetch', (event) => {
   const url = event.request.url;
   
   // Skip localhost:5000 requests - backend API is not available in production
-  if (url.includes('localhost:5000') || url.includes('/api/health')) {
+  if (url.includes('localhost:5000') || url.includes('/api/health') || url.includes('/api/archive/documents') || url.includes('/api/district-officials') || url.includes('/api/visits/counts') || url.includes('/api/districts') || url.includes('/deputy-inspectors')) {
     // Don't intercept these requests - let them fail silently
+    // Return a dummy response to prevent errors
+    event.respondWith(new Response('', { status: 200, statusText: 'OK' }));
     return;
   }
   
