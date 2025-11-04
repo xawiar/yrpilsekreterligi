@@ -2094,16 +2094,28 @@ class ApiService {
 
   // Position-based permissions
   static async getAllPermissions() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getAllPermissions();
+    }
+
     const res = await fetch(`${API_BASE_URL}/permissions`, { headers: this.getAuthHeaders() });
     return res.json();
   }
 
   static async getPermissionsForPosition(position) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getPermissionsForPosition(position);
+    }
+
     const res = await fetch(`${API_BASE_URL}/permissions/${encodeURIComponent(position)}`, { headers: this.getAuthHeaders() });
     return res.json();
   }
 
   static async setPermissionsForPosition(position, permissions) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.setPermissionsForPosition(position, permissions);
+    }
+
     const res = await fetch(`${API_BASE_URL}/permissions/${encodeURIComponent(position)}`, {
       method: 'POST',
       headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },

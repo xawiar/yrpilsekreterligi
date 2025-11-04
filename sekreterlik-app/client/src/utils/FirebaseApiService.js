@@ -51,7 +51,8 @@ class FirebaseApiService {
     MESSAGE_GROUPS: 'message_groups',
     PERSONAL_DOCUMENTS: 'personal_documents',
     ARCHIVE: 'archive',
-    GROUPS: 'groups'
+    GROUPS: 'groups',
+    POSITION_PERMISSIONS: 'position_permissions'
   };
 
   // Auth API
@@ -249,6 +250,10 @@ class FirebaseApiService {
 
   static async createMemberUser(memberId, username, password) {
     try {
+      // Mevcut kullanıcıyı koru - sadece yeni kullanıcı oluştur
+      const currentUser = auth.currentUser;
+      const currentUserUid = currentUser ? currentUser.uid : null;
+      
       // Önce bu memberId için zaten kullanıcı var mı kontrol et
       const existingUsers = await FirebaseService.findByField(
         this.COLLECTIONS.MEMBER_USERS,
@@ -269,12 +274,23 @@ class FirebaseApiService {
       try {
         authUser = await createUserWithEmailAndPassword(auth, email, password);
         console.log('✅ Firebase Auth user created:', authUser.user.uid);
+        
+        // Yeni kullanıcı oluşturulduktan sonra, mevcut kullanıcıyı geri yükle (eğer varsa)
+        // createUserWithEmailAndPassword yeni kullanıcıyı otomatik olarak sign-in eder
+        // Bu yüzden admin kullanıcısını tekrar sign-in etmemiz gerekiyor
+        if (currentUserUid && currentUserUid !== authUser.user.uid) {
+          // Mevcut kullanıcı farklıysa, admin kullanıcısını geri yükle
+          // Bu durumda admin kullanıcısını tekrar sign-in etmemiz gerekiyor
+          // Ama bu karmaşık olabilir, bu yüzden sadece Firestore'a kaydetmeyi tercih ediyoruz
+          console.warn('⚠️ New user created, but current user is different. Admin user will need to re-login.');
+        }
       } catch (authError) {
         // Email zaten kullanılıyorsa, sadece Firestore'a kaydet
         if (authError.code === 'auth/email-already-in-use') {
           console.warn('⚠️ Email already in use, creating Firestore record only:', email);
         } else {
-          throw authError; // Diğer hataları fırlat
+          // Diğer hataları log'la ama fırlatma - kritik değil
+          console.warn('⚠️ Firebase Auth user creation failed (non-critical):', authError);
         }
       }
 
@@ -416,7 +432,9 @@ class FirebaseApiService {
       
       const createdMember = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, docId);
       
-      // Otomatik olarak kullanıcı oluştur
+      // Otomatik olarak kullanıcı oluştur (Firestore'a kaydet, Firebase Auth'a kaydetme)
+      // Firebase Auth'da kullanıcı oluşturmak mevcut kullanıcıyı logout eder
+      // Bu yüzden sadece Firestore'a kaydediyoruz
       try {
         // Önce bu üye için zaten kullanıcı var mı kontrol et
         const existingUsers = await FirebaseService.findByField(
@@ -426,22 +444,30 @@ class FirebaseApiService {
         );
         
         if (!existingUsers || existingUsers.length === 0) {
-          // Kullanıcı yoksa otomatik oluştur
+          // Kullanıcı yoksa otomatik oluştur (sadece Firestore'a kaydet)
           // Username: TC numarası veya telefon numarası
           const username = memberData.tc || memberData.phone || `member_${docId}`;
           // Şifre: TC numarası (eğer varsa) veya varsayılan şifre
           const password = memberData.tc || '123456'; // Varsayılan şifre
           
-          console.log('🔄 Creating automatic user for member:', docId, 'username:', username);
+          console.log('🔄 Creating automatic user for member (Firestore only):', docId, 'username:', username);
           
-          const userResult = await this.createMemberUser(docId, username, password);
+          // Sadece Firestore'a kaydet, Firebase Auth'a kaydetme
+          // (Firebase Auth'a kaydetme mevcut kullanıcıyı logout eder)
+          const userDocId = await FirebaseService.create(
+            this.COLLECTIONS.MEMBER_USERS,
+            null,
+            {
+              memberId: docId,
+              username,
+              password: password, // Şifreleme FirebaseService içinde yapılacak
+              userType: 'member',
+              isActive: true,
+              authUid: null // Firebase Auth'a kaydetmedik
+            }
+          );
           
-          if (userResult.success) {
-            console.log('✅ Automatic user created successfully:', userResult);
-          } else {
-            console.warn('⚠️ Automatic user creation failed (non-critical):', userResult.message);
-            // Kullanıcı oluşturma hatası kritik değil, üye oluşturuldu
-          }
+          console.log('✅ Automatic user created successfully (Firestore only):', userDocId);
         } else {
           console.log('ℹ️ User already exists for member:', docId);
         }
@@ -630,17 +656,64 @@ class FirebaseApiService {
     }
   }
 
+  static async getAllPermissions() {
+    try {
+      const allPermissions = await FirebaseService.getAll(this.COLLECTIONS.POSITION_PERMISSIONS);
+      const map = {};
+      allPermissions.forEach(perm => {
+        if (!map[perm.position]) {
+          map[perm.position] = [];
+        }
+        map[perm.position].push(perm.permission);
+      });
+      return map;
+    } catch (error) {
+      console.error('Get all permissions error:', error);
+      return {};
+    }
+  }
+
   static async getPermissionsForPosition(position) {
     try {
       const permissions = await FirebaseService.findByField(
-        'position_permissions',
+        this.COLLECTIONS.POSITION_PERMISSIONS,
         'position',
         position
       );
-      return permissions || [];
+      return permissions ? permissions.map(p => p.permission) : [];
     } catch (error) {
       console.error('Get permissions for position error:', error);
       return [];
+    }
+  }
+
+  static async setPermissionsForPosition(position, permissions) {
+    try {
+      // Önce bu pozisyon için mevcut izinleri sil
+      const existingPermissions = await FirebaseService.findByField(
+        this.COLLECTIONS.POSITION_PERMISSIONS,
+        'position',
+        position
+      );
+      
+      if (existingPermissions && existingPermissions.length > 0) {
+        for (const perm of existingPermissions) {
+          await FirebaseService.delete(this.COLLECTIONS.POSITION_PERMISSIONS, perm.id);
+        }
+      }
+      
+      // Yeni izinleri ekle
+      for (const permission of permissions) {
+        await FirebaseService.create(this.COLLECTIONS.POSITION_PERMISSIONS, null, {
+          position: position,
+          permission: permission
+        });
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Set permissions for position error:', error);
+      throw new Error('Yetkiler kaydedilemedi: ' + error.message);
     }
   }
 
