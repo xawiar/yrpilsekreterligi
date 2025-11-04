@@ -9,6 +9,7 @@ import {
   EmailAuthProvider
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { decryptData } from '../utils/crypto';
 
 /**
  * Firebase tabanlı API Service
@@ -64,10 +65,85 @@ class FirebaseApiService {
       
       console.log('Firebase login attempt:', { username, email });
       
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      let userCredential = null;
+      let user = null;
       
-      console.log('Firebase login successful:', user.uid);
+      try {
+        // Önce Firebase Auth'da kullanıcıyı bulmaya çalış
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        user = userCredential.user;
+        console.log('Firebase login successful:', user.uid);
+      } catch (authError) {
+        // Firebase Auth'da kullanıcı bulunamadı veya şifre hatalı
+        console.log('Firebase Auth login failed, checking Firestore:', authError.code);
+        
+        // Eğer kullanıcı bulunamadıysa, Firestore'dan kontrol et
+        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
+          // Firestore'dan kullanıcıyı bul
+          const memberUsers = await FirebaseService.findByField(
+            this.COLLECTIONS.MEMBER_USERS,
+            'username',
+            username
+          );
+          
+          if (memberUsers && memberUsers.length > 0) {
+            const memberUser = memberUsers[0];
+            // FirebaseService.findByField zaten decrypt ediyor (decrypt = true default)
+            // Ama password field'ı SENSITIVE_FIELDS içinde olduğu için decrypt edilmiş olmalı
+            // Eğer hala encrypted görünüyorsa, manuel decrypt et
+            let decryptedPassword = memberUser.password;
+            
+            // Eğer password şifrelenmiş görünüyorsa (U2FsdGVkX1 ile başlıyorsa), decrypt et
+            if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
+              decryptedPassword = decryptData(decryptedPassword);
+            }
+            
+            // Şifre doğru mu kontrol et (decrypt edilmiş password veya orijinal password ile karşılaştır)
+            if (decryptedPassword === password || memberUser.password === password) {
+              // Şifre doğru, Firebase Auth'da kullanıcı oluştur ve giriş yap
+              console.log('Password correct, creating Firebase Auth user for member:', memberUser.id);
+              
+              try {
+                // Firebase Auth'da kullanıcı oluştur
+                userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                user = userCredential.user;
+                
+                // Firestore'daki kullanıcıyı güncelle (authUid ekle)
+                await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                  authUid: user.uid
+                });
+                
+                console.log('Firebase Auth user created for member:', user.uid);
+              } catch (createError) {
+                // Email zaten kullanılıyorsa, giriş yapmaya çalış
+                if (createError.code === 'auth/email-already-in-use') {
+                  console.log('Email already in use, trying to sign in:', email);
+                  userCredential = await signInWithEmailAndPassword(auth, email, password);
+                  user = userCredential.user;
+                  
+                  // Firestore'daki kullanıcıyı güncelle (authUid ekle)
+                  await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                    authUid: user.uid
+                  });
+                  
+                  console.log('Firebase Auth sign in successful for member:', user.uid);
+                } else {
+                  throw createError;
+                }
+              }
+            } else {
+              // Şifre hatalı
+              throw new Error('Şifre hatalı');
+            }
+          } else {
+            // Firestore'da da kullanıcı bulunamadı
+            throw authError; // Orijinal hatayı fırlat
+          }
+        } else {
+          // Diğer hatalar (wrong-password, invalid-email, vb.)
+          throw authError;
+        }
+      }
 
       // User bilgisini hazırla (varsayılan olarak admin)
       const userData = {
