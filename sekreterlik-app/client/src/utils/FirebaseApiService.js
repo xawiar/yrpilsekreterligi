@@ -235,9 +235,34 @@ class FirebaseApiService {
 
   static async createMemberUser(memberId, username, password) {
     try {
+      // Önce bu memberId için zaten kullanıcı var mı kontrol et
+      const existingUsers = await FirebaseService.findByField(
+        this.COLLECTIONS.MEMBER_USERS,
+        'memberId',
+        memberId
+      );
+      
+      if (existingUsers && existingUsers.length > 0) {
+        console.log('ℹ️ User already exists for member:', memberId);
+        return { success: true, id: existingUsers[0].id, message: 'Kullanıcı zaten mevcut' };
+      }
+      
       // Firebase Auth'da kullanıcı oluştur
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
-      await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Email zaten kullanılıyorsa hata fırlatma, sadece Firestore'a kaydet
+      let authUser = null;
+      try {
+        authUser = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('✅ Firebase Auth user created:', authUser.user.uid);
+      } catch (authError) {
+        // Email zaten kullanılıyorsa, sadece Firestore'a kaydet
+        if (authError.code === 'auth/email-already-in-use') {
+          console.warn('⚠️ Email already in use, creating Firestore record only:', email);
+        } else {
+          throw authError; // Diğer hataları fırlat
+        }
+      }
 
       // Firestore'a kaydet
       const docId = await FirebaseService.create(
@@ -248,14 +273,15 @@ class FirebaseApiService {
           username,
           password: password, // Şifreleme FirebaseService içinde yapılacak
           userType: 'member',
-          isActive: true
+          isActive: true,
+          authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
         }
       );
 
       return { success: true, id: docId, message: 'Kullanıcı oluşturuldu' };
     } catch (error) {
       console.error('Create member user error:', error);
-      return { success: false, message: 'Kullanıcı oluşturulurken hata oluştu' };
+      return { success: false, message: error.message || 'Kullanıcı oluşturulurken hata oluştu' };
     }
   }
 
@@ -375,6 +401,40 @@ class FirebaseApiService {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const createdMember = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, docId);
+      
+      // Otomatik olarak kullanıcı oluştur
+      try {
+        // Önce bu üye için zaten kullanıcı var mı kontrol et
+        const existingUsers = await FirebaseService.findByField(
+          this.COLLECTIONS.MEMBER_USERS,
+          'memberId',
+          docId
+        );
+        
+        if (!existingUsers || existingUsers.length === 0) {
+          // Kullanıcı yoksa otomatik oluştur
+          // Username: TC numarası veya telefon numarası
+          const username = memberData.tc || memberData.phone || `member_${docId}`;
+          // Şifre: TC numarası (eğer varsa) veya varsayılan şifre
+          const password = memberData.tc || '123456'; // Varsayılan şifre
+          
+          console.log('🔄 Creating automatic user for member:', docId, 'username:', username);
+          
+          const userResult = await this.createMemberUser(docId, username, password);
+          
+          if (userResult.success) {
+            console.log('✅ Automatic user created successfully:', userResult);
+          } else {
+            console.warn('⚠️ Automatic user creation failed (non-critical):', userResult.message);
+            // Kullanıcı oluşturma hatası kritik değil, üye oluşturuldu
+          }
+        } else {
+          console.log('ℹ️ User already exists for member:', docId);
+        }
+      } catch (userError) {
+        // Kullanıcı oluşturma hatası kritik değil, üye zaten oluşturuldu
+        console.warn('⚠️ Automatic user creation error (non-critical):', userError);
+      }
       
       // Üye objesini döndür (id ile birlikte)
       if (createdMember) {
