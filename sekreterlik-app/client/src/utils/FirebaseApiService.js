@@ -431,41 +431,52 @@ class FirebaseApiService {
       }
 
       const updateData = { username };
+      const oldUsername = memberUser.username;
+      const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
+      const oldEmail = oldUsername.includes('@') ? oldUsername : `${oldUsername}@ilsekreterlik.local`;
       
-      // Şifre güncelleniyorsa, Firebase Auth'da da güncelle
+      // Username değiştiyse, email değişmiş olabilir
+      const usernameChanged = oldUsername !== username;
+      
+      // Şifre güncelleniyorsa
       if (password && password.trim()) {
         updateData.password = password;
-        
-        // Eğer Firebase Auth'da kullanıcı varsa, şifreyi güncelle
-        if (memberUser.authUid) {
-          try {
-            // Admin olarak şifreyi güncellemek için Firebase Admin SDK kullanmalıyız
-            // Ama client-side'da bunu yapamayız, bu yüzden kullanıcı login olduğunda güncelleme yapabiliriz
-            // Şimdilik sadece Firestore'u güncelleyelim
-            // İleride backend'de bir endpoint ile bu işlemi yapabiliriz
-            
-            // Alternatif: Kullanıcıyı yeniden oluştur (email zaten varsa hata vermez)
-            const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
-            
-            // Not: Client-side'dan başka bir kullanıcının şifresini direkt güncelleyemeyiz
-            // Bu yüzden şimdilik sadece Firestore'u güncelliyoruz
-            // Kullanıcı login olduğunda, şifre kontrolü Firestore'dan yapılacak
-            console.log('🔄 Updating password in Firestore for member user:', id);
-            console.log('⚠️ Note: Firebase Auth password will be updated on next login');
-          } catch (authError) {
-            console.warn('⚠️ Firebase Auth password update skipped (non-critical):', authError);
-            // Firestore güncellemesi devam edecek
+      }
+      
+      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa)
+      if (memberUser.authUid) {
+        try {
+          // Client-side'dan başka bir kullanıcının şifresini/email'ini direkt güncelleyemeyiz
+          // Bu yüzden şimdilik sadece Firestore'u güncelliyoruz
+          // Login sırasında şifre/username kontrolü yapılıp, Firebase Auth'da güncelleme yapılacak
+          console.log('🔄 Updating member user in Firestore:', {
+            id,
+            oldUsername,
+            newUsername: username,
+            usernameChanged,
+            passwordUpdated: !!(password && password.trim()),
+            authUid: memberUser.authUid
+          });
+          console.log('⚠️ Note: Firebase Auth will be updated on next login if password/username changed');
+          
+          // Eğer username değiştiyse, authUid'i temizle ki login sırasında yeni email ile oluşturulsun
+          if (usernameChanged) {
+            console.log('⚠️ Username changed, clearing authUid to force re-creation on next login');
+            updateData.authUid = null; // Login sırasında yeni email ile oluşturulacak
           }
-        } else {
-          // Auth UID yoksa, kullanıcı ilk login olduğunda oluşturulacak
-          console.log('ℹ️ No authUid found, password will be used on first login');
+        } catch (authError) {
+          console.warn('⚠️ Firebase Auth update preparation failed (non-critical):', authError);
+          // Firestore güncellemesi devam edecek
         }
+      } else {
+        // Auth UID yoksa, kullanıcı ilk login olduğunda oluşturulacak
+        console.log('ℹ️ No authUid found, user will be created in Firebase Auth on first login');
       }
 
       // Firestore'u güncelle
       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData);
       
-      console.log('✅ Member user updated successfully:', id);
+      console.log('✅ Member user updated successfully in Firestore:', id);
       return { success: true, message: 'Kullanıcı güncellendi' };
     } catch (error) {
       console.error('Update member user error:', error);
@@ -2249,11 +2260,38 @@ class FirebaseApiService {
   // Delete Member User
   static async deleteMemberUser(id) {
     try {
+      // Önce Firestore'dan kullanıcıyı al
+      const memberUser = await FirebaseService.getById(this.COLLECTIONS.MEMBER_USERS, id);
+      
+      if (!memberUser) {
+        return { success: false, message: 'Kullanıcı bulunamadı' };
+      }
+
+      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa), sil
+      if (memberUser.authUid) {
+        try {
+          // Firebase Auth REST API kullanarak kullanıcıyı sil
+          // Admin SDK key'i kullanarak ID token alıp, kullanıcıyı silebiliriz
+          // Ama client-side'da bu mümkün değil, bu yüzden şimdilik Firestore'dan siliyoruz
+          // Login sırasında authUid kontrolü yapılıp, eğer Firestore'da yoksa Auth'dan da silinebilir
+          console.log('⚠️ User has authUid, but cannot delete from Firebase Auth (client-side limitation)');
+          console.log('⚠️ Firebase Auth user will remain. Consider manual cleanup or use Admin SDK on server-side.');
+          
+          // Alternatif: Firestore'dan authUid'i kaldır, böylece login sırasında kontrol edilecek
+          // Ama zaten siliyoruz, bu yüzden gerek yok
+        } catch (authError) {
+          console.warn('⚠️ Firebase Auth deletion skipped (non-critical):', authError);
+        }
+      }
+
+      // Firestore'dan sil
       await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, id);
+      
+      console.log('✅ Member user deleted from Firestore:', id);
       return { success: true, message: 'Kullanıcı silindi' };
     } catch (error) {
       console.error('Delete member user error:', error);
-      throw new Error('Kullanıcı silinirken hata oluştu');
+      throw new Error('Kullanıcı silinirken hata oluştu: ' + error.message);
     }
   }
 
