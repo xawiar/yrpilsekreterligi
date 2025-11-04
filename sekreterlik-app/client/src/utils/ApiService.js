@@ -576,16 +576,27 @@ class ApiService {
 
   // Document Archive API
   static async getDocuments() {
+    // Debug: Firebase kontrolü - ZORUNLU
+    console.error('[getDocuments] Firebase check:', {
+      USE_FIREBASE,
+      VITE_USE_FIREBASE: import.meta.env.VITE_USE_FIREBASE,
+      HOSTNAME: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+    });
+    
     if (USE_FIREBASE) {
       try {
+        console.error('[getDocuments] Using Firebase - fetching from ARCHIVE collection');
         // Firebase'de arşiv belgeleri için ARCHIVE collection'ını kullan
         const documents = await FirebaseService.getAll(FirebaseApiService.COLLECTIONS.ARCHIVE);
+        console.error('[getDocuments] Firebase documents retrieved:', documents?.length || 0);
         return documents || [];
       } catch (error) {
-        console.error('Get documents error:', error);
+        console.error('[getDocuments] Firebase error:', error);
         return [];
       }
     }
+    
+    console.error('[getDocuments] WARNING: Using localhost:5000 (USE_FIREBASE is false)');
     const response = await fetch(`${API_BASE_URL}/archive/documents`);
     if (!response.ok) {
       throw new Error('Belgeler getirilirken hata oluştu');
