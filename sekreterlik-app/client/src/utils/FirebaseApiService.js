@@ -511,6 +511,8 @@ class FirebaseApiService {
       // Otomatik olarak kullanıcı oluştur (Firestore'a kaydet, Firebase Auth'a kaydetme)
       // Firebase Auth'da kullanıcı oluşturmak mevcut kullanıcıyı logout eder
       // Bu yüzden sadece Firestore'a kaydediyoruz
+      let userCredentials = null; // try bloğunun dışında tanımla
+      
       try {
         // Önce bu üye için zaten kullanıcı var mı kontrol et
         const existingUsers = await FirebaseService.findByField(
@@ -518,8 +520,6 @@ class FirebaseApiService {
           'memberId',
           docId
         );
-        
-        let userCredentials = null;
         
         if (!existingUsers || existingUsers.length === 0) {
           // Kullanıcı yoksa otomatik oluştur (sadece Firestore'a kaydet)
