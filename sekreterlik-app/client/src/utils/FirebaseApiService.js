@@ -189,7 +189,20 @@ class FirebaseApiService {
   static async getAdminInfo() {
     try {
       const admin = await FirebaseService.getById(this.COLLECTIONS.ADMIN, 'main');
-      return admin || { success: false, message: 'Admin bulunamadı' };
+      if (admin && admin.id) {
+        // Admin bulundu - beklenen format: { success: true, admin: {...} }
+        return { 
+          success: true, 
+          admin: {
+            username: admin.username || 'admin',
+            created_at: admin.createdAt || admin.created_at,
+            updated_at: admin.updatedAt || admin.updated_at
+          }
+        };
+      } else {
+        // Admin bulunamadı
+        return { success: false, message: 'Admin bulunamadı' };
+      }
     } catch (error) {
       console.error('Get admin info error:', error);
       return { success: false, message: 'Admin bilgileri alınırken hata oluştu' };
