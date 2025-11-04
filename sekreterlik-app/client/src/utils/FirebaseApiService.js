@@ -927,6 +927,28 @@ class FirebaseApiService {
   static async restoreMember(id) {
     try {
       await FirebaseService.update(this.COLLECTIONS.MEMBERS, id, { archived: false });
+      
+      // Üye kullanıcısını aktif yap (eğer varsa)
+      try {
+        const memberUsers = await FirebaseService.findByField(
+          this.COLLECTIONS.MEMBER_USERS,
+          'memberId',
+          id
+        );
+        
+        if (memberUsers && memberUsers.length > 0) {
+          for (const memberUser of memberUsers) {
+            await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+              isActive: true
+            });
+            console.log('✅ Member user activated:', memberUser.id);
+          }
+        }
+      } catch (userError) {
+        console.warn('⚠️ Error activating member user (non-critical):', userError);
+        // Devam et, member user aktif yapma hatası kritik değil
+      }
+      
       return { success: true, message: 'Üye geri yüklendi' };
     } catch (error) {
       console.error('Restore member error:', error);
