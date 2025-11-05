@@ -705,7 +705,7 @@ const ObserversPage = () => {
                         {neighborhoods
                           .filter(neighborhood => {
                             // İlçe kontrolü
-                            if (!String(neighborhood.district_id) === String(formData.district_id)) return false;
+                            if (String(neighborhood.district_id) !== String(formData.district_id)) return false;
                             // Eğer belde seçilmişse, belde kontrolü de yap
                             if (formData.town_id) {
                               return String(neighborhood.town_id || '') === String(formData.town_id);
@@ -734,7 +734,7 @@ const ObserversPage = () => {
                         {villages
                           .filter(village => {
                             // İlçe kontrolü
-                            if (!String(village.district_id) === String(formData.district_id)) return false;
+                            if (String(village.district_id) !== String(formData.district_id)) return false;
                             // Eğer belde seçilmişse, belde kontrolü de yap
                             if (formData.town_id) {
                               return String(village.town_id || '') === String(formData.town_id);
