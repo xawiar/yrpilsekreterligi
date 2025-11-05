@@ -51,7 +51,7 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'llama-3.1-70b-versatile', // veya 'mixtral-8x7b-32768' - ücretsiz ve hızlı
+          model: 'llama-3.3-70b-versatile', // Güncel model - hızlı ve ücretsiz
           messages: messages,
           temperature: 0.7,
           max_tokens: 1024,
