@@ -190,10 +190,44 @@ const TownDetailsPage = () => {
         </div>
       </div>
 
+      {/* Yönetim Kurulu */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Yönetim Kurulu</h3>
+        
+        {managementMembers.length === 0 ? (
+          <p className="text-gray-500">Henüz yönetim kurulu üyesi eklenmemiş</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Görev</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bölge</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {managementMembers.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{member.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.tc}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.position || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.region || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.phone || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* İstatistikler */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Belde Bilgileri</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-indigo-600">{officials.length}</div>
             <div className="text-sm text-gray-500">Yönetim Sayısı</div>
@@ -203,8 +237,12 @@ const TownDetailsPage = () => {
             <div className="text-sm text-gray-500">Müfettiş Yardımcısı</div>
           </div>
           <div className="text-center">
+            <div className="text-2xl font-bold text-indigo-600">{managementMembers.length}</div>
+            <div className="text-sm text-gray-500">Yönetim Kurulu Üyesi</div>
+          </div>
+          <div className="text-center">
             <div className="text-2xl font-bold text-indigo-600">
-              {new Date(town.created_at).toLocaleDateString('tr-TR')}
+              {town.created_at ? new Date(town.created_at).toLocaleDateString('tr-TR') : '-'}
             </div>
             <div className="text-sm text-gray-500">Oluşturulma Tarihi</div>
           </div>
@@ -213,12 +251,6 @@ const TownDetailsPage = () => {
 
       {/* Aksiyon Butonları */}
       <div className="flex justify-center space-x-4">
-        <Link
-          to={`/towns/${town.id}/members`}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Yönetim Kurulu
-        </Link>
         <Link
           to="/settings"
           className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors"
