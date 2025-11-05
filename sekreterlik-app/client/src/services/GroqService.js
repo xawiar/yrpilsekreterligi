@@ -188,6 +188,153 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
     context.push(`Üye kaydı için: Ayarlar > Üye Ekle veya Üyeler sayfasından yeni üye eklenebilir.`);
     context.push(`Üye kaydı için gerekli bilgiler: Ad Soyad, TC Kimlik No, Telefon, Adres, Bölge, Görev.`);
     
+    // TOPLANTI İSTATİSTİKLERİ (TARİH BAZLI)
+    if (siteData.meetings && siteData.meetings.length > 0) {
+      const activeMeetings = siteData.meetings.filter(m => !m.archived);
+      context.push(`\n=== TOPLANTI İSTATİSTİKLERİ ===`);
+      context.push(`Toplam ${activeMeetings.length} aktif toplantı yapılmış.`);
+      
+      // Ay bazlı analiz
+      const meetingsByMonth = {};
+      activeMeetings.forEach(meeting => {
+        if (meeting.date) {
+          try {
+            // Tarih formatı: DD.MM.YYYY veya YYYY-MM-DD
+            let dateObj;
+            if (meeting.date.includes('.')) {
+              const [day, month, year] = meeting.date.split('.');
+              dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            } else {
+              dateObj = new Date(meeting.date);
+            }
+            
+            const monthKey = dateObj.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+            if (!meetingsByMonth[monthKey]) {
+              meetingsByMonth[monthKey] = 0;
+            }
+            meetingsByMonth[monthKey]++;
+          } catch (e) {
+            // Tarih parse edilemezse atla
+          }
+        }
+      });
+      
+      // Ay bazlı toplantı sayıları
+      Object.entries(meetingsByMonth).forEach(([month, count]) => {
+        context.push(`${month}: ${count} toplantı`);
+      });
+    }
+    
+    // ETKİNLİK İSTATİSTİKLERİ (TARİH BAZLI)
+    if (siteData.events && siteData.events.length > 0) {
+      const activeEvents = siteData.events.filter(e => !e.archived);
+      context.push(`\n=== ETKİNLİK İSTATİSTİKLERİ ===`);
+      context.push(`Toplam ${activeEvents.length} aktif etkinlik yapılmış.`);
+      
+      // Ay bazlı analiz
+      const eventsByMonth = {};
+      activeEvents.forEach(event => {
+        if (event.date) {
+          try {
+            let dateObj;
+            if (event.date.includes('.')) {
+              const [day, month, year] = event.date.split('.');
+              dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            } else {
+              dateObj = new Date(event.date);
+            }
+            
+            const monthKey = dateObj.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+            if (!eventsByMonth[monthKey]) {
+              eventsByMonth[monthKey] = 0;
+            }
+            eventsByMonth[monthKey]++;
+          } catch (e) {
+            // Tarih parse edilemezse atla
+          }
+        }
+      });
+      
+      // Ay bazlı etkinlik sayıları
+      Object.entries(eventsByMonth).forEach(([month, count]) => {
+        context.push(`${month}: ${count} etkinlik`);
+      });
+    }
+    
+    // MAHALLE ZİYARET SAYILARI
+    if (siteData.neighborhoodVisitCounts && siteData.neighborhoodVisitCounts.length > 0) {
+      context.push(`\n=== MAHALLE ZİYARET SAYILARI ===`);
+      siteData.neighborhoodVisitCounts.forEach(visit => {
+        const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(visit.neighborhood_id));
+        const info = [];
+        if (neighborhood) info.push(`Mahalle: ${neighborhood.name}`);
+        if (visit.visit_count !== undefined) info.push(`Ziyaret Sayısı: ${visit.visit_count}`);
+        if (info.length > 0) {
+          context.push(info.join(' | '));
+        }
+      });
+    }
+    
+    // KÖY ZİYARET SAYILARI
+    if (siteData.villageVisitCounts && siteData.villageVisitCounts.length > 0) {
+      context.push(`\n=== KÖY ZİYARET SAYILARI ===`);
+      siteData.villageVisitCounts.forEach(visit => {
+        const village = siteData.villages?.find(v => String(v.id) === String(visit.village_id));
+        const info = [];
+        if (village) info.push(`Köy: ${village.name}`);
+        if (visit.visit_count !== undefined) info.push(`Ziyaret Sayısı: ${visit.visit_count}`);
+        if (info.length > 0) {
+          context.push(info.join(' | '));
+        }
+      });
+    }
+    
+    // TEMSİLCİSİ OLMAYAN MAHALLELER
+    if (siteData.neighborhoods && siteData.neighborhoods.length > 0) {
+      const neighborhoodsWithReps = new Set(
+        (siteData.neighborhoodRepresentatives || [])
+          .map(rep => String(rep.neighborhood_id))
+      );
+      const neighborhoodsWithoutReps = siteData.neighborhoods.filter(n => 
+        !neighborhoodsWithReps.has(String(n.id))
+      );
+      
+      if (neighborhoodsWithoutReps.length > 0) {
+        context.push(`\n=== TEMSİLCİSİ OLMAYAN MAHALLELER ===`);
+        context.push(`Toplam ${neighborhoodsWithoutReps.length} mahallenin temsilcisi yok:`);
+        neighborhoodsWithoutReps.forEach(neighborhood => {
+          const district = siteData.districts?.find(d => String(d.id) === String(neighborhood.district_id));
+          const info = [];
+          info.push(`Mahalle: ${neighborhood.name}`);
+          if (district) info.push(`İlçe: ${district.name}`);
+          context.push(info.join(' | '));
+        });
+      }
+    }
+    
+    // TEMSİLCİSİ OLMAYAN KÖYLER
+    if (siteData.villages && siteData.villages.length > 0) {
+      const villagesWithReps = new Set(
+        (siteData.villageRepresentatives || [])
+          .map(rep => String(rep.village_id))
+      );
+      const villagesWithoutReps = siteData.villages.filter(v => 
+        !villagesWithReps.has(String(v.id))
+      );
+      
+      if (villagesWithoutReps.length > 0) {
+        context.push(`\n=== TEMSİLCİSİ OLMAYAN KÖYLER ===`);
+        context.push(`Toplam ${villagesWithoutReps.length} köyün temsilcisi yok:`);
+        villagesWithoutReps.forEach(village => {
+          const district = siteData.districts?.find(d => String(d.id) === String(village.district_id));
+          const info = [];
+          info.push(`Köy: ${village.name}`);
+          if (district) info.push(`İlçe: ${district.name}`);
+          context.push(info.join(' | '));
+        });
+      }
+    }
+    
     // İLÇE YÖNETİMİ (BAŞKAN VE MÜFETTİŞLER)
     if (siteData.districtOfficials && siteData.districtOfficials.length > 0) {
       context.push(`\n=== İLÇE YÖNETİMİ ===`);
@@ -371,18 +518,20 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
   }
 
   /**
-   * Üye bilgilerini context'e ekle (detaylı arama)
+   * Üye bilgilerini context'e ekle (detaylı arama - tüm üye kartı bilgileri)
    * @param {Array} members - Üye listesi
    * @param {string} searchTerm - Arama terimi
-   * @param {Array} meetings - Toplantı listesi (yoklama için)
+   * @param {Object} siteData - Tüm site verileri (meetings, representatives, supervisors, observers vb.)
    * @returns {Array<string>} Context array'i
    */
-  static buildMemberContext(members, searchTerm = '', meetings = []) {
+  static buildMemberContext(members, searchTerm = '', siteData = {}) {
     const context = [];
     
     if (!searchTerm || !members || members.length === 0) {
       return context;
     }
+    
+    const meetings = siteData.meetings || [];
     
     // Üye arama (isim, TC, telefon ile)
     const searchLower = searchTerm.toLowerCase();
@@ -394,18 +543,28 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
     });
     
     if (matchingMembers.length > 0) {
-      matchingMembers.slice(0, 5).forEach(member => {
-        const info = [];
-        info.push(`Üye: ${member.name || 'İsimsiz'}`);
-        if (member.tc) info.push(`TC: ${member.tc}`);
-        if (member.phone) info.push(`Telefon: ${member.phone}`);
-        if (member.region) info.push(`Bölge: ${member.region}`);
-        if (member.position) info.push(`Görev: ${member.position}`);
-        if (member.address) info.push(`Adres: ${member.address}`);
+      matchingMembers.slice(0, 3).forEach(member => {
+        const memberId = String(member.id);
         
-        // Toplantı yoklama bilgisi
+        // ÜYE KARTI BİLGİLERİ (TÜM DETAYLAR)
+        context.push(`\n=== ÜYE KARTI BİLGİLERİ: ${member.name || 'İsimsiz'} ===`);
+        
+        // Temel Bilgiler
+        const basicInfo = [];
+        if (member.name) basicInfo.push(`Ad Soyad: ${member.name}`);
+        if (member.tc) basicInfo.push(`TC Kimlik No: ${member.tc}`);
+        if (member.phone) basicInfo.push(`Telefon: ${member.phone}`);
+        if (member.address) basicInfo.push(`Adres: ${member.address}`);
+        if (member.region) basicInfo.push(`Bölge: ${member.region}`);
+        if (member.position) basicInfo.push(`Görev: ${member.position}`);
+        if (member.district) basicInfo.push(`İlçe: ${member.district}`);
+        if (member.notes) basicInfo.push(`Notlar: ${member.notes}`);
+        if (basicInfo.length > 0) {
+          context.push(basicInfo.join(' | '));
+        }
+        
+        // Toplantı Yoklama Bilgisi
         if (meetings && meetings.length > 0) {
-          const memberId = String(member.id);
           const memberMeetings = meetings.filter(m => {
             if (!m.attendees) return false;
             return m.attendees.some(a => String(a.memberId) === memberId);
@@ -417,7 +576,22 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
               return attendee && attendee.attended === true;
             }).length;
             const notAttended = memberMeetings.length - attended;
-            info.push(`Toplantı katılım: ${attended} toplantıya katıldı, ${notAttended} toplantıya katılmadı`);
+            const attendanceRate = Math.round((attended / memberMeetings.length) * 100);
+            
+            context.push(`Toplantı İstatistikleri: ${attended} toplantıya katıldı, ${notAttended} toplantıya katılmadı (Katılım Oranı: %${attendanceRate})`);
+            
+            // Katıldığı toplantılar
+            if (attended > 0) {
+              const attendedMeetings = memberMeetings
+                .filter(m => {
+                  const attendee = m.attendees.find(a => String(a.memberId) === memberId);
+                  return attendee && attendee.attended === true;
+                })
+                .map(m => `${m.name || 'İsimsiz'} (${m.date || 'Tarih yok'})`)
+                .slice(0, 5)
+                .join(', ');
+              context.push(`Katıldığı toplantılar: ${attendedMeetings}${attended > 5 ? ' ve diğerleri...' : ''}`);
+            }
             
             // Katılmadığı toplantılar
             if (notAttended > 0) {
@@ -429,12 +603,189 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
                 .map(m => `${m.name || 'İsimsiz'} (${m.date || 'Tarih yok'})`)
                 .slice(0, 5)
                 .join(', ');
-              info.push(`Katılmadığı toplantılar: ${notAttendedMeetings}`);
+              context.push(`Katılmadığı toplantılar: ${notAttendedMeetings}${notAttended > 5 ? ' ve diğerleri...' : ''}`);
             }
+          } else {
+            context.push(`Toplantı İstatistikleri: Bu üye henüz hiçbir toplantıya katılmamış.`);
           }
         }
         
-        context.push(info.join(' | '));
+        // Etkinlik Katılım Bilgisi
+        const events = siteData.events || [];
+        if (events && events.length > 0) {
+          const memberEvents = events.filter(e => {
+            if (!e.attendees) return false;
+            return e.attendees.some(a => String(a.memberId) === memberId);
+          });
+          
+          if (memberEvents.length > 0) {
+            const attendedEvents = memberEvents.filter(e => {
+              const attendee = e.attendees.find(a => String(a.memberId) === memberId);
+              return attendee && attendee.attended === true;
+            }).length;
+            context.push(`Etkinlik İstatistikleri: ${attendedEvents} etkinliğe katıldı (Toplam ${memberEvents.length} etkinlikte yer aldı)`);
+          }
+        }
+        
+        // MAHALLE/KÖY TEMSİLCİSİ BİLGİSİ
+        const neighborhoodReps = siteData.neighborhoodRepresentatives || [];
+        const villageReps = siteData.villageRepresentatives || [];
+        const memberNeighborhoodRep = neighborhoodReps.find(rep => {
+          const repMemberId = rep.member_id || rep.memberId;
+          return String(repMemberId) === memberId;
+        });
+        const memberVillageRep = villageReps.find(rep => {
+          const repMemberId = rep.member_id || rep.memberId;
+          return String(repMemberId) === memberId;
+        });
+        
+        if (memberNeighborhoodRep) {
+          const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(memberNeighborhoodRep.neighborhood_id));
+          const district = siteData.districts?.find(d => String(d.id) === String(memberNeighborhoodRep.district_id));
+          const repInfo = [];
+          repInfo.push(`Mahalle Temsilcisi`);
+          if (neighborhood) repInfo.push(`Mahalle: ${neighborhood.name}`);
+          if (district) repInfo.push(`İlçe: ${district.name}`);
+          if (memberNeighborhoodRep.member_phone) repInfo.push(`Telefon: ${memberNeighborhoodRep.member_phone}`);
+          context.push(repInfo.join(' | '));
+        }
+        
+        if (memberVillageRep) {
+          const village = siteData.villages?.find(v => String(v.id) === String(memberVillageRep.village_id));
+          const district = siteData.districts?.find(d => String(d.id) === String(memberVillageRep.district_id));
+          const repInfo = [];
+          repInfo.push(`Köy Temsilcisi`);
+          if (village) repInfo.push(`Köy: ${village.name}`);
+          if (district) repInfo.push(`İlçe: ${district.name}`);
+          if (memberVillageRep.member_phone) repInfo.push(`Telefon: ${memberVillageRep.member_phone}`);
+          context.push(repInfo.join(' | '));
+        }
+        
+        // MAHALLE/KÖY SORUMLUSU (MÜFETTİŞ) BİLGİSİ
+        const neighborhoodSups = siteData.neighborhoodSupervisors || [];
+        const villageSups = siteData.villageSupervisors || [];
+        const memberNeighborhoodSup = neighborhoodSups.find(sup => {
+          const supMemberId = sup.member_id || sup.memberId;
+          return String(supMemberId) === memberId;
+        });
+        const memberVillageSup = villageSups.find(sup => {
+          const supMemberId = sup.member_id || sup.memberId;
+          return String(supMemberId) === memberId;
+        });
+        
+        if (memberNeighborhoodSup) {
+          const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(memberNeighborhoodSup.neighborhood_id));
+          const district = siteData.districts?.find(d => String(d.id) === String(memberNeighborhoodSup.district_id));
+          const supInfo = [];
+          supInfo.push(`Mahalle Sorumlusu (Müfettiş)`);
+          if (neighborhood) supInfo.push(`Mahalle: ${neighborhood.name}`);
+          if (district) supInfo.push(`İlçe: ${district.name}`);
+          if (memberNeighborhoodSup.member_phone) supInfo.push(`Telefon: ${memberNeighborhoodSup.member_phone}`);
+          context.push(supInfo.join(' | '));
+        }
+        
+        if (memberVillageSup) {
+          const village = siteData.villages?.find(v => String(v.id) === String(memberVillageSup.village_id));
+          const district = siteData.districts?.find(d => String(d.id) === String(memberVillageSup.district_id));
+          const supInfo = [];
+          supInfo.push(`Köy Sorumlusu (Müfettiş)`);
+          if (village) supInfo.push(`Köy: ${village.name}`);
+          if (district) supInfo.push(`İlçe: ${district.name}`);
+          if (memberVillageSup.member_phone) supInfo.push(`Telefon: ${memberVillageSup.member_phone}`);
+          context.push(supInfo.join(' | '));
+        }
+        
+        // MÜŞAHİT BİLGİSİ
+        const observers = siteData.observers || [];
+        const memberObservers = observers.filter(obs => {
+          const obsMemberId = obs.member_id || obs.memberId || obs.observer_member_id;
+          return String(obsMemberId) === memberId;
+        });
+        
+        if (memberObservers.length > 0) {
+          memberObservers.forEach(observer => {
+            const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(observer.ballot_box_id));
+            const district = siteData.districts?.find(d => String(d.id) === String(observer.observer_district_id));
+            const obsInfo = [];
+            if (observer.is_chief_observer === true) {
+              obsInfo.push(`Baş Müşahit`);
+            } else {
+              obsInfo.push(`Müşahit`);
+            }
+            if (ballotBox) obsInfo.push(`Sandık: ${ballotBox.ballot_box_number || 'No yok'}`);
+            if (district) obsInfo.push(`İlçe: ${district.name}`);
+            if (observer.observer_phone) obsInfo.push(`Telefon: ${observer.observer_phone}`);
+            context.push(obsInfo.join(' | '));
+          });
+        }
+        
+        // İLÇE/BELDE YÖNETİMİ BİLGİSİ
+        const districtOfficials = siteData.districtOfficials || [];
+        const townOfficials = siteData.townOfficials || [];
+        const districtDeputyInspectors = siteData.districtDeputyInspectors || [];
+        const townDeputyInspectors = siteData.townDeputyInspectors || [];
+        
+        const memberDistrictOfficial = districtOfficials.find(off => 
+          (off.chairman_id && String(off.chairman_id) === memberId) ||
+          (off.inspector_id && String(off.inspector_id) === memberId)
+        );
+        
+        const memberTownOfficial = townOfficials.find(off => 
+          (off.chairman_id && String(off.chairman_id) === memberId) ||
+          (off.inspector_id && String(off.inspector_id) === memberId)
+        );
+        
+        const memberDistrictDeputy = districtDeputyInspectors.find(dep => {
+          const depMemberId = dep.member_id || dep.memberId;
+          return String(depMemberId) === memberId;
+        });
+        
+        const memberTownDeputy = townDeputyInspectors.find(dep => {
+          const depMemberId = dep.member_id || dep.memberId;
+          return String(depMemberId) === memberId;
+        });
+        
+        if (memberDistrictOfficial) {
+          const district = siteData.districts?.find(d => String(d.id) === String(memberDistrictOfficial.district_id));
+          const officialInfo = [];
+          if (memberDistrictOfficial.chairman_id && String(memberDistrictOfficial.chairman_id) === memberId) {
+            officialInfo.push(`İlçe Başkanı`);
+          }
+          if (memberDistrictOfficial.inspector_id && String(memberDistrictOfficial.inspector_id) === memberId) {
+            officialInfo.push(`İlçe Müfettişi`);
+          }
+          if (district) officialInfo.push(`İlçe: ${district.name}`);
+          context.push(officialInfo.join(' | '));
+        }
+        
+        if (memberTownOfficial) {
+          const town = siteData.towns?.find(t => String(t.id) === String(memberTownOfficial.town_id));
+          const officialInfo = [];
+          if (memberTownOfficial.chairman_id && String(memberTownOfficial.chairman_id) === memberId) {
+            officialInfo.push(`Belde Başkanı`);
+          }
+          if (memberTownOfficial.inspector_id && String(memberTownOfficial.inspector_id) === memberId) {
+            officialInfo.push(`Belde Müfettişi`);
+          }
+          if (town) officialInfo.push(`Belde: ${town.name}`);
+          context.push(officialInfo.join(' | '));
+        }
+        
+        if (memberDistrictDeputy) {
+          const district = siteData.districts?.find(d => String(d.id) === String(memberDistrictDeputy.district_id));
+          const deputyInfo = [];
+          deputyInfo.push(`İlçe Müfettiş Yardımcısı`);
+          if (district) deputyInfo.push(`İlçe: ${district.name}`);
+          context.push(deputyInfo.join(' | '));
+        }
+        
+        if (memberTownDeputy) {
+          const town = siteData.towns?.find(t => String(t.id) === String(memberTownDeputy.town_id));
+          const deputyInfo = [];
+          deputyInfo.push(`Belde Müfettiş Yardımcısı`);
+          if (town) deputyInfo.push(`Belde: ${town.name}`);
+          context.push(deputyInfo.join(' | '));
+        }
       });
     }
     

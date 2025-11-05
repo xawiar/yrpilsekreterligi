@@ -50,7 +50,9 @@ const Chatbot = ({ isOpen, onClose }) => {
         neighborhoodSupervisors,
         villageSupervisors,
         districtDeputyInspectors,
-        townDeputyInspectors
+        townDeputyInspectors,
+        neighborhoodVisitCounts,
+        villageVisitCounts
       ] = await Promise.all([
         ApiService.getMembers().catch(() => []),
         ApiService.getEvents().catch(() => []),
@@ -68,7 +70,9 @@ const Chatbot = ({ isOpen, onClose }) => {
         ApiService.getNeighborhoodSupervisors().catch(() => []),
         ApiService.getVillageSupervisors().catch(() => []),
         ApiService.getAllDistrictDeputyInspectors().catch(() => []),
-        ApiService.getAllTownDeputyInspectors().catch(() => [])
+        ApiService.getAllTownDeputyInspectors().catch(() => []),
+        ApiService.getAllVisitCounts('neighborhood').catch(() => []),
+        ApiService.getAllVisitCounts('village').catch(() => [])
       ]);
 
       setSiteData({
@@ -88,7 +92,9 @@ const Chatbot = ({ isOpen, onClose }) => {
         neighborhoodSupervisors,
         villageSupervisors,
         districtDeputyInspectors,
-        townDeputyInspectors
+        townDeputyInspectors,
+        neighborhoodVisitCounts,
+        villageVisitCounts
       });
     } catch (error) {
       console.error('Error loading site data:', error);
@@ -198,11 +204,11 @@ const Chatbot = ({ isOpen, onClose }) => {
         const siteContext = GroqService.buildSiteContext(siteData);
         context.push(...siteContext);
         
-        // Check if user is asking about a specific member (with meetings for attendance)
+        // Check if user is asking about a specific member (with all site data for comprehensive info)
         const memberContext = GroqService.buildMemberContext(
           siteData.members, 
           userMessage,
-          siteData.meetings
+          siteData // Tüm site verilerini gönder (meetings, representatives, supervisors, observers vb.)
         );
         context.push(...memberContext);
       }
