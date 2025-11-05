@@ -85,10 +85,12 @@ const ObserversPage = () => {
             district_id: selected.district_id,
             town_id: selected.town_id,
             neighborhood_id: selected.neighborhood_id,
-            village_id: selected.village_id
+            village_id: selected.village_id,
+            previous_district_id: prev.district_id
           });
           
           // Sandığın kaydedilirken seçilen mahalle/köy ve belde bilgilerini otomatik doldur
+          // Önce district_id'yi set et, sonra diğer alanları set et
           if (selected.district_id) {
             newData.district_id = String(selected.district_id);
           }
@@ -108,6 +110,12 @@ const ObserversPage = () => {
           
           // Sandık seçimi nedeniyle district_id değiştiyse, alt alanları resetleme
           // Bu yüzden return ediyoruz, aşağıdaki reset mantığına geçmesin
+          console.log('✅ Sandık bilgileri otomatik dolduruldu:', {
+            district_id: newData.district_id,
+            town_id: newData.town_id,
+            neighborhood_id: newData.neighborhood_id,
+            village_id: newData.village_id
+          });
           return newData;
         } else {
           // Sandık seçimi temizlendiyse, sadece ballot_box_id'yi temizle, diğer alanları koru
@@ -117,13 +125,15 @@ const ObserversPage = () => {
 
       // Reset dependent fields when parent changes (sadece manuel değişikliklerde)
       // Sandık seçimi değiştiğinde reset yapma, sandığın bilgilerini kullan
+      // NOT: Bu kontrol sadece name === 'district_id' veya name === 'town_id' olduğunda çalışır
+      // Sandık seçimi (name === 'ballot_box_id') yukarıda handle edildi ve return edildi
       if (name === 'district_id') {
-        // Eğer district_id değiştiyse ve bu sandık seçimi nedeniyle değilse, alt alanları temizle
+        // Eğer district_id manuel olarak değiştirildiyse (sandık seçimi değilse), alt alanları temizle
         newData.town_id = '';
         newData.neighborhood_id = '';
         newData.village_id = '';
       } else if (name === 'town_id') {
-        // Eğer town_id değiştiyse ve bu sandık seçimi nedeniyle değilse, alt alanları temizle
+        // Eğer town_id manuel olarak değiştirildiyse (sandık seçimi değilse), alt alanları temizle
         newData.neighborhood_id = '';
         newData.village_id = '';
       }
