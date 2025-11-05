@@ -32,6 +32,18 @@ const TownDetailsPage = () => {
         const districts = await ApiService.getDistricts();
         const districtData = districts.find(d => String(d.id) === String(townData.district_id));
         setDistrict(districtData);
+        
+        // Fetch district officials to get chairman and inspector info
+        if (districtData) {
+          const districtOfficialsData = await ApiService.getDistrictOfficials();
+          const districtOfficials = districtOfficialsData.filter(official => String(official.district_id) === String(districtData.id));
+          if (districtOfficials.length > 0) {
+            const official = districtOfficials[0];
+            // Add chairman and inspector info to district object for display
+            districtData.chairman_name = official.chairman_name;
+            districtData.inspector_name = official.inspector_name;
+          }
+        }
 
         // Fetch officials - ID'leri string'e çevirerek karşılaştır
         const officialsData = await ApiService.getTownOfficials();
@@ -103,6 +115,22 @@ const TownDetailsPage = () => {
           </Link>
         </div>
       </div>
+
+      {/* İlçe Bilgileri */}
+      {district && (
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">İlçe Bilgileri</h3>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600"><strong>İlçe Adı:</strong> {district.name}</p>
+            {district.chairman_name && (
+              <p className="text-sm text-gray-600"><strong>İlçe Başkanı:</strong> {district.chairman_name}</p>
+            )}
+            {district.inspector_name && (
+              <p className="text-sm text-gray-600"><strong>İlçe Müfettişi:</strong> {district.inspector_name}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Belde Başkanı ve Müfettiş */}
