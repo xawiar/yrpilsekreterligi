@@ -141,14 +141,20 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       
       // Check neighborhood supervisors
       const neighborhoodSupervisors = await ApiService.getNeighborhoodSupervisors();
+      const neighborhoods = await ApiService.getNeighborhoods();
       const neighborhoodSupPositions = neighborhoodSupervisors.filter(sup => 
         String(sup.member_id) === String(member.id)
       );
       
       neighborhoodSupPositions.forEach(sup => {
+        // neighborhood_name yoksa neighborhoods listesinden bul
+        const neighborhoodName = sup.neighborhood_name || 
+          neighborhoods.find(n => String(n.id) === String(sup.neighborhood_id))?.name || 
+          'Bilinmeyen Mahalle';
+        
         positions.push({
           type: 'Mahalle Sorumlusu',
-          location: sup.neighborhood_name,
+          location: neighborhoodName,
           locationType: 'Mahalle'
         });
       });
@@ -169,14 +175,20 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       
       // Check village supervisors
       const villageSupervisors = await ApiService.getVillageSupervisors();
+      const villages = await ApiService.getVillages();
       const villageSupPositions = villageSupervisors.filter(sup => 
         String(sup.member_id) === String(member.id)
       );
       
       villageSupPositions.forEach(sup => {
+        // village_name yoksa villages listesinden bul
+        const villageName = sup.village_name || 
+          villages.find(v => String(v.id) === String(sup.village_id))?.name || 
+          'Bilinmeyen Köy';
+        
         positions.push({
           type: 'Köy Sorumlusu',
-          location: sup.village_name,
+          location: villageName,
           locationType: 'Köy'
         });
       });
