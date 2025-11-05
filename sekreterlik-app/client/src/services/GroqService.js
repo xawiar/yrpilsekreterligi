@@ -641,9 +641,9 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
     // Üye arama (isim, TC, telefon ile)
     const searchLower = searchTerm.toLowerCase();
     const matchingMembers = members.filter(m => {
-      const nameMatch = m.name && m.name.toLowerCase().includes(searchLower);
-      const tcMatch = m.tc && m.tc.toLowerCase().includes(searchLower);
-      const phoneMatch = m.phone && m.phone.toLowerCase().includes(searchLower);
+      const nameMatch = m.name && typeof m.name === 'string' && m.name.toLowerCase().includes(searchLower);
+      const tcMatch = m.tc && (typeof m.tc === 'string' ? m.tc.toLowerCase().includes(searchLower) : String(m.tc).includes(searchTerm));
+      const phoneMatch = m.phone && (typeof m.phone === 'string' ? m.phone.toLowerCase().includes(searchLower) : String(m.phone).includes(searchTerm));
       return nameMatch || tcMatch || phoneMatch;
     });
     
