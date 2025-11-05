@@ -110,12 +110,14 @@ const VillagesSettings = () => {
   };
 
   const handleMemberSelect = (field, memberId) => {
-    const member = members.find(m => m.id === parseInt(memberId));
+    // ID'leri string'e çevirerek karşılaştır
+    const member = members.find(m => String(m.id) === String(memberId));
     if (member) {
       setFormData(prev => ({
         ...prev,
         [field]: memberId,
         [`${field.replace('_member_id', '_name')}`]: member.name,
+        [`${field.replace('_member_id', '_tc')}`]: member.tc || '', // TC alanını da doldur
         [`${field.replace('_member_id', '_phone')}`]: member.phone || ''
       }));
     } else {
@@ -123,6 +125,7 @@ const VillagesSettings = () => {
         ...prev,
         [field]: memberId,
         [`${field.replace('_member_id', '_name')}`]: '',
+        [`${field.replace('_member_id', '_tc')}`]: '',
         [`${field.replace('_member_id', '_phone')}`]: ''
       }));
     }
