@@ -683,7 +683,7 @@ const ObserversPage = () => {
                         disabled={!formData.district_id}
                       >
                         <option value="">Belde seçin (opsiyonel)</option>
-                        {towns.filter(town => town.district_id === parseInt(formData.district_id)).map(town => (
+                        {towns.filter(town => String(town.district_id) === String(formData.district_id)).map(town => (
                           <option key={town.id} value={town.id}>
                             {town.name}
                           </option>
@@ -702,11 +702,21 @@ const ObserversPage = () => {
                         disabled={!formData.district_id}
                       >
                         <option value="">Mahalle seçin (opsiyonel)</option>
-                        {neighborhoods.filter(neighborhood => neighborhood.district_id === parseInt(formData.district_id)).map(neighborhood => (
-                          <option key={neighborhood.id} value={neighborhood.id}>
-                            {neighborhood.name}
-                          </option>
-                        ))}
+                        {neighborhoods
+                          .filter(neighborhood => {
+                            // İlçe kontrolü
+                            if (!String(neighborhood.district_id) === String(formData.district_id)) return false;
+                            // Eğer belde seçilmişse, belde kontrolü de yap
+                            if (formData.town_id) {
+                              return String(neighborhood.town_id || '') === String(formData.town_id);
+                            }
+                            return true;
+                          })
+                          .map(neighborhood => (
+                            <option key={neighborhood.id} value={neighborhood.id}>
+                              {neighborhood.name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div>
@@ -721,11 +731,21 @@ const ObserversPage = () => {
                         disabled={!formData.district_id}
                       >
                         <option value="">Köy seçin (opsiyonel)</option>
-                        {villages.filter(village => village.district_id === parseInt(formData.district_id)).map(village => (
-                          <option key={village.id} value={village.id}>
-                            {village.name}
-                          </option>
-                        ))}
+                        {villages
+                          .filter(village => {
+                            // İlçe kontrolü
+                            if (!String(village.district_id) === String(formData.district_id)) return false;
+                            // Eğer belde seçilmişse, belde kontrolü de yap
+                            if (formData.town_id) {
+                              return String(village.town_id || '') === String(formData.town_id);
+                            }
+                            return true;
+                          })
+                          .map(village => (
+                            <option key={village.id} value={village.id}>
+                              {village.name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div className="flex items-center">
