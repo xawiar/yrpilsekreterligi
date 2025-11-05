@@ -70,26 +70,77 @@ const Chatbot = ({ isOpen, onClose }) => {
         villages
       }));
 
-      // Load additional data in background (non-blocking)
+      // Load ALL additional data in background (non-blocking) - TÜM VERİLER
       Promise.all([
+        // Seçim hazırlık verileri
         ApiService.getBallotBoxes().catch(() => []),
         ApiService.getBallotBoxObservers().catch(() => []),
+        ApiService.getGroups().catch(() => []),
+        
+        // Yönetim verileri
         ApiService.getDistrictOfficials().catch(() => []),
         ApiService.getTownOfficials().catch(() => []),
+        
+        // Tüm yönetim üyeleri - Tüm district ve town'lar için
+        Promise.all([
+          ApiService.getDistricts().then(districts => 
+            Promise.all(districts.map(d => 
+              ApiService.getDistrictManagementMembers(d.id).catch(() => [])
+            ))
+          ).then(results => results.flat()).catch(() => []),
+          ApiService.getTowns().then(towns => 
+            Promise.all(towns.map(t => 
+              ApiService.getTownManagementMembers(t.id).catch(() => [])
+            ))
+          ).then(results => results.flat()).catch(() => [])
+        ]).then(([districtMembers, townMembers]) => ({
+          districtManagementMembers: districtMembers,
+          townManagementMembers: townMembers
+        })).catch(() => ({ districtManagementMembers: [], townManagementMembers: [] })),
+        
+        // Temsilci ve sorumlu verileri
         ApiService.getNeighborhoodRepresentatives().catch(() => []),
         ApiService.getVillageRepresentatives().catch(() => []),
         ApiService.getNeighborhoodSupervisors().catch(() => []),
         ApiService.getVillageSupervisors().catch(() => []),
         ApiService.getAllDistrictDeputyInspectors().catch(() => []),
         ApiService.getAllTownDeputyInspectors().catch(() => []),
+        
+        // Ziyaret sayıları
         ApiService.getAllVisitCounts('neighborhood').catch(() => []),
         ApiService.getAllVisitCounts('village').catch(() => []),
-        ApiService.getMemberRegistrations().catch(() => [])
+        
+        // Üye kayıtları
+        ApiService.getMemberRegistrations().catch(() => []),
+        
+        // STK ve Cami verileri
+        ApiService.getSTKs().catch(() => []),
+        ApiService.getMosques().catch(() => []),
+        
+        // Etkinlik kategorileri
+        ApiService.getEventCategories().catch(() => []),
+        
+        // Tüm kişisel belgeler - Tüm üyeler için
+        ApiService.getMembers().then(members => 
+          Promise.all(members.map(m => 
+            ApiService.getPersonalDocuments(m.id).catch(() => [])
+          ))
+        ).then(results => results.flat()).catch(() => []),
+        
+        // Arşiv verileri
+        ApiService.getDocuments().catch(() => []),
+        
+        // Arşivlenmiş üyeler, toplantılar, etkinlikler
+        ApiService.getMembers(true).catch(() => []), // archived members
+        ApiService.getMeetings(true).catch(() => []), // archived meetings
+        ApiService.getEvents(true).catch(() => []) // archived events
       ]).then(([
         ballotBoxes,
         observers,
+        groups,
         districtOfficials,
         townOfficials,
+        managementMembersData,
         neighborhoodRepresentatives,
         villageRepresentatives,
         neighborhoodSupervisors,
@@ -98,16 +149,27 @@ const Chatbot = ({ isOpen, onClose }) => {
         townDeputyInspectors,
         neighborhoodVisitCounts,
         villageVisitCounts,
-        memberRegistrations
+        memberRegistrations,
+        stks,
+        mosques,
+        eventCategories,
+        personalDocuments,
+        archiveDocuments,
+        archivedMembers,
+        archivedMeetings,
+        archivedEvents
       ]) => {
 
-        // Update with additional data
+        // Update with ALL additional data
         setSiteData(prev => ({
           ...prev,
           ballotBoxes,
           observers,
+          groups,
           districtOfficials,
           townOfficials,
+          districtManagementMembers: managementMembersData?.districtManagementMembers || [],
+          townManagementMembers: managementMembersData?.townManagementMembers || [],
           neighborhoodRepresentatives,
           villageRepresentatives,
           neighborhoodSupervisors,
@@ -116,7 +178,15 @@ const Chatbot = ({ isOpen, onClose }) => {
           townDeputyInspectors,
           neighborhoodVisitCounts,
           villageVisitCounts,
-          memberRegistrations
+          memberRegistrations,
+          stks,
+          mosques,
+          eventCategories,
+          personalDocuments,
+          archiveDocuments,
+          archivedMembers,
+          archivedMeetings,
+          archivedEvents
         }));
       }).catch(error => {
         console.error('Error loading additional site data:', error);
