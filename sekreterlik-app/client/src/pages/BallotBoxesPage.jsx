@@ -187,20 +187,28 @@ const BallotBoxesPage = () => {
   };
 
   const getBallotBoxStatus = (ballotBoxId) => {
+    const ballotBox = ballotBoxes.find(bb => bb.id === ballotBoxId);
     const ballotBoxObservers = getBallotBoxObservers(ballotBoxId);
     const chiefObserver = ballotBoxObservers.find(observer => observer.is_chief_observer);
     const regularObservers = ballotBoxObservers.filter(observer => !observer.is_chief_observer);
     
-    const hasDistrict = ballotBoxObservers.some(observer => observer.observer_district_id);
-    const hasNeighborhoodOrVillage = ballotBoxObservers.some(observer => 
-      observer.observer_neighborhood_id || observer.observer_village_id
+    // Sandığın kendisinde mahalle/köy var mı kontrol et
+    const hasBallotBoxNeighborhood = ballotBox && (ballotBox.neighborhood_id || ballotBox.village_id);
+    
+    // Observer'larda mahalle/köy var mı kontrol et
+    const hasObserverNeighborhoodOrVillage = ballotBoxObservers.some(observer => 
+      observer.neighborhood_id || observer.village_id || observer.observer_neighborhood_id || observer.observer_village_id
     );
+    
+    // Sandığın kendisinde veya observer'larda ilçe var mı kontrol et
+    const hasBallotBoxDistrict = ballotBox && ballotBox.district_id;
+    const hasObserverDistrict = ballotBoxObservers.some(observer => observer.district_id || observer.observer_district_id);
     
     return {
       hasChiefObserver: !!chiefObserver,
       hasObservers: regularObservers.length > 0,
-      hasDistrict: hasDistrict,
-      hasNeighborhoodOrVillage: hasNeighborhoodOrVillage,
+      hasDistrict: hasBallotBoxDistrict || hasObserverDistrict,
+      hasNeighborhoodOrVillage: hasBallotBoxNeighborhood || hasObserverNeighborhoodOrVillage,
       chiefObserverName: chiefObserver ? chiefObserver.name : null,
       observersCount: regularObservers.length
     };

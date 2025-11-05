@@ -5,12 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 const PersonalDocuments = ({ memberId }) => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
-  const [documentTypes, setDocumentTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [selectedType, setSelectedType] = useState('');
+  const [documentName, setDocumentName] = useState('');
   const [error, setError] = useState('');
 
   // Check if user is admin or viewing their own documents
@@ -21,7 +20,6 @@ const PersonalDocuments = ({ memberId }) => {
   useEffect(() => {
     if (canViewDocuments) {
       fetchDocuments();
-      fetchDocumentTypes();
     }
   }, [memberId, canViewDocuments]);
 
@@ -34,15 +32,6 @@ const PersonalDocuments = ({ memberId }) => {
       setError('Belgeler yüklenirken hata oluştu');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDocumentTypes = async () => {
-    try {
-      const data = await ApiService.getDocumentTypes();
-      setDocumentTypes(data);
-    } catch (error) {
-      console.error('Error fetching document types:', error);
     }
   };
 
@@ -63,8 +52,8 @@ const PersonalDocuments = ({ memberId }) => {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !selectedType) {
-      setError('Lütfen dosya ve belge türü seçin');
+    if (!selectedFile || !documentName.trim()) {
+      setError('Lütfen dosya seçin ve belge adı girin');
       return;
     }
 
@@ -72,14 +61,14 @@ const PersonalDocuments = ({ memberId }) => {
       setUploading(true);
       setError('');
       
-      await ApiService.uploadPersonalDocument(memberId, selectedType, selectedFile);
+      await ApiService.uploadPersonalDocument(memberId, documentName.trim(), selectedFile);
       
       // Refresh documents list
       await fetchDocuments();
       
       // Reset form
       setSelectedFile(null);
-      setSelectedType('');
+      setDocumentName('');
       setShowUploadForm(false);
       
     } catch (error) {
@@ -118,10 +107,6 @@ const PersonalDocuments = ({ memberId }) => {
     }
   };
 
-  const getAvailableTypes = () => {
-    const usedTypes = documents.map(doc => doc.document_type);
-    return documentTypes.filter(type => !usedTypes.includes(type.value));
-  };
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -180,20 +165,15 @@ const PersonalDocuments = ({ memberId }) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Belge Türü
+                Belge Adı
               </label>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
+              <input
+                type="text"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="Belge adını yazın (örn: Kimlik, Diploma, Sertifika)"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">Belge türü seçin</option>
-                {getAvailableTypes().map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>
@@ -227,7 +207,7 @@ const PersonalDocuments = ({ memberId }) => {
                 onClick={() => {
                   setShowUploadForm(false);
                   setSelectedFile(null);
-                  setSelectedType('');
+                  setDocumentName('');
                   setError('');
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
@@ -237,7 +217,7 @@ const PersonalDocuments = ({ memberId }) => {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={uploading || !selectedFile || !selectedType}
+                disabled={uploading || !selectedFile || !documentName.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors duration-200 flex items-center disabled:opacity-50"
               >
                 {uploading ? (
@@ -281,10 +261,10 @@ const PersonalDocuments = ({ memberId }) => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
-                    {document.document_type_label}
+                    {document.document_name || document.document_type_label || 'Belge'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {document.document_name} • {formatFileSize(document.file_size)} • {formatDate(document.uploaded_at)}
+                    {formatFileSize(document.file_size)} • {formatDate(document.uploaded_at)}
                   </p>
                 </div>
               </div>
