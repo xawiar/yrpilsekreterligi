@@ -304,10 +304,12 @@ const Chatbot = ({ isOpen, onClose }) => {
             context.push(`TÜZÜK BİLGİLERİ: Parti tüzüğü şu web linkinde bulunmaktadır: ${url}. Tüzük hakkında sorular için bu linki ziyaret edebilirsiniz.`);
           }
         } else {
-          // Normal metin ise, ilk 15000 karakteri kullan
+          // Normal metin ise, tüm metni kullan (tüzük metni önemli, mümkün olduğunca fazla karakter kullan)
           console.log('✅ Using bylaws text directly (length:', bylawsText.length, ')');
-          const textToAdd = bylawsText.length > 15000 
-            ? bylawsText.substring(0, 15000) + '... (devamı var)' 
+          // Tüzük metni çok uzun olabilir, ama mümkün olduğunca fazla karakter kullan (max 50000 karakter)
+          const maxLength = 50000;
+          const textToAdd = bylawsText.length > maxLength 
+            ? bylawsText.substring(0, maxLength) + '... (devamı var - tüzük metni çok uzun)' 
             : bylawsText;
           context.push(`TÜZÜK BİLGİLERİ:\n${textToAdd}`);
         }

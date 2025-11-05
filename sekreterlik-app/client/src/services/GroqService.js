@@ -52,13 +52,13 @@ ${context.length > 0 ? context.map((item, index) => `${index + 1}. ${item}`).joi
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile', // Güncel model - hızlı ve ücretsiz
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 1024,
-          stream: false
-        })
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile', // Güncel model - hızlı ve ücretsiz
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 2048, // Tüzük metni için daha fazla token
+            stream: false
+          })
       });
 
       if (!response.ok) {
