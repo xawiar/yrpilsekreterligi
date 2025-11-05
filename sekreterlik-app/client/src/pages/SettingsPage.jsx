@@ -12,6 +12,7 @@ import STKSettings from '../components/STKSettings';
 import MosquesSettings from '../components/MosquesSettings';
 import EventCategoriesSettings from '../components/EventCategoriesSettings';
 import AuthorizationSettings from '../components/AuthorizationSettings';
+import BylawsSettings from '../components/BylawsSettings';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -70,6 +71,7 @@ const SettingsPage = ({ tab }) => {
           {activeTab === 'mosques' && <MosquesSettings />}
           {activeTab === 'event-categories' && <EventCategoriesSettings />}
           {activeTab === 'authorization' && <AuthorizationSettings />}
+          {activeTab === 'bylaws' && <BylawsSettings />}
           {/* Push notifications removed */}
         </div>
       </div>
