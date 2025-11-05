@@ -80,6 +80,14 @@ const ObserversPage = () => {
       if (name === 'ballot_box_id') {
         const selected = ballotBoxes.find(bb => String(bb.id) === String(value));
         if (selected) {
+          console.log('🔍 Sandık seçildi, otomatik doldurulacak:', {
+            ballotBoxId: selected.id,
+            district_id: selected.district_id,
+            town_id: selected.town_id,
+            neighborhood_id: selected.neighborhood_id,
+            village_id: selected.village_id
+          });
+          
           // Sandığın kaydedilirken seçilen mahalle/köy ve belde bilgilerini otomatik doldur
           if (selected.district_id) {
             newData.district_id = String(selected.district_id);
@@ -97,6 +105,10 @@ const ObserversPage = () => {
             // Köy seçildiyse mahalle alanını temizle
             newData.neighborhood_id = '';
           }
+          
+          // Sandık seçimi nedeniyle district_id değiştiyse, alt alanları resetleme
+          // Bu yüzden return ediyoruz, aşağıdaki reset mantığına geçmesin
+          return newData;
         } else {
           // Sandık seçimi temizlendiyse, sadece ballot_box_id'yi temizle, diğer alanları koru
           // (kullanıcı manuel değişiklik yapmış olabilir)

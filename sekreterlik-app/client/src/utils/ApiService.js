@@ -2271,20 +2271,28 @@ class ApiService {
   static async getBallotBoxObserversByBallotBox(ballotBoxId) {
     if (USE_FIREBASE) {
       const observers = await FirebaseApiService.getBallotBoxObservers();
-      return observers ? observers.filter(o => o.ballot_box_id === ballotBoxId) : [];
+      // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
+      return observers ? observers.filter(o => String(o.ballot_box_id) === String(ballotBoxId)) : [];
     }
 
     const response = await fetch(`${API_BASE_URL}/ballot-box-observers/ballot-box/${ballotBoxId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     return response.json();
   }
 
   static async getBallotBoxObserver(id) {
     if (USE_FIREBASE) {
       const observers = await FirebaseApiService.getBallotBoxObservers();
-      return observers ? observers.find(o => o.id === id) : null;
+      // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
+      return observers ? observers.find(o => String(o.id) === String(id)) : null;
     }
 
     const response = await fetch(`${API_BASE_URL}/ballot-box-observers/${id}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     return response.json();
   }
 
