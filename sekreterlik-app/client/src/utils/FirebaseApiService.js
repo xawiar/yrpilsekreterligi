@@ -1771,6 +1771,30 @@ class FirebaseApiService {
     }
   }
 
+  static async getTownById(townId) {
+    try {
+      const town = await FirebaseService.getById(this.COLLECTIONS.TOWNS, townId);
+      if (!town) {
+        return { success: false, message: 'Belde bulunamadı' };
+      }
+      
+      // Districts bilgisini de ekle
+      const districts = await this.getDistricts();
+      const district = districts.find(d => String(d.id) === String(town.district_id));
+      
+      return {
+        success: true,
+        town: {
+          ...town,
+          districtName: district?.name || ''
+        }
+      };
+    } catch (error) {
+      console.error('Get town by id error:', error);
+      return { success: false, message: 'Belde bilgileri alınamadı' };
+    }
+  }
+
   static async createTown(townData) {
     try {
       const docId = await FirebaseService.create(this.COLLECTIONS.TOWNS, null, townData);
