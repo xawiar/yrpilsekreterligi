@@ -80,19 +80,36 @@ const ObserversPage = () => {
       if (name === 'ballot_box_id') {
         const selected = ballotBoxes.find(bb => String(bb.id) === String(value));
         if (selected) {
-          newData.district_id = selected.district_id ? String(selected.district_id) : newData.district_id;
-          newData.town_id = selected.town_id ? String(selected.town_id) : newData.town_id;
-          newData.neighborhood_id = selected.neighborhood_id ? String(selected.neighborhood_id) : newData.neighborhood_id;
-          newData.village_id = selected.village_id ? String(selected.village_id) : newData.village_id;
+          // Sandığın kaydedilirken seçilen mahalle/köy ve belde bilgilerini otomatik doldur
+          if (selected.district_id) {
+            newData.district_id = String(selected.district_id);
+          }
+          if (selected.town_id) {
+            newData.town_id = String(selected.town_id);
+          }
+          if (selected.neighborhood_id) {
+            newData.neighborhood_id = String(selected.neighborhood_id);
+            // Mahalle seçildiyse köy alanını temizle
+            newData.village_id = '';
+          }
+          if (selected.village_id) {
+            newData.village_id = String(selected.village_id);
+            // Köy seçildiyse mahalle alanını temizle
+            newData.neighborhood_id = '';
+          }
+        } else {
+          // Sandık seçimi temizlendiyse, sadece ballot_box_id'yi temizle, diğer alanları koru
+          // (kullanıcı manuel değişiklik yapmış olabilir)
         }
       }
 
-      // Reset dependent fields when parent changes
-      if (name === 'district_id') {
+      // Reset dependent fields when parent changes (sadece manuel değişikliklerde)
+      // Sandık seçimi değiştiğinde reset yapma, sandığın bilgilerini kullan
+      if (name === 'district_id' && name !== 'ballot_box_id') {
         newData.town_id = '';
         newData.neighborhood_id = '';
         newData.village_id = '';
-      } else if (name === 'town_id') {
+      } else if (name === 'town_id' && name !== 'ballot_box_id') {
         newData.neighborhood_id = '';
         newData.village_id = '';
       }
