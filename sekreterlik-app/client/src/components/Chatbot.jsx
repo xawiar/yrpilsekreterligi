@@ -138,12 +138,21 @@ const Chatbot = ({ isOpen, onClose }) => {
           if (bylawsSnap.exists()) {
             const bylawsData = bylawsSnap.data();
             
-            // Önce text varsa onu kullan
-            if (bylawsData.text) {
-              setBylawsText(bylawsData.text);
+            console.log('📋 Bylaws data loaded:', {
+              hasText: !!bylawsData.text,
+              textLength: bylawsData.text?.length || 0,
+              hasUrl: !!bylawsData.url,
+              url: bylawsData.url
+            });
+            
+            // Önce text varsa onu kullan (text varsa URL'yi ignore et)
+            if (bylawsData.text && bylawsData.text.trim()) {
+              console.log('✅ Using bylaws text (length:', bylawsData.text.length, ')');
+              setBylawsText(bylawsData.text.trim());
             }
             // Eğer text yoksa ama URL varsa, URL'den içeriği çek
             else if (bylawsData.url) {
+              console.log('⚠️ No text found, trying to fetch from URL:', bylawsData.url);
               try {
                 // Backend API'den URL'den içeriği çek
                 const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
@@ -237,8 +246,15 @@ const Chatbot = ({ isOpen, onClose }) => {
       
       // Add bylaws text or URL if available
       if (bylawsText) {
+        console.log('📋 Adding bylaws to context:', {
+          textLength: bylawsText.length,
+          startsWithLink: bylawsText.startsWith('TÜZÜK_LINK:'),
+          preview: bylawsText.substring(0, 100)
+        });
+        
         // Eğer URL ise (TÜZÜK_LINK: ile başlıyorsa), tekrar çekmeyi dene
         if (bylawsText.startsWith('TÜZÜK_LINK:')) {
+          console.log('⚠️ Bylaws text is a link, trying to fetch...');
           const url = bylawsText.replace('TÜZÜK_LINK:', '');
           try {
             // Backend API'den URL'den içeriği çek
@@ -289,7 +305,11 @@ const Chatbot = ({ isOpen, onClose }) => {
           }
         } else {
           // Normal metin ise, ilk 15000 karakteri kullan
-          context.push(`TÜZÜK BİLGİLERİ:\n${bylawsText.substring(0, 15000)}${bylawsText.length > 15000 ? '... (devamı var)' : ''}`);
+          console.log('✅ Using bylaws text directly (length:', bylawsText.length, ')');
+          const textToAdd = bylawsText.length > 15000 
+            ? bylawsText.substring(0, 15000) + '... (devamı var)' 
+            : bylawsText;
+          context.push(`TÜZÜK BİLGİLERİ:\n${textToAdd}`);
         }
       }
       
