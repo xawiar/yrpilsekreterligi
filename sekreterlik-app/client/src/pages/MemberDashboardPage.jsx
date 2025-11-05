@@ -14,6 +14,14 @@ import MembersPage from './MembersPage';
 import MeetingsPage from './MeetingsPage';
 import CalendarPage from './CalendarPage';
 import DistrictsPage from './DistrictsPage';
+import EventsPage from './EventsPage';
+import ArchivePage from './ArchivePage';
+import ManagementChartPage from './ManagementChartPage';
+import ElectionPreparationPage from './pages/ElectionPreparationPage';
+import RepresentativesPage from './pages/RepresentativesPage';
+import NeighborhoodsPage from './pages/NeighborhoodsPage';
+import VillagesPage from './pages/VillagesPage';
+import GroupsPage from './pages/GroupsPage';
 
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
@@ -25,7 +33,7 @@ const MemberDashboardPage = () => {
   const [memberRegistrations, setMemberRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -332,6 +340,142 @@ const MemberDashboardPage = () => {
       </div>
     );
   }
+  if (currentView === 'events-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Etkinlikler</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <EventsPage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'archive-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Arşiv</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <ArchivePage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'management-chart-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yönetim Şeması</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <ManagementChartPage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'election-preparation-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seçim Hazırlık</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <ElectionPreparationPage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'representatives-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Temsilciler</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <RepresentativesPage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'neighborhoods-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mahalleler</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <NeighborhoodsPage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'villages-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Köyler</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <VillagesPage />
+        </div>
+      </div>
+    );
+  }
+  if (currentView === 'groups-page') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Gruplar</h1>
+              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <GroupsPage />
+        </div>
+      </div>
+    );
+  }
 
   // Default dashboard view
   return (
@@ -630,26 +774,211 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
-          {/* Sayfa Erişimleri - görev bazlı */}
-          {(grantedPermissions.includes('access_members_page') || grantedPermissions.includes('access_meetings_page') || grantedPermissions.includes('access_calendar_page') || grantedPermissions.includes('access_districts_page')) && (
+          {/* Sayfa Erişimleri - görev bazlı - TÜM SAYFALAR */}
+          {(grantedPermissions.includes('access_dashboard') || 
+            grantedPermissions.includes('access_members_page') || 
+            grantedPermissions.includes('access_meetings_page') || 
+            grantedPermissions.includes('access_events_page') ||
+            grantedPermissions.includes('access_calendar_page') || 
+            grantedPermissions.includes('access_districts_page') ||
+            grantedPermissions.includes('access_archive_page') ||
+            grantedPermissions.includes('access_management_chart_page') ||
+            grantedPermissions.includes('access_election_preparation_page') ||
+            grantedPermissions.includes('access_representatives_page') ||
+            grantedPermissions.includes('access_neighborhoods_page') ||
+            grantedPermissions.includes('access_villages_page') ||
+            grantedPermissions.includes('access_groups_page')) && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-900 dark:to-sky-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sayfa Erişimleri</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Sayfa Erişimleri
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yetkilendirildiğiniz sayfalara erişim</p>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {grantedPermissions.includes('access_members_page') && (
-                    <button onClick={() => setCurrentView('members-page')} className="px-4 py-3 rounded-xl border bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-left shadow-sm">Üyeler</button>
+                    <button 
+                      onClick={() => setCurrentView('members-page')} 
+                      className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m8-4a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Üyeler</span>
+                      </div>
+                    </button>
                   )}
                   {grantedPermissions.includes('access_meetings_page') && (
-                    <button onClick={() => setCurrentView('meetings-page')} className="px-4 py-3 rounded-xl border bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-left shadow-sm">Toplantılar</button>
+                    <button 
+                      onClick={() => setCurrentView('meetings-page')} 
+                      className="group p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-xl border border-purple-200 dark:border-purple-700 hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800 dark:hover:to-purple-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-500 dark:bg-purple-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Toplantılar</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_events_page') && (
+                    <button 
+                      onClick={() => setCurrentView('events-page')} 
+                      className="group p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 rounded-xl border border-pink-200 dark:border-pink-700 hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800 dark:hover:to-pink-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-pink-500 dark:bg-pink-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Etkinlikler</span>
+                      </div>
+                    </button>
                   )}
                   {grantedPermissions.includes('access_calendar_page') && (
-                    <button onClick={() => setCurrentView('calendar-page')} className="px-4 py-3 rounded-xl border bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-left shadow-sm">Takvim</button>
+                    <button 
+                      onClick={() => setCurrentView('calendar-page')} 
+                      className="group p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-xl border border-green-200 dark:border-green-700 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800 dark:hover:to-green-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Takvim</span>
+                      </div>
+                    </button>
                   )}
                   {grantedPermissions.includes('access_districts_page') && (
-                    <button onClick={() => setCurrentView('districts-page')} className="px-4 py-3 rounded-xl border bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-left shadow-sm">İlçeler</button>
+                    <button 
+                      onClick={() => setCurrentView('districts-page')} 
+                      className="group p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-xl border border-orange-200 dark:border-orange-700 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800 dark:hover:to-orange-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-orange-500 dark:bg-orange-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">İlçeler</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_archive_page') && (
+                    <button 
+                      onClick={() => setCurrentView('archive-page')} 
+                      className="group p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-500 dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Arşiv</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_management_chart_page') && (
+                    <button 
+                      onClick={() => setCurrentView('management-chart-page')} 
+                      className="group p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-indigo-500 dark:bg-indigo-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Yönetim Şeması</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_election_preparation_page') && (
+                    <button 
+                      onClick={() => setCurrentView('election-preparation-page')} 
+                      className="group p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 rounded-xl border border-yellow-200 dark:border-yellow-700 hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800 dark:hover:to-yellow-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-yellow-500 dark:bg-yellow-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Seçim Hazırlık</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_representatives_page') && (
+                    <button 
+                      onClick={() => setCurrentView('representatives-page')} 
+                      className="group p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Temsilciler</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_neighborhoods_page') && (
+                    <button 
+                      onClick={() => setCurrentView('neighborhoods-page')} 
+                      className="group p-4 bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900 dark:to-cyan-800 rounded-xl border border-cyan-200 dark:border-cyan-700 hover:from-cyan-100 hover:to-cyan-200 dark:hover:from-cyan-800 dark:hover:to-cyan-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-cyan-500 dark:bg-cyan-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Mahalleler</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_villages_page') && (
+                    <button 
+                      onClick={() => setCurrentView('villages-page')} 
+                      className="group p-4 bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-900 dark:to-lime-800 rounded-xl border border-lime-200 dark:border-lime-700 hover:from-lime-100 hover:to-lime-200 dark:hover:from-lime-800 dark:hover:to-lime-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-lime-500 dark:bg-lime-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Köyler</span>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('access_groups_page') && (
+                    <button 
+                      onClick={() => setCurrentView('groups-page')} 
+                      className="group p-4 bg-gradient-to-r from-violet-50 to-violet-100 dark:from-violet-900 dark:to-violet-800 rounded-xl border border-violet-200 dark:border-violet-700 hover:from-violet-100 hover:to-violet-200 dark:hover:from-violet-800 dark:hover:to-violet-700 transition-all duration-200 hover:shadow-md text-left"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-violet-500 dark:bg-violet-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m8-4a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                        </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Gruplar</span>
+                      </div>
+                    </button>
                   )}
                 </div>
               </div>

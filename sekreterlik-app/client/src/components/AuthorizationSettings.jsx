@@ -1,21 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import ApiService from '../utils/ApiService';
 
-// Çoklu yetkilendirme seçenekleri
+// Çoklu yetkilendirme seçenekleri - TÜM SAYFALAR (settings hariç)
 const AVAILABLE_PERMISSIONS = [
+  // İşlem Yetkileri
   { key: 'add_member', label: 'Üye Ekleme' },
   { key: 'create_meeting', label: 'Toplantı Oluşturma' },
   { key: 'create_event', label: 'Etkinlik Oluşturma' },
   { key: 'add_stk', label: 'STK Ekleme' },
-  { key: 'access_ballot_boxes', label: 'Sandıklar Sayfası Erişimi' },
   { key: 'add_ballot_box', label: 'Sandık Ekleme' },
-  { key: 'access_observers', label: 'Müşahitler Sayfası Erişimi' },
   { key: 'add_observer', label: 'Müşahit Ekleme' },
-  // Yeni erişim izinleri
+  
+  // Sayfa Erişim Yetkileri (Tüm sayfalar - settings hariç)
+  { key: 'access_dashboard', label: 'Dashboard Sayfası Erişimi' },
   { key: 'access_members_page', label: 'Üyeler Sayfası Erişimi' },
   { key: 'access_meetings_page', label: 'Toplantılar Sayfası Erişimi' },
+  { key: 'access_events_page', label: 'Etkinlikler Sayfası Erişimi' },
   { key: 'access_calendar_page', label: 'Takvim Sayfası Erişimi' },
   { key: 'access_districts_page', label: 'İlçeler Sayfası Erişimi' },
+  { key: 'access_archive_page', label: 'Arşiv Sayfası Erişimi' },
+  { key: 'access_management_chart_page', label: 'Yönetim Şeması Sayfası Erişimi' },
+  { key: 'access_election_preparation_page', label: 'Seçim Hazırlık Ana Sayfası Erişimi' },
+  { key: 'access_ballot_boxes', label: 'Sandıklar Sayfası Erişimi' },
+  { key: 'access_observers', label: 'Müşahitler Sayfası Erişimi' },
+  { key: 'access_representatives_page', label: 'Temsilciler Sayfası Erişimi' },
+  { key: 'access_neighborhoods_page', label: 'Mahalleler Sayfası Erişimi' },
+  { key: 'access_villages_page', label: 'Köyler Sayfası Erişimi' },
+  { key: 'access_groups_page', label: 'Gruplar Sayfası Erişimi' },
 ];
 
 const AuthorizationSettings = () => {
