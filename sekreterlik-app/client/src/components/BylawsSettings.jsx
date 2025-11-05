@@ -61,7 +61,6 @@ const BylawsSettings = () => {
       
       if (USE_FIREBASE) {
         const bylawsData = {
-          id: 'main',
           updated_at: new Date().toISOString()
         };
         
@@ -73,8 +72,8 @@ const BylawsSettings = () => {
           bylawsData.url = bylawsUrl.trim();
         }
         
-        // setDoc kullanarak kaydet (id: 'main')
-        await FirebaseService.create('bylaws', bylawsData);
+        // setDoc kullanarak kaydet (id: 'main', encrypt: false - tüzük metni şifrelenmemeli)
+        await FirebaseService.create('bylaws', 'main', bylawsData, false);
         
         setMessage('Tüzük başarıyla kaydedildi');
       }
@@ -165,16 +164,16 @@ const BylawsSettings = () => {
       {/* Text Editor */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Tüzük Metni (Opsiyonel)
+          Tüzük Metni
         </label>
         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-          Eğer tüzük linkini kullanıyorsanız, bu alanı boş bırakabilirsiniz. Manuel metin girmek isterseniz buraya yapıştırabilirsiniz.
+          Tüzük metnini buraya yapıştırın. Chatbot bu metni kullanarak tüzük hakkında soruları yanıtlayacaktır.
         </p>
         <textarea
           value={bylawsText}
           onChange={(e) => setBylawsText(e.target.value)}
-          rows={20}
-          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+          rows={30}
+          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
           placeholder="Tüzük metnini buraya yapıştırın veya yukarıdaki butondan dosya yükleyin..."
         />
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
