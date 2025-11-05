@@ -371,6 +371,19 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         const responsible = await getResponsibleMembers();
         console.log('Loaded responsible members:', responsible);
         setResponsibleMembers(responsible);
+        
+        // Initialize attendance state for responsible members - default to attended
+        setAttendance(prev => {
+          const newAttendance = { ...prev };
+          responsible.forEach(member => {
+            // ID'yi string'e çevirerek tutarlılık sağla
+            const stringId = String(member.id);
+            if (!(stringId in newAttendance)) {
+              newAttendance[stringId] = true; // Default to attended
+            }
+          });
+          return newAttendance;
+        });
       } catch (error) {
         console.error('Error loading responsible members:', error);
         setResponsibleMembers([]);
