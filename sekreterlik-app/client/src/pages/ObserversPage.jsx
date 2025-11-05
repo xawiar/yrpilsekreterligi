@@ -185,10 +185,19 @@ const ObserversPage = () => {
         editingObserver: editingObserver ? editingObserver.id : null
       });
 
-      if (editingObserver) {
-        await ApiService.updateBallotBoxObserver(editingObserver.id, observerData);
-      } else {
-        await ApiService.createBallotBoxObserver(observerData);
+      try {
+        if (editingObserver) {
+          await ApiService.updateBallotBoxObserver(editingObserver.id, observerData);
+          setMessage('Müşahit başarıyla güncellendi');
+          setMessageType('success');
+        } else {
+          await ApiService.createBallotBoxObserver(observerData);
+          setMessage('Müşahit başarıyla eklendi');
+          setMessageType('success');
+        }
+      } catch (apiError) {
+        console.error('❌ API Error:', apiError);
+        throw apiError; // Re-throw to be caught by outer catch block
       }
 
       setFormData({
