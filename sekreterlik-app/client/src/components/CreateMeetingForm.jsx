@@ -37,10 +37,10 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
       
       setMembers(sortedMembers);
       
-      // Initialize attendance state
+      // Initialize attendance state - ID'leri string'e çevirerek tutarlılık sağla
       const initialAttendance = {};
       sortedMembers.forEach(member => {
-        initialAttendance[member.id] = true; // Default to attended
+        initialAttendance[String(member.id)] = true; // Default to attended
       });
       setAttendance(initialAttendance);
     } catch (error) {
@@ -115,13 +115,14 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
         notes: meetingNotes,
         date: new Date().toISOString().split('T')[0], // Today's date
         attendees: members.map(member => {
-          const memberId = member.id;
+          // ID'leri string'e çevirerek tutarlılık sağla
+          const memberId = String(member.id);
           const attended = attendance[memberId] === true;
           const hasExcuse = excuse[memberId] === true;
           const excuseReason = excuseReasons[memberId] || '';
           
           return {
-            memberId: parseInt(memberId),
+            memberId: memberId, // String olarak sakla (Firebase ID'leri string)
             attended: attended && !hasExcuse, // If has excuse, not attended
             excuse: hasExcuse ? { 
               hasExcuse: true, 
@@ -237,7 +238,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                                 <input
                                   type="radio"
                                   name={`attendance-${member.id}`}
-                                  checked={attendance[member.id] === true}
+                                  checked={attendance[String(member.id)] === true}
                                   onChange={() => handleAttendanceChange(member.id, true)}
                                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                                 />
@@ -247,7 +248,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                                 <input
                                   type="radio"
                                   name={`attendance-${member.id}`}
-                                  checked={attendance[member.id] === false && !excuse[member.id]}
+                                  checked={attendance[String(member.id)] === false && !excuse[String(member.id)]}
                                   onChange={() => handleAttendanceChange(member.id, false)}
                                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                                 />
@@ -259,7 +260,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                                   <input
                                     type="radio"
                                     name={`attendance-${member.id}`}
-                                    checked={excuse[member.id] === true}
+                                    checked={excuse[String(member.id)] === true}
                                     onChange={() => handleExcuseChange(member.id, true)}
                                     className="h-4 w-4 text-yellow-600 focus:ring-yellow-500"
                                   />
