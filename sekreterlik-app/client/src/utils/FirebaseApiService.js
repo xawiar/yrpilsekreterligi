@@ -924,11 +924,31 @@ class FirebaseApiService {
 
   static async createMeeting(meetingData) {
     try {
+      // description alanını şifrelemeden saklamak için özel işlem
+      // description hassas bir alan değil, normal metin olarak saklanmalı
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      
+      const descriptionValue = meetingData.description;
+      const meetingDataWithoutDescription = { ...meetingData };
+      delete meetingDataWithoutDescription.description;
+      
+      // Önce description olmadan kaydet
       const docId = await FirebaseService.create(
         this.COLLECTIONS.MEETINGS,
         null,
-        meetingData
+        meetingDataWithoutDescription,
+        true // encrypt = true (description hariç diğer hassas alanlar şifrelenecek)
       );
+      
+      // Sonra description'ı şifrelemeden ekle
+      if (descriptionValue !== undefined && descriptionValue !== null && descriptionValue !== '') {
+        const docRef = doc(db, this.COLLECTIONS.MEETINGS, docId);
+        await updateDoc(docRef, {
+          description: descriptionValue // Şifrelenmeden sakla
+        });
+      }
+      
       return { success: true, id: docId, message: 'Toplantı oluşturuldu' };
     } catch (error) {
       console.error('Create meeting error:', error);
@@ -976,11 +996,28 @@ class FirebaseApiService {
 
   static async createEvent(eventData) {
     try {
+      // description alanını şifrelemeden saklamak için özel işlem
+      // description hassas bir alan değil, normal metin olarak saklanmalı
+      const descriptionValue = eventData.description;
+      const eventDataWithoutDescription = { ...eventData };
+      delete eventDataWithoutDescription.description;
+      
+      // Önce description olmadan kaydet
       const docId = await FirebaseService.create(
         this.COLLECTIONS.EVENTS,
         null,
-        eventData
+        eventDataWithoutDescription,
+        true // encrypt = true (description hariç diğer hassas alanlar şifrelenecek)
       );
+      
+      // Sonra description'ı şifrelemeden ekle
+      if (descriptionValue) {
+        const docRef = doc(db, this.COLLECTIONS.EVENTS, docId);
+        await updateDoc(docRef, {
+          description: descriptionValue // Şifrelenmeden sakla
+        });
+      }
+      
       return { success: true, id: docId, message: 'Etkinlik oluşturuldu' };
     } catch (error) {
       console.error('Create event error:', error);
