@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
-import { decryptData } from '../utils/crypto';
 
 const MemberUsersSettings = () => {
   const [memberUsers, setMemberUsers] = useState([]);
@@ -8,11 +7,7 @@ const MemberUsersSettings = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
-  const [editingUser, setEditingUser] = useState(null);
-  const [editForm, setEditForm] = useState({
-    username: '',
-    password: ''
-  });
+  // Şifre düzenleme özelliği kaldırıldı
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState({
     memberId: '',
@@ -54,57 +49,7 @@ const MemberUsersSettings = () => {
     }
   };
 
-  const handleEditUser = (user) => {
-    setEditingUser(user);
-    setEditForm({
-      username: user.username,
-      password: ''
-    });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingUser(null);
-    setEditForm({ username: '', password: '' });
-  };
-
-  const handleUpdateUser = async (e) => {
-    e.preventDefault();
-    
-    if (!editForm.username.trim()) {
-      setMessage('Kullanıcı adı zorunludur');
-      setMessageType('error');
-      return;
-    }
-    
-    if (!editForm.password.trim()) {
-      setMessage('Şifre zorunludur');
-      setMessageType('error');
-      return;
-    }
-
-    try {
-      const response = await ApiService.updateMemberUser(
-        editingUser.id,
-        editForm.username,
-        editForm.password
-      );
-      
-      if (response.success) {
-        setMessage('Kullanıcı bilgileri başarıyla güncellendi');
-        setMessageType('success');
-        setEditingUser(null);
-        setEditForm({ username: '', password: '' });
-        await fetchMemberUsers();
-      } else {
-        setMessage(response.message || 'Güncelleme sırasında hata oluştu');
-        setMessageType('error');
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-      setMessage('Kullanıcı bilgileri güncellenirken hata oluştu');
-      setMessageType('error');
-    }
-  };
+  // Şifre düzenleme özelliği kaldırıldı - çalışmıyor
 
   const handleToggleStatus = async (userId) => {
     try {
@@ -248,11 +193,11 @@ const MemberUsersSettings = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Üye Kullanıcıları Yönetimi</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Üye Kullanıcıları Yönetimi</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Her üye için otomatik olarak oluşturulan kullanıcı hesaplarını yönetebilirsiniz.
             </p>
           </div>
@@ -288,8 +233,8 @@ const MemberUsersSettings = () => {
 
       {/* Create User Form */}
       {showCreateForm && (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <h4 className="text-lg font-semibold text-gray-800 mb-4">Yeni Kullanıcı Oluştur</h4>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+          <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Yeni Kullanıcı Oluştur</h4>
           <form onSubmit={handleCreateUser} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -367,40 +312,39 @@ const MemberUsersSettings = () => {
       {message && (
         <div className={`p-3 rounded-lg shadow-sm ${
           messageType === 'success' 
-            ? 'bg-green-100 text-green-700 border border-green-200' 
-            : 'bg-red-100 text-red-700 border border-red-200'
+            ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-700' 
+            : messageType === 'warning'
+            ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-700'
+            : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 border border-red-200 dark:border-red-700'
         }`}>
           {message}
         </div>
       )}
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Üye Bilgileri
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Kullanıcı Adı
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Şifre (Telefon)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {memberUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Henüz üye kullanıcısı bulunmuyor
                   </td>
                 </tr>
@@ -413,120 +357,44 @@ const MemberUsersSettings = () => {
                   const memberPosition = member?.position || member?.position_name || '-';
                   
                   return (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{memberName}</div>
-                        <div className="text-sm text-gray-500">{memberRegion} - {memberPosition}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{memberName}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{memberRegion} - {memberPosition}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {editingUser && editingUser.id === user.id ? (
-                        <input
-                          type="text"
-                          value={editForm.username}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-900">{user.username}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {editingUser && editingUser.id === user.id ? (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editForm.password}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
-                            placeholder="Yeni şifre (telefon)"
-                          />
-                          <div className="text-xs text-gray-400">
-                            Beklenen: {member?.phone || 'Telefon bulunamadı'}
-                          </div>
-                        </div>
-                      ) : (
-                        (() => {
-                          // Şifreyi decrypt et
-                          let decryptedPassword = user.password;
-                          if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
-                            try {
-                              decryptedPassword = decryptData(decryptedPassword);
-                            } catch (e) {
-                              // Decrypt hatası - olduğu gibi göster
-                            }
-                          }
-                          const expectedPassword = member?.phone || 'Telefon bulunamadı';
-                          const isCorrect = decryptedPassword === expectedPassword;
-                          
-                          return (
-                            <div>
-                              <div className={`text-sm font-mono ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
-                                {decryptedPassword || '-'}
-                              </div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                (Beklenen: {expectedPassword})
-                                {!isCorrect && decryptedPassword && (
-                                  <span className="text-red-500 ml-1">⚠️ Yanlış!</span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()
-                      )}
+                      <div className="text-sm text-gray-900 dark:text-gray-100">{user.username}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         user.is_active || user.isActive
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                       }`}>
                         {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {editingUser && editingUser.id === user.id ? (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={handleUpdateUser}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            Kaydet
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="text-gray-600 hover:text-gray-900"
-                          >
-                            İptal
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditUser(user)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            Düzenle
-                          </button>
-                          <button
-                            onClick={() => handleToggleStatus(user.id)}
-                            className={`${
-                              user.is_active || user.isActive
-                                ? 'text-yellow-600 hover:text-yellow-900' 
-                                : 'text-green-600 hover:text-green-900'
-                            }`}
-                          >
-                            {user.is_active || user.isActive ? 'Pasifleştir' : 'Aktifleştir'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id, user.username)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Sil
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleToggleStatus(user.id)}
+                          className={`${
+                            user.is_active || user.isActive
+                              ? 'text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300' 
+                              : 'text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300'
+                          }`}
+                        >
+                          {user.is_active || user.isActive ? 'Pasifleştir' : 'Aktifleştir'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.username)}
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                        >
+                          Sil
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   );
@@ -537,47 +405,7 @@ const MemberUsersSettings = () => {
         </div>
       </div>
 
-      {/* Edit Form Modal */}
-      {editingUser && (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <h4 className="text-lg font-semibold text-gray-800 mb-4">
-            {(() => {
-              const member = members.find(m => m.id === editingUser.member_id || m.id === editingUser.memberId || String(m.id) === String(editingUser.member_id) || String(m.id) === String(editingUser.memberId));
-              return member?.name || editingUser.username || 'Kullanıcı';
-            })()} - Kullanıcı Bilgilerini Düzenle
-          </h4>
-          <form onSubmit={handleUpdateUser} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Yeni Şifre
-              </label>
-              <input
-                type="password"
-                value={editForm.password}
-                onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
-                placeholder="Yeni şifre girin"
-                required
-              />
-            </div>
-            <div className="flex space-x-2">
-              <button
-                type="submit"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200"
-              >
-                Güncelle
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition duration-200"
-              >
-                İptal
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Şifre düzenleme özelliği kaldırıldı - çalışmıyor */}
     </div>
   );
 };
