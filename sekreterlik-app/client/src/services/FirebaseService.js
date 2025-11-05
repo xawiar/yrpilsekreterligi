@@ -557,6 +557,12 @@ class FirebaseService {
    */
   static async findByField(collectionName, field, value, decrypt = true) {
     try {
+      // value undefined ise boş array döndür (Firebase where() undefined kabul etmez)
+      if (value === undefined || value === null) {
+        console.warn(`⚠️ findByField called with undefined/null value for field "${field}" in collection "${collectionName}"`);
+        return [];
+      }
+      
       return await this.getAll(
         collectionName, 
         { 
