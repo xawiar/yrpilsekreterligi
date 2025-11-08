@@ -15,6 +15,8 @@ const FirebaseConfigSettings = () => {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [showConfig, setShowConfig] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -94,6 +96,25 @@ const FirebaseConfigSettings = () => {
         return;
       }
 
+      // Admin şifresi doğrulama
+      if (!adminPassword.trim()) {
+        setMessage('Lütfen admin şifresini girin');
+        setMessageType('error');
+        setShowPasswordModal(true);
+        return;
+      }
+
+      // Admin şifresini doğrula
+      const ApiService = (await import('../utils/ApiService')).default;
+      const verifyResult = await ApiService.verifyAdminPassword(adminPassword.trim());
+      
+      if (!verifyResult.success) {
+        setMessage(verifyResult.message || 'Admin şifresi yanlış');
+        setMessageType('error');
+        setAdminPassword(''); // Şifreyi temizle
+        return;
+      }
+
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       if (USE_FIREBASE) {
@@ -113,6 +134,8 @@ const FirebaseConfigSettings = () => {
         
         setMessage('Firebase yapılandırması başarıyla kaydedildi. Değişikliklerin etkili olması için sayfayı yenileyin.');
         setMessageType('success');
+        setAdminPassword(''); // Şifreyi temizle
+        setShowPasswordModal(false);
       } else {
         setMessage('Firebase kullanılmıyor. Yapılandırma environment variable olarak ayarlanmalıdır.');
         setMessageType('error');
@@ -121,6 +144,7 @@ const FirebaseConfigSettings = () => {
       console.error('Error saving Firebase config:', error);
       setMessage('Firebase yapılandırması kaydedilirken hata oluştu: ' + error.message);
       setMessageType('error');
+      setAdminPassword(''); // Şifreyi temizle
     } finally {
       setSaving(false);
     }

@@ -125,6 +125,35 @@ class ApiService {
     return response.json();
   }
 
+  static async verifyAdminPassword(password) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.verifyAdminPassword(password);
+    }
+
+    // Backend için login endpoint'ini kullanarak doğrulama yap
+    try {
+      const adminInfo = await this.getAdminInfo();
+      if (adminInfo.success && adminInfo.admin) {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            username: adminInfo.admin.username, 
+            password 
+          }),
+        });
+        const result = await response.json();
+        return { success: result.success, message: result.success ? 'Şifre doğrulandı' : 'Şifre yanlış' };
+      }
+      return { success: false, message: 'Admin bilgileri alınamadı' };
+    } catch (error) {
+      console.error('Verify admin password error:', error);
+      return { success: false, message: 'Şifre doğrulanırken hata oluştu' };
+    }
+  }
+
   // Member Users API
   static async getMemberUsers() {
     if (USE_FIREBASE) {

@@ -413,6 +413,27 @@ class FirebaseApiService {
     }
   }
 
+  // Verify admin password
+  static async verifyAdminPassword(password) {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        return { success: false, message: 'Kullanıcı oturumu bulunamadı' };
+      }
+
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      
+      return { success: true, message: 'Şifre doğrulandı' };
+    } catch (error) {
+      console.error('Verify admin password error:', error);
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        return { success: false, message: 'Şifre yanlış' };
+      }
+      return { success: false, message: 'Şifre doğrulanırken hata oluştu: ' + (error.message || error) };
+    }
+  }
+
   // Member Users API
   static async getMemberUsers() {
     try {

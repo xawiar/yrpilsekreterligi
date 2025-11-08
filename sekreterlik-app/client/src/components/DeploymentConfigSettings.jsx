@@ -12,6 +12,7 @@ const DeploymentConfigSettings = () => {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [showSecrets, setShowSecrets] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
 
   useEffect(() => {
     loadConfig();
@@ -77,6 +78,24 @@ const DeploymentConfigSettings = () => {
       setSaving(true);
       setMessage('');
       
+      // Admin şifresi doğrulama
+      if (!adminPassword.trim()) {
+        setMessage('Lütfen admin şifresini girin');
+        setMessageType('error');
+        return;
+      }
+
+      // Admin şifresini doğrula
+      const ApiService = (await import('../utils/ApiService')).default;
+      const verifyResult = await ApiService.verifyAdminPassword(adminPassword.trim());
+      
+      if (!verifyResult.success) {
+        setMessage(verifyResult.message || 'Admin şifresi yanlış');
+        setMessageType('error');
+        setAdminPassword(''); // Şifreyi temizle
+        return;
+      }
+      
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       if (USE_FIREBASE) {
@@ -94,6 +113,7 @@ const DeploymentConfigSettings = () => {
         
         setMessage('Yapılandırma başarıyla kaydedildi');
         setMessageType('success');
+        setAdminPassword(''); // Şifreyi temizle
       } else {
         setMessage('Firebase kullanılmıyor. Yapılandırma environment variable olarak ayarlanmalıdır.');
         setMessageType('error');
@@ -102,6 +122,7 @@ const DeploymentConfigSettings = () => {
       console.error('Error saving deployment config:', error);
       setMessage('Yapılandırma kaydedilirken hata oluştu: ' + error.message);
       setMessageType('error');
+      setAdminPassword(''); // Şifreyi temizle
     } finally {
       setSaving(false);
     }
