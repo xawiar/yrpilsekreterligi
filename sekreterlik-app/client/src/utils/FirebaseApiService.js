@@ -2784,7 +2784,6 @@ class FirebaseApiService {
                 const member = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, cleanedData.chairman_member_id);
                 if (member) {
                   // TC ve telefon numarasını decrypt et
-                  const { decryptData } = await import('../utils/crypto');
                   const tc = member.tc && member.tc.startsWith('U2FsdGVkX1') ? decryptData(member.tc) : member.tc;
                   const phone = member.phone && member.phone.startsWith('U2FsdGVkX1') ? decryptData(member.phone) : member.phone;
                   
