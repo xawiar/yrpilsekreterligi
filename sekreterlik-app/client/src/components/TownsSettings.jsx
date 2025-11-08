@@ -175,24 +175,32 @@ const TownsSettings = () => {
     }
 
     try {
-      // Belde oluştur
-      let town;
+      // Belde oluştur veya güncelle
+      let townId;
       if (editingTown) {
-        town = await ApiService.updateTown(editingTown.id, { name: formData.name, district_id: formData.district_id });
+        await ApiService.updateTown(editingTown.id, { name: formData.name, district_id: formData.district_id });
+        townId = editingTown.id;
         setMessage('Belde başarıyla güncellendi');
       } else {
-        town = await ApiService.createTown({ name: formData.name, district_id: formData.district_id });
+        const result = await ApiService.createTown({ name: formData.name, district_id: formData.district_id });
+        // Firebase'de result.id, backend'de result.id veya result.town.id olabilir
+        townId = result.id || result.town?.id || result;
         setMessage('Belde başarıyla eklendi');
+      }
+
+      // town_id kontrolü
+      if (!townId) {
+        throw new Error('Belde ID alınamadı');
       }
 
       // Yönetici bilgilerini kaydet
       const officialsData = {
-        town_id: town.id,
-        chairman_name: formData.chairman_name,
-        chairman_phone: formData.chairman_phone,
+        town_id: String(townId), // String'e çevirerek tutarlılık sağla
+        chairman_name: formData.chairman_name || null,
+        chairman_phone: formData.chairman_phone || null,
         chairman_member_id: formData.chairman_member_id || null,
-        inspector_name: formData.inspector_name,
-        inspector_phone: formData.inspector_phone,
+        inspector_name: formData.inspector_name || null,
+        inspector_phone: formData.inspector_phone || null,
         inspector_member_id: formData.inspector_member_id || null,
         deputy_inspectors: formData.deputy_inspectors.filter(deputy => 
           deputy.name.trim() || deputy.phone.trim() || deputy.member_id
