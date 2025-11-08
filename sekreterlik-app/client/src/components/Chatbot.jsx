@@ -328,11 +328,21 @@ const Chatbot = ({ isOpen, onClose }) => {
       const context = [];
       
       if (siteData) {
-        const siteContext = GroqService.buildSiteContext(siteData);
+        // Seçilen AI servisine göre context builder kullan
+        let AIService;
+        if (aiProvider === 'gemini') {
+          AIService = GeminiService;
+        } else if (aiProvider === 'chatgpt') {
+          AIService = ChatGPTService;
+        } else {
+          AIService = GroqService; // Default: Groq
+        }
+
+        const siteContext = AIService.buildSiteContext(siteData);
         context.push(...siteContext);
         
         // Check if user is asking about a specific member (with all site data for comprehensive info)
-        const memberContext = GroqService.buildMemberContext(
+        const memberContext = AIService.buildMemberContext(
           siteData.members, 
           userMessage,
           siteData // Tüm site verilerini gönder (meetings, representatives, supervisors, observers vb.)
