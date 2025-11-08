@@ -55,8 +55,8 @@ class GroqService {
 
       // Context'i token limitine göre kısalt (12000 token limiti için)
       // Her token yaklaşık 4 karakter (Türkçe için)
-      // Güvenli limit: 10000 token = 40000 karakter (sistem prompt ve mesajlar için 2000 token bırakıyoruz)
-      const MAX_CONTEXT_LENGTH = 35000; // ~8750 token için güvenli limit (daha küçük)
+      // Güvenli limit: 8000 token = 32000 karakter (sistem prompt ve mesajlar için 4000 token bırakıyoruz)
+      const MAX_CONTEXT_LENGTH = 28000; // ~7000 token için güvenli limit (çok daha küçük)
       let contextText = context.length > 0 ? context.join('\n') : 'Henüz context bilgisi yok.';
       
       // Eğer context çok büyükse, kısalt
@@ -137,7 +137,7 @@ ${contextText}`;
    */
   static buildSiteContext(siteData) {
     const context = [];
-    const MAX_ITEMS_PER_SECTION = 30; // Her bölüm için maksimum öğe sayısı (token limiti için daha küçük)
+    const MAX_ITEMS_PER_SECTION = 20; // Her bölüm için maksimum öğe sayısı (token limiti için çok daha küçük)
     
     // ÜYE BİLGİLERİ (Özet - detaylar sadece gerektiğinde)
     if (siteData.members && siteData.members.length > 0) {
