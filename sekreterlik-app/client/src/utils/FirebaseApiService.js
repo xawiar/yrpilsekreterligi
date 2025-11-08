@@ -1990,6 +1990,11 @@ class FirebaseApiService {
 
   static async getTownById(townId) {
     try {
+      // townId boş veya geçersizse hata döndür
+      if (!townId || townId === '' || townId === undefined || townId === null) {
+        return { success: false, message: 'Belde ID gerekli' };
+      }
+      
       const town = await FirebaseService.getById(this.COLLECTIONS.TOWNS, townId);
       if (!town) {
         return { success: false, message: 'Belde bulunamadı' };
