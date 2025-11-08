@@ -14,6 +14,8 @@ import EventCategoriesSettings from '../components/EventCategoriesSettings';
 import AuthorizationSettings from '../components/AuthorizationSettings';
 import BylawsSettings from '../components/BylawsSettings';
 import GroqApiSettings from '../components/GroqApiSettings';
+import FirebaseConfigSettings from '../components/FirebaseConfigSettings';
+import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -74,6 +76,8 @@ const SettingsPage = ({ tab }) => {
           {activeTab === 'authorization' && <AuthorizationSettings />}
           {activeTab === 'bylaws' && <BylawsSettings />}
           {activeTab === 'groq-api' && <GroqApiSettings />}
+          {activeTab === 'firebase-config' && <FirebaseConfigSettings />}
+          {activeTab === 'deployment-config' && <DeploymentConfigSettings />}
           {/* Push notifications removed */}
         </div>
       </div>
