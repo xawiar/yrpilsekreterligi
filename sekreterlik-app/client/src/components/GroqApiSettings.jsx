@@ -274,6 +274,19 @@ const GroqApiSettings = () => {
             max_tokens: 10
           })
         });
+      } else if (selectedProvider === 'deepseek') {
+        testResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentKey.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [{ role: 'user', content: 'Test' }],
+            max_tokens: 10
+          })
+        });
       }
 
       if (testResponse && testResponse.ok) {
