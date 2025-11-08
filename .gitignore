@@ -69,3 +69,4 @@ direct-import-test.js
 *.tmp
 *.temp
 
+# Force rebuild
