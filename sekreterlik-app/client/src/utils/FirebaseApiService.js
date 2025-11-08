@@ -1374,8 +1374,8 @@ class FirebaseApiService {
     }
   }
 
-  // Import members from Excel
-  static async importMembersFromExcel(file) {
+  // Preview Excel import - analyze file and return preview data
+  static async previewImportMembersFromExcel(file) {
     try {
       // XLSX kütüphanesini dinamik olarak yükle
       const XLSX = await import('xlsx');
@@ -1390,72 +1390,14 @@ class FirebaseApiService {
       // İlk satırı başlık olarak atla
       const rows = jsonData.slice(1);
       
-      let importedCount = 0;
+      const newMembers = [];
+      const updatedMembers = [];
       const errors = [];
       
-      // Helper function to create region if it doesn't exist
-      const createRegionIfNotExists = async (regionName) => {
-        if (!regionName || regionName.trim() === '') return null;
-        
-        try {
-          // Bölge var mı kontrol et
-          const existingRegions = await FirebaseService.findByField(
-            this.COLLECTIONS.REGIONS,
-            'name',
-            regionName.trim()
-          );
-          
-          if (existingRegions && existingRegions.length > 0) {
-            return existingRegions[0];
-          }
-          
-          // Yeni bölge oluştur
-          const docId = await FirebaseService.create(
-            this.COLLECTIONS.REGIONS,
-            null,
-            { name: regionName.trim() },
-            false // Şifreleme yok (bölge adı hassas değil)
-          );
-          
-          return { id: docId, name: regionName.trim() };
-        } catch (error) {
-          console.error('Error creating region:', error);
-          return null;
-        }
-      };
+      // Get all existing members once
+      const existingMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
       
-      // Helper function to create position if it doesn't exist
-      const createPositionIfNotExists = async (positionName) => {
-        if (!positionName || positionName.trim() === '') return null;
-        
-        try {
-          // Görev var mı kontrol et
-          const existingPositions = await FirebaseService.findByField(
-            this.COLLECTIONS.POSITIONS,
-            'name',
-            positionName.trim()
-          );
-          
-          if (existingPositions && existingPositions.length > 0) {
-            return existingPositions[0];
-          }
-          
-          // Yeni görev oluştur
-          const docId = await FirebaseService.create(
-            this.COLLECTIONS.POSITIONS,
-            null,
-            { name: positionName.trim() },
-            false // Şifreleme yok (görev adı hassas değil)
-          );
-          
-          return { id: docId, name: positionName.trim() };
-        } catch (error) {
-          console.error('Error creating position:', error);
-          return null;
-        }
-      };
-      
-      // Her satırı işle
+      // Process each row
       for (let i = 0; i < rows.length; i++) {
         try {
           const row = rows[i];
@@ -1465,7 +1407,6 @@ class FirebaseApiService {
           }
           
           // Map Excel columns to member fields
-          // Sütun sırası: TC, İsim Soyisim, Telefon, Görev, Bölge (İlçe kaldırıldı)
           const tc = row[0] ? String(row[0]).trim() : '';
           const name = row[1] ? String(row[1]).trim() : '';
           const phone = row[2] ? String(row[2]).trim() : '';
@@ -1494,7 +1435,6 @@ class FirebaseApiService {
           }
           
           // Check if TC already exists
-          const existingMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
           const existingMember = existingMembers.find(m => {
             if (m.archived) return false;
             
@@ -1515,28 +1455,25 @@ class FirebaseApiService {
             return String(decryptedTc) === String(tc);
           });
           
-          // Create region and position if they don't exist
-          await createRegionIfNotExists.call(this, region);
-          await createPositionIfNotExists.call(this, position);
-          
-          // Member data
           const memberData = {
             tc,
             name,
             phone,
             position,
-            region,
-            archived: false
+            region
           };
           
           if (existingMember) {
-            // TC zaten varsa, üyeyi güncelle
-            await this.updateMember(existingMember.id, memberData);
-            importedCount++;
+            // TC zaten varsa, güncelleme bilgisi ekle
+            updatedMembers.push({
+              ...memberData,
+              currentName: existingMember.name,
+              currentPhone: existingMember.phone,
+              memberId: existingMember.id
+            });
           } else {
-            // TC yoksa, yeni üye ekle
-            await this.createMember(memberData);
-            importedCount++;
+            // TC yoksa, yeni üye
+            newMembers.push(memberData);
           }
         } catch (rowError) {
           console.error(`Error processing row ${i + 2}:`, rowError);
@@ -1545,9 +1482,143 @@ class FirebaseApiService {
       }
       
       return {
+        newMembers,
+        updatedMembers,
+        errors
+      };
+    } catch (error) {
+      console.error('Excel preview error:', error);
+      throw new Error('Excel dosyası analiz edilirken hata oluştu: ' + error.message);
+    }
+  }
+
+  // Import members from Excel (with preview data)
+  static async importMembersFromExcel(file, previewData = null) {
+    try {
+      let newMembers = [];
+      let updatedMembers = [];
+      let errors = [];
+      
+      // If preview data is provided, use it; otherwise analyze the file
+      if (previewData) {
+        newMembers = previewData.newMembers || [];
+        updatedMembers = previewData.updatedMembers || [];
+        errors = previewData.errors || [];
+      } else {
+        // Fallback: analyze file if preview data not provided
+        const preview = await this.previewImportMembersFromExcel(file);
+        newMembers = preview.newMembers;
+        updatedMembers = preview.updatedMembers;
+        errors = preview.errors;
+      }
+      
+      let importedCount = 0;
+      const importErrors = [];
+      
+      // Helper function to create region if it doesn't exist
+      const createRegionIfNotExists = async (regionName) => {
+        if (!regionName || regionName.trim() === '') return null;
+        
+        try {
+          const existingRegions = await FirebaseService.findByField(
+            this.COLLECTIONS.REGIONS,
+            'name',
+            regionName.trim()
+          );
+          
+          if (existingRegions && existingRegions.length > 0) {
+            return existingRegions[0];
+          }
+          
+          const docId = await FirebaseService.create(
+            this.COLLECTIONS.REGIONS,
+            null,
+            { name: regionName.trim() },
+            false
+          );
+          
+          return { id: docId, name: regionName.trim() };
+        } catch (error) {
+          console.error('Error creating region:', error);
+          return null;
+        }
+      };
+      
+      // Helper function to create position if it doesn't exist
+      const createPositionIfNotExists = async (positionName) => {
+        if (!positionName || positionName.trim() === '') return null;
+        
+        try {
+          const existingPositions = await FirebaseService.findByField(
+            this.COLLECTIONS.POSITIONS,
+            'name',
+            positionName.trim()
+          );
+          
+          if (existingPositions && existingPositions.length > 0) {
+            return existingPositions[0];
+          }
+          
+          const docId = await FirebaseService.create(
+            this.COLLECTIONS.POSITIONS,
+            null,
+            { name: positionName.trim() },
+            false
+          );
+          
+          return { id: docId, name: positionName.trim() };
+        } catch (error) {
+          console.error('Error creating position:', error);
+          return null;
+        }
+      };
+      
+      // Process new members
+      for (const memberData of newMembers) {
+        try {
+          // Create region and position if they don't exist
+          await createRegionIfNotExists.call(this, memberData.region);
+          await createPositionIfNotExists.call(this, memberData.position);
+          
+          // Create new member
+          await this.createMember({
+            ...memberData,
+            archived: false
+          });
+          importedCount++;
+        } catch (error) {
+          console.error(`Error creating member ${memberData.tc}:`, error);
+          importErrors.push(`Üye oluşturulurken hata: ${memberData.name} (${memberData.tc}) - ${error.message}`);
+        }
+      }
+      
+      // Process updated members
+      for (const memberData of updatedMembers) {
+        try {
+          // Create region and position if they don't exist
+          await createRegionIfNotExists.call(this, memberData.region);
+          await createPositionIfNotExists.call(this, memberData.position);
+          
+          // Update existing member
+          await this.updateMember(memberData.memberId, {
+            tc: memberData.tc,
+            name: memberData.name,
+            phone: memberData.phone,
+            position: memberData.position,
+            region: memberData.region,
+            archived: false
+          });
+          importedCount++;
+        } catch (error) {
+          console.error(`Error updating member ${memberData.tc}:`, error);
+          importErrors.push(`Üye güncellenirken hata: ${memberData.name} (${memberData.tc}) - ${error.message}`);
+        }
+      }
+      
+      return {
         message: `${importedCount} üye başarıyla içe aktarıldı`,
         count: importedCount,
-        errors: errors.length > 0 ? errors : undefined
+        errors: [...errors, ...importErrors].length > 0 ? [...errors, ...importErrors] : undefined
       };
     } catch (error) {
       console.error('Excel import error:', error);

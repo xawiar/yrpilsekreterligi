@@ -4,20 +4,6 @@ const ExcelImportButton = ({ onImport }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Show import format instructions
-      alert('Excel dosyası formatı:\n\n' +
-            'A1: TC (11 haneli, zorunlu)\n' +
-            'B1: İsim Soyisim (zorunlu)\n' +
-            'C1: Telefon (zorunlu)\n' +
-            'D1: Görev (opsiyonel, örn: İlçe Başkanı, Divan Üyesi)\n' +
-            'E1: Bölge (opsiyonel, örn: Beşiktaş, Kadıköy)\n\n' +
-            'Notlar:\n' +
-            '- Görev veya bölge boş bırakılırsa otomatik olarak "Üye" olarak atanır.\n' +
-            '- Yeni görev veya bölge adları otomatik olarak sisteme eklenir.\n' +
-            '- Örnek: Görev kısmına "Divan" yazarsanız ve bu görev sistemde yoksa, otomatik olarak oluşturulur.\n' +
-            '- Aynı şekilde bölge kısmına yeni bir bölge adı yazarsanız, otomatik olarak oluşturulur.\n\n' +
-            'Devam etmek için "Tamam" tuşuna basın.');
-      
       onImport(file);
       // Reset the file input
       e.target.value = null;

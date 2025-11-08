@@ -319,10 +319,21 @@ class ApiService {
     return response.json();
   }
 
-  static async importMembersFromExcel(file) {
+  static async previewImportMembersFromExcel(file) {
     // Firebase kullanılıyorsa FirebaseApiService'i kullan
     if (USE_FIREBASE) {
-      return FirebaseApiService.importMembersFromExcel(file);
+      return FirebaseApiService.previewImportMembersFromExcel(file);
+    }
+    
+    // Backend API için preview endpoint'i yoksa, dosyayı analiz et
+    // Şimdilik Firebase kullanılıyorsa preview destekleniyor
+    throw new Error('Preview özelliği sadece Firebase ile desteklenmektedir');
+  }
+
+  static async importMembersFromExcel(file, previewData = null) {
+    // Firebase kullanılıyorsa FirebaseApiService'i kullan
+    if (USE_FIREBASE) {
+      return FirebaseApiService.importMembersFromExcel(file, previewData);
     }
     
     // Backend API kullanılıyorsa

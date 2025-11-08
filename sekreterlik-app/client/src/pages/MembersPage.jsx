@@ -33,6 +33,9 @@ const MembersPage = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' }); // For sorting - default to name A-Z
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   const [filteredMembers, setFilteredMembers] = useState([]); // For filtered and sorted members
+  const [excelImportPreview, setExcelImportPreview] = useState(null); // Excel import preview data
+  const [excelImportFile, setExcelImportFile] = useState(null); // Excel file for import
+  const [excelImportLoading, setExcelImportLoading] = useState(false); // Excel import loading state
 
   useEffect(() => {
     fetchMembers();
@@ -268,10 +271,34 @@ const MembersPage = () => {
 
   const handleImportExcel = async (file) => {
     try {
-      // Send the file to the server
-      const result = await ApiService.importMembersFromExcel(file);
+      setExcelImportLoading(true);
+      // Preview the import first
+      const previewData = await ApiService.previewImportMembersFromExcel(file);
+      setExcelImportPreview(previewData);
+      setExcelImportFile(file);
+    } catch (error) {
+      console.error('Error previewing Excel import:', error);
+      alert('Excel dosyası analiz edilirken hata oluştu: ' + error.message);
+    } finally {
+      setExcelImportLoading(false);
+    }
+  };
+
+  const handleConfirmExcelImport = async () => {
+    if (!excelImportFile || !excelImportPreview) return;
+    
+    try {
+      setExcelImportLoading(true);
+      // Import with preview data
+      const result = await ApiService.importMembersFromExcel(excelImportFile, excelImportPreview);
       fetchMembers(); // Refresh the list
       console.log('Members imported from Excel:', result);
+      
+      // Close preview modal
+      setExcelImportPreview(null);
+      setExcelImportFile(null);
+      
+      // Show success message
       alert(`${result.count} üye başarıyla içe aktarıldı.`);
       if (result.errors && result.errors.length > 0) {
         alert('Hatalar oluştu:\n' + result.errors.join('\n'));
@@ -279,7 +306,14 @@ const MembersPage = () => {
     } catch (error) {
       console.error('Error importing members from Excel:', error);
       alert('Excel içe aktarımı sırasında bir hata oluştu: ' + error.message);
+    } finally {
+      setExcelImportLoading(false);
     }
+  };
+
+  const handleCancelExcelImport = () => {
+    setExcelImportPreview(null);
+    setExcelImportFile(null);
   };
 
   const handleExportExcel = async () => {
@@ -542,6 +576,16 @@ const MembersPage = () => {
           </div>
         )}
       </Modal>
+
+      {/* Excel Import Preview Modal */}
+      {excelImportPreview && (
+        <ExcelImportPreview
+          previewData={excelImportPreview}
+          onConfirm={handleConfirmExcelImport}
+          onCancel={handleCancelExcelImport}
+          loading={excelImportLoading}
+        />
+      )}
     </div>
   );
 };
