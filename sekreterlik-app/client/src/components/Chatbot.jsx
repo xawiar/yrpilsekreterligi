@@ -442,6 +442,8 @@ const Chatbot = ({ isOpen, onClose }) => {
         response = await GeminiService.chat(userMessage, context, conversationHistory);
       } else if (aiProvider === 'chatgpt') {
         response = await ChatGPTService.chat(userMessage, context, conversationHistory);
+      } else if (aiProvider === 'deepseek') {
+        response = await DeepSeekService.chat(userMessage, context, conversationHistory);
       } else {
         response = await GroqService.chat(userMessage, context, conversationHistory); // Default: Groq
       }
