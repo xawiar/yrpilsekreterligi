@@ -356,8 +356,8 @@ const Chatbot = ({ isOpen, onClose }) => {
       
       // Add bylaws text or URL if available (kısaltılmış - token limiti için)
       if (bylawsText) {
-        // Tüzük metnini kısalt (token limiti için - max 5000 karakter = ~1250 token)
-        const MAX_BYLAWS_LENGTH = 5000;
+        // Tüzük metnini kısalt (token limiti için - max 3000 karakter = ~750 token)
+        const MAX_BYLAWS_LENGTH = 3000;
         const shortenedBylaws = bylawsText.length > MAX_BYLAWS_LENGTH 
           ? bylawsText.substring(0, MAX_BYLAWS_LENGTH) + '\n\n[Tüzük metni kısaltıldı - token limiti nedeniyle]'
           : bylawsText;

@@ -55,8 +55,8 @@ class GroqService {
 
       // Context'i token limitine göre kısalt (12000 token limiti için)
       // Her token yaklaşık 4 karakter (Türkçe için)
-      // Güvenli limit: 8000 token = 32000 karakter (sistem prompt ve mesajlar için 4000 token bırakıyoruz)
-      const MAX_CONTEXT_LENGTH = 28000; // ~7000 token için güvenli limit (çok daha küçük)
+      // Güvenli limit: 6000 token = 24000 karakter (sistem prompt ve mesajlar için 6000 token bırakıyoruz)
+      const MAX_CONTEXT_LENGTH = 24000; // ~6000 token için güvenli limit (çok daha küçük)
       let contextText = context.length > 0 ? context.join('\n') : 'Henüz context bilgisi yok.';
       
       // Eğer context çok büyükse, kısalt
@@ -65,22 +65,17 @@ class GroqService {
         console.warn('Context çok büyük, kısaltıldı:', contextText.length, 'karakter (limit:', MAX_CONTEXT_LENGTH, ')');
       }
 
-      // System prompt - AI'nın kimliği ve sınırları
-      const systemPrompt = `Sen "Yeniden Refah Partisi Elazığ Merkez İlçe Sekreteri" adlı bir yapay zeka asistanısın. Görevin site içi bilgileri ve yüklenen siyasi parti tüzüğünü kullanarak kullanıcılara yardımcı olmaktır.
+      // System prompt - AI'nın kimliği ve sınırları (kısaltılmış - token limiti için)
+      const systemPrompt = `Sen "Yeniden Refah Partisi Elazığ Merkez İlçe Sekreteri" yapay zeka asistanısın. Site bilgileri ve tüzük kullanarak yardımcı ol.
 
 KURALLAR:
-1. SADECE verilen bilgileri (context) kullanarak cevap ver
-2. Site içi bilgiler (üyeler, etkinlikler, toplantılar, bölgeler vb.), site işlevleri ve tüzük bilgileri dışında bilgi verme
-3. Eğer sorulan bilgi context'te yoksa, "Bu bilgiyi bulamadım. Lütfen site içi bilgiler, site işlevleri veya tüzük ile ilgili sorular sorun." de
-4. Eğer tüzük için web linki verilmişse, kullanıcıya tüzük hakkında sorular sorduğunda bu linki paylaşabilirsin: "Parti tüzüğü hakkında detaylı bilgi için şu linki ziyaret edebilirsiniz: [link]"
-5. Hassas bilgileri (TC, telefon, adres vb.) sadece yetkili kullanıcılar sorduğunda paylaş
-6. Türkçe yanıt ver, samimi ve yardımcı ol
-7. Yanıtlarını kısa ve öz tut, gereksiz detay verme
-8. Sayısal sorular için (kaç üye var, kaç etkinlik yapıldı vb.) context'teki verileri kullanarak hesapla
-9. Site işlevleri hakkında sorular sorulduğunda (örnek: "sandık nasıl eklenir", "toplantı nasıl oluşturulur"), context'teki "SİTE İŞLEVLERİ VE KULLANIM KILAVUZU" bölümündeki bilgileri kullanarak adım adım açıkla
-10. Kullanıcılar site işlevlerini nasıl kullanacaklarını sorduğunda, hangi sayfaya gitmeleri gerektiğini, hangi butona tıklamaları gerektiğini ve hangi bilgileri girmeleri gerektiğini detaylıca anlat
+1. SADECE verilen context'i kullan
+2. Site bilgileri ve tüzük dışında bilgi verme
+3. Bilgi yoksa "Bulamadım" de
+4. Türkçe, kısa ve öz cevap ver
+5. Sayısal sorular için context'teki verileri kullan
 
-CONTEXT BİLGİLERİ:
+CONTEXT:
 ${contextText}`;
 
       // Konuşma geçmişini formatla
