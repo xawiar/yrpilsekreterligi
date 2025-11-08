@@ -382,18 +382,18 @@ class MemberController {
         try {
           const row = rows[i];
           console.log(`Processing row ${i + 1}:`, row);
-          if (row.length < 6) {
-            console.log(`Skipping row ${i + 1} due to insufficient columns`);
+          if (row.length < 3) {
+            console.log(`Skipping row ${i + 1} due to insufficient columns (en az 3 sütun gerekli: TC, İsim, Telefon)`);
             continue; // Skip incomplete rows
           }
 
           // Map Excel columns to member fields (without automatic mapping)
+          // Sütun sırası: TC, İsim Soyisim, Telefon, Görev, Bölge (İlçe kaldırıldı)
           const tc = row[0] ? String(row[0]).trim() : '';
           const name = row[1] ? String(row[1]).trim() : '';
           const phone = row[2] ? String(row[2]).trim() : '';
           let position = row[3] ? String(row[3]).trim() : '';
           let region = row[4] ? String(row[4]).trim() : '';
-          const district = row[5] ? String(row[5]).trim() : '';
 
           // If position or region is empty, set default values
           if (!position) {
@@ -404,11 +404,11 @@ class MemberController {
             region = 'Üye';
           }
 
-          console.log(`Mapped data - TC: ${tc}, Name: ${name}, Phone: ${phone}, Position: ${position}, Region: ${region}, District: ${district}`);
+          console.log(`Mapped data - TC: ${tc}, Name: ${name}, Phone: ${phone}, Position: ${position}, Region: ${region}`);
 
-          // Validate required fields
-          if (!tc || !name || !phone || !district) {
-            errors.push(`Satır ${i + 2}: Gerekli alanlar eksik`);
+          // Validate required fields (İlçe artık zorunlu değil)
+          if (!tc || !name || !phone) {
+            errors.push(`Satır ${i + 2}: Gerekli alanlar eksik (TC, İsim Soyisim, Telefon zorunludur)`);
             console.log(`Validation failed for row ${i + 2}`);
             continue;
           }

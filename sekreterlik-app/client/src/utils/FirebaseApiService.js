@@ -1332,6 +1332,170 @@ class FirebaseApiService {
     }
   }
 
+  // Import members from Excel
+  static async importMembersFromExcel(file) {
+    try {
+      // XLSX kütüphanesini dinamik olarak yükle
+      const XLSX = await import('xlsx');
+      
+      // Dosyayı oku
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      // İlk satırı başlık olarak atla
+      const rows = jsonData.slice(1);
+      
+      let importedCount = 0;
+      const errors = [];
+      
+      // Helper function to create region if it doesn't exist
+      const createRegionIfNotExists = async (regionName) => {
+        if (!regionName || regionName.trim() === '') return null;
+        
+        try {
+          // Bölge var mı kontrol et
+          const existingRegions = await FirebaseService.findByField(
+            this.COLLECTIONS.REGIONS,
+            'name',
+            regionName.trim()
+          );
+          
+          if (existingRegions && existingRegions.length > 0) {
+            return existingRegions[0];
+          }
+          
+          // Yeni bölge oluştur
+          const docId = await FirebaseService.create(
+            this.COLLECTIONS.REGIONS,
+            null,
+            { name: regionName.trim() },
+            false // Şifreleme yok (bölge adı hassas değil)
+          );
+          
+          return { id: docId, name: regionName.trim() };
+        } catch (error) {
+          console.error('Error creating region:', error);
+          return null;
+        }
+      };
+      
+      // Helper function to create position if it doesn't exist
+      const createPositionIfNotExists = async (positionName) => {
+        if (!positionName || positionName.trim() === '') return null;
+        
+        try {
+          // Görev var mı kontrol et
+          const existingPositions = await FirebaseService.findByField(
+            this.COLLECTIONS.POSITIONS,
+            'name',
+            positionName.trim()
+          );
+          
+          if (existingPositions && existingPositions.length > 0) {
+            return existingPositions[0];
+          }
+          
+          // Yeni görev oluştur
+          const docId = await FirebaseService.create(
+            this.COLLECTIONS.POSITIONS,
+            null,
+            { name: positionName.trim() },
+            false // Şifreleme yok (görev adı hassas değil)
+          );
+          
+          return { id: docId, name: positionName.trim() };
+        } catch (error) {
+          console.error('Error creating position:', error);
+          return null;
+        }
+      };
+      
+      // Her satırı işle
+      for (let i = 0; i < rows.length; i++) {
+        try {
+          const row = rows[i];
+          
+          if (row.length < 3) {
+            continue; // En az 3 sütun gerekli: TC, İsim, Telefon
+          }
+          
+          // Map Excel columns to member fields
+          // Sütun sırası: TC, İsim Soyisim, Telefon, Görev, Bölge (İlçe kaldırıldı)
+          const tc = row[0] ? String(row[0]).trim() : '';
+          const name = row[1] ? String(row[1]).trim() : '';
+          const phone = row[2] ? String(row[2]).trim() : '';
+          let position = row[3] ? String(row[3]).trim() : '';
+          let region = row[4] ? String(row[4]).trim() : '';
+          
+          // If position or region is empty, set default values
+          if (!position) {
+            position = 'Üye';
+          }
+          
+          if (!region) {
+            region = 'Üye';
+          }
+          
+          // Validate required fields
+          if (!tc || !name || !phone) {
+            errors.push(`Satır ${i + 2}: Gerekli alanlar eksik (TC, İsim Soyisim, Telefon zorunludur)`);
+            continue;
+          }
+          
+          // Validate TC length
+          if (tc.length !== 11) {
+            errors.push(`Satır ${i + 2}: TC kimlik numarası 11 haneli olmalıdır`);
+            continue;
+          }
+          
+          // Check if TC already exists
+          const existingMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+          const duplicateMember = existingMembers.find(m => {
+            const memberTc = m.tc || m.tcNo;
+            return memberTc === tc && !m.archived;
+          });
+          
+          if (duplicateMember) {
+            errors.push(`Satır ${i + 2}: Bu TC kimlik numarası zaten kayıtlı`);
+            continue;
+          }
+          
+          // Create region and position if they don't exist
+          await createRegionIfNotExists.call(this, region);
+          await createPositionIfNotExists.call(this, position);
+          
+          // Create member
+          const memberData = {
+            tc,
+            name,
+            phone,
+            position,
+            region,
+            archived: false
+          };
+          
+          await this.createMember(memberData);
+          importedCount++;
+        } catch (rowError) {
+          console.error(`Error processing row ${i + 2}:`, rowError);
+          errors.push(`Satır ${i + 2}: ${rowError.message}`);
+        }
+      }
+      
+      return {
+        message: `${importedCount} üye başarıyla içe aktarıldı`,
+        count: importedCount,
+        errors: errors.length > 0 ? errors : undefined
+      };
+    } catch (error) {
+      console.error('Excel import error:', error);
+      throw new Error('Excel içe aktarımı sırasında hata oluştu: ' + error.message);
+    }
+  }
+
   // Delete archived member permanently
   static async deleteArchivedMember(id) {
     try {
