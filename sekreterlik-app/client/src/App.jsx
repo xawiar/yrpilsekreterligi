@@ -24,6 +24,7 @@ import RepresentativesPage from './pages/RepresentativesPage';
 import NeighborhoodsPage from './pages/NeighborhoodsPage';
 import VillagesPage from './pages/VillagesPage';
 import GroupsPage from './pages/GroupsPage';
+import BulkSmsPage from './pages/BulkSmsPage';
 import DistrictPresidentDashboardPage from './pages/DistrictPresidentDashboardPage';
 import TownPresidentDashboardPage from './pages/TownPresidentDashboardPage';
 import CalendarPage from './pages/CalendarPage';
@@ -252,6 +253,7 @@ function AppContent() {
             <Route path="/election-preparation/representatives" element={<RepresentativesPage />} />
             <Route path="/election-preparation/neighborhoods" element={<NeighborhoodsPage />} />
             <Route path="/election-preparation/villages" element={<VillagesPage />} />
+            <Route path="/bulk-sms" element={<BulkSmsPage />} />
             <Route path="/election-preparation/groups" element={<GroupsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />

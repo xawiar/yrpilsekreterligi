@@ -4,6 +4,7 @@ import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import CryptoJS from 'crypto-js';
 import * as XLSX from 'xlsx';
+import Modal from '../components/Modal';
 
 const RepresentativesPage = () => {
   const [neighborhoodRepresentatives, setNeighborhoodRepresentatives] = useState([]);
@@ -12,6 +13,10 @@ const RepresentativesPage = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('neighborhood'); // 'neighborhood' or 'village'
   const [searchTerm, setSearchTerm] = useState('');
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [smsMessage, setSmsMessage] = useState('');
+  const [sendingSms, setSendingSms] = useState(false);
+  const [smsResult, setSmsResult] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -166,41 +171,52 @@ const RepresentativesPage = () => {
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Temsilciler</h1>
         </div>
-        <button
-          onClick={() => {
-            const excelData = [
-              activeTab === 'neighborhood' 
-                ? ['Mahalle Adı', 'İlçe', 'Belde', 'Temsilci Adı', 'Temsilci TC', 'Temsilci Telefon', 'Grup No']
-                : ['Köy Adı', 'İlçe', 'Belde', 'Temsilci Adı', 'Temsilci TC', 'Temsilci Telefon', 'Grup No']
-            ];
-            
-            const reps = activeTab === 'neighborhood' ? filteredNeighborhoodReps : filteredVillageReps;
-            reps.forEach(rep => {
-              excelData.push([
-                rep.neighborhood_name || rep.village_name || '',
-                rep.district_name || '',
-                rep.town_name || '',
-                rep.name || '',
-                rep.tc || '',
-                rep.phone || '',
-                rep.group_no || ''
-              ]);
-            });
-            
-            const ws = XLSX.utils.aoa_to_sheet(excelData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, activeTab === 'neighborhood' ? 'Mahalle Temsilcileri' : 'Köy Temsilcileri');
-            
-            const fileName = `${activeTab === 'neighborhood' ? 'mahalle' : 'koy'}_temsilcileri_${new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-          }}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Excel'e Aktar
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowSmsModal(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            SMS Gönder
+          </button>
+          <button
+            onClick={() => {
+              const excelData = [
+                activeTab === 'neighborhood' 
+                  ? ['Mahalle Adı', 'İlçe', 'Belde', 'Temsilci Adı', 'Temsilci TC', 'Temsilci Telefon', 'Grup No']
+                  : ['Köy Adı', 'İlçe', 'Belde', 'Temsilci Adı', 'Temsilci TC', 'Temsilci Telefon', 'Grup No']
+              ];
+              
+              const reps = activeTab === 'neighborhood' ? filteredNeighborhoodReps : filteredVillageReps;
+              reps.forEach(rep => {
+                excelData.push([
+                  rep.neighborhood_name || rep.village_name || '',
+                  rep.district_name || '',
+                  rep.town_name || '',
+                  rep.name || '',
+                  rep.tc || '',
+                  rep.phone || '',
+                  rep.group_no || ''
+                ]);
+              });
+              
+              const ws = XLSX.utils.aoa_to_sheet(excelData);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, activeTab === 'neighborhood' ? 'Mahalle Temsilcileri' : 'Köy Temsilcileri');
+              
+              const fileName = `${activeTab === 'neighborhood' ? 'mahalle' : 'koy'}_temsilcileri_${new Date().toISOString().split('T')[0]}.xlsx`;
+              XLSX.writeFile(wb, fileName);
+            }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Excel'e Aktar
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -370,6 +386,119 @@ const RepresentativesPage = () => {
           )}
         </div>
       </div>
+
+      {/* SMS Modal */}
+      <Modal
+        isOpen={showSmsModal}
+        onClose={() => {
+          setShowSmsModal(false);
+          setSmsMessage('');
+          setSmsResult(null);
+        }}
+        title={`${activeTab === 'neighborhood' ? 'Mahalle' : 'Köy'} Temsilcilerine SMS Gönder`}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Mesaj Metni <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Gönderilecek mesajı yazın. Mesaj başına temsilci adı otomatik olarak eklenecektir (Sn [temsilci adı], [mesaj])."
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Mesaj formatı: "Sn [temsilci adı], [mesaj metni]"
+            </p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Gönderilecek temsilci sayısı: {activeTab === 'neighborhood' ? filteredNeighborhoodReps.length : filteredVillageReps.length}
+            </p>
+          </div>
+
+          {smsResult && (
+            <div className={`p-4 rounded-lg ${
+              smsResult.success 
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' 
+                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'
+            }`}>
+              <p className="font-medium">{smsResult.message}</p>
+              {smsResult.sent > 0 && (
+                <p className="mt-2 text-sm">Başarılı: {smsResult.sent} SMS</p>
+              )}
+              {smsResult.failed > 0 && (
+                <p className="mt-2 text-sm">Başarısız: {smsResult.failed} SMS</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => {
+                setShowSmsModal(false);
+                setSmsMessage('');
+                setSmsResult(null);
+              }}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              İptal
+            </button>
+            <button
+              onClick={async () => {
+                if (!smsMessage.trim()) {
+                  alert('Lütfen mesaj metnini girin');
+                  return;
+                }
+
+                const reps = activeTab === 'neighborhood' ? filteredNeighborhoodReps : filteredVillageReps;
+                if (reps.length === 0) {
+                  alert('Gönderilecek temsilci bulunamadı');
+                  return;
+                }
+
+                if (!window.confirm(`${reps.length} temsilciye SMS göndermek istediğinize emin misiniz?`)) {
+                  return;
+                }
+
+                try {
+                  setSendingSms(true);
+                  setSmsResult(null);
+                  
+                  const repIds = reps.map(rep => String(rep.id));
+                  const result = await ApiService.sendSmsToRepresentatives(
+                    activeTab === 'neighborhood' ? 'neighborhood' : 'village',
+                    smsMessage,
+                    repIds
+                  );
+                  
+                  setSmsResult(result);
+                  
+                  if (result.success) {
+                    setTimeout(() => {
+                      setShowSmsModal(false);
+                      setSmsMessage('');
+                      setSmsResult(null);
+                    }, 3000);
+                  }
+                } catch (error) {
+                  console.error('Error sending SMS:', error);
+                  setSmsResult({
+                    success: false,
+                    message: 'SMS gönderilirken hata oluştu: ' + error.message
+                  });
+                } finally {
+                  setSendingSms(false);
+                }
+              }}
+              disabled={sendingSms || !smsMessage.trim()}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sendingSms ? 'Gönderiliyor...' : 'SMS Gönder'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
