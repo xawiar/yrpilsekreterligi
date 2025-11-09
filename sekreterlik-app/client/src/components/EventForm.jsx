@@ -23,6 +23,16 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [responsibleMembers, setResponsibleMembers] = useState([]);
   const [loadingResponsibleMembers, setLoadingResponsibleMembers] = useState(false);
+  
+  // Search terms for location selection
+  const [locationSearchTerms, setLocationSearchTerms] = useState({
+    neighborhood: '',
+    village: '',
+    district: '',
+    town: '',
+    stk: '',
+    mosque: ''
+  });
 
   // Filter and sort members
   const filteredMembers = members ? members.filter(member => 
@@ -311,17 +321,21 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
     }
   }, [event]);
 
-  // Compute filtered options based on hierarchical selections
+  // Compute filtered options based on hierarchical selections and search terms
   const getFilteredOptions = (type) => {
     const selectedDistrictIds = selectedLocations.district || [];
     const selectedTownIds = selectedLocations.town || [];
     const selectedNeighborhoodIds = selectedLocations.neighborhood || [];
     const selectedVillageIds = selectedLocations.village || [];
+    const searchTerm = locationSearchTerms[type] || '';
+
+    let filtered = [];
 
     switch (type) {
       case 'town': {
-        if (selectedDistrictIds.length === 0) return towns;
-        return towns.filter(t => selectedDistrictIds.includes(t.district_id));
+        if (selectedDistrictIds.length === 0) filtered = towns;
+        else filtered = towns.filter(t => selectedDistrictIds.includes(t.district_id));
+        break;
       }
       case 'neighborhood': {
         let base = neighborhoods;
@@ -331,7 +345,8 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
         if (selectedTownIds.length > 0 && base.length > 0 && 'town_id' in (base[0] || {})) {
           base = base.filter(n => selectedTownIds.includes(n.town_id));
         }
-        return base;
+        filtered = base;
+        break;
       }
       case 'village': {
         let base = villages;
@@ -341,7 +356,8 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
         if (selectedTownIds.length > 0 && base.length > 0 && 'town_id' in (base[0] || {})) {
           base = base.filter(v => selectedTownIds.includes(v.town_id));
         }
-        return base;
+        filtered = base;
+        break;
       }
       case 'mosque': {
         let base = mosques;
@@ -356,19 +372,41 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
         if (selectedVillageIds.length > 0 && base.length > 0 && 'village_id' in (base[0] || {})) {
           base = base.filter(m => selectedVillageIds.includes(m.village_id));
         }
-        return base;
+        filtered = base;
+        break;
       }
       case 'district':
-        return districts;
+        filtered = districts;
+        break;
       case 'stk':
         // STK'lar bölge bazlı olabilir; eğer district_id alanı varsa filtrele
         if ((selectedDistrictIds.length > 0) && stks.length > 0 && 'district_id' in (stks[0] || {})) {
-          return stks.filter(s => selectedDistrictIds.includes(s.district_id));
+          filtered = stks.filter(s => selectedDistrictIds.includes(s.district_id));
+        } else {
+          filtered = stks;
         }
-        return stks;
+        break;
       default:
         return [];
     }
+
+    // Apply search term filter if exists
+    if (searchTerm && searchTerm.trim() !== '') {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(option => 
+        option.name && option.name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  };
+
+  // Handle location search term change
+  const handleLocationSearchChange = (locationType, value) => {
+    setLocationSearchTerms(prev => ({
+      ...prev,
+      [locationType]: value
+    }));
   };
 
   // Load responsible members when selected locations change
