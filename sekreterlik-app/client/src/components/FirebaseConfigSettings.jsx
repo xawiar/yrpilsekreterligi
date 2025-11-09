@@ -27,6 +27,28 @@ const FirebaseConfigSettings = () => {
       setLoading(true);
       setMessage('');
       
+      // Önce environment variable'lardan yükle (en güncel)
+      const envApiKey = import.meta.env.VITE_FIREBASE_API_KEY || '';
+      const envAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '';
+      const envProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || '';
+      const envStorageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '';
+      const envMessagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '';
+      const envAppId = import.meta.env.VITE_FIREBASE_APP_ID || '';
+      const envMeasurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '';
+      
+      // Eğer environment variable'lar varsa onları kullan
+      if (envApiKey && envAuthDomain && envProjectId) {
+        setApiKey(envApiKey);
+        setAuthDomain(envAuthDomain);
+        setProjectId(envProjectId);
+        setStorageBucket(envStorageBucket);
+        setMessagingSenderId(envMessagingSenderId);
+        setAppId(envAppId);
+        setMeasurementId(envMeasurementId);
+        return; // Environment variable'lar varsa Firestore'dan yükleme
+      }
+      
+      // Environment variable'lar yoksa Firestore'dan yükle
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       if (USE_FIREBASE) {
@@ -47,33 +69,35 @@ const FirebaseConfigSettings = () => {
             setAppId(configDoc.appId || '');
             setMeasurementId(configDoc.measurementId || '');
           } else {
-            // Environment variable'lardan yükle, yoksa mevcut yapılandırmadan
-            setApiKey(import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAAkFCVr_IrA9qR8gAgDAZMGGk-xGsY2nA');
-            setAuthDomain(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'ilsekreterliki.firebaseapp.com');
-            setProjectId(import.meta.env.VITE_FIREBASE_PROJECT_ID || 'ilsekreterliki');
-            setStorageBucket(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'ilsekreterliki.firebasestorage.app');
-            setMessagingSenderId(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '112937724027');
-            setAppId(import.meta.env.VITE_FIREBASE_APP_ID || '1:112937724027:web:03e419ca720eea178c1ade');
-            setMeasurementId(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-YMN4TEP8Z1');
+            // Firestore'da da yoksa boş bırak
+            setApiKey('');
+            setAuthDomain('');
+            setProjectId('');
+            setStorageBucket('');
+            setMessagingSenderId('');
+            setAppId('');
+            setMeasurementId('');
           }
         } catch (error) {
-          console.warn('Firebase config not found in Firestore, using environment variables:', error);
-          setApiKey(import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAAkFCVr_IrA9qR8gAgDAZMGGk-xGsY2nA');
-          setAuthDomain(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'ilsekreterliki.firebaseapp.com');
-          setProjectId(import.meta.env.VITE_FIREBASE_PROJECT_ID || 'ilsekreterliki');
-          setStorageBucket(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'ilsekreterliki.firebasestorage.app');
-          setMessagingSenderId(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '112937724027');
-          setAppId(import.meta.env.VITE_FIREBASE_APP_ID || '1:112937724027:web:03e419ca720eea178c1ade');
-          setMeasurementId(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-YMN4TEP8Z1');
+          console.warn('Firebase config not found in Firestore:', error);
+          // Firestore hatası varsa environment variable'ları kullan
+          setApiKey(envApiKey);
+          setAuthDomain(envAuthDomain);
+          setProjectId(envProjectId);
+          setStorageBucket(envStorageBucket);
+          setMessagingSenderId(envMessagingSenderId);
+          setAppId(envAppId);
+          setMeasurementId(envMeasurementId);
         }
       } else {
-        setApiKey(import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAAkFCVr_IrA9qR8gAgDAZMGGk-xGsY2nA');
-        setAuthDomain(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'ilsekreterliki.firebaseapp.com');
-        setProjectId(import.meta.env.VITE_FIREBASE_PROJECT_ID || 'ilsekreterliki');
-        setStorageBucket(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'ilsekreterliki.firebasestorage.app');
-        setMessagingSenderId(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '112937724027');
-        setAppId(import.meta.env.VITE_FIREBASE_APP_ID || '1:112937724027:web:03e419ca720eea178c1ade');
-        setMeasurementId(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-YMN4TEP8Z1');
+        // Firebase kullanılmıyorsa environment variable'ları göster
+        setApiKey(envApiKey);
+        setAuthDomain(envAuthDomain);
+        setProjectId(envProjectId);
+        setStorageBucket(envStorageBucket);
+        setMessagingSenderId(envMessagingSenderId);
+        setAppId(envAppId);
+        setMeasurementId(envMeasurementId);
       }
     } catch (error) {
       console.error('Error loading Firebase config:', error);

@@ -143,11 +143,18 @@ const VillagesPage = () => {
   };
 
   // Calculate villages without representatives
+  // Handle both string and number ID types
   const villagesWithReps = new Set(
-    villageRepresentatives.map(rep => rep.village_id).filter(Boolean)
+    villageRepresentatives.map(rep => {
+      const id = rep.village_id || rep.villageId;
+      return id ? String(id) : null;
+    }).filter(Boolean)
   );
   const villagesWithoutReps = villages.filter(
-    v => !villagesWithReps.has(v.id)
+    v => {
+      const vId = String(v.id);
+      return !villagesWithReps.has(vId);
+    }
   ).length;
 
   const filteredVillages = villages.filter(village => {
@@ -178,8 +185,24 @@ const VillagesPage = () => {
     ];
 
     filteredVillages.forEach(village => {
-      const representative = villageRepresentatives.find(rep => String(rep.village_id) === String(village.id));
-      const supervisor = villageSupervisors.find(sup => String(sup.village_id) === String(village.id));
+      const villageIdStr = String(village.id);
+      const villageIdNum = Number(village.id);
+      
+      const representative = villageRepresentatives.find(rep => {
+        const repId = rep.village_id || rep.villageId;
+        const repIdStr = String(repId);
+        const repIdNum = Number(repId);
+        return repIdStr === villageIdStr || repIdNum === villageIdNum || 
+               repIdStr === villageIdNum || repIdNum === villageIdStr;
+      });
+      
+      const supervisor = villageSupervisors.find(sup => {
+        const supId = sup.village_id || sup.villageId;
+        const supIdStr = String(supId);
+        const supIdNum = Number(supId);
+        return supIdStr === villageIdStr || supIdNum === villageIdNum || 
+               supIdStr === villageIdNum || supIdNum === villageIdStr;
+      });
       
       excelData.push([
         village.name || '',
@@ -329,9 +352,28 @@ const VillagesPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredVillages.map((village) => {
-                  const hasRepresentative = villagesWithReps.has(village.id);
-                  const representative = villageRepresentatives.find(rep => rep.village_id === village.id);
-                  const supervisor = villageSupervisors.find(sup => sup.village_id === village.id);
+                  const villageIdStr = String(village.id);
+                  const villageIdNum = Number(village.id);
+                  
+                  // Find representative - handle both string and number ID types
+                  const representative = villageRepresentatives.find(rep => {
+                    const repId = rep.village_id || rep.villageId;
+                    const repIdStr = String(repId);
+                    const repIdNum = Number(repId);
+                    return repIdStr === villageIdStr || repIdNum === villageIdNum || 
+                           repIdStr === villageIdNum || repIdNum === villageIdStr;
+                  });
+                  
+                  // Find supervisor - handle both string and number ID types
+                  const supervisor = villageSupervisors.find(sup => {
+                    const supId = sup.village_id || sup.villageId;
+                    const supIdStr = String(supId);
+                    const supIdNum = Number(supId);
+                    return supIdStr === villageIdStr || supIdNum === villageIdNum || 
+                           supIdStr === villageIdNum || supIdNum === villageIdStr;
+                  });
+                  
+                  const hasRepresentative = !!representative;
                   const isEditing = editingGroup === village.id;
                   
                   return (

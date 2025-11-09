@@ -143,11 +143,18 @@ const NeighborhoodsPage = () => {
   };
 
   // Calculate neighborhoods without representatives
+  // Handle both string and number ID types
   const neighborhoodsWithReps = new Set(
-    neighborhoodRepresentatives.map(rep => rep.neighborhood_id).filter(Boolean)
+    neighborhoodRepresentatives.map(rep => {
+      const id = rep.neighborhood_id || rep.neighborhoodId;
+      return id ? String(id) : null;
+    }).filter(Boolean)
   );
   const neighborhoodsWithoutReps = neighborhoods.filter(
-    n => !neighborhoodsWithReps.has(n.id)
+    n => {
+      const nId = String(n.id);
+      return !neighborhoodsWithReps.has(nId);
+    }
   ).length;
 
   const filteredNeighborhoods = neighborhoods.filter(neighborhood => {
@@ -178,8 +185,24 @@ const NeighborhoodsPage = () => {
     ];
 
     filteredNeighborhoods.forEach(neighborhood => {
-      const representative = neighborhoodRepresentatives.find(rep => String(rep.neighborhood_id) === String(neighborhood.id));
-      const supervisor = neighborhoodSupervisors.find(sup => String(sup.neighborhood_id) === String(neighborhood.id));
+      const neighborhoodIdStr = String(neighborhood.id);
+      const neighborhoodIdNum = Number(neighborhood.id);
+      
+      const representative = neighborhoodRepresentatives.find(rep => {
+        const repId = rep.neighborhood_id || rep.neighborhoodId;
+        const repIdStr = String(repId);
+        const repIdNum = Number(repId);
+        return repIdStr === neighborhoodIdStr || repIdNum === neighborhoodIdNum || 
+               repIdStr === neighborhoodIdNum || repIdNum === neighborhoodIdStr;
+      });
+      
+      const supervisor = neighborhoodSupervisors.find(sup => {
+        const supId = sup.neighborhood_id || sup.neighborhoodId;
+        const supIdStr = String(supId);
+        const supIdNum = Number(supId);
+        return supIdStr === neighborhoodIdStr || supIdNum === neighborhoodIdNum || 
+               supIdStr === neighborhoodIdNum || supIdNum === neighborhoodIdStr;
+      });
       
       excelData.push([
         neighborhood.name || '',
@@ -329,9 +352,28 @@ const NeighborhoodsPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredNeighborhoods.map((neighborhood) => {
-                  const hasRepresentative = neighborhoodsWithReps.has(neighborhood.id);
-                  const representative = neighborhoodRepresentatives.find(rep => rep.neighborhood_id === neighborhood.id);
-                  const supervisor = neighborhoodSupervisors.find(sup => sup.neighborhood_id === neighborhood.id);
+                  const neighborhoodIdStr = String(neighborhood.id);
+                  const neighborhoodIdNum = Number(neighborhood.id);
+                  
+                  // Find representative - handle both string and number ID types
+                  const representative = neighborhoodRepresentatives.find(rep => {
+                    const repId = rep.neighborhood_id || rep.neighborhoodId;
+                    const repIdStr = String(repId);
+                    const repIdNum = Number(repId);
+                    return repIdStr === neighborhoodIdStr || repIdNum === neighborhoodIdNum || 
+                           repIdStr === neighborhoodIdNum || repIdNum === neighborhoodIdStr;
+                  });
+                  
+                  // Find supervisor - handle both string and number ID types
+                  const supervisor = neighborhoodSupervisors.find(sup => {
+                    const supId = sup.neighborhood_id || sup.neighborhoodId;
+                    const supIdStr = String(supId);
+                    const supIdNum = Number(supId);
+                    return supIdStr === neighborhoodIdStr || supIdNum === neighborhoodIdNum || 
+                           supIdStr === neighborhoodIdNum || supIdNum === neighborhoodIdStr;
+                  });
+                  
+                  const hasRepresentative = !!representative;
                   const isEditing = editingGroup === neighborhood.id;
                   
                   return (

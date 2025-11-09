@@ -329,7 +329,50 @@ class FirebaseApiService {
         if (memberUser && memberUser.length > 0) {
           userData.type = memberUser[0].userType || 'member';
           userData.role = memberUser[0].userType || 'member';
-          userData.memberId = memberUser[0].memberId;
+          
+          // memberId alanını kontrol et - hem memberId hem member_id olabilir
+          let memberId = memberUser[0].memberId || memberUser[0].member_id;
+          
+          // Eğer memberId yoksa ve userType 'member' ise, username (TC) ile member bul
+          if (!memberId && memberUser[0].userType === 'member' && memberUser[0].username) {
+            try {
+              // Tüm üyeleri al ve TC'ye göre bul
+              const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+              const memberByTc = allMembers.find(m => {
+                // TC şifrelenmiş olabilir, decrypt etmeye çalış
+                try {
+                  const decryptedTc = decryptData(m.tc || m.tcNo || '');
+                  return decryptedTc === memberUser[0].username || m.tc === memberUser[0].username || m.tcNo === memberUser[0].username;
+                } catch (e) {
+                  // Decrypt başarısız, direkt karşılaştır
+                  return m.tc === memberUser[0].username || m.tcNo === memberUser[0].username;
+                }
+              });
+              
+              if (memberByTc) {
+                memberId = memberByTc.id;
+                console.log(`✅ Member found by TC: ${memberUser[0].username} -> ${memberId}`);
+              }
+            } catch (e) {
+              console.warn('Member lookup by TC failed:', e);
+            }
+          }
+          
+          // Eğer hala memberId yoksa ve userType 'member' ise, id'yi memberId olarak kullan
+          // (member_users collection'ındaki id, members collection'ındaki id ile eşleşebilir)
+          if (!memberId && memberUser[0].userType === 'member') {
+            try {
+              const memberById = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, memberUser[0].id, false);
+              if (memberById) {
+                memberId = memberUser[0].id;
+                console.log(`✅ Member found by id: ${memberUser[0].id}`);
+              }
+            } catch (e) {
+              console.warn('Member not found by id:', memberUser[0].id);
+            }
+          }
+          
+          userData.memberId = memberId ? String(memberId) : null;
           userData.id = memberUser[0].id;
           
           // Belde başkanı veya ilçe başkanı ise townId veya districtId ekle

@@ -33,6 +33,8 @@ import CheckAdminPage from './pages/CheckAdminPage';
 import DebugFirebasePage from './pages/DebugFirebasePage';
 import ClearAllDataPage from './pages/ClearAllDataPage';
 import FirebaseAuthUsersPage from './pages/FirebaseAuthUsersPage';
+import SyncToFirebasePage from './pages/SyncToFirebasePage';
+import FirebaseTestPage from './pages/FirebaseTestPage';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import PWANotification from './components/PWANotification';
@@ -151,6 +153,10 @@ function AppContent() {
             element={<DebugFirebasePage />} 
           />
           <Route 
+            path="/firebase-test" 
+            element={<FirebaseTestPage />} 
+          />
+          <Route 
             path="/clear-all-data" 
             element={
               <AdminRoute>
@@ -260,6 +266,7 @@ function AppContent() {
                           <Route path="/archive" element={<ArchivePage />} />
                           <Route path="/management-chart" element={<ManagementChartPage />} />
                           <Route path="/settings/*" element={<SettingsPage />} />
+                          <Route path="/sync-to-firebase" element={<SyncToFirebasePage />} />
                           
                           {/* STK Manager Routes */}
                           <Route path="/stk-management" element={

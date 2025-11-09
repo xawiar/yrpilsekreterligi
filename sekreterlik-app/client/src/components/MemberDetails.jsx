@@ -245,14 +245,26 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       };
     }
 
+    // Normalize member ID for comparison (handle both string and number)
+    const memberIdStr = String(memberId);
+    const memberIdNum = Number(memberId);
+
     const memberEvents = events.filter(event => 
       event.attendees && 
       Array.isArray(event.attendees) && 
-      event.attendees.some(att => att.memberId === memberId)
+      event.attendees.some(att => {
+        const attendeeMemberId = att.memberId || att.member_id;
+        return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+      })
     );
 
     const attendedEvents = memberEvents.filter(event => {
-      const attendance = event.attendees.find(att => att.memberId === memberId);
+      const attendeeMemberIdStr = String(memberId);
+      const attendeeMemberIdNum = Number(memberId);
+      const attendance = event.attendees.find(att => {
+        const attendeeMemberId = att.memberId || att.member_id;
+        return String(attendeeMemberId) === attendeeMemberIdStr || Number(attendeeMemberId) === attendeeMemberIdNum;
+      });
       return attendance && attendance.attended;
     });
 
@@ -275,16 +287,26 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       return 0;
     }
 
+    // Normalize member ID for comparison (handle both string and number)
+    const memberIdStr = String(memberId);
+    const memberIdNum = Number(memberId);
+
     const memberMeetings = meetings.filter(meeting => 
       meeting.attendees && 
       Array.isArray(meeting.attendees) && 
-      meeting.attendees.some(att => att.memberId === memberId)
+      meeting.attendees.some(att => {
+        const attendeeMemberId = att.memberId || att.member_id;
+        return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+      })
     );
 
     let excuseCount = 0;
     memberMeetings.forEach(meeting => {
       if (meeting.attendees && Array.isArray(meeting.attendees)) {
-        const attendee = meeting.attendees.find(a => a.memberId === memberId);
+        const attendee = meeting.attendees.find(a => {
+          const attendeeMemberId = a.memberId || a.member_id;
+          return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+        });
         if (attendee && attendee.excuse && attendee.excuse.hasExcuse) {
           excuseCount++;
         }
@@ -831,11 +853,15 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
             </thead>
             <tbody className="bg-white divide-y divide-gray-100 hidden md:table-row-group">
               {meetings
-                .filter(meeting => 
-                  meeting.attendees && 
-                  Array.isArray(meeting.attendees) && 
-                  meeting.attendees.some(a => a.memberId === member.id)
-                )
+                .filter(meeting => {
+                  if (!meeting.attendees || !Array.isArray(meeting.attendees)) return false;
+                  const memberIdStr = String(member.id);
+                  const memberIdNum = Number(member.id);
+                  return meeting.attendees.some(a => {
+                    const attendeeMemberId = a.memberId || a.member_id;
+                    return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+                  });
+                })
                 .sort((a, b) => {
                   // Sort by date descending (newest first)
                   const dateA = new Date(a.date.split('.').reverse().join('-'));
@@ -843,7 +869,12 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
                   return dateB - dateA;
                 })
                 .map((meeting) => {
-                const attendance = meeting.attendees.find(a => a.memberId === member.id);
+                const memberIdStr = String(member.id);
+                const memberIdNum = Number(member.id);
+                const attendance = meeting.attendees.find(a => {
+                  const attendeeMemberId = a.memberId || a.member_id;
+                  return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+                });
                 return (
                   <tr key={meeting.id} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -900,11 +931,15 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
             {/* Mobile Card Layout */}
             <div className="md:hidden space-y-3 p-4">
           {meetings
-            .filter(meeting => 
-              meeting.attendees && 
-              Array.isArray(meeting.attendees) && 
-              meeting.attendees.some(a => a.memberId === member.id)
-            )
+            .filter(meeting => {
+              if (!meeting.attendees || !Array.isArray(meeting.attendees)) return false;
+              const memberIdStr = String(member.id);
+              const memberIdNum = Number(member.id);
+              return meeting.attendees.some(a => {
+                const attendeeMemberId = a.memberId || a.member_id;
+                return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+              });
+            })
             .sort((a, b) => {
               // Sort by date descending (newest first)
               const dateA = new Date(a.date.split('.').reverse().join('-'));
@@ -912,7 +947,12 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
               return dateB - dateA;
             })
             .map((meeting) => {
-              const attendance = meeting.attendees.find(a => a.memberId === member.id);
+              const memberIdStr = String(member.id);
+              const memberIdNum = Number(member.id);
+              const attendance = meeting.attendees.find(a => {
+                const attendeeMemberId = a.memberId || a.member_id;
+                return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+              });
               return (
                 <div key={meeting.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex justify-between items-start mb-2">

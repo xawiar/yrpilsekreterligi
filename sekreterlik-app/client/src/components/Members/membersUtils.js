@@ -10,10 +10,18 @@ export const calculateMeetingStats = (member, meetings) => {
     };
   }
 
+  // Normalize member ID for comparison (handle both string and number)
+  const memberIdStr = String(member.id);
+  const memberIdNum = Number(member.id);
+  
   // Filter meetings where this member is actually required to attend (in attendees list)
   const memberMeetings = meetings.filter(meeting => 
     meeting && meeting.attendees && Array.isArray(meeting.attendees) &&
-    meeting.attendees.some(a => a.memberId === member.id)
+    meeting.attendees.some(a => {
+      // Handle both string and number memberId values
+      const attendeeMemberId = a.memberId || a.member_id;
+      return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+    })
   );
   
   // Count attended and excused meetings
@@ -21,7 +29,10 @@ export const calculateMeetingStats = (member, meetings) => {
   let excusedMeetings = 0;
   memberMeetings.forEach(meeting => {
     if (meeting.attendees && Array.isArray(meeting.attendees)) {
-      const attendee = meeting.attendees.find(a => a.memberId === member.id);
+      const attendee = meeting.attendees.find(a => {
+        const attendeeMemberId = a.memberId || a.member_id;
+        return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+      });
       if (attendee) {
         if (attendee.attended) {
           attendedMeetings++;

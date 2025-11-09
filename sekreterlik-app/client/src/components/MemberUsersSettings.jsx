@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import FirebaseService from '../services/FirebaseService';
 
 const MemberUsersSettings = () => {
   const [memberUsers, setMemberUsers] = useState([]);
@@ -17,6 +20,8 @@ const MemberUsersSettings = () => {
     password: ''
   });
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSyncingToAuth, setIsSyncingToAuth] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -264,6 +269,147 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Üye kullanıcılarını Firebase Auth'a kaydet
+  const handleSyncToFirebaseAuth = async () => {
+    try {
+      setIsSyncingToAuth(true);
+      setMessage('');
+      setMessageType('info');
+      
+      // Mevcut admin kullanıcısını koru
+      const currentUser = auth.currentUser;
+      const currentUserEmail = currentUser ? currentUser.email : null;
+      const currentUserUid = currentUser ? currentUser.uid : null;
+      
+      // Admin bilgilerini al (Firestore'dan)
+      let adminEmail = 'admin@ilsekreterlik.local';
+      let adminPassword = 'admin123';
+      try {
+        const adminDoc = await FirebaseService.getById('admin', 'main');
+        if (adminDoc && adminDoc.email) {
+          adminEmail = adminDoc.email;
+        }
+      } catch (error) {
+        console.warn('Admin bilgileri alınamadı, varsayılan kullanılıyor');
+      }
+      
+      // Tüm üye kullanıcılarını al
+      const allMemberUsers = memberUsers.filter(user => user.isActive !== false);
+      setSyncProgress({ current: 0, total: allMemberUsers.length });
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
+      for (let i = 0; i < allMemberUsers.length; i++) {
+        const user = allMemberUsers[i];
+        setSyncProgress({ current: i + 1, total: allMemberUsers.length });
+        
+        try {
+          // Şifreyi decrypt et
+          let password = user.password || '';
+          if (password && typeof password === 'string' && password.startsWith('U2FsdGVkX1')) {
+            password = decryptData(password);
+          }
+          
+          if (!password) {
+            errors.push(`${user.username}: Şifre bulunamadı`);
+            errorCount++;
+            continue;
+          }
+          
+          // Email formatına çevir
+          const email = user.username.includes('@') ? user.username : `${user.username}@ilsekreterlik.local`;
+          
+          // Eğer zaten authUid varsa, kullanıcı zaten Firebase Auth'da var
+          if (user.authUid) {
+            console.log(`ℹ️ User ${user.username} already has authUid: ${user.authUid}`);
+            successCount++;
+            continue;
+          }
+          
+          // Firebase Auth'da kullanıcı oluştur
+          try {
+            const authUser = await createUserWithEmailAndPassword(auth, email, password);
+            console.log(`✅ Firebase Auth user created: ${user.username} -> ${authUser.user.uid}`);
+            
+            // Firestore'da authUid'yi güncelle
+            await FirebaseService.update('member_users', user.id, {
+              authUid: authUser.user.uid
+            }, true);
+            
+            successCount++;
+            
+            // Admin kullanıcısını geri yükle (eğer farklıysa)
+            if (currentUserUid && currentUserUid !== authUser.user.uid && currentUserEmail === adminEmail) {
+              // Admin kullanıcısını tekrar sign-in et
+              try {
+                await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+                console.log('✅ Admin user re-authenticated');
+              } catch (signInError) {
+                console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
+                errors.push(`Admin kullanıcısı tekrar giriş yapılamadı: ${signInError.message}`);
+              }
+            }
+          } catch (authError) {
+            if (authError.code === 'auth/email-already-in-use') {
+              // Email zaten kullanılıyorsa, sadece Firestore'u güncelle
+              console.warn(`⚠️ Email already in use: ${email}`);
+              // Firebase Auth'dan kullanıcıyı bulamayız, bu yüzden sadece devam ediyoruz
+              successCount++;
+            } else {
+              errors.push(`${user.username}: ${authError.message}`);
+              errorCount++;
+              console.error(`❌ Error creating Firebase Auth user for ${user.username}:`, authError);
+            }
+          }
+        } catch (error) {
+          errors.push(`${user.username}: ${error.message}`);
+          errorCount++;
+          console.error(`❌ Error processing user ${user.username}:`, error);
+        }
+      }
+      
+      // Tüm kullanıcılar oluşturulduktan sonra admin kullanıcısını tekrar sign-in et
+      if (currentUserEmail === adminEmail) {
+        try {
+          await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+          console.log('✅ Admin user re-authenticated after all users created');
+        } catch (signInError) {
+          console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
+          errors.push(`Admin kullanıcısı tekrar giriş yapılamadı: ${signInError.message}`);
+        }
+      }
+      
+      // Sonuç mesajı
+      let message = `Firebase Auth'a aktarım tamamlandı!\n`;
+      message += `• Başarılı: ${successCount} kullanıcı\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount} kullanıcı\n`;
+        message += `\nHatalar:\n${errors.slice(0, 10).join('\n')}`;
+        if (errors.length > 10) {
+          message += `\n... ve ${errors.length - 10} hata daha`;
+        }
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      
+      // Kullanıcı listesini yenile
+      await fetchMemberUsers();
+      
+    } catch (error) {
+      console.error('Error syncing to Firebase Auth:', error);
+      setMessage('Firebase Auth\'a aktarım sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsSyncingToAuth(false);
+      setSyncProgress({ current: 0, total: 0 });
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -287,6 +433,25 @@ const MemberUsersSettings = () => {
             </p>
           </div>
           <div className="flex space-x-3">
+            <button
+              onClick={handleSyncToFirebaseAuth}
+              disabled={isSyncingToAuth || memberUsers.length === 0}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+            >
+              {isSyncingToAuth ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Firebase Auth'a Aktarılıyor... ({syncProgress.current}/{syncProgress.total})
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  Firebase Auth'a Aktar
+                </>
+              )}
+            </button>
             <button
               onClick={handleUpdateAllCredentials}
               disabled={isUpdating}

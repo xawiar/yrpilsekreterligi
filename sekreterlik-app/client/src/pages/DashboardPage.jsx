@@ -11,6 +11,9 @@ const DashboardPage = () => {
   const [stats, setStats] = useState({
     totalMembers: 0,
     totalMeetings: 0,
+    totalEvents: 0,
+    totalNeighborhoodRepresentatives: 0,
+    totalVillageRepresentatives: 0,
     avgAttendanceRate: 0
   });
   
@@ -29,11 +32,13 @@ const DashboardPage = () => {
       setLoading(true);
       
       // Fetch all data
-      const [members, meetings, events, memberRegistrations] = await Promise.all([
+      const [members, meetings, events, memberRegistrations, neighborhoodRepresentatives, villageRepresentatives] = await Promise.all([
         ApiService.getMembers(),
         ApiService.getMeetings(),
         ApiService.getEvents(),
-        ApiService.getMemberRegistrations()
+        ApiService.getMemberRegistrations(),
+        ApiService.getNeighborhoodRepresentatives(),
+        ApiService.getVillageRepresentatives()
       ]);
       
       // Calculate total members
@@ -41,6 +46,13 @@ const DashboardPage = () => {
       
       // Calculate total meetings
       const totalMeetings = meetings.length;
+      
+      // Calculate total events
+      const totalEvents = events.length;
+      
+      // Calculate total representatives
+      const totalNeighborhoodRepresentatives = neighborhoodRepresentatives.length;
+      const totalVillageRepresentatives = villageRepresentatives.length;
       
       // Calculate average attendance rate
       let totalAttendanceRate = 0;
@@ -62,6 +74,9 @@ const DashboardPage = () => {
       setStats({
         totalMembers,
         totalMeetings,
+        totalEvents,
+        totalNeighborhoodRepresentatives,
+        totalVillageRepresentatives,
         avgAttendanceRate: Math.round(avgAttendanceRate)
       });
       
@@ -98,8 +113,22 @@ const DashboardPage = () => {
       meetings.forEach(meeting => {
         if (meeting.attendees) {
           meeting.attendees.forEach(attendee => {
-            if (attendee.attended && memberAttendanceCounts[attendee.memberId]) {
-              memberAttendanceCounts[attendee.memberId].count += 1;
+            if (attendee.attended) {
+              // Handle both string and number memberId values
+              const attendeeMemberId = attendee.memberId || attendee.member_id;
+              const memberIdStr = String(attendeeMemberId);
+              const memberIdNum = Number(attendeeMemberId);
+              
+              // Find matching member by checking both string and number IDs
+              const matchingMemberId = Object.keys(memberAttendanceCounts).find(id => {
+                const idStr = String(id);
+                const idNum = Number(id);
+                return idStr === memberIdStr || idNum === memberIdNum || idStr === memberIdNum || idNum === memberIdStr;
+              });
+              
+              if (matchingMemberId && memberAttendanceCounts[matchingMemberId]) {
+                memberAttendanceCounts[matchingMemberId].count += 1;
+              }
             }
           });
         }

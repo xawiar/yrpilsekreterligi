@@ -1,0 +1,275 @@
+import React, { useState } from 'react';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { createAdminUser, syncMemberUsersToFirebaseAuth } from '../utils/createFirebaseUsers';
+
+// Firebase config'i import et
+const firebaseConfig = {
+  apiKey: "AIzaSyA0wDM5fXHtm0uDlALRhkQzF7tpsZ-7BZI",
+  authDomain: "spilsekreterligi.firebaseapp.com",
+  projectId: "spilsekreterligi",
+  storageBucket: "spilsekreterligi.firebasestorage.app",
+  messagingSenderId: "692841027309",
+  appId: "1:692841027309:web:d702e7f55031de5eef5ee4",
+  measurementId: "G-0X605S84W1"
+};
+
+const FirebaseTestPage = () => {
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState([]);
+  const [adminResult, setAdminResult] = useState(null);
+
+  const testFirebaseConnection = async () => {
+    try {
+      setLoading(true);
+      setResults([]);
+      setAdminResult(null);
+
+      // Test 1: Firebase Auth bağlantısı
+      const test1 = { test: 'Firebase Auth Bağlantısı', status: 'testing', message: '' };
+      setResults([test1]);
+
+      try {
+        console.log('🔍 Firebase Auth test başlıyor...');
+        console.log('🔍 Auth instance:', auth ? 'Mevcut' : 'Yok');
+        console.log('🔍 Project ID:', firebaseConfig.projectId);
+        
+        // Auth instance'ı kontrol et
+        if (!auth) {
+          throw new Error('Firebase Auth instance bulunamadı - auth null veya undefined');
+        }
+        
+        // Auth'un app'ine erişim kontrolü
+        if (auth.app) {
+          console.log('✅ Auth app mevcut:', auth.app.name);
+        }
+        
+        test1.status = 'success';
+        test1.message = `✅ Firebase Auth bağlantısı başarılı (Project: ${firebaseConfig.projectId})`;
+      } catch (error) {
+        console.error('❌ Firebase Auth test hatası:', error);
+        test1.status = 'error';
+        test1.message = `❌ Firebase Auth bağlantı hatası: ${error.message}`;
+      }
+      setResults([test1]);
+
+      // Test 2: Firestore bağlantısı
+      const test2 = { test: 'Firestore Bağlantısı', status: 'testing', message: '' };
+      setResults(prev => [...prev, test2]);
+
+      try {
+        console.log('🔍 Firestore test başlıyor...');
+        console.log('🔍 DB instance:', db ? 'Mevcut' : 'Yok');
+        
+        if (!db) {
+          throw new Error('Firestore instance bulunamadı - db null veya undefined');
+        }
+        
+        console.log('📝 Test dokümanı oluşturuluyor...');
+        // Test dokümanı oluştur
+        const testDocRef = doc(db, 'test', 'connection');
+        
+        console.log('💾 Firestore\'a yazma işlemi başlıyor...');
+        await setDoc(testDocRef, {
+          timestamp: new Date().toISOString(),
+          test: true,
+          projectId: firebaseConfig.projectId
+        });
+        console.log('✅ Firestore\'a yazma başarılı');
+        
+        console.log('📖 Firestore\'dan okuma işlemi başlıyor...');
+        const testDoc = await getDoc(testDocRef);
+        
+        if (testDoc.exists()) {
+          console.log('✅ Test dokümanı okundu:', testDoc.data());
+          test2.status = 'success';
+          test2.message = '✅ Firestore bağlantısı başarılı - Yazma ve okuma test edildi';
+        } else {
+          throw new Error('Test dokümanı okunamadı - Doküman mevcut değil');
+        }
+      } catch (error) {
+        console.error('❌ Firestore test hatası:', error);
+        console.error('❌ Hata kodu:', error.code);
+        console.error('❌ Hata mesajı:', error.message);
+        console.error('❌ Hata stack:', error.stack);
+        
+        let errorMessage = `❌ Firestore bağlantı hatası: ${error.message}`;
+        if (error.code) {
+          errorMessage += ` (Kod: ${error.code})`;
+        }
+        
+        // Özel hata mesajları
+        if (error.code === 'permission-denied') {
+          errorMessage += '\n💡 Çözüm: Firestore güvenlik kurallarını kontrol edin. Test koleksiyonu için yazma izni verin.';
+        } else if (error.code === 'unavailable') {
+          errorMessage += '\n💡 Çözüm: İnternet bağlantınızı kontrol edin.';
+        } else if (error.message.includes('instance')) {
+          errorMessage += '\n💡 Çözüm: Firebase yapılandırmasını kontrol edin.';
+        }
+        
+        test2.status = 'error';
+        test2.message = errorMessage;
+      }
+      setResults(prev => [...prev.slice(0, -1), test2]);
+
+      // Test 3: Admin kullanıcısı oluştur
+      const test3 = { test: 'Admin Kullanıcısı Oluşturma', status: 'testing', message: '' };
+      setResults(prev => [...prev, test3]);
+
+      try {
+        const adminResult = await createAdminUser();
+        if (adminResult.success) {
+          test3.status = 'success';
+          test3.message = `✅ Admin kullanıcısı oluşturuldu: ${adminResult.email}`;
+          setAdminResult(adminResult);
+        } else {
+          throw new Error(adminResult.message || 'Admin kullanıcısı oluşturulamadı');
+        }
+      } catch (error) {
+        test3.status = 'error';
+        test3.message = `❌ Admin kullanıcısı oluşturma hatası: ${error.message}`;
+      }
+      setResults(prev => [...prev.slice(0, -1), test3]);
+
+    } catch (error) {
+      console.error('Firebase test hatası:', error);
+      setResults(prev => [...prev, {
+        test: 'Genel Hata',
+        status: 'error',
+        message: `❌ ${error.message}`
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncAllUsers = async () => {
+    try {
+      setLoading(true);
+      setResults([]);
+
+      const result = await syncMemberUsersToFirebaseAuth();
+      
+      if (result.success) {
+        setResults([{
+          test: 'Üye Kullanıcıları Firebase Auth\'a Aktarım',
+          status: 'success',
+          message: `✅ Başarılı: ${result.successCount} kullanıcı, Hata: ${result.errorCount} kullanıcı`
+        }]);
+      } else {
+        setResults([{
+          test: 'Üye Kullanıcıları Firebase Auth\'a Aktarım',
+          status: 'error',
+          message: `❌ ${result.message}`
+        }]);
+      }
+    } catch (error) {
+      console.error('Sync hatası:', error);
+      setResults([{
+        test: 'Üye Kullanıcıları Firebase Auth\'a Aktarım',
+        status: 'error',
+        message: `❌ ${error.message}`
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Firebase Bağlantı Testi</h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Firebase bağlantısını test edin ve admin kullanıcısını oluşturun.
+        </p>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+        <div className="flex space-x-3">
+          <button
+            onClick={testFirebaseConnection}
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              loading
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {loading ? 'Test Ediliyor...' : 'Firebase Bağlantısını Test Et ve Admin Oluştur'}
+          </button>
+          <button
+            onClick={syncAllUsers}
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              loading
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            {loading ? 'Aktarılıyor...' : 'Tüm Üye Kullanıcılarını Firebase Auth\'a Aktar'}
+          </button>
+        </div>
+
+        {results.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Test Sonuçları</h3>
+            {results.map((result, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg ${
+                  result.status === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                    : result.status === 'error'
+                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                    : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{result.test}</span>
+                  <span className={`text-sm ${
+                    result.status === 'success'
+                      ? 'text-green-700 dark:text-green-300'
+                      : result.status === 'error'
+                      ? 'text-red-700 dark:text-red-300'
+                      : 'text-yellow-700 dark:text-yellow-300'
+                  }`}>
+                    {result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⏳'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{result.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {adminResult && (
+          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Admin Kullanıcı Bilgileri</h3>
+            <div className="space-y-2 font-mono text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Username:</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">{adminResult.username}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Email:</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">{adminResult.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Password:</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">{adminResult.password}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">UID:</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100 text-xs break-all">{adminResult.uid}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default FirebaseTestPage;
+

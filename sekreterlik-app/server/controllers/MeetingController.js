@@ -84,6 +84,23 @@ class MeetingController {
       const result = await db.run(sql, params);
       const newMeeting = await db.get('SELECT * FROM meetings WHERE id = ?', [result.lastID]);
       
+      // Parse JSON fields for Firebase
+      const meetingForFirebase = {
+        ...newMeeting,
+        regions: meetingData.regions || [],
+        attendees: (meetingData.attendees || []).map(attendee => ({
+          ...attendee,
+          memberId: String(attendee.memberId || attendee.member_id || '')
+        }))
+      };
+      
+      // Otomatik Firebase sync
+      try {
+        await syncAfterSqliteOperation('meetings', result.lastID, meetingForFirebase, 'create');
+      } catch (syncError) {
+        console.warn('⚠️ Firebase sync hatası (meeting create):', syncError.message);
+      }
+      
       res.status(201).json(newMeeting);
     } catch (error) {
       console.error('Error creating meeting:', error);
@@ -117,6 +134,24 @@ class MeetingController {
       }
       
       const updatedMeeting = await db.get('SELECT * FROM meetings WHERE id = ?', [parseInt(id)]);
+      
+      // Parse JSON fields for Firebase
+      const meetingForFirebase = {
+        ...updatedMeeting,
+        regions: meetingData.regions || [],
+        attendees: (meetingData.attendees || []).map(attendee => ({
+          ...attendee,
+          memberId: String(attendee.memberId || attendee.member_id || '')
+        }))
+      };
+      
+      // Otomatik Firebase sync
+      try {
+        await syncAfterSqliteOperation('meetings', parseInt(id), meetingForFirebase, 'update');
+      } catch (syncError) {
+        console.warn('⚠️ Firebase sync hatası (meeting update):', syncError.message);
+      }
+      
       res.json(updatedMeeting);
     } catch (error) {
       console.error('Error updating meeting:', error);

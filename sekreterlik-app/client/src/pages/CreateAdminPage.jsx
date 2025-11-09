@@ -1,35 +1,32 @@
 import React, { useState } from 'react';
-import { initializeApp } from "firebase/app";
 import { 
-  getAuth, 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword 
 } from "firebase/auth";
 import { 
-  getFirestore, 
   doc, 
   setDoc, 
   getDoc 
 } from "firebase/firestore";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAAkFCVr_IrA9qR8gAgDAZMGGk-xGsY2nA",
-  authDomain: "ilsekreterliki.firebaseapp.com",
-  projectId: "ilsekreterliki",
-  storageBucket: "ilsekreterliki.firebasestorage.app",
-  messagingSenderId: "112937724027",
-  appId: "1:112937724027:web:03e419ca720eea178c1ade",
-  measurementId: "G-YMN4TEP8Z1"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+import { auth, db } from '../config/firebase';
 
 function CreateAdminPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [adminInfo, setAdminInfo] = useState(null);
+
+  // Sayfa yüklendiğinde otomatik olarak admin kullanıcısını oluştur
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!adminInfo && !loading) {
+        console.log('🚀 CreateAdminPage: Admin kullanıcısı otomatik oluşturuluyor...');
+        createAdmin();
+      }
+    }, 1000); // 1 saniye bekle, Firebase'in initialize olması için
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createAdmin = async () => {
     setLoading(true);
@@ -62,6 +59,7 @@ function CreateAdminPage() {
       }
 
       // Firestore'da admin bilgilerini kaydet
+      console.log('💾 Firestore\'da admin bilgileri kaydediliyor...');
       const adminDocRef = doc(db, 'admin', 'main');
 
       await setDoc(adminDocRef, {
@@ -73,14 +71,17 @@ function CreateAdminPage() {
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
+      console.log('✅ Admin bilgileri Firestore\'a kaydedildi!');
       setResult({ 
         type: 'success', 
         message: '✅ Admin bilgileri Firestore\'a kaydedildi!' 
       });
 
       // Bağlantıyı test et
+      console.log('🧪 Bağlantı test ediliyor...');
       const testDoc = await getDoc(adminDocRef);
       if (testDoc.exists()) {
+        console.log('✅ Admin dokümanı başarıyla okundu:', testDoc.data());
         setAdminInfo({
           username: adminUsername,
           email: adminEmail,
@@ -91,6 +92,8 @@ function CreateAdminPage() {
           type: 'success', 
           message: '🎉 Admin kullanıcısı başarıyla oluşturuldu ve bağlantı test edildi!' 
         });
+      } else {
+        console.warn('⚠️ Admin dokümanı okunamadı');
       }
 
     } catch (error) {

@@ -58,8 +58,23 @@ const EventDetails = ({ event, members }) => {
   };
 
   const getMemberInfo = (memberId) => {
-    // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-    const member = members.find(m => String(m.id) === String(memberId));
+    if (!memberId) {
+      return {
+        name: 'Bilinmeyen Üye',
+        position: '-',
+        region: '-'
+      };
+    }
+    
+    // Handle both string and number memberId values
+    const memberIdStr = String(memberId);
+    const memberIdNum = Number(memberId);
+    
+    const member = members.find(m => {
+      const mIdStr = String(m.id);
+      const mIdNum = Number(m.id);
+      return mIdStr === memberIdStr || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberIdStr;
+    });
     if (member) {
       return {
         name: member.name,
@@ -69,7 +84,11 @@ const EventDetails = ({ event, members }) => {
     }
     
     // Members listesinde yoksa, neighborhood representatives'te ara
-    const neighborhoodRep = neighborhoodRepresentatives.find(rep => String(rep.member_id) === String(memberId));
+    const neighborhoodRep = neighborhoodRepresentatives.find(rep => {
+      const repIdStr = String(rep.member_id);
+      const repIdNum = Number(rep.member_id);
+      return repIdStr === memberIdStr || repIdNum === memberIdNum || repIdStr === memberIdNum || repIdNum === memberIdStr;
+    });
     if (neighborhoodRep) {
       return {
         name: neighborhoodRep.name,
@@ -79,7 +98,11 @@ const EventDetails = ({ event, members }) => {
     }
     
     // Neighborhood supervisors'te ara
-    const neighborhoodSup = neighborhoodSupervisors.find(sup => String(sup.member_id) === String(memberId));
+    const neighborhoodSup = neighborhoodSupervisors.find(sup => {
+      const supIdStr = String(sup.member_id);
+      const supIdNum = Number(sup.member_id);
+      return supIdStr === memberIdStr || supIdNum === memberIdNum || supIdStr === memberIdNum || supIdNum === memberIdStr;
+    });
     if (neighborhoodSup) {
       return {
         name: neighborhoodSup.name,
@@ -89,7 +112,11 @@ const EventDetails = ({ event, members }) => {
     }
     
     // Village representatives'te ara
-    const villageRep = villageRepresentatives.find(rep => String(rep.member_id) === String(memberId));
+    const villageRep = villageRepresentatives.find(rep => {
+      const repIdStr = String(rep.member_id);
+      const repIdNum = Number(rep.member_id);
+      return repIdStr === memberIdStr || repIdNum === memberIdNum || repIdStr === memberIdNum || repIdNum === memberIdStr;
+    });
     if (villageRep) {
       return {
         name: villageRep.name,
@@ -99,7 +126,11 @@ const EventDetails = ({ event, members }) => {
     }
     
     // Village supervisors'te ara
-    const villageSup = villageSupervisors.find(sup => String(sup.member_id) === String(memberId));
+    const villageSup = villageSupervisors.find(sup => {
+      const supIdStr = String(sup.member_id);
+      const supIdNum = Number(sup.member_id);
+      return supIdStr === memberIdStr || supIdNum === memberIdNum || supIdStr === memberIdNum || supIdNum === memberIdStr;
+    });
     if (villageSup) {
       return {
         name: villageSup.name,
@@ -157,9 +188,16 @@ const EventDetails = ({ event, members }) => {
     
     if (event.attendees && event.attendees.length > 0) {
       event.attendees.forEach(attendance => {
-        // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-        const memberInfo = getMemberInfo(attendance.memberId);
-        const member = members.find(m => String(m.id) === String(attendance.memberId));
+        // Handle both string and number memberId values
+        const attendeeMemberId = attendance.memberId || attendance.member_id;
+        const memberInfo = getMemberInfo(attendeeMemberId);
+        const memberIdStr = String(attendeeMemberId);
+        const memberIdNum = Number(attendeeMemberId);
+        const member = members.find(m => {
+          const mIdStr = String(m.id);
+          const mIdNum = Number(m.id);
+          return mIdStr === memberIdStr || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberIdStr;
+        });
         const memberName = memberInfo.name;
         const memberTc = member ? member.tc : '-';
         const memberPosition = memberInfo.position;
@@ -353,14 +391,24 @@ const EventDetails = ({ event, members }) => {
                     
                     // Eğer etkinlikte seçilen konumlar varsa, sadece o konumlardaki temsilcileri göster
                     if (event.selectedLocationTypes && event.selectedLocations) {
-                      const memberId = String(attendance.memberId);
+                      const attendeeMemberId = attendance.memberId || attendance.member_id;
+                      const memberId = String(attendeeMemberId);
+                      const memberIdNum = Number(attendeeMemberId);
                       
                       // Önce normal üye mi kontrol et
-                      const member = members.find(m => String(m.id) === memberId);
+                      const member = members.find(m => {
+                        const mIdStr = String(m.id);
+                        const mIdNum = Number(m.id);
+                        return mIdStr === memberId || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberId;
+                      });
                       if (member) return true; // Normal üyeler her zaman gösterilir
                       
                       // Mahalle temsilcisi mi kontrol et
-                      const neighborhoodRep = neighborhoodRepresentatives.find(rep => String(rep.member_id) === memberId);
+                      const neighborhoodRep = neighborhoodRepresentatives.find(rep => {
+                        const repIdStr = String(rep.member_id);
+                        const repIdNum = Number(rep.member_id);
+                        return repIdStr === memberId || repIdNum === memberIdNum || repIdStr === memberIdNum || repIdNum === memberId;
+                      });
                       if (neighborhoodRep) {
                         // Etkinlikte bu mahalle seçilmiş mi kontrol et
                         const selectedNeighborhoodIds = event.selectedLocations.neighborhood || [];
@@ -369,7 +417,11 @@ const EventDetails = ({ event, members }) => {
                       }
                       
                       // Köy temsilcisi mi kontrol et
-                      const villageRep = villageRepresentatives.find(rep => String(rep.member_id) === memberId);
+                      const villageRep = villageRepresentatives.find(rep => {
+                        const repIdStr = String(rep.member_id);
+                        const repIdNum = Number(rep.member_id);
+                        return repIdStr === memberId || repIdNum === memberIdNum || repIdStr === memberIdNum || repIdNum === memberId;
+                      });
                       if (villageRep) {
                         // Etkinlikte bu köy seçilmiş mi kontrol et
                         const selectedVillageIds = event.selectedLocations.village || [];
@@ -378,7 +430,11 @@ const EventDetails = ({ event, members }) => {
                       }
                       
                       // Mahalle sorumlusu mu kontrol et
-                      const neighborhoodSup = neighborhoodSupervisors.find(sup => String(sup.member_id) === memberId);
+                      const neighborhoodSup = neighborhoodSupervisors.find(sup => {
+                        const supIdStr = String(sup.member_id);
+                        const supIdNum = Number(sup.member_id);
+                        return supIdStr === memberId || supIdNum === memberIdNum || supIdStr === memberIdNum || supIdNum === memberId;
+                      });
                       if (neighborhoodSup) {
                         // Etkinlikte bu mahalle seçilmiş mi kontrol et
                         const selectedNeighborhoodIds = event.selectedLocations.neighborhood || [];
@@ -387,7 +443,11 @@ const EventDetails = ({ event, members }) => {
                       }
                       
                       // Köy sorumlusu mu kontrol et
-                      const villageSup = villageSupervisors.find(sup => String(sup.member_id) === memberId);
+                      const villageSup = villageSupervisors.find(sup => {
+                        const supIdStr = String(sup.member_id);
+                        const supIdNum = Number(sup.member_id);
+                        return supIdStr === memberId || supIdNum === memberIdNum || supIdStr === memberIdNum || supIdNum === memberId;
+                      });
                       if (villageSup) {
                         // Etkinlikte bu köy seçilmiş mi kontrol et
                         const selectedVillageIds = event.selectedLocations.village || [];
@@ -403,16 +463,19 @@ const EventDetails = ({ event, members }) => {
                     return true;
                   })
                   .sort((a, b) => {
-                    // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-                    const memberInfoA = getMemberInfo(a.memberId);
-                    const memberInfoB = getMemberInfo(b.memberId);
+                    // Handle both string and number memberId values
+                    const attendeeMemberIdA = a.memberId || a.member_id;
+                    const attendeeMemberIdB = b.memberId || b.member_id;
+                    const memberInfoA = getMemberInfo(attendeeMemberIdA);
+                    const memberInfoB = getMemberInfo(attendeeMemberIdB);
                     return memberInfoA.name.localeCompare(memberInfoB.name, 'tr', { sensitivity: 'base' });
                   })
                   .map((attendance) => {
-                  // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-                  const memberInfo = getMemberInfo(attendance.memberId);
+                  // Handle both string and number memberId values
+                  const attendeeMemberId = attendance.memberId || attendance.member_id;
+                  const memberInfo = getMemberInfo(attendeeMemberId);
                   return (
-                    <tr key={attendance.memberId} className="hover:bg-gray-50 transition-colors duration-150">
+                    <tr key={attendeeMemberId} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">

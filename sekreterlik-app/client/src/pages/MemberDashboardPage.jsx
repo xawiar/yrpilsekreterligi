@@ -48,8 +48,18 @@ const MemberDashboardPage = () => {
     try {
       setLoading(true);
       
+      // Get member ID - use memberId if available, otherwise use user.id
+      const memberId = user.memberId || user.id;
+      
+      if (!memberId) {
+        console.error('Member ID not found in user data:', user);
+        setError('Üye bilgisi bulunamadı');
+        setLoading(false);
+        return;
+      }
+      
       // Fetch member details
-      const memberResponse = await ApiService.getMemberById(user.memberId);
+      const memberResponse = await ApiService.getMemberById(memberId);
       setMember(memberResponse);
       
       // Fetch all members for management chart

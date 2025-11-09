@@ -4,6 +4,7 @@ const MemberUser = require('../models/MemberUser');
 const xlsx = require('xlsx');
 const { encryptField, decryptField } = require('../utils/crypto');
 const { invalidate } = require('../middleware/cache');
+const { syncAfterSqliteOperation } = require('../utils/autoSyncToFirebase');
 
 class MemberController {
   // Get all members
@@ -151,6 +152,19 @@ class MemberController {
       // Invalidate cache for members
       invalidate('/api/members');
       
+      // Otomatik Firebase sync
+      try {
+        const memberForFirebase = {
+          ...newMember,
+          tc: memberData.tc, // Decrypt edilmiş TC
+          phone: memberData.phone, // Decrypt edilmiş phone
+        };
+        await syncAfterSqliteOperation('members', result.lastID, memberForFirebase, 'create');
+      } catch (syncError) {
+        console.warn('⚠️ Firebase sync hatası (member create):', syncError.message);
+        // Sync hatası ana işlemi durdurmamalı
+      }
+      
       res.status(201).json({
         ...newMember,
         tc: decryptField(newMember.tc),
@@ -226,6 +240,19 @@ class MemberController {
       
       // Invalidate cache for members
       invalidate('/api/members');
+      
+      // Otomatik Firebase sync
+      try {
+        const memberForFirebase = {
+          ...updatedMember,
+          tc: memberData.tc, // Decrypt edilmiş TC
+          phone: memberData.phone, // Decrypt edilmiş phone
+        };
+        await syncAfterSqliteOperation('members', parseInt(id), memberForFirebase, 'update');
+      } catch (syncError) {
+        console.warn('⚠️ Firebase sync hatası (member update):', syncError.message);
+        // Sync hatası ana işlemi durdurmamalı
+      }
       
       res.json({
         ...updatedMember,

@@ -26,9 +26,28 @@ const MeetingDetails = ({ meeting }) => {
   };
 
   const getMemberName = (memberId) => {
-    // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-    const member = members.find(m => String(m.id) === String(memberId));
+    if (!memberId) return 'Bilinmeyen Üye';
+    // Handle both string and number memberId values
+    const memberIdStr = String(memberId);
+    const memberIdNum = Number(memberId);
+    const member = members.find(m => {
+      const mIdStr = String(m.id);
+      const mIdNum = Number(m.id);
+      return mIdStr === memberIdStr || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberIdStr;
+    });
     return member ? member.name : 'Bilinmeyen Üye';
+  };
+  
+  const getMember = (memberId) => {
+    if (!memberId) return null;
+    // Handle both string and number memberId values
+    const memberIdStr = String(memberId);
+    const memberIdNum = Number(memberId);
+    return members.find(m => {
+      const mIdStr = String(m.id);
+      const mIdNum = Number(m.id);
+      return mIdStr === memberIdStr || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberIdStr;
+    });
   };
 
   const getAttendanceRate = () => {
@@ -74,8 +93,9 @@ const MeetingDetails = ({ meeting }) => {
     
     if (meeting.attendees && meeting.attendees.length > 0) {
       meeting.attendees.forEach(attendance => {
-        // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-        const member = members.find(m => String(m.id) === String(attendance.memberId));
+        // Handle both string and number memberId values
+        const attendeeMemberId = attendance.memberId || attendance.member_id;
+        const member = getMember(attendeeMemberId);
         const memberName = member ? member.name : 'Bilinmeyen Üye';
         const memberTc = member ? member.tc : '-';
         const memberPosition = member ? member.position : '-';
@@ -299,16 +319,19 @@ const MeetingDetails = ({ meeting }) => {
               <tbody className="bg-white divide-y divide-gray-100">
                 {meeting.attendees && meeting.attendees
                   .sort((a, b) => {
-                    // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-                    const memberA = members.find(m => String(m.id) === String(a.memberId));
-                    const memberB = members.find(m => String(m.id) === String(b.memberId));
+                    // Handle both string and number memberId values
+                    const attendeeMemberIdA = a.memberId || a.member_id;
+                    const attendeeMemberIdB = b.memberId || b.member_id;
+                    const memberA = getMember(attendeeMemberIdA);
+                    const memberB = getMember(attendeeMemberIdB);
                     const nameA = memberA ? memberA.name : 'Bilinmeyen Üye';
                     const nameB = memberB ? memberB.name : 'Bilinmeyen Üye';
                     return nameA.localeCompare(nameB, 'tr', { sensitivity: 'base' });
                   })
                   .map((attendance) => {
-                  // ID'leri string'e çevirerek karşılaştır (tip uyumsuzluğu sorununu çözer)
-                  const member = members.find(m => String(m.id) === String(attendance.memberId));
+                  // Handle both string and number memberId values
+                  const attendeeMemberId = attendance.memberId || attendance.member_id;
+                  const member = getMember(attendeeMemberId);
                   return (
                     <tr key={attendance.memberId} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">

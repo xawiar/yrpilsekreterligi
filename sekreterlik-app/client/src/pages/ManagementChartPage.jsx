@@ -89,13 +89,18 @@ const ManagementChartPage = () => {
 
   // Categorize members based on region information
   const categorizeMembers = () => {
+    const ilBaskani = [];
     const ilceBaskani = [];
     const divanUyeleri = [];
     const digerUyeler = [];
 
     members.forEach(member => {
+      // İl Başkanı - en üst pozisyon
+      if (member.position === 'İl Başkanı') {
+        ilBaskani.push(member);
+      }
       // İlçe Başkanı - fixed position
-      if (member.position === 'İlçe Başkanı') {
+      else if (member.position === 'İlçe Başkanı') {
         ilceBaskani.push(member);
       }
       // Divan üyeleri - members whose region contains "divan"
@@ -122,10 +127,10 @@ const ManagementChartPage = () => {
     });
 
 
-    return { ilceBaskani, divanUyeleri, digerUyeler };
+    return { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler };
   };
 
-  const { ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
+  const { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
 
   if (loading) {
     return (
@@ -158,6 +163,49 @@ const ManagementChartPage = () => {
 
   return (
     <div className="py-6">
+
+      {/* İl Başkanı - En Üst Pozisyon */}
+      {ilBaskani.length > 0 && (
+        <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl shadow-lg p-8 mb-6 text-white">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold mb-2">İl Başkanı</h2>
+            <p className="text-red-100">Kurumun en üst yöneticisi</p>
+          </div>
+          
+          <div className="flex justify-center">
+            {ilBaskani.map(member => (
+              <div 
+                key={member.id} 
+                onClick={() => handleMemberClick(member)}
+                className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20 hover:bg-white/20 hover:shadow-lg transition-all duration-300 cursor-pointer max-w-sm w-full sm:w-auto"
+              >
+                <div className="text-center">
+                  {member.photo ? (
+                    <img
+                      src={`http://localhost:5000${member.photo}`}
+                      alt={formatMemberName(member.name)}
+                      className="w-20 h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-4"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className={`bg-white/20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 ${member.photo ? 'hidden' : ''}`}>
+                    <span className="text-2xl font-bold text-white">
+                      {member.name.charAt(0)}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">{formatMemberName(member.name)}</h3>
+                  <p className="text-red-100 text-sm mb-1">{member.position}</p>
+                  <p className="text-red-200 text-xs">Bölge: {member.region || 'Belirtilmemiş'}</p>
+                  <p className="text-red-200 text-xs">TC: {member.tc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* İlçe Başkanı - Özel Bölüm */}
       {ilceBaskani.length > 0 && (

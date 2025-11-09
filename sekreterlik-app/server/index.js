@@ -79,6 +79,8 @@ const permissionsRouter = require('./routes/permissions');
 console.log('Permissions router imported');
 const bylawsRouter = require('./routes/bylaws');
 console.log('Bylaws router imported');
+const syncRouter = require('./routes/sync');
+console.log('Sync router imported');
 
 // Import middleware
 const { authenticateToken } = require('./middleware/auth');
@@ -254,6 +256,7 @@ app.use('/api/messages', messagesRouter);
 app.use('/api/mongo-messages', mongoMessagesRouter);
 app.use('/api/permissions', permissionsRouter);
 app.use('/api/bylaws', bylawsRouter);
+app.use('/api/sync', syncRouter);
 
 console.log('API routes registered');
 

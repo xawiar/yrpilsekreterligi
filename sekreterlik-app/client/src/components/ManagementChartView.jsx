@@ -17,13 +17,18 @@ const ManagementChartView = ({ members }) => {
 
   // Categorize members based on region information
   const categorizeMembers = () => {
+    const ilBaskani = [];
     const ilceBaskani = [];
     const divanUyeleri = [];
     const digerUyeler = [];
 
     members.forEach(member => {
+      // İl Başkanı - en üst pozisyon
+      if (member.position === 'İl Başkanı') {
+        ilBaskani.push(member);
+      }
       // İlçe Başkanı - fixed position
-      if (member.position === 'İlçe Başkanı') {
+      else if (member.position === 'İlçe Başkanı') {
         ilceBaskani.push(member);
       }
       // Divan üyeleri - members whose region contains "divan"
@@ -49,10 +54,10 @@ const ManagementChartView = ({ members }) => {
       return a.name.localeCompare(b.name, 'tr-TR');
     });
 
-    return { ilceBaskani, divanUyeleri, digerUyeler };
+    return { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler };
   };
 
-  const { ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
+  const { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -62,6 +67,48 @@ const ManagementChartView = ({ members }) => {
       
       <div className="p-4 sm:p-6">
         <div className="space-y-6 sm:space-y-8">
+          {/* İl Başkanı - En Üst Pozisyon */}
+          {ilBaskani.length > 0 && (
+            <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-xl shadow-lg p-4 sm:p-6 text-white">
+              <div className="text-center mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">İl Başkanı</h2>
+                <p className="text-red-100 text-xs sm:text-sm">Kurumun en üst yöneticisi</p>
+              </div>
+              
+              <div className="flex justify-center">
+                {ilBaskani.map(member => (
+                  <div 
+                    key={member.id} 
+                    className="bg-white/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 lg:p-6 border border-white/20 max-w-sm w-full"
+                  >
+                    <div className="text-center">
+                      {member.photo ? (
+                        <img
+                          src={`http://localhost:5000${member.photo}`}
+                          alt={formatMemberName(member.name)}
+                          className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-2 sm:mb-4"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`bg-white/20 rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center mx-auto mb-2 sm:mb-4 ${member.photo ? 'hidden' : ''}`}>
+                        <span className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
+                          {member.name.charAt(0)}
+                        </span>
+                      </div>
+                      <h3 className="text-sm sm:text-base lg:text-xl font-bold text-white mb-1 sm:mb-2">{formatMemberName(member.name)}</h3>
+                      <p className="text-red-100 text-xs sm:text-sm mb-1">{member.position}</p>
+                      <p className="text-red-200 text-xs">Bölge: {member.region || 'Belirtilmemiş'}</p>
+                      <p className="text-red-200 text-xs">Tel: {member.phone || 'Belirtilmemiş'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* İlçe Başkanı - Özel Bölüm */}
           {ilceBaskani.length > 0 && (
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 sm:p-6 text-white">
