@@ -142,16 +142,23 @@ const RepresentativesPage = () => {
       const neighborhoodCounts = {};
       const villageCounts = {};
       
-      // Tüm temsilcilerin mahalle/köy ID'lerini topla
-      neighborhoodRepresentatives.forEach(rep => {
+      // Tüm temsilcilerin mahalle/köy ID'lerini topla (state'den değil, direkt kullan)
+      const currentNeighborhoodReps = neighborhoodRepresentatives.length > 0 
+        ? neighborhoodRepresentatives 
+        : await ApiService.getNeighborhoodRepresentatives();
+      const currentVillageReps = villageRepresentatives.length > 0 
+        ? villageRepresentatives 
+        : await ApiService.getVillageRepresentatives();
+      
+      currentNeighborhoodReps.forEach(rep => {
         if (rep.neighborhood_id) {
-          neighborhoodCounts[rep.neighborhood_id] = 0;
+          neighborhoodCounts[String(rep.neighborhood_id)] = 0;
         }
       });
       
-      villageRepresentatives.forEach(rep => {
+      currentVillageReps.forEach(rep => {
         if (rep.village_id) {
-          villageCounts[rep.village_id] = 0;
+          villageCounts[String(rep.village_id)] = 0;
         }
       });
       
