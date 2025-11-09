@@ -1,0 +1,18 @@
+# Render.com Environment Variables Listesi
+# Bu değişkenleri Render Dashboard > Environment sekmesinden ekleyin
+
+# Firebase Configuration
+VITE_USE_FIREBASE=true
+VITE_API_BASE_URL=https://your-backend-url.onrender.com/api
+
+# Firebase Config (Firebase Console'dan alın)
+VITE_FIREBASE_API_KEY=AIzaSyA0wDM5fXHtm0uDlALRhkQzF7tpsZ-7BZI
+VITE_FIREBASE_AUTH_DOMAIN=spilsekreterligi.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=spilsekreterligi
+VITE_FIREBASE_STORAGE_BUCKET=spilsekreterligi.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=692841027309
+VITE_FIREBASE_APP_ID=1:692841027309:web:d702e7f55031de5eef5ee4
+VITE_FIREBASE_MEASUREMENT_ID=G-0X605S84W1
+
+# Encryption Key (GERÇEK KEY'İNİZİ KULLANIN - minimum 32 karakter)
+VITE_ENCRYPTION_KEY=ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters
