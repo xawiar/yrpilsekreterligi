@@ -405,11 +405,29 @@ const ArchivePage = () => {
         {/* Documents Tab */}
         {activeTab === 'documents' && (
           <div>
-            <DocumentsTable 
-              documents={documents} 
-              onDownloadDocument={handleDownloadDocument} 
-              onDeleteDocument={handleDeleteDocument} 
-            />
+            {/* Admin Belgeleri */}
+            <div className="mb-6">
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Admin Belgeleri</h3>
+              </div>
+              <DocumentsTable 
+                documents={documents} 
+                onDownloadDocument={(id, filename) => handleDownloadDocument(id, filename, false)} 
+                onDeleteDocument={(id) => handleDeleteDocument(id, false)} 
+              />
+            </div>
+            
+            {/* Üye Belgeleri */}
+            <div className="mt-8">
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Üye Belgeleri</h3>
+              </div>
+              <MemberDocumentsTable 
+                documents={memberDocuments} 
+                onDownloadDocument={(id, filename) => handleDownloadDocument(id, filename, true)} 
+                onDeleteDocument={(id) => handleDeleteDocument(id, true)} 
+              />
+            </div>
           </div>
         )}
 
