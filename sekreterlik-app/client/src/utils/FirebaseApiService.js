@@ -944,9 +944,23 @@ class FirebaseApiService {
         return [];
       }
       
-      // description alanını decrypt etmeye çalışma (artık şifrelenmeden saklanıyor)
+      // notes ve description alanlarını decrypt etmeye çalışma (artık şifrelenmeden saklanıyor)
       // Eğer şifrelenmişse (eski kayıtlar için), decrypt etmeye çalış
       const processedMeetings = meetings.map(meeting => {
+        // notes decrypt
+        if (meeting.notes && typeof meeting.notes === 'string' && meeting.notes.startsWith('U2FsdGVkX1')) {
+          // Şifrelenmiş görünüyor, decrypt etmeye çalış
+          try {
+            const decrypted = decryptData(meeting.notes);
+            if (decrypted && decrypted !== meeting.notes) {
+              meeting.notes = decrypted;
+            }
+          } catch (error) {
+            // Decrypt başarısız olursa, notes'ı temizle (muhtemelen bozuk veri)
+            console.warn('⚠️ Failed to decrypt meeting notes, keeping as is:', error);
+          }
+        }
+        // description decrypt
         if (meeting.description && typeof meeting.description === 'string' && meeting.description.startsWith('U2FsdGVkX1')) {
           // Şifrelenmiş görünüyor, decrypt etmeye çalış
           try {
@@ -959,7 +973,7 @@ class FirebaseApiService {
             console.warn('⚠️ Failed to decrypt meeting description, keeping as is:', error);
           }
         }
-        // description zaten şifrelenmemişse (yeni kayıtlar), olduğu gibi bırak
+        // notes ve description zaten şifrelenmemişse (yeni kayıtlar), olduğu gibi bırak
         return meeting;
       });
       
