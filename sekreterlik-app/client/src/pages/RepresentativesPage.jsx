@@ -259,6 +259,27 @@ const RepresentativesPage = () => {
     fetchData();
   }, []);
 
+  // Sayfa odağa geldiğinde veriyi yenile (silme işlemlerinden sonra güncelleme için)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
