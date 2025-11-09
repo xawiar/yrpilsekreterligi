@@ -2170,6 +2170,10 @@ class ApiService {
 
   // Message API (MongoDB)
   static async sendMessageToGroup(messageData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.sendMessageToGroup(messageData);
+    }
+
     const response = await fetch(`${API_BASE_URL}/mongo-messages/send-to-group`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
