@@ -33,7 +33,8 @@ const routes = [
   'town-president-dashboard',
   'election-preparation',
   'management-chart',
-  'calendar'
+  'calendar',
+  'bulk-sms'
 ];
 
 if (!fs.existsSync(indexHtmlPath)) {
