@@ -3653,6 +3653,34 @@ class FirebaseApiService {
         }
       }
 
+      // Mahalle temsilcileri ekle
+      if (includeNeighborhoodRepresentatives) {
+        const neighborhoodReps = await this.getNeighborhoodRepresentatives();
+        
+        for (const rep of neighborhoodReps) {
+          const phone = smsService.formatPhoneNumber(rep.phone);
+          if (phone) {
+            const repName = rep.name || 'Mahalle Temsilcisi';
+            const personalizedMessage = smsService.formatBulkMessage(repName, message);
+            smsData.push({ phone, message: personalizedMessage, name: repName, type: 'neighborhood_representative' });
+          }
+        }
+      }
+
+      // Köy temsilcileri ekle
+      if (includeVillageRepresentatives) {
+        const villageReps = await this.getVillageRepresentatives();
+        
+        for (const rep of villageReps) {
+          const phone = smsService.formatPhoneNumber(rep.phone);
+          if (phone) {
+            const repName = rep.name || 'Köy Temsilcisi';
+            const personalizedMessage = smsService.formatBulkMessage(repName, message);
+            smsData.push({ phone, message: personalizedMessage, name: repName, type: 'village_representative' });
+          }
+        }
+      }
+
       if (smsData.length === 0) {
         return { success: false, message: 'Gönderilecek kişi bulunamadı', sent: 0, failed: 0 };
       }
