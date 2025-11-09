@@ -1,7 +1,7 @@
 services:
   - type: static
     name: ilce-sekreterlik
-    branch: version1
+    branch: main
     rootDir: "sekreterlik-app/client"
     buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build && node scripts/fix-spa-routing.js && ls -la dist && echo "Build completed at $(date)" && echo "Commit: $(git rev-parse HEAD)"
     staticPublishPath: "./dist"
