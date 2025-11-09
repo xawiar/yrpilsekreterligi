@@ -15,6 +15,8 @@ const BulkSmsPage = () => {
   const [includeObservers, setIncludeObservers] = useState(false);
   const [includeChiefObservers, setIncludeChiefObservers] = useState(false);
   const [includeTownPresidents, setIncludeTownPresidents] = useState(false);
+  const [includeNeighborhoodRepresentatives, setIncludeNeighborhoodRepresentatives] = useState(false);
+  const [includeVillageRepresentatives, setIncludeVillageRepresentatives] = useState(false);
   
   // İleri tarihli mesaj
   const [isScheduled, setIsScheduled] = useState(false);
@@ -43,7 +45,7 @@ const BulkSmsPage = () => {
   // Seçilen kişileri yükle
   useEffect(() => {
     loadSelectedRecipients();
-  }, [selectedRegions, includeObservers, includeChiefObservers, includeTownPresidents]);
+  }, [selectedRegions, includeObservers, includeChiefObservers, includeTownPresidents, includeNeighborhoodRepresentatives, includeVillageRepresentatives]);
 
   const loadRegions = async () => {
     try {
@@ -187,6 +189,46 @@ const BulkSmsPage = () => {
         }
       }
 
+      // Mahalle temsilcileri
+      if (includeNeighborhoodRepresentatives) {
+        try {
+          const neighborhoodReps = await ApiService.getNeighborhoodRepresentatives();
+          neighborhoodReps.forEach(rep => {
+            const phone = rep.phone;
+            if (phone) {
+              recipients.push({
+                name: rep.name || 'Mahalle Temsilcisi',
+                phone: phone,
+                type: 'neighborhood_representative',
+                neighborhood: rep.neighborhood_name || ''
+              });
+            }
+          });
+        } catch (error) {
+          console.error('Error loading neighborhood representatives:', error);
+        }
+      }
+
+      // Köy temsilcileri
+      if (includeVillageRepresentatives) {
+        try {
+          const villageReps = await ApiService.getVillageRepresentatives();
+          villageReps.forEach(rep => {
+            const phone = rep.phone;
+            if (phone) {
+              recipients.push({
+                name: rep.name || 'Köy Temsilcisi',
+                phone: phone,
+                type: 'village_representative',
+                village: rep.village_name || ''
+              });
+            }
+          });
+        } catch (error) {
+          console.error('Error loading village representatives:', error);
+        }
+      }
+
       setSelectedRecipients(recipients);
     } catch (error) {
       console.error('Error loading selected recipients:', error);
@@ -202,8 +244,8 @@ const BulkSmsPage = () => {
       return;
     }
 
-    if (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents) {
-      alert('Lütfen en az bir bölge seçin veya müşahit/belde başkanı seçeneklerinden birini işaretleyin');
+    if (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents && !includeNeighborhoodRepresentatives && !includeVillageRepresentatives) {
+      alert('Lütfen en az bir bölge seçin veya müşahit/belde başkanı/temsilci seçeneklerinden birini işaretleyin');
       return;
     }
 
@@ -236,7 +278,9 @@ const BulkSmsPage = () => {
             options: {
               includeObservers,
               includeChiefObservers,
-              includeTownPresidents
+              includeTownPresidents,
+              includeNeighborhoodRepresentatives,
+              includeVillageRepresentatives
             }
           });
 
@@ -249,6 +293,8 @@ const BulkSmsPage = () => {
             setIncludeObservers(false);
             setIncludeChiefObservers(false);
             setIncludeTownPresidents(false);
+            setIncludeNeighborhoodRepresentatives(false);
+            setIncludeVillageRepresentatives(false);
             await loadScheduledSms();
           } else {
             alert('SMS planlanırken hata oluştu: ' + result.message);
@@ -270,6 +316,8 @@ const BulkSmsPage = () => {
     if (includeObservers) recipientTypes.push('müşahitlere');
     if (includeChiefObservers) recipientTypes.push('baş müşahitlere');
     if (includeTownPresidents) recipientTypes.push('belde başkanlarına');
+    if (includeNeighborhoodRepresentatives) recipientTypes.push('mahalle temsilcilerine');
+    if (includeVillageRepresentatives) recipientTypes.push('köy temsilcilerine');
 
     if (!window.confirm(`${recipientTypes.join(', ')} SMS göndermek istediğinize emin misiniz?`)) {
       return;
@@ -282,7 +330,9 @@ const BulkSmsPage = () => {
       const result = await ApiService.sendBulkSms(message, selectedRegions, [], {
         includeObservers,
         includeChiefObservers,
-        includeTownPresidents
+        includeTownPresidents,
+        includeNeighborhoodRepresentatives,
+        includeVillageRepresentatives
       });
       setResult(result);
       setShowResultModal(true);
@@ -293,6 +343,8 @@ const BulkSmsPage = () => {
         setIncludeObservers(false);
         setIncludeChiefObservers(false);
         setIncludeTownPresidents(false);
+        setIncludeNeighborhoodRepresentatives(false);
+        setIncludeVillageRepresentatives(false);
       }
     } catch (error) {
       console.error('Error sending bulk SMS:', error);
@@ -478,20 +530,26 @@ const BulkSmsPage = () => {
                         {recipient.phone}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full font-medium ${
-                          recipient.type === 'member' 
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-                            : recipient.type === 'observer'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                            : recipient.type === 'chief_observer'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
-                        }`}>
-                          {recipient.type === 'member' && 'Üye'}
-                          {recipient.type === 'observer' && 'Müşahit'}
-                          {recipient.type === 'chief_observer' && 'Baş Müşahit'}
-                          {recipient.type === 'town_president' && 'Belde Başkanı'}
-                        </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full font-medium ${
+                            recipient.type === 'member' 
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                              : recipient.type === 'observer'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                              : recipient.type === 'chief_observer'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                              : recipient.type === 'town_president'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
+                              : recipient.type === 'neighborhood_representative'
+                              ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300'
+                              : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300'
+                          }`}>
+                            {recipient.type === 'member' && 'Üye'}
+                            {recipient.type === 'observer' && 'Müşahit'}
+                            {recipient.type === 'chief_observer' && 'Baş Müşahit'}
+                            {recipient.type === 'town_president' && 'Belde Başkanı'}
+                            {recipient.type === 'neighborhood_representative' && 'Mahalle Temsilcisi'}
+                            {recipient.type === 'village_representative' && 'Köy Temsilcisi'}
+                          </span>
                       </td>
                     </tr>
                   ))}
@@ -543,7 +601,7 @@ const BulkSmsPage = () => {
             disabled={
               sending || 
               !message.trim() || 
-              (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents) ||
+              (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents && !includeNeighborhoodRepresentatives && !includeVillageRepresentatives) ||
               (isScheduled && !scheduledDate)
             }
             className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -811,7 +869,9 @@ const EditScheduledSmsForm = ({ sms, regions, onSave, onCancel }) => {
       options: {
         includeObservers,
         includeChiefObservers,
-        includeTownPresidents
+        includeTownPresidents,
+        includeNeighborhoodRepresentatives,
+        includeVillageRepresentatives
       }
     });
   };

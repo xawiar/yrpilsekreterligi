@@ -3604,14 +3604,16 @@ class FirebaseApiService {
    * @param {string} message - Gönderilecek mesaj
    * @param {string[]} regions - Bölge isimleri (boş ise tüm üyelere)
    * @param {string[]} memberIds - Belirli üye ID'leri (opsiyonel)
-   * @param {object} options - { includeObservers: boolean, includeChiefObservers: boolean, includeTownPresidents: boolean }
+   * @param {object} options - { includeObservers: boolean, includeChiefObservers: boolean, includeTownPresidents: boolean, includeNeighborhoodRepresentatives: boolean, includeVillageRepresentatives: boolean }
    */
   static async sendBulkSms(message, regions = [], memberIds = [], options = {}) {
     try {
       const { 
         includeObservers = false, 
         includeChiefObservers = false, 
-        includeTownPresidents = false 
+        includeTownPresidents = false,
+        includeNeighborhoodRepresentatives = false,
+        includeVillageRepresentatives = false
       } = options;
 
       // SMS servisini yükle
