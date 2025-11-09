@@ -2357,7 +2357,27 @@ class FirebaseApiService {
   // Event Categories CRUD
   static async getEventCategories() {
     try {
-      return await FirebaseService.getAll(this.COLLECTIONS.EVENT_CATEGORIES);
+      const categories = await FirebaseService.getAll(this.COLLECTIONS.EVENT_CATEGORIES);
+      
+      // description alanını decrypt etmeye çalış (eski şifrelenmiş kayıtlar için)
+      const { decryptData } = await import('../utils/crypto');
+      
+      return categories.map(category => {
+        // Eğer description şifrelenmişse (eski kayıtlar için), decrypt et
+        if (category.description && typeof category.description === 'string' && category.description.startsWith('U2FsdGVkX1')) {
+          try {
+            const decrypted = decryptData(category.description);
+            if (decrypted && decrypted !== category.description) {
+              category.description = decrypted;
+            }
+          } catch (error) {
+            // Decrypt başarısız olursa, description'ı temizle (muhtemelen bozuk veri)
+            console.warn('Failed to decrypt description for category:', category.id, error);
+            category.description = null;
+          }
+        }
+        return category;
+      });
     } catch (error) {
       console.error('Get event categories error:', error);
       return [];
