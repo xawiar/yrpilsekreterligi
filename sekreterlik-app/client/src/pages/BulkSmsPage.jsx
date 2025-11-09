@@ -433,6 +433,68 @@ const BulkSmsPage = () => {
           )}
         </div>
 
+        {/* SMS Atılacak Kişiler */}
+        {selectedRecipients.length > 0 && (
+          <div className="mb-6 bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                SMS Atılacak Kişiler ({selectedRecipients.length})
+              </label>
+            </div>
+            {loadingRecipients ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        İsim Soyisim
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Telefon
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Tip
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                    {selectedRecipients.map((recipient, index) => (
+                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                          {recipient.name}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                          {recipient.phone}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full font-medium ${
+                            recipient.type === 'member' 
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                              : recipient.type === 'observer'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                              : recipient.type === 'chief_observer'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                              : 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
+                          }`}>
+                            {recipient.type === 'member' && 'Üye'}
+                            {recipient.type === 'observer' && 'Müşahit'}
+                            {recipient.type === 'chief_observer' && 'Baş Müşahit'}
+                            {recipient.type === 'town_president' && 'Belde Başkanı'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Planlanmış SMS Listesi */}
         {scheduledSms.length > 0 && (
           <div className="mb-6">
