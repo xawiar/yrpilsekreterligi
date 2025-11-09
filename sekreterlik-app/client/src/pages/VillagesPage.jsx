@@ -47,6 +47,7 @@ const VillagesPage = () => {
     if (villages.length > 0) {
       fetchVisitCounts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [villages]);
 
   const fetchVisitCounts = async () => {

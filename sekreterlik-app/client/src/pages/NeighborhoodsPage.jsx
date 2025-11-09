@@ -47,6 +47,7 @@ const NeighborhoodsPage = () => {
     if (neighborhoods.length > 0) {
       fetchVisitCounts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [neighborhoods]);
 
   const fetchVisitCounts = async () => {

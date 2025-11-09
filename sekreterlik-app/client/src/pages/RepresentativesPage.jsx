@@ -129,6 +129,7 @@ const RepresentativesPage = () => {
     if (neighborhoodRepresentatives.length > 0 || villageRepresentatives.length > 0) {
       fetchVisitCountsAndEvents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [neighborhoodRepresentatives, villageRepresentatives]);
 
   const fetchVisitCountsAndEvents = async () => {
