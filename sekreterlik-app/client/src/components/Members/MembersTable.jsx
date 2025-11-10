@@ -312,9 +312,9 @@ const MembersTable = ({
                     </td>
                     <td className="px-3 py-3 text-sm font-medium">
                       <div className="flex space-x-1">
-                        <ShowMemberButton onClick={() => onShowMember(member.id)} />
-                        <EditMemberButton onClick={() => onEditMember(member.id)} />
-                        <ArchiveMemberButton onClick={() => onArchiveMember(member.id)} />
+                        <ShowMemberButton onClick={() => onShowMember(member)} />
+                        <EditMemberButton onClick={() => onEditMember(member)} />
+                        <ArchiveMemberButton onClick={() => onArchiveMember(member)} />
                         {onAddRegistration && (
                           <button
                             onClick={() => onAddRegistration(member.id)}
