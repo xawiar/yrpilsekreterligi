@@ -16,12 +16,33 @@ export const usePushNotifications = (userId = null) => {
 
   // Check if push notifications are supported
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
       setIsSupported(true);
+      // Check existing subscription
+      checkExistingSubscription();
     } else {
       setIsSupported(false);
+      setError('Push notifications bu tarayıcıda desteklenmiyor');
     }
   }, []);
+
+  // Check existing subscription
+  const checkExistingSubscription = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        const existingSubscription = await registration.pushManager.getSubscription();
+        
+        if (existingSubscription) {
+          setSubscription(existingSubscription);
+          setIsSubscribed(true);
+          console.log('✅ Found existing push subscription');
+        }
+      }
+    } catch (error) {
+      console.warn('Error checking existing subscription:', error);
+    }
+  };
 
   // Get VAPID key
   useEffect(() => {
@@ -46,6 +67,26 @@ export const usePushNotifications = (userId = null) => {
     }
   };
 
+  // Get VAPID key function (moved outside to be accessible)
+  const getVapidKey = async () => {
+    try {
+      const response = await ApiService.getVapidKey();
+      if (response && response.success && response.publicKey) {
+        setVapidKey(response.publicKey);
+        setError(null); // Clear any previous errors
+        return response.publicKey;
+      } else {
+        console.warn('VAPID key response invalid:', response);
+        setError('VAPID anahtarı alınamadı');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting VAPID key:', error);
+      setError('VAPID anahtarı alınırken hata oluştu: ' + error.message);
+      return null;
+    }
+  };
+
   // Subscribe to push notifications
   const subscribe = useCallback(async () => {
     if (!isSupported) {
@@ -53,11 +94,12 @@ export const usePushNotifications = (userId = null) => {
       return false;
     }
 
-    if (!vapidKey) {
+    let currentVapidKey = vapidKey;
+    if (!currentVapidKey) {
       // VAPID key yoksa tekrar dene
       console.warn('VAPID key not available, retrying...');
-      await getVapidKey();
-      if (!vapidKey) {
+      currentVapidKey = await getVapidKey();
+      if (!currentVapidKey) {
         setError('VAPID anahtarı alınamadı. Lütfen sayfayı yenileyin.');
         return false;
       }
@@ -85,7 +127,7 @@ export const usePushNotifications = (userId = null) => {
       // Create new subscription
       const newSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+        applicationServerKey: urlBase64ToUint8Array(currentVapidKey)
       });
 
       // Send subscription to server
@@ -113,6 +155,13 @@ export const usePushNotifications = (userId = null) => {
       setIsLoading(false);
     }
   }, [isSupported, vapidKey]);
+  
+  // Get VAPID key on mount
+  useEffect(() => {
+    if (isSupported) {
+      getVapidKey();
+    }
+  }, [isSupported]);
 
   // Unsubscribe from push notifications
   const unsubscribe = useCallback(async () => {
