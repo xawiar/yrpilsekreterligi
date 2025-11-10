@@ -9,6 +9,8 @@ const SyncToFirebasePage = () => {
   const [progress, setProgress] = useState({ current: 0, total: 0, table: '' });
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
+  const [updatingMembers, setUpdatingMembers] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0 });
 
   // Collections to sync
   const COLLECTIONS_TO_SYNC = [
@@ -140,6 +142,77 @@ const SyncToFirebasePage = () => {
         count: 0,
         errors: [error.message]
       };
+    }
+  };
+
+  const handleUpdateMembersFromDesktop = async () => {
+    if (!isLoggedIn || user?.role !== 'admin') {
+      setError('Bu işlem için admin yetkisi gereklidir.');
+      return;
+    }
+
+    setUpdatingMembers(true);
+    setError('');
+    setUpdateProgress({ current: 0, total: 0 });
+
+    try {
+      console.log('📥 Masaüstü database\'den üye verileri alınıyor...');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_BASE_URL}/sync/desktop-members`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const desktopData = await response.json();
+      
+      if (!desktopData.success) {
+        throw new Error(desktopData.message || 'Veriler alınamadı');
+      }
+
+      console.log('✅ Masaüstü database\'den veriler alındı:', desktopData.count, 'üye');
+
+      const desktopMembers = desktopData.data || [];
+      setUpdateProgress({ current: 0, total: desktopMembers.length });
+
+      let updated = 0;
+      let skipped = 0;
+      let errors = 0;
+
+      for (let i = 0; i < desktopMembers.length; i++) {
+        const desktopMember = desktopMembers[i];
+        setUpdateProgress({ current: i + 1, total: desktopMembers.length });
+
+        try {
+          // Firebase'deki üyeyi bul
+          const firebaseMember = await FirebaseService.getById('members', String(desktopMember.id), false);
+          
+          if (!firebaseMember) {
+            console.warn(`⚠️ Firebase'de üye bulunamadı: ${desktopMember.id} (${desktopMember.name})`);
+            skipped++;
+            continue;
+          }
+
+          // TC ve telefon güncelle
+          await FirebaseService.update('members', String(desktopMember.id), {
+            tc: desktopMember.tc,
+            phone: desktopMember.phone
+          }, false); // encrypt = false (artık şifreleme yapılmıyor)
+
+          updated++;
+          console.log(`✅ Üye güncellendi: ${desktopMember.name} (ID: ${desktopMember.id}, TC: ${desktopMember.tc})`);
+        } catch (error) {
+          errors++;
+          console.error(`❌ Üye güncelleme hatası (ID: ${desktopMember.id}):`, error);
+        }
+      }
+
+      setUpdatingMembers(false);
+      alert(`✅ Güncelleme tamamlandı!\n${updated} üye güncellendi\n${skipped} üye atlandı\n${errors} hata`);
+    } catch (error) {
+      console.error('❌ Update error:', error);
+      setError(`Üye güncelleme hatası: ${error.message}`);
+      setUpdatingMembers(false);
     }
   };
 
@@ -325,14 +398,58 @@ const SyncToFirebasePage = () => {
 
           <button
             onClick={handleSync}
-            disabled={loading}
+            disabled={loading || updatingMembers}
             className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
-              loading
+              loading || updatingMembers
                 ? 'bg-gray-400 cursor-not-allowed text-white'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
           >
             {loading ? 'Aktarılıyor...' : 'Verileri Firebase\'e Aktar'}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Masaüstü Database'den TC ve Telefonları Güncelle
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Masaüstündeki ildatabase.sqlite dosyasından TC ve telefon numaralarını çekip Firebase'deki üyeleri günceller.
+            </p>
+          </div>
+
+          {updatingMembers && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  Güncelleniyor ({updateProgress.current}/{updateProgress.total})
+                </span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  {updateProgress.total > 0 ? Math.round((updateProgress.current / updateProgress.total) * 100) : 0}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${updateProgress.total > 0 ? (updateProgress.current / updateProgress.total) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleUpdateMembersFromDesktop}
+            disabled={loading || updatingMembers}
+            className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+              loading || updatingMembers
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {updatingMembers ? 'Güncelleniyor...' : 'Masaüstü Database\'den TC ve Telefonları Güncelle'}
           </button>
         </div>
       </div>

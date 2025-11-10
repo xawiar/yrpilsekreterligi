@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const { decryptField } = require('../utils/crypto');
 
 // Get all data from SQLite for Firebase sync
 router.get('/all', async (req, res) => {
@@ -315,6 +318,65 @@ router.get('/all', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Veriler hazırlanırken hata oluştu',
+      error: error.message
+    });
+  }
+});
+
+// Endpoint: Masaüstündeki database'den TC ve telefonları çekip Firebase için hazırla
+router.get('/desktop-members', async (req, res) => {
+  try {
+    console.log('📥 Masaüstü database\'den üye verileri alınıyor...');
+    
+    const desktopDbPath = path.join(require('os').homedir(), 'Desktop', 'ildatabase.sqlite');
+    
+    const desktopDb = new sqlite3.Database(desktopDbPath, sqlite3.OPEN_READONLY, (err) => {
+      if (err) {
+        console.error('❌ Desktop veritabanına bağlanılamadı:', err.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Desktop veritabanına bağlanılamadı',
+          error: err.message
+        });
+      }
+    });
+
+    const desktopMembers = await new Promise((resolve, reject) => {
+      desktopDb.all('SELECT id, tc, phone, name FROM members WHERE archived = 0 OR archived IS NULL', [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+
+    console.log(`📊 ${desktopMembers.length} üye bulundu`);
+
+    // TC ve telefon decrypt et
+    const membersWithDecryptedData = desktopMembers.map(member => {
+      const tc = decryptField(member.tc) || member.tc || '';
+      const phone = decryptField(member.phone) || member.phone || '';
+      
+      return {
+        id: member.id,
+        name: member.name,
+        tc: tc,
+        phone: phone
+      };
+    });
+
+    desktopDb.close((err) => {
+      if (err) console.error('Desktop veritabanı kapatılırken hata:', err.message);
+    });
+
+    res.json({
+      success: true,
+      data: membersWithDecryptedData,
+      count: membersWithDecryptedData.length
+    });
+  } catch (error) {
+    console.error('❌ Desktop members sync error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Masaüstü database\'den veriler alınırken hata oluştu',
       error: error.message
     });
   }
