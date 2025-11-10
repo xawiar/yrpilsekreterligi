@@ -186,6 +186,7 @@ const ManagementChartPage = () => {
                       src={normalizePhotoUrl(member.photo)}
                       alt={formatMemberName(member.name)}
                       className="w-20 h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-4"
+                      loading="lazy"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
@@ -229,6 +230,7 @@ const ManagementChartPage = () => {
                       src={normalizePhotoUrl(member.photo)}
                       alt={formatMemberName(member.name)}
                       className="w-20 h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-4"
+                      loading="lazy"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';

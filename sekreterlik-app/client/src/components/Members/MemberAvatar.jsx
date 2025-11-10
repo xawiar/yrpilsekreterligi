@@ -9,6 +9,7 @@ const MemberAvatar = ({ name, photo }) => {
           src={normalizePhotoUrl(photo)}
           alt={name}
           className="h-8 w-8 rounded-full object-cover"
+          loading="lazy"
           onError={(e) => {
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'flex';

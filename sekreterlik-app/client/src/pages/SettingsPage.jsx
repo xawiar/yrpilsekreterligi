@@ -19,6 +19,7 @@ import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import SmsSettings from '../components/SmsSettings';
 import SyncToFirebasePage from './SyncToFirebasePage';
 import PollsPage from './PollsPage';
+import MemberDashboardAnalyticsPage from './MemberDashboardAnalyticsPage';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -84,6 +85,7 @@ const SettingsPage = ({ tab }) => {
           {activeTab === 'sms-config' && <SmsSettings />}
           {activeTab === 'firebase-sync' && <SyncToFirebasePage />}
           {activeTab === 'polls' && <PollsPage />}
+          {activeTab === 'member-dashboard-analytics' && <MemberDashboardAnalyticsPage />}
           {/* Push notifications removed */}
         </div>
       </div>

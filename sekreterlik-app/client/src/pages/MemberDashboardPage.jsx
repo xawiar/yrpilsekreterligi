@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
@@ -24,6 +24,7 @@ import GroupsPage from './GroupsPage';
 import Footer from '../components/Footer';
 import PollVotingComponent from '../components/PollVotingComponent';
 import PollResultsComponent from '../components/PollResultsComponent';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
@@ -41,12 +42,113 @@ const MemberDashboardPage = () => {
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
+  
+  // Analytics tracking
+  const sessionIdRef = useRef(null);
+  const sessionStartTimeRef = useRef(null);
+  const pageViewsRef = useRef(0);
+  
+  // Push notifications
+  const {
+    isSupported: isPushSupported,
+    isSubscribed: isPushSubscribed,
+    subscribe: subscribeToPush,
+    requestPermission: requestPushPermission
+  } = usePushNotifications();
 
   useEffect(() => {
     if (user && user.role === 'member') {
       fetchMemberData();
+      startAnalyticsSession();
+      initializePushNotifications();
     }
+    
+    // Cleanup: End session when component unmounts
+    return () => {
+      endAnalyticsSession();
+    };
   }, [user]);
+
+  // Track page views
+  useEffect(() => {
+    if (user && user.role === 'member' && sessionIdRef.current) {
+      pageViewsRef.current += 1;
+      updateAnalyticsSession();
+    }
+  }, [currentView]);
+
+  // Initialize push notifications
+  const initializePushNotifications = async () => {
+    if (isPushSupported && !isPushSubscribed) {
+      try {
+        const permission = await requestPushPermission();
+        if (permission) {
+          await subscribeToPush();
+        }
+      } catch (error) {
+        console.error('Error initializing push notifications:', error);
+      }
+    }
+  };
+
+  // Start analytics session
+  const startAnalyticsSession = async () => {
+    try {
+      const memberId = user?.memberId || user?.id;
+      if (!memberId) return;
+      
+      const response = await ApiService.startAnalyticsSession(memberId);
+      if (response.success && response.session) {
+        sessionIdRef.current = response.session.id;
+        sessionStartTimeRef.current = new Date();
+        pageViewsRef.current = 1;
+      }
+    } catch (error) {
+      console.error('Error starting analytics session:', error);
+    }
+  };
+
+  // Update analytics session
+  const updateAnalyticsSession = async () => {
+    if (!sessionIdRef.current) return;
+    
+    try {
+      const now = new Date();
+      const durationSeconds = sessionStartTimeRef.current 
+        ? Math.floor((now - sessionStartTimeRef.current) / 1000)
+        : 0;
+      
+      await ApiService.updateAnalyticsSession(sessionIdRef.current, {
+        sessionEnd: null, // Still active
+        durationSeconds,
+        pageViews: pageViewsRef.current
+      });
+    } catch (error) {
+      console.error('Error updating analytics session:', error);
+    }
+  };
+
+  // End analytics session
+  const endAnalyticsSession = async () => {
+    if (!sessionIdRef.current || !sessionStartTimeRef.current) return;
+    
+    try {
+      const now = new Date();
+      const durationSeconds = Math.floor((now - sessionStartTimeRef.current) / 1000);
+      
+      await ApiService.updateAnalyticsSession(sessionIdRef.current, {
+        sessionEnd: now.toISOString(),
+        durationSeconds,
+        pageViews: pageViewsRef.current
+      });
+      
+      sessionIdRef.current = null;
+      sessionStartTimeRef.current = null;
+      pageViewsRef.current = 0;
+    } catch (error) {
+      console.error('Error ending analytics session:', error);
+    }
+  };
 
   const fetchMemberData = async () => {
     try {

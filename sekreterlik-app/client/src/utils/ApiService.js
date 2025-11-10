@@ -2137,6 +2137,74 @@ class ApiService {
     return response.json();
   }
 
+  // Member Dashboard Analytics API
+  static async startAnalyticsSession(memberId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      // Firebase'de analytics için Firestore collection kullanılacak
+      return await FirebaseApiService.startAnalyticsSession(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/session/start`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ memberId }),
+    });
+    return response.json();
+  }
+
+  static async updateAnalyticsSession(sessionId, updates) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.updateAnalyticsSession(sessionId, updates);
+    }
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/session/${sessionId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(updates),
+    });
+    return response.json();
+  }
+
+  static async getMemberAnalytics(memberId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.getMemberAnalytics(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/member/${memberId}`);
+    return response.json();
+  }
+
+  static async getMemberAnalyticsSummary(memberId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.getMemberAnalyticsSummary(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/member/${memberId}/summary`);
+    return response.json();
+  }
+
+  static async getAllAnalytics() {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.getAllAnalytics();
+    }
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/all`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async getAllAnalyticsSummary() {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.getAllAnalyticsSummary();
+    }
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/summary`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   static async getAllPushSubscriptions() {
     const response = await fetch(`${API_BASE_URL}/push-subscriptions/all`);
     return response.json();

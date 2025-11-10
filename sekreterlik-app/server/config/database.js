@@ -380,6 +380,18 @@ db.serialize(() => {
     UNIQUE(poll_id, member_id)
   )`);
 
+  // Create member_dashboard_analytics table (üye dashboard analytics)
+  db.run(`CREATE TABLE IF NOT EXISTS member_dashboard_analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
+    session_start DATETIME NOT NULL,
+    session_end DATETIME,
+    duration_seconds INTEGER,
+    page_views INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE
+  )`);
+
   // Create documents table for archive
   db.run(`CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

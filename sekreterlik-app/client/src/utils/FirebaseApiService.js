@@ -50,6 +50,7 @@ class FirebaseApiService {
     BALLOT_BOX_OBSERVERS: 'ballot_box_observers',
     POLLS: 'polls',
     POLL_VOTES: 'poll_votes',
+    MEMBER_DASHBOARD_ANALYTICS: 'member_dashboard_analytics',
     MESSAGES: 'messages',
     MESSAGE_GROUPS: 'message_groups',
     PERSONAL_DOCUMENTS: 'personal_documents',
@@ -970,7 +971,7 @@ class FirebaseApiService {
       
       // Permission hatası için özel mesaj
       if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-        throw new Error('Firebase izin hatası! Lütfen Firebase Console\'da Firestore Security Rules\'u güncelleyin. FIREBASE_SECURITY_RULES.md dosyasındaki kuralları kullanın.');
+        throw new Error('Firebase izin hatası! Lütfen Firebase Console\'da Firestore Security Rules\'u güncelleyin. Detaylar için docs/archive/FIREBASE_SECURITY_RULES.md dosyasına bakın.');
       }
       
       throw error; // Hatayı fırlat ki MemberForm catch edebilsin
@@ -4818,6 +4819,159 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Error deleting poll:', error);
       throw error;
+    }
+  }
+
+  // Member Dashboard Analytics API
+  static async startAnalyticsSession(memberId) {
+    try {
+      const sessionData = {
+        memberId: String(memberId),
+        sessionStart: new Date().toISOString(),
+        pageViews: 1
+      };
+      const docId = await FirebaseService.create(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS, null, sessionData, false);
+      return { success: true, session: { id: docId, ...sessionData } };
+    } catch (error) {
+      console.error('Error starting analytics session:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  static async updateAnalyticsSession(sessionId, updates) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS, String(sessionId), updates, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating analytics session:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  static async getMemberAnalytics(memberId) {
+    try {
+      const allAnalytics = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS);
+      const memberAnalytics = allAnalytics.filter(a => String(a.memberId || a.member_id) === String(memberId));
+      return { success: true, analytics: memberAnalytics };
+    } catch (error) {
+      console.error('Error getting member analytics:', error);
+      return { success: false, analytics: [] };
+    }
+  }
+
+  static async getMemberAnalyticsSummary(memberId) {
+    try {
+      const allAnalytics = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS);
+      const memberAnalytics = allAnalytics.filter(a => String(a.memberId || a.member_id) === String(memberId));
+      
+      const totalSessions = memberAnalytics.length;
+      const totalDurationSeconds = memberAnalytics.reduce((sum, a) => sum + (a.durationSeconds || a.duration_seconds || 0), 0);
+      const totalPageViews = memberAnalytics.reduce((sum, a) => sum + (a.pageViews || a.page_views || 0), 0);
+      const firstSession = memberAnalytics.length > 0 ? memberAnalytics[memberAnalytics.length - 1].sessionStart : null;
+      const lastSession = memberAnalytics.length > 0 ? memberAnalytics[0].sessionStart : null;
+      const avgDurationSeconds = totalSessions > 0 ? Math.floor(totalDurationSeconds / totalSessions) : 0;
+      
+      return {
+        success: true,
+        summary: {
+          total_sessions: totalSessions,
+          total_duration_seconds: totalDurationSeconds,
+          total_page_views: totalPageViews,
+          first_session: firstSession,
+          last_session: lastSession,
+          avg_duration_seconds: avgDurationSeconds
+        }
+      };
+    } catch (error) {
+      console.error('Error getting member analytics summary:', error);
+      return { success: false, summary: null };
+    }
+  }
+
+  static async getAllAnalytics() {
+    try {
+      const analytics = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS);
+      // Get members to populate names
+      const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+      
+      return {
+        success: true,
+        analytics: analytics.map(a => {
+          const member = members.find(m => String(m.id) === String(a.memberId || a.member_id));
+          return {
+            ...a,
+            name: member?.name || '',
+            surname: member?.surname || '',
+            tc: member?.tc || ''
+          };
+        })
+      };
+    } catch (error) {
+      console.error('Error getting all analytics:', error);
+      return { success: false, analytics: [] };
+    }
+  }
+
+  static async getAllAnalyticsSummary() {
+    try {
+      const analytics = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS);
+      const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+      
+      // Group by member
+      const memberMap = new Map();
+      
+      analytics.forEach(a => {
+        const memberId = String(a.memberId || a.member_id);
+        if (!memberMap.has(memberId)) {
+          const member = members.find(m => String(m.id) === memberId);
+          memberMap.set(memberId, {
+            member_id: memberId,
+            name: member?.name || '',
+            surname: member?.surname || '',
+            tc: member?.tc || '',
+            total_sessions: 0,
+            total_duration_seconds: 0,
+            total_page_views: 0,
+            first_session: null,
+            last_session: null,
+            avg_duration_seconds: 0
+          });
+        }
+        
+        const summary = memberMap.get(memberId);
+        summary.total_sessions += 1;
+        summary.total_duration_seconds += (a.durationSeconds || a.duration_seconds || 0);
+        summary.total_page_views += (a.pageViews || a.page_views || 0);
+        
+        const sessionStart = a.sessionStart || a.session_start;
+        if (sessionStart) {
+          if (!summary.first_session || sessionStart < summary.first_session) {
+            summary.first_session = sessionStart;
+          }
+          if (!summary.last_session || sessionStart > summary.last_session) {
+            summary.last_session = sessionStart;
+          }
+        }
+      });
+      
+      // Calculate averages
+      memberMap.forEach((summary, memberId) => {
+        summary.avg_duration_seconds = summary.total_sessions > 0 
+          ? Math.floor(summary.total_duration_seconds / summary.total_sessions) 
+          : 0;
+      });
+      
+      const summaryArray = Array.from(memberMap.values()).sort((a, b) => {
+        if (b.total_sessions !== a.total_sessions) {
+          return b.total_sessions - a.total_sessions;
+        }
+        return new Date(b.last_session || 0) - new Date(a.last_session || 0);
+      });
+      
+      return { success: true, summary: summaryArray };
+    } catch (error) {
+      console.error('Error getting all analytics summary:', error);
+      return { success: false, summary: [] };
     }
   }
 }

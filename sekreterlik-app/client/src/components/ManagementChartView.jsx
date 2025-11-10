@@ -173,6 +173,7 @@ const ManagementChartView = ({ members }) => {
                               src={`http://localhost:5000${member.photo}`}
                               alt={formatMemberName(member.name)}
                               className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-blue-200"
+                              loading="lazy"
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';

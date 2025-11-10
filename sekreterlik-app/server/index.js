@@ -83,6 +83,12 @@ const syncRouter = require('./routes/sync');
 console.log('Sync router imported');
 const pollsRouter = require('./routes/polls');
 console.log('Polls router imported');
+const financialRouter = require('./routes/financial');
+console.log('Financial router imported');
+const pushSubscriptionsRouter = require('./routes/pushSubscriptions');
+console.log('Push subscriptions router imported');
+const memberDashboardAnalyticsRouter = require('./routes/memberDashboardAnalytics');
+console.log('Member dashboard analytics router imported');
 const PollController = require('./controllers/PollController');
 
 // Import middleware
@@ -106,11 +112,13 @@ const PORT = process.env.PORT || 5000;
 console.log('Starting server setup');
 
 // Initialize database models and MongoDB
+const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
 Promise.all([
   Admin.init(),
   MemberUser.init(),
   PersonalDocument.init(),
   PositionPermission.init(),
+  MemberDashboardAnalytics.init(),
   connectToMongoDB()
 ]).then(() => {
   console.log('All models and MongoDB initialized');
@@ -261,6 +269,9 @@ app.use('/api/permissions', permissionsRouter);
 app.use('/api/bylaws', bylawsRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/polls', pollsRouter);
+app.use('/api/financial', financialRouter);
+app.use('/api/push-subscriptions', pushSubscriptionsRouter);
+app.use('/api/member-dashboard-analytics', memberDashboardAnalyticsRouter);
 
 console.log('API routes registered');
 

@@ -573,6 +573,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
                     src={normalizePhotoUrl(photo)}
                     alt={formattedName}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-gray-200"
+                    loading="lazy"
                     onError={(e) => {
                       console.error('Image load error:', e);
                       e.target.style.display = 'none';

@@ -104,7 +104,7 @@ class FirebaseService {
       
       // Permission hatası için daha açıklayıcı mesaj
       if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-        throw new Error('Firebase Security Rules hatası. Lütfen Firebase Console\'da Firestore Rules\'u güncelleyin. Detaylar için FIREBASE_SECURITY_RULES.md dosyasına bakın.');
+        throw new Error('Firebase Security Rules hatası. Lütfen Firebase Console\'da Firestore Rules\'u güncelleyin. Detaylar için docs/archive/FIREBASE_SECURITY_RULES.md dosyasına bakın.');
       }
       
       throw error;
