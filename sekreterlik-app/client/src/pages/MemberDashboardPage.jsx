@@ -36,6 +36,8 @@ const MemberDashboardPage = () => {
   const [memberRegistrations, setMemberRegistrations] = useState([]);
   const [polls, setPolls] = useState([]);
   const [pollResults, setPollResults] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
@@ -211,6 +213,32 @@ const MemberDashboardPage = () => {
       } catch (err) {
         console.error('Error fetching polls:', err);
         setPolls([]);
+      }
+
+      // Fetch notifications
+      try {
+        const notificationsResponse = await ApiService.getNotifications(memberId);
+        if (notificationsResponse.success) {
+          setNotifications(notificationsResponse.notifications || []);
+        }
+        
+        const unreadCountResponse = await ApiService.getUnreadNotificationCount(memberId);
+        if (unreadCountResponse.success) {
+          setUnreadNotificationCount(unreadCountResponse.count || 0);
+          
+          // Update app badge
+          if ('setAppBadge' in navigator && unreadCountResponse.count > 0) {
+            navigator.setAppBadge(unreadCountResponse.count).catch(err => {
+              console.warn('Could not set app badge:', err);
+            });
+          } else if ('clearAppBadge' in navigator && unreadCountResponse.count === 0) {
+            navigator.clearAppBadge().catch(err => {
+              console.warn('Could not clear app badge:', err);
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching notifications:', err);
       }
 
       // Fetch regions/positions for forms
@@ -1186,6 +1214,99 @@ const MemberDashboardPage = () => {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Section */}
+          {notifications.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900 dark:to-cyan-900">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      Bildirimler
+                      {unreadNotificationCount > 0 && (
+                        <span className="ml-2 px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-full">
+                          {unreadNotificationCount}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Son bildirimleriniz</p>
+                  </div>
+                  {unreadNotificationCount > 0 && (
+                    <button
+                      onClick={async () => {
+                        const memberId = user?.memberId || user?.id;
+                        if (memberId) {
+                          await ApiService.markAllNotificationsAsRead(memberId);
+                          await fetchMemberData();
+                        }
+                      }}
+                      className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Tümünü Okundu İşaretle
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="p-6 space-y-3 max-h-96 overflow-y-auto">
+                {notifications.slice(0, 10).map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                      notification.read
+                        ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                        : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900'
+                    }`}
+                    onClick={async () => {
+                      if (!notification.read) {
+                        await ApiService.markNotificationAsRead(notification.id);
+                        await fetchMemberData();
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className={`font-semibold ${notification.read ? 'text-gray-700 dark:text-gray-300' : 'text-blue-900 dark:text-blue-100'}`}>
+                            {notification.title}
+                          </h4>
+                          {!notification.read && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          )}
+                        </div>
+                        <p className={`text-sm ${notification.read ? 'text-gray-600 dark:text-gray-400' : 'text-blue-800 dark:text-blue-200'}`}>
+                          {notification.body}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                          {new Date(notification.createdAt || notification.created_at).toLocaleString('tr-TR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await ApiService.deleteNotification(notification.id);
+                          await fetchMemberData();
+                        }}
+                        className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

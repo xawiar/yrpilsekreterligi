@@ -90,11 +90,17 @@ self.addEventListener('push', (event) => {
     data = event.data.json();
   }
   
+  // Get badge count from data
+  const badgeCount = data.data?.badgeCount || null;
+  
   const options = {
     body: data.body || 'Yeni bildirim',
     icon: data.icon || '/icon-192x192.png',
-    badge: data.badge || '/badge-72x72.png',
-    data: data.data || {},
+    badge: badgeCount !== null ? badgeCount.toString() : (data.badge || '/badge-72x72.png'),
+    data: {
+      ...(data.data || {}),
+      timestamp: data.timestamp || Date.now()
+    },
     actions: data.actions || [
       {
         action: 'view',
@@ -105,9 +111,21 @@ self.addEventListener('push', (event) => {
         title: 'Kapat'
       }
     ],
-    requireInteraction: data.requireInteraction || true,
-    silent: data.silent || false
+    requireInteraction: data.requireInteraction !== undefined ? data.requireInteraction : true,
+    silent: data.silent || false,
+    vibrate: data.vibrate || [200, 100, 200], // Vibrate pattern
+    sound: data.sound || undefined, // Sound (browser may ignore)
+    tag: data.tag || data.data?.type || 'general', // Tag for grouping
+    renotify: data.renotify !== undefined ? data.renotify : true,
+    timestamp: data.timestamp || Date.now()
   };
+  
+  // Update badge count if available
+  if (badgeCount !== null && 'setAppBadge' in navigator) {
+    navigator.setAppBadge(badgeCount).catch(err => {
+      console.warn('Could not set app badge:', err);
+    });
+  }
   
   event.waitUntil(
     self.registration.showNotification(data.title || 'Bildirim', options)

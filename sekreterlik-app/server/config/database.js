@@ -392,6 +392,20 @@ db.serialize(() => {
     FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE
   )`);
 
+  // Create notifications table (bildirimler)
+  db.run(`CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    type TEXT DEFAULT 'general',
+    data TEXT,
+    read BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME,
+    FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE
+  )`);
+
   // Create documents table for archive
   db.run(`CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

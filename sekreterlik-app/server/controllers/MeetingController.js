@@ -104,20 +104,35 @@ class MeetingController {
         console.warn('⚠️ Firebase sync hatası (meeting create):', syncError.message);
       }
       
-      // Send push notification to all subscribed users
+      // Send push notification to all subscribed users and save to database
       try {
         const subscriptions = await PushSubscription.getAll();
         if (subscriptions.length > 0) {
+          // Get unread count for badge
+          const Notification = require('../models/Notification');
+          const unreadCount = await Notification.getUnreadCount(null);
+          
           const payload = PushNotificationService.createPayload(
             'Yeni Toplantı Oluşturuldu',
             `${meetingData.name} - ${meetingData.date || 'Tarih belirtilmemiş'}`,
             '/icon-192x192.png',
             '/badge-72x72.png',
-            { type: 'meeting', id: result.lastID, action: 'view' }
+            { type: 'meeting', id: result.lastID, action: 'view' },
+            unreadCount + 1
           );
           await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
           console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
         }
+        
+        // Save notification to database for all members (or specific members if regions specified)
+        const Notification = require('../models/Notification');
+        await Notification.create({
+          memberId: null, // null = all members
+          title: 'Yeni Toplantı Oluşturuldu',
+          body: `${meetingData.name} - ${meetingData.date || 'Tarih belirtilmemiş'}`,
+          type: 'meeting',
+          data: { meetingId: result.lastID, meetingName: meetingData.name, date: meetingData.date }
+        });
       } catch (pushError) {
         console.warn('⚠️ Push notification hatası (meeting create):', pushError.message);
       }

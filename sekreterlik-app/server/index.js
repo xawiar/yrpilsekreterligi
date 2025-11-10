@@ -89,6 +89,8 @@ const pushSubscriptionsRouter = require('./routes/pushSubscriptions');
 console.log('Push subscriptions router imported');
 const memberDashboardAnalyticsRouter = require('./routes/memberDashboardAnalytics');
 console.log('Member dashboard analytics router imported');
+const notificationsRouter = require('./routes/notifications');
+console.log('Notifications router imported');
 const PollController = require('./controllers/PollController');
 
 // Import middleware
@@ -113,15 +115,28 @@ console.log('Starting server setup');
 
 // Initialize database models and MongoDB
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
+const Notification = require('./models/Notification');
 Promise.all([
   Admin.init(),
   MemberUser.init(),
   PersonalDocument.init(),
   PositionPermission.init(),
   MemberDashboardAnalytics.init(),
+  Notification.init(),
   connectToMongoDB()
 ]).then(() => {
   console.log('All models and MongoDB initialized');
+  
+  // Delete expired notifications on startup and then every 24 hours
+  Notification.deleteExpired().catch(err => {
+    console.warn('Error deleting expired notifications on startup:', err);
+  });
+  
+  setInterval(() => {
+    Notification.deleteExpired().catch(err => {
+      console.warn('Error deleting expired notifications:', err);
+    });
+  }, 24 * 60 * 60 * 1000); // Every 24 hours
 }).catch((err) => {
   console.error('Error initializing models:', err);
 });
@@ -272,6 +287,7 @@ app.use('/api/polls', pollsRouter);
 app.use('/api/financial', financialRouter);
 app.use('/api/push-subscriptions', pushSubscriptionsRouter);
 app.use('/api/member-dashboard-analytics', memberDashboardAnalyticsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 console.log('API routes registered');
 

@@ -91,20 +91,35 @@ class EventController {
       // Invalidate events cache so new event appears immediately
       try { invalidate('/api/events'); } catch (_) {}
       
-      // Send push notification to all subscribed users
+      // Send push notification to all subscribed users and save to database
       try {
         const subscriptions = await PushSubscription.getAll();
         if (subscriptions.length > 0) {
+          // Get unread count for badge
+          const Notification = require('../models/Notification');
+          const unreadCount = await Notification.getUnreadCount(null);
+          
           const payload = PushNotificationService.createPayload(
             'Yeni Etkinlik Oluşturuldu',
             `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
             '/icon-192x192.png',
             '/badge-72x72.png',
-            { type: 'event', id: result.lastID, action: 'view' }
+            { type: 'event', id: result.lastID, action: 'view' },
+            unreadCount + 1
           );
           await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
           console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
         }
+        
+        // Save notification to database for all members
+        const Notification = require('../models/Notification');
+        await Notification.create({
+          memberId: null, // null = all members
+          title: 'Yeni Etkinlik Oluşturuldu',
+          body: `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
+          type: 'event',
+          data: { eventId: result.lastID, eventName: eventData.name, date: eventData.date }
+        });
       } catch (pushError) {
         console.warn('⚠️ Push notification hatası (event create):', pushError.message);
       }

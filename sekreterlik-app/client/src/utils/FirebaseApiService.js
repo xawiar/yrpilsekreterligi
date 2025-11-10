@@ -51,6 +51,7 @@ class FirebaseApiService {
     POLLS: 'polls',
     POLL_VOTES: 'poll_votes',
     MEMBER_DASHBOARD_ANALYTICS: 'member_dashboard_analytics',
+    NOTIFICATIONS: 'notifications',
     MESSAGES: 'messages',
     MESSAGE_GROUPS: 'message_groups',
     PERSONAL_DOCUMENTS: 'personal_documents',
@@ -4972,6 +4973,76 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Error getting all analytics summary:', error);
       return { success: false, summary: [] };
+    }
+  }
+
+  // Notifications API
+  static async getNotifications(memberId, unreadOnly = false) {
+    try {
+      const allNotifications = await FirebaseService.getAll(this.COLLECTIONS.NOTIFICATIONS);
+      let notifications = allNotifications.filter(n => {
+        const memberMatch = !n.memberId || String(n.memberId) === String(memberId);
+        const expired = n.expiresAt && new Date(n.expiresAt) <= new Date();
+        const unreadMatch = !unreadOnly || !n.read;
+        return memberMatch && !expired && unreadMatch;
+      });
+      
+      notifications.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.created_at || 0);
+        const dateB = new Date(b.createdAt || b.created_at || 0);
+        return dateB - dateA;
+      });
+      
+      return { success: true, notifications: notifications.slice(0, 50) };
+    } catch (error) {
+      console.error('Error getting notifications:', error);
+      return { success: false, notifications: [] };
+    }
+  }
+
+  static async getUnreadNotificationCount(memberId) {
+    try {
+      const response = await this.getNotifications(memberId, true);
+      return { success: true, count: response.notifications?.length || 0 };
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return { success: false, count: 0 };
+    }
+  }
+
+  static async markNotificationAsRead(notificationId) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.NOTIFICATIONS, String(notificationId), { read: true }, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      return { success: false };
+    }
+  }
+
+  static async markAllNotificationsAsRead(memberId) {
+    try {
+      const response = await this.getNotifications(memberId, true);
+      const unreadNotifications = response.notifications || [];
+      
+      for (const notification of unreadNotifications) {
+        await FirebaseService.update(this.COLLECTIONS.NOTIFICATIONS, String(notification.id), { read: true }, false);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      return { success: false };
+    }
+  }
+
+  static async deleteNotification(notificationId) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.NOTIFICATIONS, String(notificationId));
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return { success: false };
     }
   }
 }

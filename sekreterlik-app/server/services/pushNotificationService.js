@@ -44,13 +44,17 @@ class PushNotificationService {
   }
 
   // Create notification payload
-  static createPayload(title, body, icon = '/icon-192x192.png', badge = '/badge-72x72.png', data = {}) {
-    return {
+  static createPayload(title, body, icon = '/icon-192x192.png', badge = '/badge-72x72.png', data = {}, badgeCount = null) {
+    const payload = {
       title,
       body,
       icon,
       badge,
-      data,
+      data: {
+        ...data,
+        timestamp: new Date().toISOString(),
+        badgeCount: badgeCount || 1
+      },
       actions: [
         {
           action: 'view',
@@ -62,8 +66,20 @@ class PushNotificationService {
         }
       ],
       requireInteraction: true,
-      silent: false
+      silent: false,
+      vibrate: [200, 100, 200], // Vibrate pattern: 200ms, pause 100ms, 200ms
+      sound: '/notification-sound.mp3', // Sound file (optional, browser may ignore)
+      tag: data.type || 'general', // Tag for grouping notifications
+      renotify: true, // Re-notify if same tag exists
+      timestamp: Date.now()
     };
+    
+    // Add badge count if provided
+    if (badgeCount !== null) {
+      payload.badge = badgeCount.toString();
+    }
+    
+    return payload;
   }
 
   // Send event notification

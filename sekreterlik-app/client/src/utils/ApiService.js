@@ -2231,6 +2231,65 @@ class ApiService {
     return response.json();
   }
 
+  // Notifications API
+  static async getNotifications(memberId, unreadOnly = false) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.getNotifications(memberId, unreadOnly);
+    }
+    const response = await fetch(`${API_BASE_URL}/notifications/member/${memberId}${unreadOnly ? '?unreadOnly=true' : ''}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async getUnreadNotificationCount(memberId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.getUnreadNotificationCount(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/notifications/member/${memberId}/unread-count`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async markNotificationAsRead(notificationId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.markNotificationAsRead(notificationId);
+    }
+    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async markAllNotificationsAsRead(memberId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.markAllNotificationsAsRead(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/notifications/member/${memberId}/read-all`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async deleteNotification(notificationId) {
+    const service = this.getService();
+    if (service === FirebaseApiService) {
+      return await FirebaseApiService.deleteNotification(notificationId);
+    }
+    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   static async getAllPushSubscriptions() {
     const response = await fetch(`${API_BASE_URL}/push-subscriptions/all`);
     return response.json();
