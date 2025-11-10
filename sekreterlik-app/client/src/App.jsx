@@ -35,6 +35,7 @@ import ClearAllDataPage from './pages/ClearAllDataPage';
 import FirebaseAuthUsersPage from './pages/FirebaseAuthUsersPage';
 import SyncToFirebasePage from './pages/SyncToFirebasePage';
 import FirebaseTestPage from './pages/FirebaseTestPage';
+import RemoveDuplicateMeetingsPage from './pages/RemoveDuplicateMeetingsPage';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import PWANotification from './components/PWANotification';
@@ -267,6 +268,7 @@ function AppContent() {
                           <Route path="/management-chart" element={<ManagementChartPage />} />
                           <Route path="/settings/*" element={<SettingsPage />} />
                           <Route path="/sync-to-firebase" element={<SyncToFirebasePage />} />
+                          <Route path="/remove-duplicate-meetings" element={<RemoveDuplicateMeetingsPage />} />
                           
                           {/* STK Manager Routes */}
                           <Route path="/stk-management" element={

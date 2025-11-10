@@ -18,6 +18,7 @@ import FirebaseConfigSettings from '../components/FirebaseConfigSettings';
 import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import SmsSettings from '../components/SmsSettings';
 import SyncToFirebasePage from './SyncToFirebasePage';
+import RemoveDuplicateMeetingsPage from './RemoveDuplicateMeetingsPage';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -82,6 +83,7 @@ const SettingsPage = ({ tab }) => {
           {activeTab === 'deployment-config' && <DeploymentConfigSettings />}
           {activeTab === 'sms-config' && <SmsSettings />}
           {activeTab === 'firebase-sync' && <SyncToFirebasePage />}
+          {activeTab === 'remove-duplicates' && <RemoveDuplicateMeetingsPage />}
           {/* Push notifications removed */}
         </div>
       </div>
