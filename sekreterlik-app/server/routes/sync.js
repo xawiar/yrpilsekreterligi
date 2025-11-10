@@ -301,6 +301,15 @@ router.get('/all', async (req, res) => {
       data.polls = [];
     }
 
+    // Get all member_dashboard_analytics
+    try {
+      data.member_dashboard_analytics = await db.all('SELECT * FROM member_dashboard_analytics ORDER BY session_start DESC');
+      console.log(`✅ ${data.member_dashboard_analytics.length} analytics kaydı bulundu`);
+    } catch (err) {
+      console.warn('⚠️ Member dashboard analytics okunamadı:', err.message);
+      data.member_dashboard_analytics = [];
+    }
+
     // Summary
     const total = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
     console.log(`\n📊 Toplam ${total} kayıt hazırlandı`);
