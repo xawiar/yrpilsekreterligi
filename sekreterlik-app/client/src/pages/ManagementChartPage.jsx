@@ -183,7 +183,7 @@ const ManagementChartPage = () => {
                 <div className="text-center">
                   {member.photo ? (
                     <img
-                      src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                      src={normalizePhotoUrl(member.photo)}
                       alt={formatMemberName(member.name)}
                       className="w-20 h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-4"
                       onError={(e) => {
@@ -226,7 +226,7 @@ const ManagementChartPage = () => {
                 <div className="text-center">
                   {member.photo ? (
                     <img
-                      src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                      src={normalizePhotoUrl(member.photo)}
                       alt={formatMemberName(member.name)}
                       className="w-20 h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-4"
                       onError={(e) => {
@@ -274,7 +274,7 @@ const ManagementChartPage = () => {
                         <div className="flex-shrink-0">
                           {member.photo ? (
                             <img
-                              src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                              src={normalizePhotoUrl(member.photo)}
                               alt={formatMemberName(member.name)}
                               className="w-12 h-12 rounded-full object-cover border border-blue-200"
                               onError={(e) => {
@@ -323,7 +323,7 @@ const ManagementChartPage = () => {
                         <div className="flex-shrink-0">
                           {member.photo ? (
                             <img
-                              src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                              src={normalizePhotoUrl(member.photo)}
                               alt={formatMemberName(member.name)}
                               className="w-12 h-12 rounded-full object-cover border border-green-200"
                               onError={(e) => {
