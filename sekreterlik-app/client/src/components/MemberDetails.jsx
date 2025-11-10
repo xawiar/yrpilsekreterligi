@@ -5,6 +5,7 @@ import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import PersonalDocuments from './PersonalDocuments';
 import ManagementChartView from './ManagementChartView';
+import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
