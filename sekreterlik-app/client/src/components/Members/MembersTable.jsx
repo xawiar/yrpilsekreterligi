@@ -372,9 +372,10 @@ const MembersTable = ({
                   </div>
                 </div>
                 <MemberActions
-                  onShowMember={() => onShowMember(member)}
-                  onEditMember={() => onEditMember(member)}
-                  onArchiveMember={() => onArchiveMember(member)}
+                  member={member}
+                  onShowMember={onShowMember}
+                  onEditMember={onEditMember}
+                  onArchiveMember={onArchiveMember}
                 />
               </div>
               
