@@ -17,6 +17,7 @@ import GroqApiSettings from '../components/GroqApiSettings';
 import FirebaseConfigSettings from '../components/FirebaseConfigSettings';
 import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import SmsSettings from '../components/SmsSettings';
+import SyncToFirebasePage from './SyncToFirebasePage';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -80,6 +81,7 @@ const SettingsPage = ({ tab }) => {
           {activeTab === 'firebase-config' && <FirebaseConfigSettings />}
           {activeTab === 'deployment-config' && <DeploymentConfigSettings />}
           {activeTab === 'sms-config' && <SmsSettings />}
+          {activeTab === 'firebase-sync' && <SyncToFirebasePage />}
           {/* Push notifications removed */}
         </div>
       </div>
