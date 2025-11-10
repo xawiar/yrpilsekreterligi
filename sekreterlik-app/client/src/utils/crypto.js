@@ -24,19 +24,31 @@ export function encryptData(data) {
 
 /**
  * Verinin şifrelenmiş olup olmadığını kontrol eder
- * Şifrelenmiş veriler genellikle base64 formatında ve uzun string'lerdir
+ * Şifrelenmiş veriler genellikle base64 formatında ve "U2FsdGVkX1" ile başlar
  */
 function isEncrypted(data) {
   if (typeof data !== 'string') return false;
-  // Şifrelenmiş veriler genellikle base64 formatında ve uzun string'lerdir
-  // Basit bir kontrol: eğer string çok kısa veya JSON parse edilebiliyorsa, muhtemelen decrypt edilmiş
+  
+  // CryptoJS ile şifrelenmiş veriler "U2FsdGVkX1" ile başlar
+  if (data.startsWith('U2FsdGVkX1')) {
+    return true;
+  }
+  
+  // Eğer string çok kısa ise, muhtemelen şifrelenmemiş
   if (data.length < 20) return false;
+  
+  // Eğer sadece rakamlardan oluşuyorsa (TC veya telefon numarası gibi), şifrelenmemiş
+  if (/^\d+$/.test(data)) {
+    return false;
+  }
+  
+  // JSON parse edilebiliyorsa, muhtemelen decrypt edilmiş
   try {
     JSON.parse(data);
-    return false; // JSON parse edilebiliyorsa, muhtemelen decrypt edilmiş
+    return false;
   } catch {
-    // JSON parse edilemiyorsa, şifrelenmiş olabilir
-    return true;
+    // JSON parse edilemiyorsa ve uzunsa, şifrelenmiş olabilir
+    return data.length > 20;
   }
 }
 
@@ -48,7 +60,36 @@ function isEncrypted(data) {
 export function decryptData(encryptedData) {
   if (!encryptedData) return null;
   
-  // Eğer veri zaten decrypt edilmiş görünüyorsa, olduğu gibi döndür
+  // Eğer string değilse, olduğu gibi döndür
+  if (typeof encryptedData !== 'string') {
+    return encryptedData;
+  }
+  
+  // Eğer "U2FsdGVkX1" ile başlıyorsa, kesinlikle şifrelenmiş - decrypt et
+  if (encryptedData.startsWith('U2FsdGVkX1')) {
+    try {
+      const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      
+      // Eğer decrypt edilen veri boş veya geçersizse, orijinal veriyi döndür
+      if (!decrypted || decrypted.trim() === '') {
+        console.warn('⚠️ Decrypt edilen veri boş, orijinal veri döndürülüyor');
+        return encryptedData;
+      }
+      
+      // JSON parse denemesi
+      try {
+        return JSON.parse(decrypted);
+      } catch {
+        return decrypted; // String ise direkt döndür
+      }
+    } catch (error) {
+      console.warn('⚠️ Decrypt hatası, orijinal veri döndürülüyor:', error.message);
+      return encryptedData;
+    }
+  }
+  
+  // Eğer şifrelenmiş görünmüyorsa ama kontrol edelim
   if (!isEncrypted(encryptedData)) {
     // Muhtemelen zaten decrypt edilmiş, olduğu gibi döndür
     try {
@@ -58,13 +99,14 @@ export function decryptData(encryptedData) {
     }
   }
   
+  // Şifrelenmiş görünüyor ama "U2FsdGVkX1" ile başlamıyor - yine de decrypt deneyelim
   try {
     const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     
     // Eğer decrypt edilen veri boş veya geçersizse, orijinal veriyi döndür
     if (!decrypted || decrypted.trim() === '') {
-      return encryptedData; // Orijinal veriyi döndür
+      return encryptedData;
     }
     
     // JSON parse denemesi
@@ -75,7 +117,6 @@ export function decryptData(encryptedData) {
     }
   } catch (error) {
     // Decryption hatası - muhtemelen veri zaten decrypt edilmiş veya hiç şifrelenmemiş
-    // Sessizce orijinal veriyi döndür (console.error yerine)
     return encryptedData; // Hata durumunda orijinal veriyi döndür
   }
 }
@@ -116,12 +157,19 @@ export function decryptObject(obj, fieldsToDecrypt = []) {
       try {
         // Sadece string alanları decrypt et (object'ler zaten decrypt edilmiş olabilir)
         if (typeof decrypted[field] === 'string') {
-          decrypted[field] = decryptData(decrypted[field]);
+          const originalValue = decrypted[field];
+          const decryptedValue = decryptData(originalValue);
+          
+          // Eğer decrypt edilen değer farklıysa (yani başarılı decrypt olduysa), kullan
+          // Aksi halde orijinal değeri koru
+          if (decryptedValue !== originalValue || originalValue.startsWith('U2FsdGVkX1')) {
+            decrypted[field] = decryptedValue;
+          }
         }
         // Eğer field zaten object ise, olduğu gibi bırak
       } catch (error) {
         // Decryption hatası - alanı olduğu gibi bırak
-        // Sessizce devam et (zaten decrypt edilmiş olabilir)
+        console.warn(`⚠️ Decrypt hatası (${field}):`, error.message);
       }
     }
   });
