@@ -59,7 +59,7 @@ const LoginForm = ({
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all bg-white/50 backdrop-blur-sm"
+            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
             placeholder="Kullanıcı adınızı girin"
           />
         </div>
@@ -83,7 +83,7 @@ const LoginForm = ({
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all bg-white/50 backdrop-blur-sm"
+            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
             placeholder="Şifrenizi girin"
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">

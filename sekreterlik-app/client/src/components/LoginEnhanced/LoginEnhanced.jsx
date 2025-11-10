@@ -94,22 +94,21 @@ const LoginEnhanced = () => {
   };
 
   return (
-    <div className="mx-auto flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-[1350px] mx-auto"
+        className="w-full max-w-md mx-auto"
       >
-        <div className="sm:max-w-[1000px] mx-auto md:max-w-[600px]">
-          <LoginHeader />
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mt-8 bg-white/80 backdrop-blur-lg py-8 px-6 shadow-xl rounded-2xl border border-white/50 sm:px-10 relative overflow-hidden"
-          >
+        <LoginHeader />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mt-8 bg-white py-8 px-6 shadow-xl rounded-2xl border border-gray-200 sm:px-10 relative overflow-hidden"
+        >
             {/* Animated background elements */}
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
             <div className="absolute -bottom-12 -left-20 w-40 h-40 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
@@ -147,7 +146,6 @@ const LoginEnhanced = () => {
               </>
             )}
           </motion.div>
-        </div>
       </motion.div>
     </div>
   );
