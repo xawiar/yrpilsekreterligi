@@ -23,7 +23,9 @@ export function normalizePhotoUrl(photoUrl) {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://yrpilsekreterligi.onrender.com';
     // Remove http://localhost:5000 or http://127.0.0.1:5000 prefix
     const path = photoUrl.replace(/^https?:\/\/(localhost|127\.0\.0\.1):5000/, '');
-    return `${baseUrl}${path}`;
+    // Ensure path starts with /
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${baseUrl}${normalizedPath}`;
   }
 
   // If it's a relative path (starts with /), prepend base URL
