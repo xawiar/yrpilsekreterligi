@@ -35,7 +35,8 @@ const SyncToFirebasePage = () => {
     { name: 'tasks', apiMethod: 'getTasks', firestoreCollection: 'tasks' },
     { name: 'neighborhood_representatives', apiMethod: 'getNeighborhoodRepresentatives', firestoreCollection: 'neighborhood_representatives' },
     { name: 'village_representatives', apiMethod: 'getVillageRepresentatives', firestoreCollection: 'village_representatives' },
-    { name: 'polls', apiMethod: 'getPolls', firestoreCollection: 'polls' }
+    { name: 'polls', apiMethod: 'getPolls', firestoreCollection: 'polls' },
+    { name: 'member_dashboard_analytics', apiMethod: 'getAllAnalytics', firestoreCollection: 'member_dashboard_analytics' }
   ];
 
   const syncCollection = async (collection) => {
@@ -86,6 +87,9 @@ const SyncToFirebasePage = () => {
           data = await ApiService.getTasks();
         } else if (collection.apiMethod === 'getPolls') {
           data = await ApiService.getPolls('all');
+        } else if (collection.apiMethod === 'getAllAnalytics') {
+          const response = await ApiService.getAllAnalytics();
+          data = response.success ? response.analytics : [];
         }
       } catch (apiError) {
         console.warn(`API error for ${collection.name}:`, apiError);
