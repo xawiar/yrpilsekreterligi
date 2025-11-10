@@ -8,7 +8,17 @@ import ManagementChartView from './ManagementChartView';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
-  const formattedName = formatMemberName(member.name);
+  
+  // Early return if member is not provided
+  if (!member || !member.id) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        <p>Üye bilgileri yükleniyor...</p>
+      </div>
+    );
+  }
+  
+  const formattedName = formatMemberName(member.name || '');
   const [photo, setPhoto] = useState(member.photo || null);
   const [isUploading, setIsUploading] = useState(false);
   const [notes, setNotes] = useState(member.notes || '');
