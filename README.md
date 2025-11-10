@@ -126,7 +126,6 @@ yrpilsekreterligi/
 │       ├── scripts/
 │       └── package.json
 ├── render.yaml          # Render deployment config
-├── vercel.json          # Vercel deployment config
 └── package.json         # Root package.json
 ```
 
@@ -143,15 +142,6 @@ yrpilsekreterligi/
 ### Render.com
 
 `render.yaml` dosyası zaten yapılandırılmıştır. Render dashboard'dan repository'yi bağlayın.
-
-### Vercel
-
-`vercel.json` dosyası zaten yapılandırılmıştır. Vercel CLI ile deploy edin:
-
-```bash
-npm i -g vercel
-vercel
-```
 
 ## 📝 Scripts
 
