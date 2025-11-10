@@ -283,16 +283,19 @@ class FirebaseService {
         docs.push(decryptedData);
       });
       
-      console.log(`📖 Retrieved ${docs.length} documents from collection "${collectionName}"`);
+      // Only log if collection has documents (reduce console noise)
+      if (docs.length > 0) {
+        console.log(`📖 Retrieved ${docs.length} documents from collection "${collectionName}"`);
+      }
       return docs;
     } catch (error) {
       // Collection yoksa boş array döner (hata değil)
-      if (error.code === 'not-found' || error.code === 'permission-denied') {
-        console.warn(`⚠️ Collection "${collectionName}" not found or empty, returning empty array`);
+      if (error.code === 'not-found' || error.code === 'permission-denied' || error.message?.includes('collection')) {
+        // Silently return empty array for missing collections
         return [];
       }
-      console.error(`❌ Error getting documents from collection "${collectionName}":`, error);
-      throw error;
+      console.warn(`⚠️ Error getting documents from collection "${collectionName}":`, error.message || error);
+      return [];
     }
   }
 
