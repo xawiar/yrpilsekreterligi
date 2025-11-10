@@ -262,11 +262,21 @@ const MembersPage = () => {
 
   const handleShowMember = async (id) => {
     try {
+      if (!id) {
+        console.error('Member ID is required');
+        return;
+      }
       const member = await ApiService.getMemberById(id);
+      if (!member) {
+        console.error('Member not found');
+        alert('Üye bulunamadı');
+        return;
+      }
       setSelectedMember(member);
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error('Error fetching member details:', error);
+      alert('Üye detayları yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 
