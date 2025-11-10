@@ -131,7 +131,7 @@ function AppContent() {
         v7_relativeSplatPath: true
       }}
     >
-      <div className="min-h-screen bg-neutral-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-neutral-50">
         <Routes>
           <Route 
             path="/login" 
