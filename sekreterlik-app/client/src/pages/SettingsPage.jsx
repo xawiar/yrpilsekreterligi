@@ -37,7 +37,7 @@ const SettingsPage = ({ tab }) => {
   }, [isSTKManagement]);
 
   return (
-    <div className="py-6">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       {/* Header Section */}
       {isSTKManagement ? (
         <div className="mb-8">

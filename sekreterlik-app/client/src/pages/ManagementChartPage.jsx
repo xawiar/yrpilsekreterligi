@@ -134,7 +134,7 @@ const ManagementChartPage = () => {
 
   if (loading) {
     return (
-      <div className="py-6">
+      <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
@@ -162,7 +162,7 @@ const ManagementChartPage = () => {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
 
       {/* İl Başkanı - En Üst Pozisyon */}
       {ilBaskani.length > 0 && (
