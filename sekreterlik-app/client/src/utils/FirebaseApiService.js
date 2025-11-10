@@ -563,11 +563,12 @@ class FirebaseApiService {
         {
           memberId,
           username,
-          password: password, // Şifreleme FirebaseService içinde yapılacak
+          password: password, // Artık şifreleme yapılmıyor
           userType: 'member',
           isActive: true,
           authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
-        }
+        },
+        false // encrypt = false (artık şifreleme yapılmıyor)
       );
 
       return { success: true, id: docId, message: 'Kullanıcı oluşturuldu' };
@@ -1070,7 +1071,7 @@ class FirebaseApiService {
         this.COLLECTIONS.MEETINGS,
         null,
         meetingDataWithoutNotesAndDescription,
-        true // encrypt = true (notes ve description hariç diğer hassas alanlar şifrelenecek)
+        false // encrypt = false (artık şifreleme yapılmıyor)
       );
       
       // Sonra notes ve description'ı şifrelemeden ekle (null ise de ekle ki boş olduğu belli olsun)
@@ -1238,7 +1239,7 @@ class FirebaseApiService {
         this.COLLECTIONS.EVENTS,
         null,
         eventDataWithoutDescription,
-        true // encrypt = true (description hariç diğer hassas alanlar şifrelenecek)
+        false // encrypt = false (artık şifreleme yapılmıyor)
       );
       
       // Sonra description'ı şifrelemeden ekle (null ise de ekle ki boş olduğu belli olsun)
@@ -1498,7 +1499,7 @@ class FirebaseApiService {
 
   static async createMemberRegistration(registrationData) {
     try {
-      const docId = await FirebaseService.create(this.COLLECTIONS.MEMBER_REGISTRATIONS, null, registrationData);
+      const docId = await FirebaseService.create(this.COLLECTIONS.MEMBER_REGISTRATIONS, null, registrationData, false);
       return { success: true, id: docId, message: 'Üye kaydı oluşturuldu' };
     } catch (error) {
       console.error('Create member registration error:', error);

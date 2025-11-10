@@ -54,15 +54,15 @@ class FirebaseService {
   }
 
   /**
-   * Veriyi Firestore'a şifrelenmiş olarak kaydeder
+   * Veriyi Firestore'a kaydeder
    * Collection otomatik oluşturulur (Firestore özelliği)
    * @param {string} collectionName - Koleksiyon adı
    * @param {string} docId - Doküman ID (opsiyonel, yoksa otomatik oluşturulur)
    * @param {object} data - Kaydedilecek veri
-   * @param {boolean} encrypt - Şifreleme yapılsın mı (default: true)
+   * @param {boolean} encrypt - Şifreleme yapılsın mı (default: false - artık şifreleme yapılmıyor)
    * @returns {Promise<string>} Doküman ID
    */
-  static async create(collectionName, docId, data, encrypt = true) {
+  static async create(collectionName, docId, data, encrypt = false) {
     try {
       // Authentication kontrolü
       const isAuthenticated = await this.checkAuth();
@@ -116,10 +116,10 @@ class FirebaseService {
    * @param {string} collectionName - Koleksiyon adı
    * @param {string} docId - Doküman ID
    * @param {object} data - Güncellenecek veri
-   * @param {boolean} encrypt - Şifreleme yapılsın mı
+   * @param {boolean} encrypt - Şifreleme yapılsın mı (default: false - artık şifreleme yapılmıyor)
    * @returns {Promise<void>}
    */
-  static async update(collectionName, docId, data, encrypt = true) {
+  static async update(collectionName, docId, data, encrypt = false) {
     try {
       const docRef = doc(db, collectionName, docId);
       
