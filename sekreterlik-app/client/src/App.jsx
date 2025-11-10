@@ -121,7 +121,7 @@ const PublicRoute = ({ children }) => {
 function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   return (
     <Router
@@ -293,8 +293,8 @@ function AppContent() {
         </Routes>
       </div>
       
-      {/* Chatbot Floating Button - Only show when logged in */}
-      {isLoggedIn && (
+      {/* Chatbot Floating Button - Only show for admin users */}
+      {isLoggedIn && user?.role === 'admin' && (
         <button
           onClick={() => setIsChatbotOpen(true)}
           className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
@@ -306,8 +306,10 @@ function AppContent() {
         </button>
       )}
       
-      {/* Chatbot Modal */}
-      <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
+      {/* Chatbot Modal - Only show for admin users */}
+      {isLoggedIn && user?.role === 'admin' && (
+        <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
+      )}
     </Router>
   );
 }
