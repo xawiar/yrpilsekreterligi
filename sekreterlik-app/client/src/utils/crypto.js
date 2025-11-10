@@ -2,7 +2,7 @@ import CryptoJS from 'crypto-js';
 
 // Encryption key - production'da environment variable'dan alınmalı
 const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 
-  'ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security';
+  'ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters';
 
 /**
  * Veriyi şifreler
@@ -164,20 +164,47 @@ export function decryptObject(obj, fieldsToDecrypt = []) {
         if (typeof decrypted[field] === 'string') {
           const originalValue = decrypted[field];
           
-          // Her zaman decrypt deneyelim (decryptData fonksiyonu zaten akıllıca kontrol ediyor)
-          const decryptedValue = decryptData(originalValue);
-          
-          // Eğer decrypt edilen değer orijinalden farklıysa ve geçerli bir değerse, kullan
-          if (decryptedValue && 
-              decryptedValue !== originalValue && 
-              typeof decryptedValue === 'string' &&
-              decryptedValue.length > 0) {
-            decrypted[field] = decryptedValue;
-          } else if (originalValue.startsWith('U2FsdGVkX1')) {
-            // Eğer "U2FsdGVkX1" ile başlıyorsa ama decrypt başarısız olduysa, yine de deneyelim
-            // Bu durumda decrypt edilen değeri kullan (boş olsa bile, çünkü orijinal şifreli)
-            if (decryptedValue && typeof decryptedValue === 'string') {
-              decrypted[field] = decryptedValue;
+          // Eğer "U2FsdGVkX1" ile başlıyorsa, kesinlikle şifrelenmiş - zorla decrypt et
+          if (originalValue.startsWith('U2FsdGVkX1')) {
+            try {
+              const bytes = CryptoJS.AES.decrypt(originalValue, ENCRYPTION_KEY);
+              const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+              
+              if (decryptedStr && decryptedStr.trim() !== '') {
+                // JSON parse denemesi
+                try {
+                  const parsed = JSON.parse(decryptedStr);
+                  decrypted[field] = typeof parsed === 'string' ? parsed : decryptedStr;
+                } catch {
+                  decrypted[field] = decryptedStr;
+                }
+              } else {
+                // Decrypt başarısız, decryptData ile tekrar dene
+                const fallbackDecrypted = decryptData(originalValue);
+                if (fallbackDecrypted && fallbackDecrypted !== originalValue) {
+                  decrypted[field] = fallbackDecrypted;
+                }
+              }
+            } catch (error) {
+              // Decrypt hatası, decryptData ile tekrar dene
+              const fallbackDecrypted = decryptData(originalValue);
+              if (fallbackDecrypted && fallbackDecrypted !== originalValue) {
+                decrypted[field] = fallbackDecrypted;
+              }
+            }
+          } else {
+            // "U2FsdGVkX1" ile başlamıyor ama uzunsa, yine de decrypt deneyelim
+            if (originalValue.length > 20 && !/^\d+$/.test(originalValue)) {
+              const decryptedValue = decryptData(originalValue);
+              
+              // Eğer decrypt edilen değer orijinalden farklıysa ve geçerli bir değerse, kullan
+              if (decryptedValue && 
+                  decryptedValue !== originalValue && 
+                  typeof decryptedValue === 'string' &&
+                  decryptedValue.length > 0 &&
+                  !decryptedValue.startsWith('U2FsdGVkX1')) {
+                decrypted[field] = decryptedValue;
+              }
             }
           }
         }
