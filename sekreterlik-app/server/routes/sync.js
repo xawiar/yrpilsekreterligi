@@ -31,7 +31,8 @@ router.get('/all', async (req, res) => {
       groups: [],
       tasks: [],
       neighborhood_representatives: [],
-      village_representatives: []
+      village_representatives: [],
+      polls: []
     };
 
     // Get all regions
@@ -310,6 +311,7 @@ router.get('/all', async (req, res) => {
         tasks: data.tasks.length,
         neighborhood_representatives: data.neighborhood_representatives.length,
         village_representatives: data.village_representatives.length,
+        polls: data.polls.length,
         total
       }
     });
