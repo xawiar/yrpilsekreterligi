@@ -5,6 +5,7 @@ import { formatMemberName } from '../utils/nameFormatter';
 import Modal from '../components/Modal';
 import MemberDetails from '../components/MemberDetails';
 import { calculateMeetingStats, calculateMemberRegistrations } from '../components/Members/membersUtils';
+import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 
 const ManagementChartPage = () => {
   const [members, setMembers] = useState([]);

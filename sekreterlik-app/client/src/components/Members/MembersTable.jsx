@@ -10,6 +10,7 @@ import RegionBadge from './RegionBadge';
 import SortableHeader from './SortableHeader';
 import MemberInfo from './MemberInfo';
 import { calculateMemberRegistrations } from './membersUtils';
+import { normalizePhotoUrl } from '../../utils/photoUrlHelper';
 
 const MembersTable = ({ 
   members, 
@@ -40,7 +41,7 @@ const MembersTable = ({
           <div className="flex items-center">
             {member.photo ? (
               <img
-                src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                src={normalizePhotoUrl(member.photo)}
                 alt={member.name}
                 loading="lazy"
                 className="flex-shrink-0 h-12 w-12 rounded-full object-cover"
@@ -243,7 +244,7 @@ const MembersTable = ({
                       <div className="flex items-center">
                         {member.photo ? (
                           <img
-                            src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                            src={normalizePhotoUrl(member.photo)}
                             alt={member.name}
                             loading="lazy"
                             className="flex-shrink-0 h-8 w-8 rounded-full object-cover"
@@ -345,7 +346,7 @@ const MembersTable = ({
                 <div className="flex items-center">
                   {member.photo ? (
                     <img
-                      src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
+                      src={normalizePhotoUrl(member.photo)}
                       alt={member.name}
                       loading="lazy"
                       className="flex-shrink-0 h-10 w-10 rounded-full object-cover"

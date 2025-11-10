@@ -569,7 +569,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
               <div className="flex-shrink-0">
                 {photo ? (
                   <img
-                    src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${photo}`}
+                    src={normalizePhotoUrl(photo)}
                     alt={formattedName}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-gray-200"
                     onError={(e) => {
