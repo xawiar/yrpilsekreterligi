@@ -1,5 +1,8 @@
 const db = require('../config/database');
 const Meeting = require('../models/Meeting');
+const { syncAfterSqliteOperation } = require('../utils/autoSyncToFirebase');
+const PushSubscription = require('../models/PushSubscription');
+const PushNotificationService = require('../services/pushNotificationService');
 
 class MeetingController {
   // Get all meetings
