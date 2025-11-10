@@ -5,7 +5,7 @@ const MemberAvatar = ({ name, photo }) => {
     <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
       {photo ? (
         <img
-          src={`http://localhost:5000${photo}`}
+          src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${photo}`}
           alt={name}
           className="h-8 w-8 rounded-full object-cover"
           onError={(e) => {
