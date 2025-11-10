@@ -683,7 +683,21 @@ class FirebaseApiService {
 
   static async getMemberById(id) {
     try {
-      const member = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, id);
+      // Convert ID to string for Firebase
+      const stringId = String(id || '').trim();
+      
+      if (!stringId) {
+        console.error('Invalid member ID:', id);
+        return null;
+      }
+      
+      const member = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, stringId);
+      
+      if (!member) {
+        console.warn('Member not found for ID:', stringId);
+        return null;
+      }
+      
       return member;
     } catch (error) {
       console.error('Get member by id error:', error);

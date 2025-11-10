@@ -40,7 +40,7 @@ const MembersTable = ({
           <div className="flex items-center">
             {member.photo ? (
               <img
-                src={member.photo.startsWith('http') ? member.photo : `http://localhost:5000${member.photo}`}
+                src={member.photo.startsWith('http') ? member.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${member.photo}`}
                 alt={member.name}
                 loading="lazy"
                 className="flex-shrink-0 h-12 w-12 rounded-full object-cover"
