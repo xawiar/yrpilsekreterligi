@@ -168,9 +168,9 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <form onSubmit={handleSubmit}>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Toplantı Adı <span className="text-red-500">*</span>
@@ -202,7 +202,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Bölgeler <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {regions.map((region, idx) => (
               <label key={`${region.id ?? region.name}-${idx}`} className="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition duration-200 cursor-pointer">
                   <input
@@ -240,14 +240,14 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
                 </div>
               ) : members.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden shadow-sm">
+                <div className="border rounded-lg overflow-hidden shadow-sm overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gradient-to-r from-indigo-500 to-purple-600">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                           Üye
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                           Katılım
                         </th>
                       </tr>
@@ -255,11 +255,11 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {members.map(member => (
                         <tr key={member.id} className="hover:bg-gray-50 transition duration-150">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">
                             {formatMemberName(member.name)}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex space-x-4">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
                               <label className="flex items-center">
                                 <input
                                   type="radio"
@@ -318,17 +318,17 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
           )}
         </div>
         
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
           >
             İptal
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200"
+            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200"
           >
             Toplantıyı Kaydet
           </button>

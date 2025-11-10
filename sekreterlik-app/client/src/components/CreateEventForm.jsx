@@ -621,9 +621,9 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
       {/* Event Basic Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Etkinlik Kategorisi *
@@ -674,7 +674,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         {/* Location Type Checkboxes */}
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-2">Konum türü seçin:</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {[
               { key: 'district', label: 'İlçe' },
               { key: 'town', label: 'Belde' },
@@ -895,7 +895,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 sm:pt-6 border-t border-gray-200">
         <button
           type="button"
           onClick={onClose}
