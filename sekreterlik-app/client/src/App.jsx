@@ -66,13 +66,28 @@ const AdminRoute = ({ children }) => {
 // Member only route component
 const MemberRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
+  
+  // Wait for auth state to load, but don't redirect if we're still loading and have saved user
+  if (loading) {
+    // Check if we have saved user in localStorage (for faster initial load)
+    const savedUser = localStorage.getItem('user');
+    const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+    
+    if (savedUser && savedIsLoggedIn === 'true') {
+      // User is likely logged in, wait a bit more
+      return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+    }
+    
+    // No saved user, show loading
+    return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  }
+  
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
   if (user?.role === 'admin') return children; // Admin can access everything
   if (user?.role === 'member') return children;
-  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" />;
-  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" />;
-  return <Navigate to="/login" />;
+  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
+  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 // STK Manager route component (for STK birim başk)
@@ -110,13 +125,21 @@ const TownPresidentRoute = ({ children }) => {
 // Public route component (redirects to appropriate dashboard if already logged in)
 const PublicRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  
+  // Only show loading if we're actually checking auth state
+  // Don't block login page if user is not logged in
+  if (loading && isLoggedIn) {
+    return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  }
+  
   if (!isLoggedIn) return children;
-  if (user?.role === 'admin') return <Navigate to="/" />;
-  if (user?.role === 'member') return <Navigate to="/member-dashboard" />;
-  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" />;
-  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" />;
-  return <Navigate to="/" />;
+  
+  // If logged in, redirect to appropriate dashboard
+  if (user?.role === 'admin') return <Navigate to="/" replace />;
+  if (user?.role === 'member') return <Navigate to="/member-dashboard" replace />;
+  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
+  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" replace />;
+  return <Navigate to="/" replace />;
 };
 
 function AppContent() {

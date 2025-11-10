@@ -42,6 +42,25 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
+        // First, try to load user from localStorage immediately (for faster initial load)
+        const savedUser = localStorage.getItem('user');
+        const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+        
+        if (savedUser && savedIsLoggedIn === 'true') {
+          try {
+            const userData = JSON.parse(savedUser);
+            setUser(userData);
+            setIsLoggedIn(true);
+            setLoading(false); // Set loading to false immediately
+          } catch (error) {
+            console.error('Error parsing saved user data:', error);
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
+        }
+        
+        // Then, listen to Firebase auth state changes (for real-time updates)
         unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
           if (firebaseUser) {
             // Firebase user varsa, kullanıcı bilgilerini localStorage'dan al
@@ -75,7 +94,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('user');
             localStorage.removeItem('isLoggedIn');
           }
-          setLoading(false);
+          // Don't set loading to false here - it's already set above
         });
       }).catch((error) => {
         console.error('Firebase initialization error:', error);
@@ -95,15 +114,19 @@ export const AuthProvider = ({ children }) => {
       
       if (savedUser && savedIsLoggedIn === 'true') {
         try {
-          setUser(JSON.parse(savedUser));
+          const userData = JSON.parse(savedUser);
+          setUser(userData);
           setIsLoggedIn(true);
+          setLoading(false); // Set loading to false immediately
         } catch (error) {
           console.error('Error parsing saved user data:', error);
           localStorage.removeItem('user');
           localStorage.removeItem('isLoggedIn');
+          setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     }
   }, []);
 

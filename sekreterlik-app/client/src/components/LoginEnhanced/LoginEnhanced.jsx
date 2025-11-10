@@ -60,9 +60,6 @@ const LoginEnhanced = () => {
     setIsLoading(true);
     
     try {
-      // Simulate network delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
       // Attempt to login
       const success = await login(username, password);
       
@@ -78,11 +75,29 @@ const LoginEnhanced = () => {
           localStorage.removeItem('rememberMe');
         }
         
-        setShowSuccess(true);
-        // Navigate after a short delay to show success animation
-        setTimeout(() => {
-          navigate('/');
-        }, 1200);
+        // Navigate immediately after successful login
+        // Get user role from localStorage to navigate to correct dashboard
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            if (userData.role === 'admin') {
+              navigate('/', { replace: true });
+            } else if (userData.role === 'member') {
+              navigate('/member-dashboard', { replace: true });
+            } else if (userData.role === 'district_president') {
+              navigate('/district-president-dashboard', { replace: true });
+            } else if (userData.role === 'town_president') {
+              navigate('/town-president-dashboard', { replace: true });
+            } else {
+              navigate('/', { replace: true });
+            }
+          } catch (e) {
+            navigate('/', { replace: true });
+          }
+        } else {
+          navigate('/', { replace: true });
+        }
       } else {
         setError('Geçersiz kullanıcı adı veya şifre');
       }
