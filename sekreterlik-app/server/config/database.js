@@ -47,6 +47,20 @@ db.serialize(() => {
     }
   });
 
+  // Add is_planned column to meetings table if it doesn't exist
+  db.run(`ALTER TABLE meetings ADD COLUMN is_planned BOOLEAN DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding is_planned column:', err);
+    }
+  });
+
+  // Add notification_status column to meetings table if it doesn't exist
+  db.run(`ALTER TABLE meetings ADD COLUMN notification_status TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding notification_status column:', err);
+    }
+  });
+
   // Create events table
   db.run(`CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -137,6 +137,21 @@ Promise.all([
       console.warn('Error deleting expired notifications:', err);
     });
   }, 24 * 60 * 60 * 1000); // Every 24 hours
+
+  // Scheduled notification service for planned meetings and events
+  const ScheduledNotificationService = require('./services/scheduledNotificationService');
+  
+  // Check scheduled notifications on startup
+  ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
+    console.warn('Error checking scheduled notifications on startup:', err);
+  });
+  
+  // Check scheduled notifications every 5 minutes
+  setInterval(() => {
+    ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
+      console.warn('Error checking scheduled notifications:', err);
+    });
+  }, 5 * 60 * 1000); // Every 5 minutes
 }).catch((err) => {
   console.error('Error initializing models:', err);
 });
