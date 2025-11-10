@@ -863,7 +863,6 @@ const BallotBoxesPage = () => {
                   </div>
                 </>
               )}
-            </>
           </div>
         </div>
       </div>
