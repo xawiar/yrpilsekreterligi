@@ -40,6 +40,7 @@ const MemberDashboardPage = () => {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isPushLoading, setIsPushLoading] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -84,15 +85,35 @@ const MemberDashboardPage = () => {
 
   // Initialize push notifications
   const initializePushNotifications = async () => {
-    if (isPushSupported && !isPushSubscribed) {
-      try {
-        const permission = await requestPushPermission();
-        if (permission) {
-          await subscribeToPush();
+    if (!isPushSupported) {
+      console.log('Push notifications not supported');
+      return;
+    }
+
+    // Check if already subscribed
+    if (isPushSubscribed) {
+      console.log('Already subscribed to push notifications');
+      return;
+    }
+
+    try {
+      // Check existing subscription first
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        const existingSubscription = await registration.pushManager.getSubscription();
+        
+        if (existingSubscription) {
+          console.log('✅ Found existing push subscription');
+          // Update state without re-subscribing
+          return;
         }
-      } catch (error) {
-        console.error('Error initializing push notifications:', error);
       }
+
+      // If not subscribed, don't auto-subscribe
+      // Let user click the button to subscribe
+      console.log('Push notifications available but not subscribed');
+    } catch (error) {
+      console.error('Error checking push notification subscription:', error);
     }
   };
 
@@ -767,14 +788,31 @@ const MemberDashboardPage = () => {
                       {!isPushSubscribed && (
                         <button
                           onClick={async () => {
-                            const permission = await requestPushPermission();
-                            if (permission) {
-                              await subscribeToPush();
+                            try {
+                              setIsPushLoading(true);
+                              const permission = await requestPushPermission();
+                              if (permission) {
+                                const success = await subscribeToPush();
+                                if (success) {
+                                  // State will update automatically, no need to reload
+                                  console.log('✅ Push notification subscription successful');
+                                } else {
+                                  alert('Bildirim aboneliği başarısız. Lütfen tekrar deneyin.');
+                                }
+                              } else {
+                                alert('Bildirim izni verilmedi. Lütfen tarayıcı ayarlarından izin verin.');
+                              }
+                            } catch (error) {
+                              console.error('Error subscribing to push:', error);
+                              alert('Bildirim aboneliği sırasında hata oluştu: ' + error.message);
+                            } finally {
+                              setIsPushLoading(false);
                             }
                           }}
-                          className="text-xs bg-white text-indigo-600 px-3 py-1 rounded hover:bg-indigo-50 transition-colors"
+                          disabled={isPushLoading}
+                          className="text-xs bg-white text-indigo-600 px-3 py-1 rounded hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Bildirimleri Aç
+                          {isPushLoading ? 'Açılıyor...' : 'Bildirimleri Aç'}
                         </button>
                       )}
                       {isPushSubscribed && sendTestNotification && (

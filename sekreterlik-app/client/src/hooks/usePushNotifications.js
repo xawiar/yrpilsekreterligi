@@ -33,19 +33,34 @@ export const usePushNotifications = (userId = null) => {
   const getVapidKey = async () => {
     try {
       const response = await ApiService.getVapidKey();
-      if (response.success) {
+      if (response && response.success && response.publicKey) {
         setVapidKey(response.publicKey);
+        setError(null); // Clear any previous errors
+      } else {
+        console.warn('VAPID key response invalid:', response);
+        setError('VAPID anahtarı alınamadı');
       }
     } catch (error) {
       console.error('Error getting VAPID key:', error);
+      setError('VAPID anahtarı alınırken hata oluştu: ' + error.message);
     }
   };
 
   // Subscribe to push notifications
   const subscribe = useCallback(async () => {
-    if (!isSupported || !vapidKey) {
-      setError('Push notifications desteklenmiyor veya VAPID anahtarı alınamadı');
+    if (!isSupported) {
+      setError('Push notifications bu tarayıcıda desteklenmiyor');
       return false;
+    }
+
+    if (!vapidKey) {
+      // VAPID key yoksa tekrar dene
+      console.warn('VAPID key not available, retrying...');
+      await getVapidKey();
+      if (!vapidKey) {
+        setError('VAPID anahtarı alınamadı. Lütfen sayfayı yenileyin.');
+        return false;
+      }
     }
 
     setIsLoading(true);
@@ -63,6 +78,7 @@ export const usePushNotifications = (userId = null) => {
         setSubscription(existingSubscription);
         setIsSubscribed(true);
         setIsLoading(false);
+        console.log('✅ Already subscribed to push notifications');
         return true;
       }
 
@@ -80,17 +96,18 @@ export const usePushNotifications = (userId = null) => {
         subscription: newSubscription
       });
 
-      if (response.success) {
+      if (response && response.success) {
         setSubscription(newSubscription);
         setIsSubscribed(true);
-        console.log('Successfully subscribed to push notifications');
+        setError(null); // Clear any errors
+        console.log('✅ Successfully subscribed to push notifications');
         return true;
       } else {
-        throw new Error(response.message || 'Subscription failed');
+        throw new Error(response?.message || 'Subscription failed');
       }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
-      setError(error.message);
+      setError(error.message || 'Bildirim aboneliği başarısız');
       return false;
     } finally {
       setIsLoading(false);

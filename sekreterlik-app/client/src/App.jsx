@@ -67,7 +67,7 @@ const AdminRoute = ({ children }) => {
 const MemberRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   
-  // Wait for auth state to load, but don't redirect if we're still loading and have saved user
+  // Wait for auth state to load, but prioritize localStorage
   if (loading) {
     // Check if we have saved user in localStorage (for faster initial load)
     const savedUser = localStorage.getItem('user');
@@ -82,7 +82,29 @@ const MemberRoute = ({ children }) => {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  // If not logged in, check localStorage one more time
+  if (!isLoggedIn) {
+    const savedUser = localStorage.getItem('user');
+    const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+    
+    if (savedUser && savedIsLoggedIn === 'true') {
+      // localStorage'da user var, kullanıcıyı yükle
+      try {
+        const userData = JSON.parse(savedUser);
+        // User data valid ise, allow access (AuthContext will update state)
+        if (userData && userData.role) {
+          // Don't redirect, let AuthContext handle it
+          return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+        }
+      } catch (e) {
+        // Invalid user data, redirect to login
+        return <Navigate to="/login" replace />;
+      }
+    }
+    
+    return <Navigate to="/login" replace />;
+  }
+  
   if (user?.role === 'admin') return children; // Admin can access everything
   if (user?.role === 'member') return children;
   if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;

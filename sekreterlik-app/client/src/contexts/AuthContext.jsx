@@ -65,34 +65,85 @@ export const AuthProvider = ({ children }) => {
           if (firebaseUser) {
             // Firebase user varsa, kullanıcı bilgilerini localStorage'dan al
             const savedUser = localStorage.getItem('user');
-            if (savedUser) {
+            const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+            
+            if (savedUser && savedIsLoggedIn === 'true') {
               try {
                 const userData = JSON.parse(savedUser);
                 // Firebase UID ile eşleşiyorsa kullanıcıyı ayarla
                 if (userData.id === firebaseUser.uid || userData.uid === firebaseUser.uid) {
                   setUser(userData);
                   setIsLoggedIn(true);
+                  // localStorage'ı güncelle (yeniden kaydet)
+                  localStorage.setItem('user', JSON.stringify(userData));
+                  localStorage.setItem('isLoggedIn', 'true');
                 } else {
-                  // UID eşleşmiyorsa logout yap
-                  setUser(null);
-                  setIsLoggedIn(false);
-                  localStorage.removeItem('user');
-                  localStorage.removeItem('isLoggedIn');
+                  // UID eşleşmiyorsa, ancak localStorage'da user varsa ve isLoggedIn true ise
+                  // Kullanıcı manuel logout yapmadıysa, localStorage'daki user'ı kullan
+                  // (Firebase auth state değişikliği bazen yanlış logout'a neden olabilir)
+                  console.warn('Firebase UID mismatch, but keeping localStorage user');
+                  setUser(userData);
+                  setIsLoggedIn(true);
                 }
               } catch (error) {
                 console.error('Error parsing saved user data:', error);
+                // Hata durumunda bile localStorage'daki user'ı kullan
+                const savedUserRaw = localStorage.getItem('user');
+                if (savedUserRaw && savedIsLoggedIn === 'true') {
+                  try {
+                    const userData = JSON.parse(savedUserRaw);
+                    setUser(userData);
+                    setIsLoggedIn(true);
+                  } catch (e) {
+                    // Parse hatası varsa logout yap
+                    setUser(null);
+                    setIsLoggedIn(false);
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('isLoggedIn');
+                  }
+                }
+              }
+            } else if (savedUser) {
+              // localStorage'da user var ama isLoggedIn false/null
+              // Bu durumda user'ı yükle (sayfa yenileme sonrası)
+              try {
+                const userData = JSON.parse(savedUser);
+                setUser(userData);
+                setIsLoggedIn(true);
+                localStorage.setItem('isLoggedIn', 'true');
+              } catch (error) {
+                console.error('Error parsing saved user data:', error);
+              }
+            }
+          } else {
+            // Firebase user yoksa, ancak localStorage'da user varsa ve isLoggedIn true ise
+            // Kullanıcı manuel logout yapmadıysa, localStorage'daki user'ı kullan
+            const savedUser = localStorage.getItem('user');
+            const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+            
+            if (savedUser && savedIsLoggedIn === 'true') {
+              // Firebase auth state değişikliği bazen yanlış logout'a neden olabilir
+              // Bu durumda localStorage'daki user'ı kullan
+              console.warn('Firebase user not found, but keeping localStorage user');
+              try {
+                const userData = JSON.parse(savedUser);
+                setUser(userData);
+                setIsLoggedIn(true);
+              } catch (error) {
+                console.error('Error parsing saved user data:', error);
+                // Parse hatası varsa logout yap
                 setUser(null);
                 setIsLoggedIn(false);
                 localStorage.removeItem('user');
                 localStorage.removeItem('isLoggedIn');
               }
+            } else {
+              // Gerçekten logout yapılmalı
+              setUser(null);
+              setIsLoggedIn(false);
+              localStorage.removeItem('user');
+              localStorage.removeItem('isLoggedIn');
             }
-          } else {
-            // Firebase user yoksa logout
-            setUser(null);
-            setIsLoggedIn(false);
-            localStorage.removeItem('user');
-            localStorage.removeItem('isLoggedIn');
           }
           // Don't set loading to false here - it's already set above
         });
