@@ -2672,6 +2672,139 @@ class ApiService {
     return response.json();
   }
 
+  // Poll methods
+  /**
+   * Get all polls
+   * @param {string} status - 'active', 'ended', 'all' or null
+   */
+  static async getPolls(status = null) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getPolls(status);
+    }
+
+    const url = status ? `${API_BASE_URL}/polls?status=${status}` : `${API_BASE_URL}/polls`;
+    const response = await this.fetchJsonWithRetry(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  /**
+   * Get active polls (for member dashboard)
+   */
+  static async getActivePolls() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getActivePolls();
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls/active`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  /**
+   * Get poll by ID
+   * @param {string|number} id - Poll ID
+   */
+  static async getPollById(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getPollById(id);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls/${id}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  /**
+   * Create new poll
+   * @param {object} pollData - { title, description, type, options, endDate }
+   */
+  static async createPoll(pollData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createPoll(pollData);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(pollData),
+    });
+    return response;
+  }
+
+  /**
+   * Vote on poll
+   * @param {string|number} pollId - Poll ID
+   * @param {number} optionIndex - Option index
+   * @param {string|number} memberId - Member ID
+   */
+  static async voteOnPoll(pollId, optionIndex, memberId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.voteOnPoll(pollId, optionIndex, memberId);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls/${pollId}/vote`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ optionIndex, memberId }),
+    });
+    return response;
+  }
+
+  /**
+   * Get poll results
+   * @param {string|number} pollId - Poll ID
+   */
+  static async getPollResults(pollId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getPollResults(pollId);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls/${pollId}/results`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  /**
+   * End poll manually
+   * @param {string|number} pollId - Poll ID
+   */
+  static async endPoll(pollId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.endPoll(pollId);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls/${pollId}/end`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  /**
+   * Delete poll
+   * @param {string|number} pollId - Poll ID
+   */
+  static async deletePoll(pollId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deletePoll(pollId);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/polls/${pollId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
 }
 
 export default ApiService;

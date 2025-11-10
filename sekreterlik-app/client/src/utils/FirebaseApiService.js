@@ -48,6 +48,8 @@ class FirebaseApiService {
     TOWN_MANAGEMENT_MEMBERS: 'town_management_members',
     BALLOT_BOXES: 'ballot_boxes',
     BALLOT_BOX_OBSERVERS: 'ballot_box_observers',
+    POLLS: 'polls',
+    POLL_VOTES: 'poll_votes',
     MESSAGES: 'messages',
     MESSAGE_GROUPS: 'message_groups',
     PERSONAL_DOCUMENTS: 'personal_documents',
@@ -4573,6 +4575,249 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Process scheduled SMS error:', error);
       return { success: false, message: 'Planlanmış SMS işlenirken hata oluştu: ' + error.message };
+    }
+  }
+
+  // Poll methods
+  /**
+   * Get all polls
+   * @param {string} status - 'active', 'ended', 'all' or null
+   */
+  static async getPolls(status = null) {
+    try {
+      let polls = await FirebaseService.getAll(this.COLLECTIONS.POLLS);
+      
+      if (status && status !== 'all') {
+        polls = polls.filter(p => p.status === status);
+      }
+      
+      // Parse options if they're strings
+      return polls.map(poll => ({
+        ...poll,
+        options: Array.isArray(poll.options) ? poll.options : (poll.options ? JSON.parse(poll.options) : []),
+        endDate: poll.endDate || poll.end_date,
+        createdBy: poll.createdBy || poll.created_by,
+        createdAt: poll.createdAt || poll.created_at,
+        updatedAt: poll.updatedAt || poll.updated_at
+      }));
+    } catch (error) {
+      console.error('Error getting polls:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get active polls (for member dashboard)
+   */
+  static async getActivePolls() {
+    try {
+      const now = new Date().toISOString();
+      let polls = await FirebaseService.getAll(this.COLLECTIONS.POLLS);
+      
+      // Filter active polls
+      polls = polls.filter(poll => {
+        const endDate = new Date(poll.endDate || poll.end_date);
+        return poll.status === 'active' && endDate > new Date(now);
+      });
+      
+      // Parse options if they're strings
+      return polls.map(poll => ({
+        ...poll,
+        options: Array.isArray(poll.options) ? poll.options : (poll.options ? JSON.parse(poll.options) : []),
+        endDate: poll.endDate || poll.end_date,
+        createdBy: poll.createdBy || poll.created_by,
+        createdAt: poll.createdAt || poll.created_at,
+        updatedAt: poll.updatedAt || poll.updated_at
+      }));
+    } catch (error) {
+      console.error('Error getting active polls:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get poll by ID
+   * @param {string|number} id - Poll ID
+   */
+  static async getPollById(id) {
+    try {
+      const poll = await FirebaseService.getById(this.COLLECTIONS.POLLS, String(id || '').trim());
+      if (!poll) return null;
+      
+      return {
+        ...poll,
+        options: Array.isArray(poll.options) ? poll.options : (poll.options ? JSON.parse(poll.options) : []),
+        endDate: poll.endDate || poll.end_date,
+        createdBy: poll.createdBy || poll.created_by,
+        createdAt: poll.createdAt || poll.created_at,
+        updatedAt: poll.updatedAt || poll.updated_at
+      };
+    } catch (error) {
+      console.error('Error getting poll by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create new poll
+   * @param {object} pollData - { title, description, type, options, endDate }
+   */
+  static async createPoll(pollData) {
+    try {
+      const poll = {
+        title: pollData.title,
+        description: pollData.description || null,
+        type: pollData.type || 'poll',
+        options: Array.isArray(pollData.options) ? pollData.options : [],
+        endDate: pollData.endDate,
+        status: 'active',
+        createdBy: pollData.createdBy || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const docId = await FirebaseService.create(this.COLLECTIONS.POLLS, null, poll, false);
+      return { ...poll, id: docId };
+    } catch (error) {
+      console.error('Error creating poll:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Vote on poll
+   * @param {string|number} pollId - Poll ID
+   * @param {number} optionIndex - Option index
+   * @param {string|number} memberId - Member ID
+   */
+  static async voteOnPoll(pollId, optionIndex, memberId) {
+    try {
+      const poll = await this.getPollById(pollId);
+      if (!poll) {
+        throw new Error('Anket bulunamadı');
+      }
+      
+      // Check if poll is still active
+      const endDate = new Date(poll.endDate);
+      const now = new Date();
+      if (endDate <= now || poll.status !== 'active') {
+        throw new Error('Bu anket artık aktif değil');
+      }
+      
+      // Check if options are valid
+      const options = Array.isArray(poll.options) ? poll.options : [];
+      if (optionIndex < 0 || optionIndex >= options.length) {
+        throw new Error('Geçersiz seçenek');
+      }
+      
+      // Check if member already voted
+      const votes = await FirebaseService.getAll(this.COLLECTIONS.POLL_VOTES);
+      const existingVote = votes.find(v => 
+        String(v.pollId || v.poll_id) === String(pollId) && 
+        String(v.memberId || v.member_id) === String(memberId)
+      );
+      
+      const voteData = {
+        pollId: String(pollId),
+        memberId: String(memberId),
+        optionIndex: optionIndex,
+        createdAt: new Date().toISOString()
+      };
+      
+      if (existingVote) {
+        // Update existing vote
+        await FirebaseService.update(this.COLLECTIONS.POLL_VOTES, existingVote.id, voteData, false);
+      } else {
+        // Create new vote
+        await FirebaseService.create(this.COLLECTIONS.POLL_VOTES, null, voteData, false);
+      }
+      
+      return { message: 'Oyunuz kaydedildi' };
+    } catch (error) {
+      console.error('Error voting on poll:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get poll results
+   * @param {string|number} pollId - Poll ID
+   */
+  static async getPollResults(pollId) {
+    try {
+      const poll = await this.getPollById(pollId);
+      if (!poll) {
+        throw new Error('Anket bulunamadı');
+      }
+      
+      // Get all votes for this poll
+      const votes = await FirebaseService.getAll(this.COLLECTIONS.POLL_VOTES);
+      const pollVotes = votes.filter(v => 
+        String(v.pollId || v.poll_id) === String(pollId)
+      );
+      
+      // Parse options
+      const options = Array.isArray(poll.options) ? poll.options : [];
+      
+      // Count votes per option
+      const results = options.map((option, index) => {
+        const voteCount = pollVotes.filter(v => v.optionIndex === index).length;
+        return {
+          option,
+          index,
+          voteCount,
+          percentage: pollVotes.length > 0 ? Math.round((voteCount / pollVotes.length) * 100) : 0
+        };
+      });
+      
+      return {
+        poll,
+        totalVotes: pollVotes.length,
+        results
+      };
+    } catch (error) {
+      console.error('Error getting poll results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * End poll manually
+   * @param {string|number} pollId - Poll ID
+   */
+  static async endPoll(pollId) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.POLLS, String(pollId), {
+        status: 'ended',
+        updatedAt: new Date().toISOString()
+      }, false);
+      return { message: 'Anket sonlandırıldı' };
+    } catch (error) {
+      console.error('Error ending poll:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete poll
+   * @param {string|number} pollId - Poll ID
+   */
+  static async deletePoll(pollId) {
+    try {
+      // Delete votes first
+      const votes = await FirebaseService.getAll(this.COLLECTIONS.POLL_VOTES);
+      const pollVotes = votes.filter(v => String(v.pollId || v.poll_id) === String(pollId));
+      
+      for (const vote of pollVotes) {
+        await FirebaseService.delete(this.COLLECTIONS.POLL_VOTES, vote.id);
+      }
+      
+      // Delete poll
+      await FirebaseService.delete(this.COLLECTIONS.POLLS, String(pollId));
+      return { message: 'Anket silindi' };
+    } catch (error) {
+      console.error('Error deleting poll:', error);
+      throw error;
     }
   }
 }

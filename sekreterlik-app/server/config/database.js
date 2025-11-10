@@ -353,6 +353,33 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Create polls table (anket/oylama)
+  db.run(`CREATE TABLE IF NOT EXISTS polls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    type TEXT NOT NULL DEFAULT 'poll',
+    options TEXT NOT NULL,
+    end_date DATETIME NOT NULL,
+    status TEXT DEFAULT 'active',
+    created_by INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES members (id) ON DELETE SET NULL
+  )`);
+
+  // Create poll_votes table (oylar)
+  db.run(`CREATE TABLE IF NOT EXISTS poll_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poll_id INTEGER NOT NULL,
+    member_id INTEGER NOT NULL,
+    option_index INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (poll_id) REFERENCES polls (id) ON DELETE CASCADE,
+    FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
+    UNIQUE(poll_id, member_id)
+  )`);
+
   // Create documents table for archive
   db.run(`CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

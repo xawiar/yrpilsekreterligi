@@ -81,6 +81,9 @@ const bylawsRouter = require('./routes/bylaws');
 console.log('Bylaws router imported');
 const syncRouter = require('./routes/sync');
 console.log('Sync router imported');
+const pollsRouter = require('./routes/polls');
+console.log('Polls router imported');
+const PollController = require('./controllers/PollController');
 
 // Import middleware
 const { authenticateToken } = require('./middleware/auth');
@@ -257,6 +260,7 @@ app.use('/api/mongo-messages', mongoMessagesRouter);
 app.use('/api/permissions', permissionsRouter);
 app.use('/api/bylaws', bylawsRouter);
 app.use('/api/sync', syncRouter);
+app.use('/api/polls', pollsRouter);
 
 console.log('API routes registered');
 
@@ -361,6 +365,14 @@ app.listen(PORT, () => {
           proc.unref();
         } catch (_) {}
       }, 24 * 60 * 60 * 1000);
+      
+      // Check and end expired polls every hour
+      setInterval(() => {
+        PollController.checkAndEndExpiredPolls();
+      }, 60 * 60 * 1000);
+      
+      // Run immediately on startup
+      PollController.checkAndEndExpiredPolls();
     } catch (e) {
       console.warn('DB maintenance scheduling failed:', e.message);
     }

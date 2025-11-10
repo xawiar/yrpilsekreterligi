@@ -263,19 +263,19 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           Firebase'e Veri Aktarımı
         </button>
         
-        {/* Çift Toplantıları Temizle */}
+        {/* Anket/Oylama */}
         <button
-          onClick={() => setActiveTab('remove-duplicates')}
+          onClick={() => setActiveTab('polls')}
           className={`${
-            activeTab === 'remove-duplicates'
+            activeTab === 'polls'
               ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
           } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          Çift Toplantıları Temizle
+          Anket/Oylama
         </button>
         
       </nav>
