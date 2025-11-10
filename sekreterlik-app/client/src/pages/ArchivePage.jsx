@@ -363,14 +363,14 @@ const ArchivePage = () => {
 
   if (loading) {
     return (
-      <div className="py-6">
+      <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="py-6">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       {/* Header Section */}
       <ArchiveHeader onUploadDocument={openUploadModal} />
 

@@ -355,7 +355,7 @@ const BulkSmsPage = () => {
   };
 
   return (
-    <div className="py-6">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Toplu SMS Gönder</h1>
 

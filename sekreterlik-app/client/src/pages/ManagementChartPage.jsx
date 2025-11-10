@@ -144,7 +144,7 @@ const ManagementChartPage = () => {
 
   if (error) {
     return (
-      <div className="py-6">
+      <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex">
             <div className="flex-shrink-0">
