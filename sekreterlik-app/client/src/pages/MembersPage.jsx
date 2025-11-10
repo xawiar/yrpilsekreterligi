@@ -435,7 +435,7 @@ const MembersPage = () => {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       <MembersHeader onAddMember={handleAddMember} />
       <SummaryStatistics summaryStats={summaryStats} />
       <MembersOperationsMenu 

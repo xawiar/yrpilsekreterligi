@@ -242,8 +242,8 @@ function AppContent() {
                       </div>
                     )}
                     
-                    <main className="flex-1 p-3 sm:p-6 overflow-auto bg-gray-50 dark:bg-gray-900">
-                      <div className="max-w-7xl mx-auto w-full">
+                    <main className="flex-1 p-2 sm:p-3 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                      <div className="w-full max-w-7xl mx-auto">
                         <Routes>
                           <Route path="/" element={<DashboardPage />} />
                           <Route path="/members" element={<MembersPage />} />

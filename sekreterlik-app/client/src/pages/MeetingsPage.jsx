@@ -306,7 +306,7 @@ const MeetingsPage = () => {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       {/* Header Section */}
         <MeetingsHeader 
           onCreateMeeting={handleCreateMeeting}
