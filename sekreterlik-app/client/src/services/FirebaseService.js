@@ -201,6 +201,7 @@ class FirebaseService {
    * @param {object} options - Query seçenekleri (where, orderBy, limit)
    * @param {boolean} decrypt - Çözme yapılsın mı
    * @returns {Promise<Array>} Doküman listesi
+   * @throws {Error} Collection okunamazsa hata fırlatır
    */
   static async getAll(collectionName, options = {}, decrypt = true) {
     try {

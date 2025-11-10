@@ -1434,7 +1434,12 @@ class FirebaseApiService {
       const positions = await FirebaseService.getAll(this.COLLECTIONS.POSITIONS);
       return positions || [];
     } catch (error) {
-      console.error('Get positions error:', error);
+      // Silently handle errors - collection might not exist yet
+      if (error.message && error.message.includes('collection')) {
+        // Collection not found is not a critical error
+        return [];
+      }
+      console.warn('Get positions error:', error);
       return [];
     }
   }

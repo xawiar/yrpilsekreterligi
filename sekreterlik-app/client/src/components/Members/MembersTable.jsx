@@ -47,7 +47,9 @@ const MembersTable = ({
                 className="flex-shrink-0 h-12 w-12 rounded-full object-cover"
                 onError={(e) => {
                   e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
                 }}
               />
             ) : null}

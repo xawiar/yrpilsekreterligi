@@ -186,13 +186,21 @@ const MembersPage = () => {
   const fetchRegionsAndPositions = async () => {
     try {
       const [regionsData, positionsData] = await Promise.all([
-        ApiService.getRegions(),
-        ApiService.getPositions()
+        ApiService.getRegions().catch(err => {
+          console.warn('Error fetching regions:', err);
+          return [];
+        }),
+        ApiService.getPositions().catch(err => {
+          console.warn('Error fetching positions:', err);
+          return [];
+        })
       ]);
-      setRegions(regionsData);
-      setPositions(positionsData);
+      setRegions(Array.isArray(regionsData) ? regionsData : []);
+      setPositions(Array.isArray(positionsData) ? positionsData : []);
     } catch (error) {
-      console.error('Error fetching regions and positions:', error);
+      console.warn('Error fetching regions and positions:', error);
+      setRegions([]);
+      setPositions([]);
     }
   };
 
