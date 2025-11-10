@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import ApiService from '../utils/ApiService';
 
-export const usePushNotifications = () => {
+export const usePushNotifications = (userId = null) => {
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [vapidKey, setVapidKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Store userId globally for use in subscribe function
+  if (userId && typeof window !== 'undefined') {
+    window.userId = userId;
+  }
 
   // Check if push notifications are supported
   useEffect(() => {
@@ -68,7 +73,10 @@ export const usePushNotifications = () => {
       });
 
       // Send subscription to server
+      // Get userId from auth context or pass as parameter
+      const userId = window.userId || null; // Will be set by caller
       const response = await ApiService.subscribeToPush({
+        userId,
         subscription: newSubscription
       });
 

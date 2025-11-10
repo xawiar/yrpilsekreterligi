@@ -2,6 +2,8 @@ const db = require('../config/database');
 const Event = require('../models/Event');
 const { invalidate } = require('../middleware/cache');
 const VisitController = require('./VisitController');
+const PushSubscription = require('../models/PushSubscription');
+const PushNotificationService = require('../services/pushNotificationService');
 
 class EventController {
   // Get all events
@@ -88,6 +90,25 @@ class EventController {
       
       // Invalidate events cache so new event appears immediately
       try { invalidate('/api/events'); } catch (_) {}
+      
+      // Send push notification to all subscribed users
+      try {
+        const subscriptions = await PushSubscription.getAll();
+        if (subscriptions.length > 0) {
+          const payload = PushNotificationService.createPayload(
+            'Yeni Etkinlik Oluşturuldu',
+            `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
+            '/icon-192x192.png',
+            '/badge-72x72.png',
+            { type: 'event', id: result.lastID, action: 'view' }
+          );
+          await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+          console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
+        }
+      } catch (pushError) {
+        console.warn('⚠️ Push notification hatası (event create):', pushError.message);
+      }
+      
       res.status(201).json(newEvent);
     } catch (error) {
       console.error('Error creating event:', error);

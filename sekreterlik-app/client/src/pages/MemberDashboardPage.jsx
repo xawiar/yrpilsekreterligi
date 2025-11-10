@@ -49,12 +49,13 @@ const MemberDashboardPage = () => {
   const pageViewsRef = useRef(0);
   
   // Push notifications
+  const memberIdForPush = user?.memberId || user?.id;
   const {
     isSupported: isPushSupported,
     isSubscribed: isPushSubscribed,
     subscribe: subscribeToPush,
     requestPermission: requestPushPermission
-  } = usePushNotifications();
+  } = usePushNotifications(memberIdForPush);
 
   useEffect(() => {
     if (user && user.role === 'member') {

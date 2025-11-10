@@ -101,6 +101,24 @@ class MeetingController {
         console.warn('⚠️ Firebase sync hatası (meeting create):', syncError.message);
       }
       
+      // Send push notification to all subscribed users
+      try {
+        const subscriptions = await PushSubscription.getAll();
+        if (subscriptions.length > 0) {
+          const payload = PushNotificationService.createPayload(
+            'Yeni Toplantı Oluşturuldu',
+            `${meetingData.name} - ${meetingData.date || 'Tarih belirtilmemiş'}`,
+            '/icon-192x192.png',
+            '/badge-72x72.png',
+            { type: 'meeting', id: result.lastID, action: 'view' }
+          );
+          await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+          console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
+        }
+      } catch (pushError) {
+        console.warn('⚠️ Push notification hatası (meeting create):', pushError.message);
+      }
+      
       res.status(201).json(newMeeting);
     } catch (error) {
       console.error('Error creating meeting:', error);
