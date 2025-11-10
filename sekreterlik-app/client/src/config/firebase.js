@@ -2,7 +2,7 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
@@ -42,6 +42,12 @@ if (typeof window !== 'undefined') {
     db = getFirestore(app, FIRESTORE_DATABASE_NAME);
     storage = getStorage(app);
     console.log('✅ Firebase initialized with database:', FIRESTORE_DATABASE_NAME);
+    
+    // QUIC protokol hatalarını azaltmak için network bağlantısını optimize et
+    // enableNetwork ile bağlantıyı aktif tut
+    enableNetwork(db).catch(err => {
+      console.warn('⚠️ Firestore network enable warning (non-critical):', err);
+    });
   } catch (error) {
     console.error('Firebase initialization error:', error);
     // Fallback: Initialize without analytics
@@ -50,6 +56,11 @@ if (typeof window !== 'undefined') {
     db = getFirestore(app, FIRESTORE_DATABASE_NAME);
     storage = getStorage(app);
     console.log('✅ Firebase initialized (fallback) with database:', FIRESTORE_DATABASE_NAME);
+    
+    // Network bağlantısını aktif tut
+    enableNetwork(db).catch(err => {
+      console.warn('⚠️ Firestore network enable warning (non-critical):', err);
+    });
   }
 } else {
   // Server-side: Only initialize core services

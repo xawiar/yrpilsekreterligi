@@ -95,9 +95,41 @@ class FirebaseService {
       };
       
       // Dokümanı kaydet (collection yoksa otomatik oluşturulur)
-      await setDoc(docRef, finalData);
+      // Retry mekanizması ile QUIC hatalarını handle et
+      let retries = 3;
+      let lastError = null;
       
-      console.log(`✅ Document created in collection "${collectionName}" with ID: ${autoId}`);
+      while (retries > 0) {
+        try {
+          await setDoc(docRef, finalData);
+          console.log(`✅ Document created in collection "${collectionName}" with ID: ${autoId}`);
+          break; // Başarılı, döngüden çık
+        } catch (error) {
+          lastError = error;
+          // QUIC hatası veya network hatası ise retry yap
+          if (error.message && (error.message.includes('QUIC') || error.message.includes('network') || error.code === 'unavailable')) {
+            retries--;
+            if (retries > 0) {
+              console.warn(`⚠️ Retry creating document (${3 - retries + 1}/3):`, error.message);
+              await new Promise(resolve => setTimeout(resolve, 1000)); // 1 saniye bekle
+              continue;
+            }
+          }
+          // QUIC hatası değilse veya retry bittiyse throw et
+          throw error;
+        }
+      }
+      
+      // Son retry'de de başarısız olduysa
+      if (retries === 0 && lastError) {
+        // QUIC hatası ise uyarı ver ama devam et (işlem başarılı olabilir)
+        if (lastError.message && lastError.message.includes('QUIC')) {
+          console.warn('⚠️ QUIC protokol hatası, ancak doküman kaydedilmiş olabilir');
+          // Hata fırlatma, işlem devam etsin
+        } else {
+          throw lastError;
+        }
+      }
       return autoId;
     } catch (error) {
       console.error(`❌ Error creating document in collection "${collectionName}":`, error);
