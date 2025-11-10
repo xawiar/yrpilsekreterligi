@@ -282,6 +282,24 @@ router.get('/all', async (req, res) => {
       }
     }
 
+    // Get all polls
+    try {
+      const polls = await db.all('SELECT * FROM polls ORDER BY created_at DESC');
+      // Parse JSON fields
+      data.polls = polls.map(poll => ({
+        ...poll,
+        options: poll.options ? JSON.parse(poll.options) : [],
+        endDate: poll.end_date,
+        createdBy: poll.created_by,
+        createdAt: poll.created_at,
+        updatedAt: poll.updated_at
+      }));
+      console.log(`✅ ${data.polls.length} poll bulundu`);
+    } catch (err) {
+      console.warn('⚠️ Polls okunamadı:', err.message);
+      data.polls = [];
+    }
+
     // Summary
     const total = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
     console.log(`\n📊 Toplam ${total} kayıt hazırlandı`);
