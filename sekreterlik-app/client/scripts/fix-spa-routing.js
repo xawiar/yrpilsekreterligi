@@ -8,9 +8,19 @@ const path = require('path');
 // So ../dist is: sekreterlik-app/client/dist
 const distDir = path.join(__dirname, '..', 'dist');
 const indexHtmlPath = path.join(distDir, 'index.html');
+const publicRedirectsPath = path.join(__dirname, '..', 'public', '_redirects');
+const distRedirectsPath = path.join(distDir, '_redirects');
 
 console.log('Looking for dist directory at:', distDir);
 console.log('Index.html exists:', fs.existsSync(indexHtmlPath));
+
+// Copy _redirects file from public to dist if it exists
+if (fs.existsSync(publicRedirectsPath)) {
+  fs.copyFileSync(publicRedirectsPath, distRedirectsPath);
+  console.log('Copied _redirects file to dist directory');
+} else {
+  console.warn('_redirects file not found in public directory');
+}
 
 // Routes that need index.html copies
 const routes = [
