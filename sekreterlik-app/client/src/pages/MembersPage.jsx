@@ -205,12 +205,37 @@ const MembersPage = () => {
     setIsFormModalOpen(true);
   };
 
-  const handleEditMember = (id) => {
-    const member = allMembers.find(m => m.id === id);
-    if (member) {
+  const handleEditMember = (idOrMember) => {
+    try {
+      // Handle both ID (string/number) and member object
+      let memberId = null;
+      let member = null;
+      
+      if (typeof idOrMember === 'object' && idOrMember !== null) {
+        // If it's a member object, use it directly
+        member = idOrMember;
+        memberId = idOrMember.id;
+      } else {
+        // If it's an ID, find the member in allMembers
+        memberId = idOrMember;
+        // Convert ID to string for comparison
+        const stringId = String(memberId);
+        // Try to find member by ID (handle both string and number IDs)
+        member = allMembers.find(m => String(m.id) === stringId || Number(m.id) === Number(memberId));
+      }
+      
+      if (!member) {
+        console.error('Member not found for ID:', memberId);
+        alert('Üye bulunamadı');
+        return;
+      }
+      
       setFormMode('edit');
       setSelectedMember(member);
       setIsFormModalOpen(true);
+    } catch (error) {
+      console.error('Error in handleEditMember:', error);
+      alert('Üye düzenleme penceresi açılırken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 
