@@ -410,8 +410,54 @@ const RepresentativesPage = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-4">
+                    {filteredNeighborhoodReps.map((rep) => {
+                      const attendanceStats = getAttendanceStats(rep, true);
+                      return (
+                        <div key={rep.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">{rep.name}</h3>
+                                <p className="text-sm text-gray-500">{rep.neighborhood_name || '-'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">TC:</span>
+                                <span className="text-gray-900 font-medium">{rep.tc || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Telefon:</span>
+                                <span className="text-gray-900 font-medium">{rep.phone || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">İlçe:</span>
+                                <span className="text-gray-900 font-medium">{rep.district_name || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Belde:</span>
+                                <span className="text-gray-900 font-medium">{rep.town_name || '-'}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-500">Katılım:</span>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {attendanceStats.attended}/{attendanceStats.required}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -470,7 +516,8 @@ const RepresentativesPage = () => {
                       })}
                     </tbody>
                   </table>
-                </div>
+                  </div>
+                </>
               )}
             </>
           ) : (
@@ -483,8 +530,54 @@ const RepresentativesPage = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-4">
+                    {filteredVillageReps.map((rep) => {
+                      const attendanceStats = getAttendanceStats(rep, false);
+                      return (
+                        <div key={rep.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">{rep.name}</h3>
+                                <p className="text-sm text-gray-500">{rep.village_name || '-'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">TC:</span>
+                                <span className="text-gray-900 font-medium">{rep.tc || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Telefon:</span>
+                                <span className="text-gray-900 font-medium">{rep.phone || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">İlçe:</span>
+                                <span className="text-gray-900 font-medium">{rep.district_name || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Belde:</span>
+                                <span className="text-gray-900 font-medium">{rep.town_name || '-'}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-500">Katılım:</span>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {attendanceStats.attended}/{attendanceStats.required}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -543,7 +636,8 @@ const RepresentativesPage = () => {
                       })}
                     </tbody>
                   </table>
-                </div>
+                  </div>
+                </>
               )}
             </>
           )}

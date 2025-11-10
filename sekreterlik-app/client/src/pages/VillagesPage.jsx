@@ -311,8 +311,139 @@ const VillagesPage = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {filteredVillages.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+            <p className="text-gray-500">
+              {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz köy eklenmemiş'}
+            </p>
+          </div>
+        ) : (
+          filteredVillages.map((village) => {
+            const villageIdStr = String(village.id);
+            const villageIdNum = Number(village.id);
+            
+            const representative = villageRepresentatives.find(rep => {
+              const repId = rep.village_id || rep.villageId;
+              const repIdStr = String(repId);
+              const repIdNum = Number(repId);
+              return repIdStr === villageIdStr || repIdNum === villageIdNum || 
+                     repIdStr === villageIdNum || repIdNum === villageIdStr;
+            });
+            
+            const supervisor = villageSupervisors.find(sup => {
+              const supId = sup.village_id || sup.villageId;
+              const supIdStr = String(supId);
+              const supIdNum = Number(supId);
+              return supIdStr === villageIdStr || supIdNum === villageIdNum || 
+                     supIdStr === villageIdNum || supIdNum === villageIdStr;
+            });
+            
+            const hasRepresentative = !!representative;
+            const isEditing = editingGroup === village.id;
+            
+            return (
+              <div key={village.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-gray-900 mb-1">{village.name}</h3>
+                      <p className="text-sm text-gray-500">{village.district_name || '-'} / {village.town_name || '-'}</p>
+                    </div>
+                    {hasRepresentative ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Temsilci Atanmış
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Temsilci Atanmamış
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2 border-t border-gray-200 pt-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Grup:</span>
+                      {isEditing ? (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            value={groupNoInput}
+                            onChange={(e) => setGroupNoInput(e.target.value)}
+                            className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                            placeholder="Grup"
+                            min="1"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleGroupNoChange(village.id, groupNoInput)}
+                            className="text-green-600 hover:text-green-800 text-sm"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingGroup(null);
+                              setGroupNoInput('');
+                            }}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          {village.group_no ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                              Grup {village.group_no}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setEditingGroup(village.id);
+                              setGroupNoInput(village.group_no || '');
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800 text-xs"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Temsilci:</span>
+                      <span className="text-gray-900 font-medium">{representative?.name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Müfettiş:</span>
+                      <span className="text-gray-900 font-medium">{supervisor?.name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Ziyaret Sayısı:</span>
+                      <button
+                        onClick={() => handleVisitCountClick(village)}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors cursor-pointer"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {visitCounts[village.id] || 0} ziyaret
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
         {filteredVillages.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">

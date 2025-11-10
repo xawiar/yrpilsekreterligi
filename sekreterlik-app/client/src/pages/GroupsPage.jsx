@@ -280,7 +280,53 @@ const GroupsPage = () => {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
                       Mahalleler ({groupData.neighborhoods.length})
                     </h3>
-                    <div className="overflow-x-auto">
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {groupData.neighborhoods.map(neighborhood => {
+                        const representative = neighborhoodRepresentatives.find(rep => String(rep.neighborhood_id) === String(neighborhood.id));
+                        const supervisor = neighborhoodSupervisors.find(sup => String(sup.neighborhood_id) === String(neighborhood.id));
+                        const district = districts.find(d => String(d.id) === String(neighborhood.district_id));
+                        const town = neighborhood.town_id ? towns.find(t => String(t.id) === String(neighborhood.town_id)) : null;
+                        
+                        return (
+                          <div key={neighborhood.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                            <div className="space-y-3">
+                              <h4 className="text-base font-semibold text-gray-900">{neighborhood.name}</h4>
+                              <div className="space-y-2 border-t border-gray-200 pt-3">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">İlçe:</span>
+                                  <span className="text-gray-900 font-medium">{district?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Belde:</span>
+                                  <span className="text-gray-900 font-medium">{town?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Temsilci:</span>
+                                  <span className="text-gray-900 font-medium">{representative?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Temsilci Telefon:</span>
+                                  <span className="text-gray-900 font-medium">{representative?.phone || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Müfettiş:</span>
+                                  <span className="text-gray-900 font-medium">{supervisor?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Müfettiş Telefon:</span>
+                                  <span className="text-gray-900 font-medium">{supervisor?.phone || '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
@@ -324,7 +370,53 @@ const GroupsPage = () => {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
                       Köyler ({groupData.villages.length})
                     </h3>
-                    <div className="overflow-x-auto">
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {groupData.villages.map(village => {
+                        const representative = villageRepresentatives.find(rep => String(rep.village_id) === String(village.id));
+                        const supervisor = villageSupervisors.find(sup => String(sup.village_id) === String(village.id));
+                        const district = districts.find(d => String(d.id) === String(village.district_id));
+                        const town = village.town_id ? towns.find(t => String(t.id) === String(village.town_id)) : null;
+                        
+                        return (
+                          <div key={village.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                            <div className="space-y-3">
+                              <h4 className="text-base font-semibold text-gray-900">{village.name}</h4>
+                              <div className="space-y-2 border-t border-gray-200 pt-3">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">İlçe:</span>
+                                  <span className="text-gray-900 font-medium">{district?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Belde:</span>
+                                  <span className="text-gray-900 font-medium">{town?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Temsilci:</span>
+                                  <span className="text-gray-900 font-medium">{representative?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Temsilci Telefon:</span>
+                                  <span className="text-gray-900 font-medium">{representative?.phone || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Müfettiş:</span>
+                                  <span className="text-gray-900 font-medium">{supervisor?.name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Müfettiş Telefon:</span>
+                                  <span className="text-gray-900 font-medium">{supervisor?.phone || '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>

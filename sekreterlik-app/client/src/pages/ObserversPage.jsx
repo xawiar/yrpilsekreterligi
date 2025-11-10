@@ -961,7 +961,55 @@ const ObserversPage = () => {
                 {chiefObservers.length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Başmüşahitler</h3>
-                    <div className="overflow-x-auto">
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {chiefObservers.map((observer) => (
+                        <div key={observer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">{observer.name}</h3>
+                                <p className="text-sm text-gray-500">{observer.tc || '-'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Telefon:</span>
+                                <span className="text-gray-900 font-medium">{observer.phone || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Sandık:</span>
+                                <span className="text-gray-900 font-medium">{getBallotBoxName(observer.ballot_box_id)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Konum:</span>
+                                <span className="text-gray-900 font-medium">{getLocationInfo(observer)}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
+                              <button
+                                onClick={() => handleEdit(observer)}
+                                className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                              >
+                                Düzenle
+                              </button>
+                              <button
+                                onClick={() => handleDelete(observer.id)}
+                                className="text-red-600 hover:text-red-900 text-sm font-medium"
+                              >
+                                Sil
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
@@ -1028,7 +1076,55 @@ const ObserversPage = () => {
                 {regularObservers.length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Müşahitler</h3>
-                    <div className="overflow-x-auto">
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {regularObservers.map((observer) => (
+                        <div key={observer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900 mb-1">{observer.name}</h3>
+                                <p className="text-sm text-gray-500">{observer.tc || '-'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Telefon:</span>
+                                <span className="text-gray-900 font-medium">{observer.phone || '-'}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Sandık:</span>
+                                <span className="text-gray-900 font-medium">{getBallotBoxName(observer.ballot_box_id)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Konum:</span>
+                                <span className="text-gray-900 font-medium">{getLocationInfo(observer)}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
+                              <button
+                                onClick={() => handleEdit(observer)}
+                                className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                              >
+                                Düzenle
+                              </button>
+                              <button
+                                onClick={() => handleDelete(observer.id)}
+                                className="text-red-600 hover:text-red-900 text-sm font-medium"
+                              >
+                                Sil
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
