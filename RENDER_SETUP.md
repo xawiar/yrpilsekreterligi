@@ -110,7 +110,7 @@ Eğer `render.yaml` dosyasını kullanmak isterseniz:
 
 ### SPA Routing Hatası
 - `scripts/fix-spa-routing.js` script'inin çalıştığından emin olun
-- `vercel.json` benzeri bir redirect kuralı eklenmiş olmalı
+- Render.com'da SPA routing için redirect kuralları otomatik olarak yapılandırılmalıdır
 
 ## 📞 Destek
 
