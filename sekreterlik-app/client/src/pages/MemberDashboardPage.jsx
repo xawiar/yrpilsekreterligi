@@ -54,7 +54,9 @@ const MemberDashboardPage = () => {
     isSupported: isPushSupported,
     isSubscribed: isPushSubscribed,
     subscribe: subscribeToPush,
-    requestPermission: requestPushPermission
+    requestPermission: requestPushPermission,
+    sendTestNotification,
+    error: pushError
   } = usePushNotifications(memberIdForPush);
 
   useEffect(() => {
@@ -717,6 +719,50 @@ const MemberDashboardPage = () => {
                     Bu sayfada sadece sizin bilgileriniz ve katılım durumunuz görüntülenmektedir.
                   </p>
                 </div>
+                {/* Push Notification Status */}
+                {isPushSupported && (
+                  <div className="flex-shrink-0">
+                    <div className="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                      <div className="flex items-center space-x-2 mb-2">
+                        {isPushSubscribed ? (
+                          <>
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                            <span className="text-xs font-medium">Bildirimler Aktif</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                            <span className="text-xs font-medium">Bildirimler Kapalı</span>
+                          </>
+                        )}
+                      </div>
+                      {!isPushSubscribed && (
+                        <button
+                          onClick={async () => {
+                            const permission = await requestPushPermission();
+                            if (permission) {
+                              await subscribeToPush();
+                            }
+                          }}
+                          className="text-xs bg-white text-indigo-600 px-3 py-1 rounded hover:bg-indigo-50 transition-colors"
+                        >
+                          Bildirimleri Aç
+                        </button>
+                      )}
+                      {isPushSubscribed && sendTestNotification && (
+                        <button
+                          onClick={sendTestNotification}
+                          className="text-xs bg-white text-indigo-600 px-3 py-1 rounded hover:bg-indigo-50 transition-colors mt-1"
+                        >
+                          Test Bildirimi
+                        </button>
+                      )}
+                      {pushError && (
+                        <p className="text-xs text-red-200 mt-1">{pushError}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             {/* Decorative elements */}

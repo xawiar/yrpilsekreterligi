@@ -128,18 +128,14 @@ export const usePushNotifications = (userId = null) => {
 
   // Send test notification
   const sendTestNotification = useCallback(async () => {
-    if (!isSubscribed) {
-      setError('Önce push notification aboneliği yapmalısınız');
-      return false;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await ApiService.sendTestNotification();
+      const userId = window.userId || null;
+      const response = await ApiService.sendTestNotification(userId);
       if (response.success) {
-        console.log('Test notification sent successfully');
+        console.log('Test notification sent successfully:', response.message);
         return true;
       } else {
         throw new Error(response.message || 'Test notification failed');
@@ -151,7 +147,7 @@ export const usePushNotifications = (userId = null) => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSubscribed]);
+  }, []);
 
   // Request notification permission
   const requestPermission = useCallback(async () => {

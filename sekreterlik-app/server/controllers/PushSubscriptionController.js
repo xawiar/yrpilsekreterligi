@@ -87,12 +87,34 @@ class PushSubscriptionController {
   // Send test notification
   static async sendTestNotification(req, res) {
     try {
-      const { userId } = req.body;
+      // Get userId from request body or user from auth
+      const userId = req.body?.userId || req.user?.id || req.user?.memberId;
       
       if (!userId) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Kullanıcı ID gerekli' 
+        // If no userId, send to all subscribers
+        const subscriptions = await PushSubscription.getAll();
+        
+        if (subscriptions.length === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: 'Aktif push subscription bulunamadı' 
+          });
+        }
+
+        const payload = PushNotificationService.createPayload(
+          'Test Bildirimi',
+          'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
+          '/icon-192x192.png',
+          '/badge-72x72.png',
+          { type: 'test', action: 'view' }
+        );
+
+        const results = await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+        
+        return res.json({ 
+          success: true, 
+          message: `Test bildirimi ${subscriptions.length} kullanıcıya gönderildi`,
+          results 
         });
       }
 

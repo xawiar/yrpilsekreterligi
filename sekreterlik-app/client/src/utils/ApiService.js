@@ -2132,11 +2132,24 @@ class ApiService {
     return response.json();
   }
 
-  static async sendTestNotification() {
+  static async sendTestNotification(userId = null) {
+    // Try to get userId from localStorage if not provided
+    if (!userId) {
+      try {
+        const authData = localStorage.getItem('auth');
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          userId = parsed.user?.id || parsed.user?.memberId;
+        }
+      } catch (e) {
+        console.warn('Could not get userId from localStorage:', e);
+      }
+    }
+    
     const response = await fetch(`${API_BASE_URL}/push-subscriptions/test`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({}),
+      body: JSON.stringify({ userId }),
     });
     return response.json();
   }
