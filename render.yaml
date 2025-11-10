@@ -4,7 +4,7 @@ services:
     branch: main
     rootDir: "sekreterlik-app/client"
     buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build && node scripts/fix-spa-routing.js
-    staticPublishPath: "./dist"
+    staticPublishPath: "dist"
     envVars:
       - key: VITE_USE_FIREBASE
         value: true
