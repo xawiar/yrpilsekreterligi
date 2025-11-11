@@ -861,7 +861,6 @@ class FirebaseApiService {
               });
               // Hata olsa bile devam et (Firestore güncellemesi başarılı)
             }
-            }
           } else {
             console.log('ℹ️ Password not changed, skipping Firebase Auth update:', {
               passwordChanged,
