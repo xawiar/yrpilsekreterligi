@@ -1118,6 +1118,11 @@ class FirebaseApiService {
           where: [{ field: 'archived', operator: '==', value: false }]
         }, false);
         
+        if (!allMembers || allMembers.length === 0) {
+          console.warn('⚠️ No active members found for notification');
+          return { success: true, id: docId, message: 'Toplantı oluşturuldu' };
+        }
+        
         const notificationData = {
           title: 'Yeni Toplantı Oluşturuldu',
           body: `${meetingDataWithoutNotesAndDescription.name} - ${meetingDataWithoutNotesAndDescription.date || 'Tarih belirtilmemiş'}`,
@@ -1128,25 +1133,38 @@ class FirebaseApiService {
             date: meetingDataWithoutNotesAndDescription.date
           }),
           read: false,
+          createdAt: new Date().toISOString(),
           expiresAt: meetingDataWithoutNotesAndDescription.date 
             ? new Date(new Date(meetingDataWithoutNotesAndDescription.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
             : null
         };
         
         // Her üye için notification oluştur
+        let successCount = 0;
         for (const member of allMembers) {
-          await FirebaseService.create(
-            this.COLLECTIONS.NOTIFICATIONS,
-            null,
-            {
-              ...notificationData,
-              memberId: String(member.id)
-            },
-            false
-          );
+          try {
+            const memberId = member.id || member.memberId || member.member_id;
+            if (!memberId) {
+              console.warn('⚠️ Member without ID skipped:', member);
+              continue;
+            }
+            
+            await FirebaseService.create(
+              this.COLLECTIONS.NOTIFICATIONS,
+              null,
+              {
+                ...notificationData,
+                memberId: String(memberId)
+              },
+              false
+            );
+            successCount++;
+          } catch (memberError) {
+            console.error(`Error creating notification for member ${member.id}:`, memberError);
+          }
         }
         
-        console.log(`✅ In-app notification created for ${allMembers.length} members`);
+        console.log(`✅ In-app notification created for ${successCount}/${allMembers.length} members`);
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası toplantı oluşturmayı engellemez
@@ -1313,6 +1331,11 @@ class FirebaseApiService {
           where: [{ field: 'archived', operator: '==', value: false }]
         }, false);
         
+        if (!allMembers || allMembers.length === 0) {
+          console.warn('⚠️ No active members found for notification');
+          return { success: true, id: docId, message: 'Etkinlik oluşturuldu' };
+        }
+        
         const notificationData = {
           title: 'Yeni Etkinlik Oluşturuldu',
           body: `${finalEventData.name} - ${finalEventData.date || 'Tarih belirtilmemiş'}`,
@@ -1323,25 +1346,38 @@ class FirebaseApiService {
             date: finalEventData.date
           }),
           read: false,
+          createdAt: new Date().toISOString(),
           expiresAt: finalEventData.date 
             ? new Date(new Date(finalEventData.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
             : null
         };
         
         // Her üye için notification oluştur
+        let successCount = 0;
         for (const member of allMembers) {
-          await FirebaseService.create(
-            this.COLLECTIONS.NOTIFICATIONS,
-            null,
-            {
-              ...notificationData,
-              memberId: String(member.id)
-            },
-            false
-          );
+          try {
+            const memberId = member.id || member.memberId || member.member_id;
+            if (!memberId) {
+              console.warn('⚠️ Member without ID skipped:', member);
+              continue;
+            }
+            
+            await FirebaseService.create(
+              this.COLLECTIONS.NOTIFICATIONS,
+              null,
+              {
+                ...notificationData,
+                memberId: String(memberId)
+              },
+              false
+            );
+            successCount++;
+          } catch (memberError) {
+            console.error(`Error creating notification for member ${member.id}:`, memberError);
+          }
         }
         
-        console.log(`✅ In-app notification created for ${allMembers.length} members`);
+        console.log(`✅ In-app notification created for ${successCount}/${allMembers.length} members`);
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası etkinlik oluşturmayı engellemez
@@ -4768,6 +4804,11 @@ class FirebaseApiService {
           where: [{ field: 'archived', operator: '==', value: false }]
         }, false);
         
+        if (!allMembers || allMembers.length === 0) {
+          console.warn('⚠️ No active members found for notification');
+          return { ...poll, id: docId };
+        }
+        
         const notificationData = {
           title: 'Yeni Anket/Oylama Oluşturuldu',
           body: `${pollData.title} - Katılımınızı bekliyoruz!`,
@@ -4777,25 +4818,38 @@ class FirebaseApiService {
             pollTitle: pollData.title
           }),
           read: false,
+          createdAt: new Date().toISOString(),
           expiresAt: pollData.endDate 
             ? new Date(pollData.endDate).toISOString() // Poll end date'de expire
             : null
         };
         
         // Her üye için notification oluştur
+        let successCount = 0;
         for (const member of allMembers) {
-          await FirebaseService.create(
-            this.COLLECTIONS.NOTIFICATIONS,
-            null,
-            {
-              ...notificationData,
-              memberId: String(member.id)
-            },
-            false
-          );
+          try {
+            const memberId = member.id || member.memberId || member.member_id;
+            if (!memberId) {
+              console.warn('⚠️ Member without ID skipped:', member);
+              continue;
+            }
+            
+            await FirebaseService.create(
+              this.COLLECTIONS.NOTIFICATIONS,
+              null,
+              {
+                ...notificationData,
+                memberId: String(memberId)
+              },
+              false
+            );
+            successCount++;
+          } catch (memberError) {
+            console.error(`Error creating notification for member ${member.id}:`, memberError);
+          }
         }
         
-        console.log(`✅ In-app notification created for ${allMembers.length} members`);
+        console.log(`✅ In-app notification created for ${successCount}/${allMembers.length} members`);
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası anket oluşturmayı engellemez
@@ -5101,11 +5155,28 @@ class FirebaseApiService {
   // Notifications API
   static async getNotifications(memberId, unreadOnly = false) {
     try {
-      const allNotifications = await FirebaseService.getAll(this.COLLECTIONS.NOTIFICATIONS);
+      if (!memberId) {
+        console.warn('⚠️ getNotifications called without memberId');
+        return { success: false, notifications: [] };
+      }
+      
+      const allNotifications = await FirebaseService.getAll(this.COLLECTIONS.NOTIFICATIONS, {}, false);
+      
+      if (!allNotifications || allNotifications.length === 0) {
+        return { success: true, notifications: [] };
+      }
+      
       let notifications = allNotifications.filter(n => {
-        const memberMatch = !n.memberId || String(n.memberId) === String(memberId);
+        // Member ID eşleşmesi - hem null/undefined hem de string karşılaştırması
+        const notificationMemberId = n.memberId || n.member_id;
+        const memberMatch = !notificationMemberId || String(notificationMemberId) === String(memberId);
+        
+        // Expire kontrolü
         const expired = n.expiresAt && new Date(n.expiresAt) <= new Date();
+        
+        // Unread kontrolü
         const unreadMatch = !unreadOnly || !n.read;
+        
         return memberMatch && !expired && unreadMatch;
       });
       
