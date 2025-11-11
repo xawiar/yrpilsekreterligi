@@ -1112,6 +1112,46 @@ class FirebaseApiService {
         }
       }
       
+      // In-app notification oluştur (tüm aktif üyelere)
+      try {
+        const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+          where: [{ field: 'archived', operator: '==', value: false }]
+        }, false);
+        
+        const notificationData = {
+          title: 'Yeni Toplantı Oluşturuldu',
+          body: `${meetingDataWithoutNotesAndDescription.name} - ${meetingDataWithoutNotesAndDescription.date || 'Tarih belirtilmemiş'}`,
+          type: 'meeting',
+          data: JSON.stringify({
+            meetingId: docId,
+            meetingName: meetingDataWithoutNotesAndDescription.name,
+            date: meetingDataWithoutNotesAndDescription.date
+          }),
+          read: false,
+          expiresAt: meetingDataWithoutNotesAndDescription.date 
+            ? new Date(new Date(meetingDataWithoutNotesAndDescription.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
+            : null
+        };
+        
+        // Her üye için notification oluştur
+        for (const member of allMembers) {
+          await FirebaseService.create(
+            this.COLLECTIONS.NOTIFICATIONS,
+            null,
+            {
+              ...notificationData,
+              memberId: String(member.id)
+            },
+            false
+          );
+        }
+        
+        console.log(`✅ In-app notification created for ${allMembers.length} members`);
+      } catch (notificationError) {
+        console.error('Error creating in-app notification (non-blocking):', notificationError);
+        // Notification hatası toplantı oluşturmayı engellemez
+      }
+      
       return { success: true, id: docId, message: 'Toplantı oluşturuldu' };
     } catch (error) {
       console.error('Create meeting error:', error);
@@ -1265,6 +1305,46 @@ class FirebaseApiService {
           console.error('Auto SMS error (non-blocking):', smsError);
           // SMS hatası etkinlik oluşturmayı engellemez
         }
+      }
+      
+      // In-app notification oluştur (tüm aktif üyelere)
+      try {
+        const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+          where: [{ field: 'archived', operator: '==', value: false }]
+        }, false);
+        
+        const notificationData = {
+          title: 'Yeni Etkinlik Oluşturuldu',
+          body: `${finalEventData.name} - ${finalEventData.date || 'Tarih belirtilmemiş'}`,
+          type: 'event',
+          data: JSON.stringify({
+            eventId: docId,
+            eventName: finalEventData.name,
+            date: finalEventData.date
+          }),
+          read: false,
+          expiresAt: finalEventData.date 
+            ? new Date(new Date(finalEventData.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
+            : null
+        };
+        
+        // Her üye için notification oluştur
+        for (const member of allMembers) {
+          await FirebaseService.create(
+            this.COLLECTIONS.NOTIFICATIONS,
+            null,
+            {
+              ...notificationData,
+              memberId: String(member.id)
+            },
+            false
+          );
+        }
+        
+        console.log(`✅ In-app notification created for ${allMembers.length} members`);
+      } catch (notificationError) {
+        console.error('Error creating in-app notification (non-blocking):', notificationError);
+        // Notification hatası etkinlik oluşturmayı engellemez
       }
       
       return { success: true, id: docId, message: 'Etkinlik oluşturuldu' };
