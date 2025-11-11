@@ -5285,7 +5285,7 @@ class FirebaseApiService {
         const notification = new Notification('Test Bildirimi', {
           body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
           icon: '/icon-192x192.png',
-          badge: '/badge-72x72.png',
+          badge: '/icon-192x192.png', // badge-72x72.png yerine icon kullan
           tag: 'test-notification',
           requireInteraction: true,
           vibrate: [200, 100, 200]
@@ -5307,7 +5307,7 @@ class FirebaseApiService {
           const notification = new Notification('Test Bildirimi', {
             body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
             icon: '/icon-192x192.png',
-            badge: '/badge-72x72.png',
+            badge: '/icon-192x192.png', // badge-72x72.png yerine icon kullan
             tag: 'test-notification',
             requireInteraction: true,
             vibrate: [200, 100, 200]
