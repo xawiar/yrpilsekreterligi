@@ -700,13 +700,19 @@ class FirebaseApiService {
             updateData.authUid = null; // Login sırasında yeni email ile oluşturulacak
           }
           
-          // Eğer şifre değiştiyse, Firebase Auth şifresini güncelle
-          if (passwordChanged && normalizedNewPassword) {
+          // Eğer şifre değiştiyse VEYA password parametresi gönderildiyse, Firebase Auth şifresini güncelle
+          // Not: passwordChanged false olsa bile, eğer password parametresi gönderildiyse güncelleme yapılmalı
+          // Çünkü kullanıcı açıkça şifreyi değiştirmek istiyor
+          const shouldUpdatePassword = (passwordChanged || (password && password.trim())) && normalizedNewPassword;
+          
+          if (shouldUpdatePassword) {
             console.log('🔄 Updating Firebase Auth password for user:', {
               authUid: authUid,
               oldPassword: normalizedOldPassword.substring(0, 3) + '***',
               newPassword: normalizedNewPassword.substring(0, 3) + '***',
-              newPasswordLength: normalizedNewPassword.length
+              newPasswordLength: normalizedNewPassword.length,
+              passwordChanged,
+              passwordProvided: !!(password && password.trim())
             });
             try {
               // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
