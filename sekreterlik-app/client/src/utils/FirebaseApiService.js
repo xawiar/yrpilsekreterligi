@@ -730,20 +730,37 @@ class FirebaseApiService {
 
           if (existingUser) {
             // Update existing user - TC ve telefon numarasına göre güncelle
-            // Password'ları normalize et (karşılaştırma için)
+            // Mevcut password'u al ve decrypt et (eğer şifrelenmişse)
+            let existingPassword = existingUser.password || '';
+            
+            // Eğer password şifrelenmişse (U2FsdGVkX1 ile başlıyorsa), decrypt et
+            if (typeof existingPassword === 'string' && existingPassword.startsWith('U2FsdGVkX1')) {
+              try {
+                const { decryptData } = await import('../utils/crypto');
+                existingPassword = decryptData(existingPassword) || existingPassword;
+                console.log(`🔓 Decrypted password for member ID ${memberId}`);
+              } catch (decryptError) {
+                console.warn(`⚠️ Could not decrypt password for member ID ${memberId}:`, decryptError);
+              }
+            }
+            
+            // Password'ları normalize et (karşılaştırma için - sadece rakamlar)
             const existingUsername = (existingUser.username || '').toString().replace(/\D/g, '');
-            const existingPassword = (existingUser.password || '').toString().replace(/\D/g, '');
+            const normalizedExistingPassword = existingPassword.toString().replace(/\D/g, '');
             
             const usernameChanged = existingUsername !== username;
-            const passwordChanged = existingPassword !== password;
+            const passwordChanged = normalizedExistingPassword !== password;
 
-            if (usernameChanged || passwordChanged) {
+            // Eğer password şifrelenmişse veya değiştiyse, güncelle
+            const needsUpdate = usernameChanged || passwordChanged || (typeof existingUser.password === 'string' && existingUser.password.startsWith('U2FsdGVkX1'));
+
+            if (needsUpdate) {
               await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, existingUser.id, {
                 username,
-                password,
+                password, // Normalize edilmiş password (şifrelenmemiş)
                 // Eğer username değiştiyse, authUid'yi temizle (yeni email ile oluşturulsun)
                 ...(usernameChanged ? { authUid: null } : {})
-              }, false); // encrypt = false (password zaten normalize edilmiş)
+              }, false); // encrypt = false (password şifrelenmemeli)
 
               results.memberUsers.updated++;
               
