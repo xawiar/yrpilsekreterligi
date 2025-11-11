@@ -27,6 +27,7 @@ const MemberUsersSettings = () => {
     username: '',
     password: ''
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchMemberUsers();
@@ -571,6 +572,34 @@ const MemberUsersSettings = () => {
         </div>
       )}
 
+      {/* Search Box */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border border-gray-100 dark:border-gray-700">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+            placeholder="Üye adı, TC, telefon veya kullanıcı adı ile ara..."
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Users Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
@@ -595,14 +624,57 @@ const MemberUsersSettings = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {memberUsers.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    Henüz üye kullanıcısı bulunmuyor
-                  </td>
-                </tr>
-              ) : (
-                memberUsers.map((user) => {
+              {(() => {
+                // Filter users based on search term
+                const filteredUsers = memberUsers.filter((user) => {
+                  if (!searchTerm) return true;
+                  
+                  const searchLower = searchTerm.toLowerCase();
+                  
+                  // Get user display info
+                  let displayName = 'Bilinmeyen';
+                  let displayInfo = '-';
+                  
+                  if (user.userType === 'town_president' && user.townId) {
+                    const town = towns.find(t => String(t.id) === String(user.townId));
+                    displayName = town?.name || user.chairmanName || 'Bilinmeyen Belde';
+                    displayInfo = user.chairmanName || '';
+                  } else if (user.userType === 'district_president' && user.districtId) {
+                    displayName = user.chairmanName || 'Bilinmeyen İlçe';
+                    displayInfo = 'İlçe Başkanı';
+                  } else {
+                    const member = members.find(m => m.id === user.member_id || m.id === user.memberId || String(m.id) === String(user.member_id) || String(m.id) === String(user.memberId));
+                    displayName = member?.name || 'Bilinmeyen Üye';
+                    const memberRegion = member?.region || member?.region_name || '-';
+                    const memberPosition = member?.position || member?.position_name || '-';
+                    displayInfo = `${memberRegion} - ${memberPosition}`;
+                  }
+                  
+                  // Search in name, username, password, TC, phone
+                  const username = (user.username || '').toLowerCase();
+                  const password = (getDecryptedPassword(user) || '').toLowerCase();
+                  const name = displayName.toLowerCase();
+                  const info = displayInfo.toLowerCase();
+                  
+                  return (
+                    name.includes(searchLower) ||
+                    username.includes(searchLower) ||
+                    password.includes(searchLower) ||
+                    info.includes(searchLower)
+                  );
+                });
+                
+                if (filteredUsers.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz üye kullanıcısı bulunmuyor'}
+                      </td>
+                    </tr>
+                  );
+                }
+                
+                return filteredUsers.map((user) => {
                   // Kullanıcı tipine göre bilgileri al
                   let displayName = 'Bilinmeyen';
                   let displayInfo = '-';
@@ -693,8 +765,8 @@ const MemberUsersSettings = () => {
                     </td>
                   </tr>
                   );
-                })
-              )}
+                });
+              })()}
             </tbody>
           </table>
         </div>
