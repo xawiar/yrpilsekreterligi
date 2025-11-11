@@ -641,8 +641,8 @@ class FirebaseApiService {
         console.log('ℹ️ No authUid found, user will be created in Firebase Auth on first login');
       }
 
-      // Firestore'u güncelle
-      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData);
+      // Firestore'u güncelle (encrypt = false - password şifrelenmemeli)
+      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData, false);
       
       console.log('✅ Member user updated successfully in Firestore:', id);
       return { success: true, message: 'Kullanıcı güncellendi' };
@@ -657,7 +657,7 @@ class FirebaseApiService {
       const user = await FirebaseService.getById(this.COLLECTIONS.MEMBER_USERS, id);
       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, {
         isActive: !user.isActive
-      });
+      }, false); // encrypt = false
       return { success: true, message: 'Kullanıcı durumu güncellendi' };
     } catch (error) {
       console.error('Toggle member user status error:', error);
@@ -1201,7 +1201,7 @@ class FirebaseApiService {
             // ÖNEMLİ: TC veya telefon değiştiyse, Firebase Auth şifresini güncelle
             const shouldClearAuthUid = tcChanged || phoneChanged;
             
-            // Member user'ı güncelle
+            // Member user'ı güncelle (encrypt = false - password şifrelenmemeli)
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               username: newUsername,
               password: newPassword,
@@ -1986,7 +1986,7 @@ class FirebaseApiService {
           for (const memberUser of memberUsers) {
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               isActive: false
-            });
+            }, false); // encrypt = false
             console.log('✅ Member user deactivated:', memberUser.id);
           }
         }
@@ -2025,7 +2025,7 @@ class FirebaseApiService {
           for (const memberUser of memberUsers) {
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               isActive: true
-            });
+            }, false); // encrypt = false
             console.log('✅ Member user activated:', memberUser.id);
           }
         }
@@ -3694,23 +3694,23 @@ class FirebaseApiService {
                         }
                       }
                       
-                      // Firestore'da authUid'yi güncelle
+                      // Firestore'da authUid'yi güncelle (encrypt = false - password şifrelenmemeli)
                       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, townUser.id, {
                         username,
                         password: password,
                         chairmanName: cleanedData.chairman_name,
                         chairmanPhone: cleanedData.chairman_phone,
                         authUid: authUser.user.uid
-                      });
+                      }, false);
                     } catch (authError) {
                       console.warn('⚠️ Firebase Auth user creation failed (non-critical):', authError);
-                      // Auth oluşturulamasa bile Firestore'u güncelle
+                      // Auth oluşturulamasa bile Firestore'u güncelle (encrypt = false - password şifrelenmemeli)
                       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, townUser.id, {
                         username,
                         password: password,
                         chairmanName: cleanedData.chairman_name,
                         chairmanPhone: cleanedData.chairman_phone
-                      });
+                      }, false);
                     }
                   } else {
                     // Auth UID varsa Firestore'u güncelle
@@ -3721,10 +3721,10 @@ class FirebaseApiService {
                     
                     await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, townUser.id, {
                       username,
-                      password: password, // Şifreleme FirebaseService içinde yapılacak
+                      password: password, // Şifrelenmemeli (encrypt = false)
                       chairmanName: cleanedData.chairman_name,
                       chairmanPhone: cleanedData.chairman_phone
-                    });
+                    }, false); // encrypt = false - password şifrelenmemeli
                     
                     // Telefon değiştiyse şifre de güncellendi (Firestore'da)
                     // Firebase Auth'daki şifre güncellemesi için backend/Cloud Functions gerekir
