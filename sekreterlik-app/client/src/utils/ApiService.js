@@ -2072,9 +2072,23 @@ class ApiService {
     return response.json();
   }
 
+  // Fix all encrypted passwords in member_users collection
+  static async fixEncryptedPasswords() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.fixEncryptedPasswords();
+    }
+    // SQLite için bu özellik gerekli değil (şifreleme yok)
+    return { success: false, message: 'Bu özellik sadece Firebase için kullanılabilir' };
+  }
+
   // Update all user credentials
   static async updateAllCredentials() {
     if (USE_FIREBASE) {
+      // Önce şifrelenmiş password'ları düzelt
+      const fixResult = await FirebaseApiService.fixEncryptedPasswords();
+      console.log('🔓 Encrypted passwords fix result:', fixResult);
+      
+      // Sonra normal güncellemeyi yap
       return FirebaseApiService.updateAllCredentials();
     }
     const response = await fetch(`${API_BASE_URL}/auth/update-all-credentials`, {

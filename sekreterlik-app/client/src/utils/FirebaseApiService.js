@@ -665,6 +665,93 @@ class FirebaseApiService {
     }
   }
 
+  // Fix all encrypted passwords in member_users collection
+  static async fixEncryptedPasswords() {
+    try {
+      console.log('🔓 Starting encrypted password fix...');
+      
+      // Tüm member_users kayıtlarını al (decrypt = false çünkü şifrelenmiş olanları tespit etmek istiyoruz)
+      const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS, {}, false);
+      
+      console.log(`📊 Found ${allMemberUsers.length} member users to check`);
+      
+      let fixedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
+      for (const user of allMemberUsers) {
+        try {
+          // Password'u kontrol et - şifrelenmiş mi?
+          const password = user.password || '';
+          const isEncrypted = typeof password === 'string' && password.startsWith('U2FsdGVkX1');
+          
+          if (isEncrypted) {
+            console.log(`🔓 Decrypting password for user ID ${user.id} (username: ${user.username})`);
+            
+            // Decrypt et
+            const { decryptData } = await import('../utils/crypto');
+            let decryptedPassword = decryptData(password);
+            
+            if (!decryptedPassword || decryptedPassword === password) {
+              console.warn(`⚠️ Could not decrypt password for user ID ${user.id}`);
+              errors.push(`User ID ${user.id}: Decryption failed`);
+              errorCount++;
+              continue;
+            }
+            
+            // Normalize et (sadece rakamlar)
+            const normalizedPassword = decryptedPassword.toString().replace(/\D/g, '');
+            
+            if (!normalizedPassword) {
+              console.warn(`⚠️ Empty password after normalization for user ID ${user.id}`);
+              errors.push(`User ID ${user.id}: Empty password after normalization`);
+              errorCount++;
+              continue;
+            }
+            
+            // Güncelle (encrypt = false - şifrelenmemiş olarak kaydet)
+            await FirebaseService.update(
+              this.COLLECTIONS.MEMBER_USERS,
+              user.id,
+              {
+                password: normalizedPassword
+              },
+              false // encrypt = false
+            );
+            
+            fixedCount++;
+            console.log(`✅ Fixed password for user ID ${user.id} (username: ${user.username})`);
+          }
+        } catch (userError) {
+          console.error(`❌ Error fixing password for user ID ${user.id}:`, userError);
+          errors.push(`User ID ${user.id}: ${userError.message}`);
+          errorCount++;
+        }
+      }
+      
+      console.log(`✅ Encrypted password fix completed!`);
+      console.log(`   - Fixed: ${fixedCount}`);
+      console.log(`   - Errors: ${errorCount}`);
+      
+      return {
+        success: true,
+        fixed: fixedCount,
+        errors: errorCount,
+        errorMessages: errors,
+        message: `${fixedCount} şifrelenmiş password düzeltildi${errorCount > 0 ? `, ${errorCount} hata` : ''}`
+      };
+    } catch (error) {
+      console.error('❌ Error fixing encrypted passwords:', error);
+      return {
+        success: false,
+        fixed: 0,
+        errors: 0,
+        errorMessages: [error.message],
+        message: 'Şifrelenmiş password\'lar düzeltilirken hata oluştu: ' + error.message
+      };
+    }
+  }
+
   // Update all user credentials based on current member data
   static async updateAllCredentials() {
     try {

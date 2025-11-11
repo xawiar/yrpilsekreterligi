@@ -224,10 +224,41 @@ const MemberUsersSettings = () => {
     }
   };
 
+  const handleFixEncryptedPasswords = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      const response = await ApiService.fixEncryptedPasswords();
+      
+      if (response.success) {
+        setMessage(`✅ ${response.message}`);
+        setMessageType('success');
+        // Kullanıcı listesini yenile
+        await fetchMemberUsers();
+      } else {
+        setMessage(`❌ ${response.message || 'Şifrelenmiş password\'lar düzeltilirken hata oluştu'}`);
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error fixing encrypted passwords:', error);
+      setMessage('Şifrelenmiş password\'lar düzeltilirken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleUpdateAllCredentials = async () => {
     try {
       setIsUpdating(true);
       setMessage('');
+      
+      // Önce şifrelenmiş password'ları düzelt
+      const fixResponse = await ApiService.fixEncryptedPasswords();
+      if (fixResponse.success && fixResponse.fixed > 0) {
+        console.log(`🔓 Fixed ${fixResponse.fixed} encrypted passwords`);
+      }
       
       const response = await ApiService.updateAllCredentials();
       
