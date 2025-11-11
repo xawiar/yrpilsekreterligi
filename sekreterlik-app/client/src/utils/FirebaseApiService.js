@@ -138,9 +138,9 @@ class FirebaseApiService {
             // Şifre doğru mu kontrol et (normalize edilmiş password ile karşılaştır)
             if (normalizedDecryptedPassword === normalizedInputPassword || normalizedMemberUserPassword === normalizedInputPassword) {
               // Şifre doğru, Firebase Auth ile senkronize et
-              // ÖNEMLİ: Firebase Auth'a kaydederken Firestore'daki şifreyi (telefon numarası) kullan
-              // Kullanıcının girdiği password değil, Firestore'daki decryptedPassword kullan
-              const firestorePassword = decryptedPassword || memberUser.password;
+              // ÖNEMLİ: Firebase Auth'a kaydederken normalize edilmiş şifreyi kullan (sadece rakamlar)
+              // Firestore'da password normalize edilmiş olarak saklanıyor (sadece rakamlar)
+              const firestorePassword = normalizedMemberUserPassword || normalizedDecryptedPassword || (decryptedPassword || memberUser.password);
               
               console.log('Password correct, syncing with Firebase Auth for member:', memberUser.id);
               console.log('🔑 Using Firestore password for Firebase Auth:', {
