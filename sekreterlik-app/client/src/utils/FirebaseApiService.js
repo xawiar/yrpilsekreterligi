@@ -3780,7 +3780,7 @@ class FirebaseApiService {
                   null,
                   {
                     username,
-                    password: password, // Şifreleme FirebaseService içinde yapılacak
+                    password: password, // Şifrelenmemeli (encrypt = false)
                     userType: 'town_president',
                     townId: townId,
                     chairmanName: cleanedData.chairman_name,
