@@ -44,30 +44,7 @@ export const usePushNotifications = (userId = null) => {
     }
   };
 
-  // Get VAPID key
-  useEffect(() => {
-    if (isSupported) {
-      getVapidKey();
-    }
-  }, [isSupported]);
-
-  const getVapidKey = async () => {
-    try {
-      const response = await ApiService.getVapidKey();
-      if (response && response.success && response.publicKey) {
-        setVapidKey(response.publicKey);
-        setError(null); // Clear any previous errors
-      } else {
-        console.warn('VAPID key response invalid:', response);
-        setError('VAPID anahtarı alınamadı');
-      }
-    } catch (error) {
-      console.error('Error getting VAPID key:', error);
-      setError('VAPID anahtarı alınırken hata oluştu: ' + error.message);
-    }
-  };
-
-  // Get VAPID key function (moved outside to be accessible)
+  // Get VAPID key function
   const getVapidKey = async () => {
     try {
       const response = await ApiService.getVapidKey();
@@ -155,7 +132,7 @@ export const usePushNotifications = (userId = null) => {
       setIsLoading(false);
     }
   }, [isSupported, vapidKey]);
-  
+
   // Get VAPID key on mount
   useEffect(() => {
     if (isSupported) {

@@ -667,9 +667,9 @@ const Chatbot = ({ isOpen, onClose }) => {
                 </div>
                 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-xs text-yellow-800">
-                    <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar > Chatbot API sayfasından başka bir servis seçebilirsiniz.
-                  </p>
+                    <p className="text-xs text-yellow-800">
+                      <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar {'>'} Chatbot API sayfasından başka bir servis seçebilirsiniz.
+                    </p>
                 </div>
               </div>
             </div>
