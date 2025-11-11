@@ -106,6 +106,65 @@
 - `member_users` → Member bilgileri için
 - `authUid` → İkisini bağlamak için
 
+## Şifre Uyumsuzluğu Senaryosu
+
+### Soru: Firebase Auth şifresi ile `member_users` şifresi farklıysa ne olur?
+
+### Senaryo 1: Firebase Auth'da Kullanıcı Var, Şifre Yanlış
+```
+1. Firebase Auth ile giriş yapmayı dene
+   ↓
+2. ❌ Şifre yanlış (auth/invalid-credential)
+   ↓
+3. Firestore'dan kullanıcıyı bul
+   ↓
+4. Firestore şifresi doğru mu?
+   ├─ ✅ Doğru → Firebase Auth'a Firestore şifresi ile giriş yapmayı dene
+   │   ├─ ✅ Başarılı → Giriş yapıldı (Firebase Auth şifresi değişmedi)
+   │   └─ ❌ Başarısız (email-already-in-use ama şifre farklı)
+   │       ↓
+   │       authUid temizlenir
+   │       ↓
+   │       Hata mesajı: "Firebase Auth'daki kullanıcı şifresi Firestore'daki şifreyle eşleşmiyor"
+   │       ↓
+   │       Bir sonraki login denemesinde yeni Firebase Auth kullanıcısı oluşturulur
+   └─ ❌ Yanlış → "Şifre hatalı" hatası
+```
+
+### Senaryo 2: Firebase Auth'da Kullanıcı Var, Şifre Doğru
+```
+1. Firebase Auth ile giriş yapmayı dene
+   ↓
+2. ✅ Şifre doğru → Giriş başarılı
+   ↓
+3. Firestore kontrolü yapılmaz
+   ↓
+4. ⚠️ Eğer Firestore şifresi farklıysa, bu fark edilmez
+```
+
+### Önemli Notlar
+
+⚠️ **Sorun**: Firebase Auth şifresi ile Firestore şifresi farklıysa:
+- İlk girişte Firebase Auth şifresi kullanılır (eğer doğruysa)
+- Firestore şifresi kontrol edilmez
+- Şifreler senkronize değilse sorun çıkar
+
+✅ **Çözüm**: 
+- "Tüm Kullanıcıları Güncelle" butonuna tıklayın
+- Bu işlem Firebase Auth şifrelerini Firestore şifreleriyle senkronize eder
+- Server-side Firebase Admin SDK ile şifre güncellemesi yapılır
+
+### Şifre Güncelleme Mekanizması
+
+1. **Manuel Güncelleme**: Üye telefon numarası değiştirildiğinde
+   - Firestore'daki `member_users` password güncellenir
+   - Eğer `authUid` varsa, server-side endpoint ile Firebase Auth şifresi güncellenir
+
+2. **Toplu Güncelleme**: "Tüm Kullanıcıları Güncelle" butonu
+   - Tüm üyelerin telefon numaraları kontrol edilir
+   - Firestore'daki password'lar güncellenir
+   - Firebase Auth şifreleri server-side güncellenir
+
 ## Sonuç
 
 **Baz alınan yer**: Önce **Firebase Auth**, eğer yoksa **Firestore `member_users` collection'ı**
@@ -115,4 +174,10 @@ Bu hibrit sistem sayesinde:
 - İlk girişte otomatik olarak Firebase Auth'a kaydedilir
 - Sonraki girişlerde Firebase Auth kullanılır (daha hızlı)
 - **Eşleşme zorunlu değil, ama önerilir**
+
+**Şifre Uyumsuzluğu**: 
+- Firebase Auth şifresi yanlışsa → Firestore kontrol edilir
+- Firestore şifresi doğruysa → Firebase Auth'a Firestore şifresi ile giriş yapılır
+- Eğer Firebase Auth'da kullanıcı varsa ama şifre farklıysa → authUid temizlenir ve hata verilir
+- **Önerilen**: "Tüm Kullanıcıları Güncelle" ile şifreleri senkronize edin
 
