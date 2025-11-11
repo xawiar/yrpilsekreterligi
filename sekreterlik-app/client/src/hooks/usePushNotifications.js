@@ -87,8 +87,14 @@ export const usePushNotifications = (userId = null) => {
 
     try {
       // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const registration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/'
+      });
       console.log('Service Worker registered:', registration);
+
+      // Wait for service worker to be ready
+      await navigator.serviceWorker.ready;
+      console.log('Service Worker ready');
 
       // Get existing subscription
       let existingSubscription = await registration.pushManager.getSubscription();
@@ -98,18 +104,37 @@ export const usePushNotifications = (userId = null) => {
         setIsSubscribed(true);
         setIsLoading(false);
         console.log('✅ Already subscribed to push notifications');
+        
+        // Still send to server to ensure it's registered
+        const userId = window.userId || null;
+        try {
+          await ApiService.subscribeToPush({
+            userId,
+            subscription: existingSubscription
+          });
+        } catch (e) {
+          console.warn('Error updating existing subscription on server:', e);
+        }
+        
         return true;
       }
 
       // Create new subscription
+      console.log('Creating new push subscription...');
       const newSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(currentVapidKey)
       });
+      console.log('Push subscription created:', newSubscription);
 
       // Send subscription to server
       // Get userId from auth context or pass as parameter
-      const userId = window.userId || null; // Will be set by caller
+      const userId = window.userId || null;
+      
+      if (!userId) {
+        console.warn('No userId available, subscription may not be linked to user');
+      }
+      
       const response = await ApiService.subscribeToPush({
         userId,
         subscription: newSubscription
@@ -122,11 +147,26 @@ export const usePushNotifications = (userId = null) => {
         console.log('✅ Successfully subscribed to push notifications');
         return true;
       } else {
-        throw new Error(response?.message || 'Subscription failed');
+        const errorMessage = response?.message || 'Subscription failed';
+        console.error('Subscription failed:', errorMessage, response);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
-      setError(error.message || 'Bildirim aboneliği başarısız');
+      
+      // More detailed error messages
+      let errorMessage = 'Bildirim aboneliği başarısız';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.name === 'NotAllowedError') {
+        errorMessage = 'Bildirim izni verilmedi. Lütfen tarayıcı ayarlarından izin verin.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Bu tarayıcı push bildirimlerini desteklemiyor.';
+      } else if (error.message.includes('VAPID')) {
+        errorMessage = 'VAPID anahtarı hatası. Lütfen sayfayı yenileyin.';
+      }
+      
+      setError(errorMessage);
       return false;
     } finally {
       setIsLoading(false);

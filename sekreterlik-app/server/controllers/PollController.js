@@ -1,5 +1,8 @@
 const db = require('../config/database');
 const Poll = require('../models/Poll');
+const PushSubscription = require('../models/PushSubscription');
+const PushNotificationService = require('../services/pushNotificationService');
+const Notification = require('../models/Notification');
 
 class PollController {
   // Get all polls
@@ -125,6 +128,62 @@ class PollController {
         updatedAt: newPoll.updated_at
       };
       
+      // Send push notifications to all subscribed users
+      try {
+        const allSubscriptions = await PushSubscription.getAll();
+        if (allSubscriptions.length > 0) {
+          const payload = PushNotificationService.createPayload(
+            'Yeni Anket/Oylama Oluşturuldu',
+            `${pollData.title} - Katılımınızı bekliyoruz!`,
+            '/icon-192x192.png',
+            '/badge-72x72.png',
+            { 
+              type: 'poll', 
+              pollId: result.lastID,
+              action: 'view'
+            },
+            null
+          );
+          
+          // Send to all subscribers
+          const subscriptions = allSubscriptions.map(sub => ({
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth
+            }
+          }));
+          
+          await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+          
+          // Save notification to database for all members
+          const Member = require('../models/Member');
+          const allMembers = await db.all('SELECT id FROM members WHERE archived = 0');
+          
+          for (const member of allMembers) {
+            await Notification.create({
+              memberId: member.id,
+              title: 'Yeni Anket/Oylama',
+              body: `${pollData.title} - Katılımınızı bekliyoruz!`,
+              type: 'poll',
+              data: JSON.stringify({ pollId: result.lastID }),
+              expiresAt: new Date(pollData.endDate).toISOString()
+            });
+          }
+          
+          // Update badge count (use first member as reference)
+          if (allMembers.length > 0) {
+            const unreadCount = await Notification.getUnreadCount(allMembers[0].id);
+            if (unreadCount > 0) {
+              payload.data.badgeCount = unreadCount;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error sending poll creation notification:', error);
+        // Don't fail the request if notification fails
+      }
+      
       res.status(201).json(processedPoll);
     } catch (error) {
       console.error('Error creating poll:', error);
@@ -179,6 +238,45 @@ class PollController {
         // Insert new vote
         const insertSql = 'INSERT INTO poll_votes (poll_id, member_id, option_index) VALUES (?, ?, ?)';
         await db.run(insertSql, [parseInt(id), parseInt(memberId), optionIndex]);
+      }
+      
+      // Send push notification to poll creator (if different from voter)
+      try {
+        const poll = await db.get('SELECT * FROM polls WHERE id = ?', [parseInt(id)]);
+        if (poll && poll.created_by && poll.created_by !== parseInt(memberId)) {
+          const creatorSubscriptions = await PushSubscription.getByUserId(poll.created_by.toString());
+          
+          if (creatorSubscriptions.length > 0) {
+            const options = JSON.parse(poll.options);
+            const selectedOption = options[optionIndex] || 'Bir seçenek';
+            
+            const payload = PushNotificationService.createPayload(
+              'Yeni Oylama Yapıldı',
+              `${poll.title} anketine yeni bir oy verildi: "${selectedOption}"`,
+              '/icon-192x192.png',
+              '/badge-72x72.png',
+              { 
+                type: 'poll_vote', 
+                pollId: parseInt(id),
+                action: 'view'
+              },
+              null
+            );
+            
+            const subscriptions = creatorSubscriptions.map(sub => ({
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth
+              }
+            }));
+            
+            await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+          }
+        }
+      } catch (error) {
+        console.error('Error sending vote notification:', error);
+        // Don't fail the request if notification fails
       }
       
       res.json({ message: 'Oyunuz kaydedildi' });

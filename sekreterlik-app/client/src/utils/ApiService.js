@@ -2103,25 +2103,60 @@ class ApiService {
   }
 
   static async subscribeToPush(subscriptionData) {
-    // If userId is not provided, try to get it from localStorage or context
+    // If userId is not provided, try to get it from localStorage
     if (!subscriptionData.userId) {
       try {
-        const authData = localStorage.getItem('auth');
-        if (authData) {
-          const parsed = JSON.parse(authData);
-          subscriptionData.userId = parsed.user?.id || parsed.user?.memberId;
+        // Try to get from 'user' key (AuthContext stores it there)
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          subscriptionData.userId = user?.id || user?.memberId || user?.uid;
+        }
+        
+        // Also try from window.userId (set by usePushNotifications hook)
+        if (!subscriptionData.userId && typeof window !== 'undefined' && window.userId) {
+          subscriptionData.userId = window.userId;
         }
       } catch (e) {
         console.warn('Could not get userId from localStorage:', e);
       }
     }
     
-    const response = await fetch(`${API_BASE_URL}/push-subscriptions/subscribe`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(subscriptionData),
-    });
-    return response.json();
+    // Validate subscription data
+    if (!subscriptionData.subscription || !subscriptionData.subscription.endpoint) {
+      return {
+        success: false,
+        message: 'Subscription verisi eksik veya geçersiz'
+      };
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/subscribe`, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(subscriptionData),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Bildirim aboneliği başarısız'
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error subscribing to push:', error);
+      return {
+        success: false,
+        message: error.message || 'Bildirim aboneliği sırasında hata oluştu'
+      };
+    }
   }
 
   static async unsubscribeFromPush() {
