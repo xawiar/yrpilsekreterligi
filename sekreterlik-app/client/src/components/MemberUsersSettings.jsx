@@ -313,10 +313,20 @@ const MemberUsersSettings = () => {
             password = decryptData(password);
           }
           
+          // Şifreyi normalize et (sadece rakamlar)
+          password = (password || '').toString().replace(/\D/g, '');
+          
           if (!password) {
             errors.push(`${user.username}: Şifre bulunamadı`);
             errorCount++;
             continue;
+          }
+          
+          // Firebase Auth minimum 6 karakter şifre ister
+          // Eğer şifre 6 karakterden kısa ise, başına "0" ekle
+          if (password.length < 6) {
+            password = password.padStart(6, '0');
+            console.log(`⚠️ Password too short for ${user.username}, padded to 6 characters`);
           }
           
           // Email formatına çevir
