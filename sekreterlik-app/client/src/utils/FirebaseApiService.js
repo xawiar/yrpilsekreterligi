@@ -611,26 +611,60 @@ class FirebaseApiService {
         updateData.password = password;
       }
       
+      // Mevcut password'u al ve normalize et (karşılaştırma için)
+      let oldPassword = memberUser.password || '';
+      if (oldPassword && typeof oldPassword === 'string' && oldPassword.startsWith('U2FsdGVkX1')) {
+        oldPassword = decryptData(oldPassword);
+      }
+      const normalizedOldPassword = oldPassword.toString().replace(/\D/g, '');
+      const normalizedNewPassword = password ? password.toString().replace(/\D/g, '') : normalizedOldPassword;
+      const passwordChanged = normalizedOldPassword !== normalizedNewPassword;
+
       // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa)
       if (memberUser.authUid) {
         try {
-          // Client-side'dan başka bir kullanıcının şifresini/email'ini direkt güncelleyemeyiz
-          // Bu yüzden şimdilik sadece Firestore'u güncelliyoruz
-          // Login sırasında şifre/username kontrolü yapılıp, Firebase Auth'da güncelleme yapılacak
-          console.log('🔄 Updating member user in Firestore:', {
+          console.log('🔄 Updating member user in Firestore and Firebase Auth:', {
             id,
             oldUsername,
             newUsername: username,
             usernameChanged,
-            passwordUpdated: !!(password && password.trim()),
+            passwordChanged,
             authUid: memberUser.authUid
           });
-          console.log('⚠️ Note: Firebase Auth will be updated on next login if password/username changed');
           
           // Eğer username değiştiyse, authUid'i temizle ki login sırasında yeni email ile oluşturulsun
           if (usernameChanged) {
             console.log('⚠️ Username changed, clearing authUid to force re-creation on next login');
             updateData.authUid = null; // Login sırasında yeni email ile oluşturulacak
+          }
+          
+          // Eğer şifre değiştiyse, Firebase Auth şifresini güncelle
+          if (passwordChanged && normalizedNewPassword) {
+            console.log('🔄 Updating Firebase Auth password for user:', memberUser.authUid);
+            try {
+              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+              const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  authUid: memberUser.authUid,
+                  password: normalizedNewPassword
+                })
+              });
+              
+              if (response.ok) {
+                console.log('✅ Firebase Auth password updated successfully');
+              } else {
+                const errorData = await response.json();
+                console.error('❌ Firebase Auth password update failed:', errorData);
+                // Hata olsa bile devam et (Firestore güncellemesi başarılı)
+              }
+            } catch (firebaseError) {
+              console.error('❌ Firebase Auth password update error:', firebaseError);
+              // Hata olsa bile devam et (Firestore güncellemesi başarılı)
+            }
           }
         } catch (authError) {
           console.warn('⚠️ Firebase Auth update preparation failed (non-critical):', authError);
@@ -639,6 +673,11 @@ class FirebaseApiService {
       } else {
         // Auth UID yoksa, kullanıcı ilk login olduğunda oluşturulacak
         console.log('ℹ️ No authUid found, user will be created in Firebase Auth on first login');
+      }
+      
+      // Password'u normalize edilmiş haliyle kaydet
+      if (password && password.trim()) {
+        updateData.password = normalizedNewPassword;
       }
 
       // Firestore'u güncelle (encrypt = false - password şifrelenmemeli)
