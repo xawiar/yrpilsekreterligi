@@ -25,6 +25,7 @@ import Footer from '../components/Footer';
 import PollVotingComponent from '../components/PollVotingComponent';
 import PollResultsComponent from '../components/PollResultsComponent';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import Modal from '../components/Modal';
 
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
