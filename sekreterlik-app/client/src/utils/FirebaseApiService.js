@@ -119,16 +119,24 @@ class FirebaseApiService {
               });
             }
             
-            console.log('🔍 Password comparison:', {
+            // Password'ları normalize et (sadece rakamlar) - karşılaştırma için
+            const normalizedInputPassword = password.toString().replace(/\D/g, '');
+            const normalizedDecryptedPassword = (decryptedPassword || '').toString().replace(/\D/g, '');
+            const normalizedMemberUserPassword = (memberUser.password || '').toString().replace(/\D/g, '');
+            
+            console.log('🔍 Password comparison (normalized):', {
+              normalizedInputPassword,
+              normalizedDecryptedPassword,
+              normalizedMemberUserPassword,
               decryptedPassword,
               memberUserPassword: memberUser.password,
               inputPassword: password,
-              decryptedMatches: decryptedPassword === password,
-              originalMatches: memberUser.password === password
+              matchesDecrypted: normalizedDecryptedPassword === normalizedInputPassword,
+              matchesOriginal: normalizedMemberUserPassword === normalizedInputPassword
             });
             
-            // Şifre doğru mu kontrol et (decrypt edilmiş password veya orijinal password ile karşılaştır)
-            if (decryptedPassword === password || memberUser.password === password) {
+            // Şifre doğru mu kontrol et (normalize edilmiş password ile karşılaştır)
+            if (normalizedDecryptedPassword === normalizedInputPassword || normalizedMemberUserPassword === normalizedInputPassword) {
               // Şifre doğru, Firebase Auth ile senkronize et
               // ÖNEMLİ: Firebase Auth'a kaydederken Firestore'daki şifreyi (telefon numarası) kullan
               // Kullanıcının girdiği password değil, Firestore'daki decryptedPassword kullan
@@ -1142,8 +1150,7 @@ class FirebaseApiService {
         try {
           const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS, {
             where: [
-              { field: 'userType', operator: '==', value: 'member' },
-              { field: 'memberId', operator: '==', value: String(id) }
+              { field: 'userType', operator: '==', value: 'member' }
             ]
           }, false);
           
@@ -1153,9 +1160,9 @@ class FirebaseApiService {
           });
           
           if (memberUser) {
-            // Yeni username ve password'u hesapla
+            // Yeni username ve password'u hesapla (normalize edilmiş)
             const newUsername = newTc;
-            const newPassword = newPhone;
+            const newPassword = newPhone; // Zaten normalize edilmiş (sadece rakamlar)
             
             // Member user'ı güncelle
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
@@ -1166,6 +1173,7 @@ class FirebaseApiService {
             }, false); // encrypt = false
             
             console.log(`✅ Member user updated automatically for member ID ${id} (TC or phone changed)`);
+            console.log(`   Username: ${newUsername}, Password: ${newPassword.substring(0, 3)}***`);
           } else {
             // Member user yoksa oluştur
             if (newTc && newPhone) {
