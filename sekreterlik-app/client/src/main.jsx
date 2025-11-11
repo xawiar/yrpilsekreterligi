@@ -63,7 +63,13 @@ console.warn = (...args) => {
 };
 
 // Also filter console.log for network errors (some libraries log errors via console.log)
+// Production'da console.log'ları tamamen kaldır (performans ve güvenlik için)
 console.log = (...args) => {
+  // Production'da hiçbir console.log gösterilmez
+  if (import.meta.env.PROD) {
+    return; // Silently ignore all console.log in production
+  }
+  
   const message = args.join(' ');
   if (USE_FIREBASE && (
     message.includes('ERR_CONNECTION_REFUSED') ||
@@ -74,6 +80,14 @@ console.log = (...args) => {
   }
   originalConsoleLog.apply(console, args);
 };
+
+// Production'da console.warn ve console.info'yu da kaldır
+if (import.meta.env.PROD) {
+  console.warn = () => {}; // Production'da warn'ları kaldır
+  console.info = () => {}; // Production'da info'ları kaldır
+  console.debug = () => {}; // Production'da debug'ları kaldır
+  // console.error tutuluyor - Sentry için gerekli
+}
 
 // Filter window error events for localhost connection errors
 const originalErrorHandler = window.onerror;
