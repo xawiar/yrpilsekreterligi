@@ -70,7 +70,6 @@ const Navbar = () => {
       </div>
     </nav>
   );
-};
-
-export default Navbar;
+  };
+  
 export default Navbar;
