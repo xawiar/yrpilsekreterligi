@@ -98,8 +98,15 @@ class FirebaseApiService {
             // Eğer hala encrypted görünüyorsa, manuel decrypt et
             let decryptedPassword = memberUser.password;
             
+            // ÖNEMLİ: Member ID ile eşleştirme yap
+            const memberId = memberUser.memberId || memberUser.member_id;
+            const memberIdEmail = memberId ? `${memberId}@ilsekreterlik.local` : email;
+            
             console.log('🔍 Login - Member user found:', {
               username: memberUser.username,
+              memberId,
+              memberIdEmail,
+              originalEmail: email,
               passwordFromDB: memberUser.password,
               passwordType: typeof memberUser.password,
               passwordLength: memberUser.password?.length,
