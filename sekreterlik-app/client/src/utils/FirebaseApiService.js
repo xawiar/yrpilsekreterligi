@@ -722,8 +722,12 @@ class FirebaseApiService {
 
           if (existingUser) {
             // Update existing user - TC ve telefon numarasına göre güncelle
-            const usernameChanged = existingUser.username !== username;
-            const passwordChanged = existingUser.password !== password;
+            // Password'ları normalize et (karşılaştırma için)
+            const existingUsername = (existingUser.username || '').toString().replace(/\D/g, '');
+            const existingPassword = (existingUser.password || '').toString().replace(/\D/g, '');
+            
+            const usernameChanged = existingUsername !== username;
+            const passwordChanged = existingPassword !== password;
 
             // Debug log for specific TC
             if (username === '26413642446') {
@@ -734,8 +738,10 @@ class FirebaseApiService {
                 memberPhone: phone,
                 normalizedUsername: username,
                 normalizedPassword: password,
-                existingUsername: existingUser.username,
-                existingPassword: existingUser.password,
+                existingUsername: existingUsername,
+                existingPassword: existingPassword,
+                existingUsernameRaw: existingUser.username,
+                existingPasswordRaw: existingUser.password ? `${existingUser.password.substring(0, 3)}***` : 'N/A',
                 usernameChanged,
                 passwordChanged
               });
