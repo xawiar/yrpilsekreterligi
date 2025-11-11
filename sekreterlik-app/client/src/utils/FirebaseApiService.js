@@ -1197,23 +1197,49 @@ class FirebaseApiService {
             const newUsername = newTc;
             const newPassword = newPhone; // Zaten normalize edilmiş (sadece rakamlar)
             
-            // ÖNEMLİ: TC veya telefon değiştiyse, authUid'yi temizle
-            // Böylece bir sonraki login'de yeni şifre ile Firebase Auth kullanıcısı oluşturulacak/güncellenecek
-            // Client-side'dan başka bir kullanıcının Firebase Auth şifresini direkt güncelleyemeyiz
+            // ÖNEMLİ: TC veya telefon değiştiyse, Firebase Auth şifresini güncelle
             const shouldClearAuthUid = tcChanged || phoneChanged;
             
             // Member user'ı güncelle
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               username: newUsername,
               password: newPassword,
-              // TC veya telefon değiştiyse, authUid'yi temizle (bir sonraki login'de yeni şifre ile oluşturulsun)
-              ...(shouldClearAuthUid ? { authUid: null } : {})
+              // Eğer TC değiştiyse, authUid'yi temizle (yeni email ile oluşturulsun)
+              // Eğer sadece telefon değiştiyse, authUid'yi koru ama şifreyi güncelle
+              ...(tcChanged ? { authUid: null } : {})
             }, false); // encrypt = false
             
             console.log(`✅ Member user updated automatically for member ID ${id} (TC or phone changed)`);
             console.log(`   Username: ${newUsername}, Password: ${newPassword.substring(0, 3)}***`);
-            if (shouldClearAuthUid) {
-              console.log(`   ⚠️ authUid cleared - user will need to login again with new password`);
+            
+            // Firebase Auth şifresini güncelle (eğer authUid varsa ve şifre değiştiyse)
+            if (memberUser.authUid && phoneChanged) {
+              try {
+                // Server-side endpoint'e istek gönder (Firebase Admin SDK ile şifre güncellemesi için)
+                const response = await fetch('/api/auth/update-firebase-auth-password', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    authUid: memberUser.authUid,
+                    password: newPassword
+                  })
+                });
+                
+                if (response.ok) {
+                  console.log(`✅ Firebase Auth password updated for member ID ${id} (authUid: ${memberUser.authUid})`);
+                } else {
+                  const errorData = await response.json();
+                  console.error(`❌ Firebase Auth password update failed for member ID ${id}:`, errorData);
+                  // Hata olsa bile devam et (Firestore güncellemesi başarılı)
+                }
+              } catch (firebaseError) {
+                console.error(`❌ Firebase Auth password update error for member ID ${id}:`, firebaseError);
+                // Hata olsa bile devam et (Firestore güncellemesi başarılı)
+              }
+            } else if (tcChanged) {
+              console.log(`   ⚠️ TC changed - authUid cleared, user will need to login again with new username`);
             }
           } else {
             // Member user yoksa oluştur
