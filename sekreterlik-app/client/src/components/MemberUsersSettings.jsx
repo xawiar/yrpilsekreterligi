@@ -369,9 +369,16 @@ const MemberUsersSettings = () => {
               // Firebase Auth'dan kullanıcıyı bulamayız, bu yüzden sadece devam ediyoruz
               successCount++;
             } else {
-              errors.push(`${user.username}: ${authError.message}`);
+              const errorMsg = `${user.username}: ${authError.code || 'Unknown error'} - ${authError.message || 'Firebase Auth error'}`;
+              errors.push(errorMsg);
               errorCount++;
-              console.error(`❌ Error creating Firebase Auth user for ${user.username}:`, authError);
+              console.error(`❌ Error creating Firebase Auth user for ${user.username}:`, {
+                code: authError.code,
+                message: authError.message,
+                email,
+                passwordLength: password.length,
+                passwordPreview: password.substring(0, 3) + '***'
+              });
             }
           }
         } catch (error) {
