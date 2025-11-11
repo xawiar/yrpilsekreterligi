@@ -240,28 +240,36 @@ const MemberDashboardPage = () => {
 
       // Fetch notifications
       try {
+        console.log('🔔 Fetching notifications for memberId:', memberId);
         const notificationsResponse = await ApiService.getNotifications(memberId);
+        console.log('📬 Notifications response:', notificationsResponse);
         if (notificationsResponse.success) {
-          setNotifications(notificationsResponse.notifications || []);
+          const fetchedNotifications = notificationsResponse.notifications || [];
+          console.log(`✅ Loaded ${fetchedNotifications.length} notifications`);
+          setNotifications(fetchedNotifications);
+        } else {
+          console.warn('⚠️ Failed to fetch notifications:', notificationsResponse);
         }
         
         const unreadCountResponse = await ApiService.getUnreadNotificationCount(memberId);
         if (unreadCountResponse.success) {
-          setUnreadNotificationCount(unreadCountResponse.count || 0);
+          const unreadCount = unreadCountResponse.count || 0;
+          console.log(`📊 Unread notification count: ${unreadCount}`);
+          setUnreadNotificationCount(unreadCount);
           
           // Update app badge
-          if ('setAppBadge' in navigator && unreadCountResponse.count > 0) {
-            navigator.setAppBadge(unreadCountResponse.count).catch(err => {
+          if ('setAppBadge' in navigator && unreadCount > 0) {
+            navigator.setAppBadge(unreadCount).catch(err => {
               console.warn('Could not set app badge:', err);
             });
-          } else if ('clearAppBadge' in navigator && unreadCountResponse.count === 0) {
+          } else if ('clearAppBadge' in navigator && unreadCount === 0) {
             navigator.clearAppBadge().catch(err => {
               console.warn('Could not clear app badge:', err);
             });
           }
         }
       } catch (err) {
-        console.error('Error fetching notifications:', err);
+        console.error('❌ Error fetching notifications:', err);
       }
 
       // Fetch regions/positions for forms
