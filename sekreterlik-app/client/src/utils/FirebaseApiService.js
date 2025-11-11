@@ -738,32 +738,39 @@ class FirebaseApiService {
           });
           
           if (shouldUpdatePassword) {
-            console.log('🔄 Updating Firebase Auth password for user:', {
-              authUid: authUid,
-              oldPassword: normalizedOldPassword.substring(0, 3) + '***',
-              newPassword: normalizedNewPassword.substring(0, 3) + '***',
-              newPasswordLength: normalizedNewPassword.length,
-              passwordChanged,
-              passwordProvided: !!(password && password.trim())
-            });
-            try {
-              // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
-              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-                (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
-              
-              console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-password`);
-              
-              const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  authUid: authUid,
-                  email: email, // Email de gönder (authUid yoksa email ile bulunabilir)
-                  password: normalizedNewPassword
-                })
+            // Eğer authUid yoksa ve email ile de bulunamadıysa, hata göster
+            if (!authUid) {
+              console.error('❌ Cannot update Firebase Auth password: authUid is null and user not found by email:', email);
+              // Hata mesajı göster ama Firestore güncellemesi devam edecek
+              console.warn('⚠️ Firebase Auth password will not be updated, but Firestore will be updated');
+              // Devam et - Firestore güncellemesi yapılacak
+            } else {
+              console.log('🔄 Updating Firebase Auth password for user:', {
+                authUid: authUid,
+                oldPassword: normalizedOldPassword.substring(0, 3) + '***',
+                newPassword: normalizedNewPassword.substring(0, 3) + '***',
+                newPasswordLength: normalizedNewPassword.length,
+                passwordChanged,
+                passwordProvided: !!(password && password.trim())
               });
+              try {
+                // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
+                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+                  (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
+                
+                console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-password`);
+                
+                const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    authUid: authUid,
+                    email: email, // Email de gönder (authUid yoksa email ile bulunabilir)
+                    password: normalizedNewPassword
+                  })
+                });
               
               console.log('📥 Response status:', response.status, response.statusText);
               
@@ -818,6 +825,7 @@ class FirebaseApiService {
                 stack: firebaseError.stack
               });
               // Hata olsa bile devam et (Firestore güncellemesi başarılı)
+            }
             }
           } else {
             console.log('ℹ️ Password not changed, skipping Firebase Auth update:', {

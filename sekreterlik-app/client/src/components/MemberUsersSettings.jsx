@@ -114,7 +114,12 @@ const MemberUsersSettings = () => {
       );
       
       if (response.success) {
-        setMessage('Kullanıcı bilgileri başarıyla güncellendi');
+        // Firebase Auth güncellemesi başarılı mı kontrol et
+        let message = 'Kullanıcı bilgileri başarıyla güncellendi';
+        if (response.firebaseAuthUpdated === false) {
+          message += '\n⚠️ Not: Firebase Auth şifresi güncellenemedi (kullanıcı Firebase Auth\'da bulunamadı). Kullanıcı bir sonraki login\'de yeni şifre ile giriş yapabilir.';
+        }
+        setMessage(message);
         setMessageType('success');
         setEditingUser(null);
         setEditForm({ username: '', password: '' });
@@ -125,7 +130,7 @@ const MemberUsersSettings = () => {
       }
     } catch (error) {
       console.error('Error updating user:', error);
-      setMessage('Kullanıcı güncellenirken hata oluştu');
+      setMessage('Kullanıcı güncellenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
       setMessageType('error');
     }
   };
