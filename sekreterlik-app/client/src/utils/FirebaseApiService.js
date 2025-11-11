@@ -638,11 +638,33 @@ class FirebaseApiService {
       // Eğer authUid yoksa ama Firebase Auth'da kullanıcı olabilir, email ile bulmayı dene
       let authUid = memberUser.authUid;
       if (!authUid && username) {
-        console.log('🔍 No authUid found, trying to find user in Firebase Auth by email:', email);
+        console.log('🔍 No authUid found in Firestore, trying to find user in Firebase Auth by email:', email);
         try {
-          // Firebase Auth'da kullanıcıyı email ile bul (server-side endpoint gerekir)
-          // Şimdilik sadece log'la, sonra endpoint eklenebilir
-          console.log('⚠️ authUid not found in Firestore, Firebase Auth lookup would require server-side endpoint');
+          // Server-side endpoint ile Firebase Auth'da kullanıcıyı email ile bul
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+            (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
+          
+          const findResponse = await fetch(`${API_BASE_URL}/auth/find-firebase-auth-user`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email })
+          });
+          
+          if (findResponse.ok) {
+            const findData = await findResponse.json();
+            if (findData.success && findData.authUid) {
+              authUid = findData.authUid;
+              console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
+              // Firestore'daki authUid'yi güncelle
+              updateData.authUid = authUid;
+            } else {
+              console.log('ℹ️ User not found in Firebase Auth by email:', email);
+            }
+          } else {
+            console.warn('⚠️ Could not find Firebase Auth user by email:', await findResponse.text());
+          }
         } catch (error) {
           console.warn('⚠️ Could not lookup Firebase Auth user:', error);
         }
