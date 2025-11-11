@@ -78,21 +78,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
           'ui-vendor': ['bootstrap']
-        },
-        // Production'da console.log'ları kaldır
-        plugins: process.env.NODE_ENV === 'production' ? [
-          {
-            name: 'remove-console',
-            transform(code, id) {
-              if (process.env.NODE_ENV === 'production') {
-                return {
-                  code: code.replace(/console\.(log|warn|info|debug)\([^)]*\);?/g, ''),
-                  map: null
-                };
-              }
-            }
-          }
-        ] : []
+        }
       }
     }
   },
