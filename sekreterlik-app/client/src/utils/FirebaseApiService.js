@@ -603,12 +603,17 @@ class FirebaseApiService {
         username,
         passwordLength: password?.length,
         memberUserAuthUid: memberUser.authUid,
-        memberUserUsername: memberUser.username
+        memberUserUsername: memberUser.username,
+        memberId: memberUser.memberId || memberUser.member_id
       });
 
       const updateData = { username };
       const oldUsername = memberUser.username;
-      const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
+      
+      // ÖNEMLİ: Member ID ile eşleştirme yap
+      // Email formatı: memberId@ilsekreterlik.local (TC değil, member ID)
+      const memberId = memberUser.memberId || memberUser.member_id || id;
+      const email = `${memberId}@ilsekreterlik.local`;
       const oldEmail = oldUsername.includes('@') ? oldUsername : `${oldUsername}@ilsekreterlik.local`;
       
       // Username değiştiyse, email değişmiş olabilir
@@ -641,12 +646,16 @@ class FirebaseApiService {
         newPasswordLength: normalizedNewPassword.length
       });
 
-      // Eğer authUid yoksa ama Firebase Auth'da kullanıcı olabilir, email ile bulmayı dene
+      // ÖNEMLİ: Member ID ile eşleştirme yap
+      // Email formatı: memberId@ilsekreterlik.local (TC değil, member ID)
       let authUid = memberUser.authUid;
-      if (!authUid && username) {
-        console.log('🔍 No authUid found in Firestore, trying to find user in Firebase Auth by email:', email);
+      
+      // Eğer authUid yoksa, member ID ile email oluştur ve Firebase Auth'da bul
+      if (!authUid && memberId) {
+        const memberIdEmail = `${memberId}@ilsekreterlik.local`;
+        console.log('🔍 No authUid found in Firestore, trying to find user in Firebase Auth by member ID email:', memberIdEmail);
         try {
-          // Server-side endpoint ile Firebase Auth'da kullanıcıyı email ile bul
+          // Server-side endpoint ile Firebase Auth'da kullanıcıyı member ID email ile bul
           const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
             (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
           
@@ -657,7 +666,7 @@ class FirebaseApiService {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email: memberIdEmail })
           });
           
           console.log('📥 Find response status:', findResponse.status, findResponse.statusText);
@@ -683,24 +692,36 @@ class FirebaseApiService {
               
               if (findData.success && findData.authUid) {
                 authUid = findData.authUid;
-                console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
+                console.log('✅ Found Firebase Auth user by member ID email, authUid:', authUid);
                 // Firestore'daki authUid'yi güncelle
                 updateData.authUid = authUid;
+                // Email'i de güncelle (member ID email formatına)
+                email = memberIdEmail;
               } else {
-                console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
-                // Kullanıcı bulunamadı ama şifre güncellemesi yapılabilir (email ile)
-                // Email ile password update endpoint'ine gönderilebilir
+                console.log('ℹ️ User not found in Firebase Auth by member ID email:', memberIdEmail, findData);
+                // Kullanıcı bulunamadı, member ID email ile password update endpoint'ine gönderilecek
+                email = memberIdEmail;
               }
             } catch (findError) {
               console.error('❌ Error parsing find response:', findError);
+              // Hata olsa bile member ID email ile devam et
+              email = `${memberId}@ilsekreterlik.local`;
             }
           } else {
             const errorText = await findResponse.text();
-            console.warn('⚠️ Could not find Firebase Auth user by email:', errorText);
+            console.warn('⚠️ Could not find Firebase Auth user by member ID email:', errorText);
+            // Hata olsa bile member ID email ile devam et
+            email = `${memberId}@ilsekreterlik.local`;
           }
         } catch (error) {
           console.warn('⚠️ Could not lookup Firebase Auth user:', error);
+          // Hata olsa bile member ID email ile devam et
+          email = `${memberId}@ilsekreterlik.local`;
         }
+      } else if (!authUid && username) {
+        // Fallback: Eğer member ID yoksa, username (TC) ile email oluştur
+        email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
+        console.log('⚠️ No memberId found, using username (TC) for email:', email);
       }
 
       // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa) VEYA email ile bulunabilirse
