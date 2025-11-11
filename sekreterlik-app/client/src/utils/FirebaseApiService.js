@@ -4761,6 +4761,46 @@ class FirebaseApiService {
       };
       
       const docId = await FirebaseService.create(this.COLLECTIONS.POLLS, null, poll, false);
+      
+      // In-app notification oluştur (tüm aktif üyelere)
+      try {
+        const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+          where: [{ field: 'archived', operator: '==', value: false }]
+        }, false);
+        
+        const notificationData = {
+          title: 'Yeni Anket/Oylama Oluşturuldu',
+          body: `${pollData.title} - Katılımınızı bekliyoruz!`,
+          type: 'poll',
+          data: JSON.stringify({
+            pollId: docId,
+            pollTitle: pollData.title
+          }),
+          read: false,
+          expiresAt: pollData.endDate 
+            ? new Date(pollData.endDate).toISOString() // Poll end date'de expire
+            : null
+        };
+        
+        // Her üye için notification oluştur
+        for (const member of allMembers) {
+          await FirebaseService.create(
+            this.COLLECTIONS.NOTIFICATIONS,
+            null,
+            {
+              ...notificationData,
+              memberId: String(member.id)
+            },
+            false
+          );
+        }
+        
+        console.log(`✅ In-app notification created for ${allMembers.length} members`);
+      } catch (notificationError) {
+        console.error('Error creating in-app notification (non-blocking):', notificationError);
+        // Notification hatası anket oluşturmayı engellemez
+      }
+      
       return { ...poll, id: docId };
     } catch (error) {
       console.error('Error creating poll:', error);
