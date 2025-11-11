@@ -751,7 +751,8 @@ class FirebaseApiService {
               if (existingUser.authUid && passwordChanged) {
                 try {
                   // Server-side endpoint'e istek gönder (Firebase Admin SDK ile şifre güncellemesi için)
-                  const response = await fetch('/api/auth/update-firebase-auth-password', {
+                  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                  const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -1216,7 +1217,8 @@ class FirebaseApiService {
             if (memberUser.authUid && phoneChanged) {
               try {
                 // Server-side endpoint'e istek gönder (Firebase Admin SDK ile şifre güncellemesi için)
-                const response = await fetch('/api/auth/update-firebase-auth-password', {
+                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
