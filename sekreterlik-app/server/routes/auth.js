@@ -670,19 +670,26 @@ router.post('/find-firebase-auth-user', async (req, res) => {
     }
 
     try {
+      console.log('🔍 Finding Firebase Auth user by email:', email);
       const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
-      res.json({
+      console.log('✅ Found Firebase Auth user:', userRecord.uid, userRecord.email);
+      const responseData = {
         success: true,
         authUid: userRecord.uid,
         email: userRecord.email
-      });
+      };
+      console.log('📤 Sending find response:', responseData);
+      res.status(200).json(responseData);
     } catch (firebaseError) {
       if (firebaseError.code === 'auth/user-not-found') {
-        res.json({
+        console.log('ℹ️ User not found in Firebase Auth by email:', email);
+        const responseData = {
           success: false,
           message: 'Kullanıcı bulunamadı',
           authUid: null
-        });
+        };
+        console.log('📤 Sending find response (not found):', responseData);
+        res.status(200).json(responseData);
       } else {
         throw firebaseError;
       }
@@ -773,11 +780,13 @@ router.post('/update-firebase-auth-password', async (req, res) => {
       console.log('✅ Firebase Auth password updated successfully for authUid:', authUid);
       
       // Response'u düzgün gönder
-      res.status(200).json({
+      const responseData = {
         success: true,
         message: 'Firebase Auth şifresi güncellendi',
         authUid: authUid
-      });
+      };
+      console.log('📤 Sending password update response:', responseData);
+      res.status(200).json(responseData);
     } catch (firebaseError) {
       console.error('❌ Firebase Auth password update error:', {
         code: firebaseError.code,
