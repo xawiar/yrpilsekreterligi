@@ -729,24 +729,6 @@ class FirebaseApiService {
             const usernameChanged = existingUsername !== username;
             const passwordChanged = existingPassword !== password;
 
-            // Debug log for specific TC
-            if (username === '26413642446') {
-              console.log('🔍 DEBUG - TC 26413642446:', {
-                memberId,
-                memberName: member.name,
-                memberTC: tc,
-                memberPhone: phone,
-                normalizedUsername: username,
-                normalizedPassword: password,
-                existingUsername: existingUsername,
-                existingPassword: existingPassword,
-                existingUsernameRaw: existingUser.username,
-                existingPasswordRaw: existingUser.password ? `${existingUser.password.substring(0, 3)}***` : 'N/A',
-                usernameChanged,
-                passwordChanged
-              });
-            }
-
             if (usernameChanged || passwordChanged) {
               await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, existingUser.id, {
                 username,
@@ -756,22 +738,6 @@ class FirebaseApiService {
               }, false); // encrypt = false (password zaten normalize edilmiş)
 
               results.memberUsers.updated++;
-              console.log(`✅ Updated member user for member ID ${memberId} (username: ${username}, password: ${password.substring(0, 3)}***)`);
-              
-              // Debug log for specific TC after update
-              if (username === '26413642446') {
-                console.log('✅ DEBUG - TC 26413642446 updated successfully:', {
-                  newUsername: username,
-                  newPassword: password
-                });
-              }
-            } else {
-              console.log(`ℹ️ Member user for member ID ${memberId} already up to date`);
-              
-              // Debug log for specific TC
-              if (username === '26413642446') {
-                console.log('ℹ️ DEBUG - TC 26413642446 already up to date');
-              }
             }
           } else {
             // Create new user if doesn't exist
@@ -1156,7 +1122,74 @@ class FirebaseApiService {
 
   static async updateMember(id, memberData) {
     try {
+      // Önce eski üye bilgilerini al (TC ve telefon karşılaştırması için)
+      const oldMember = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, id, true); // decrypt = true
+      
+      // Üyeyi güncelle
       await FirebaseService.update(this.COLLECTIONS.MEMBERS, id, memberData);
+      
+      // TC veya telefon numarası değiştiyse, member_user'ı da güncelle
+      const oldTc = (oldMember?.tc || '').toString().replace(/\D/g, '');
+      const oldPhone = (oldMember?.phone || '').toString().replace(/\D/g, '');
+      const newTc = (memberData.tc || '').toString().replace(/\D/g, '');
+      const newPhone = (memberData.phone || '').toString().replace(/\D/g, '');
+      
+      const tcChanged = oldTc !== newTc;
+      const phoneChanged = oldPhone !== newPhone;
+      
+      if (tcChanged || phoneChanged) {
+        // Member user'ı bul ve güncelle
+        try {
+          const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS, {
+            where: [
+              { field: 'userType', operator: '==', value: 'member' },
+              { field: 'memberId', operator: '==', value: String(id) }
+            ]
+          }, false);
+          
+          const memberUser = allMemberUsers.find(u => {
+            const userId = u.memberId || u.member_id;
+            return String(userId) === String(id);
+          });
+          
+          if (memberUser) {
+            // Yeni username ve password'u hesapla
+            const newUsername = newTc;
+            const newPassword = newPhone;
+            
+            // Member user'ı güncelle
+            await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+              username: newUsername,
+              password: newPassword,
+              // Eğer TC değiştiyse, authUid'yi temizle (yeni email ile oluşturulsun)
+              ...(tcChanged ? { authUid: null } : {})
+            }, false); // encrypt = false
+            
+            console.log(`✅ Member user updated automatically for member ID ${id} (TC or phone changed)`);
+          } else {
+            // Member user yoksa oluştur
+            if (newTc && newPhone) {
+              await FirebaseService.create(
+                this.COLLECTIONS.MEMBER_USERS,
+                null,
+                {
+                  memberId: String(id),
+                  username: newTc,
+                  password: newPhone,
+                  userType: 'member',
+                  isActive: true
+                },
+                false // encrypt = false
+              );
+              console.log(`✅ Member user created automatically for member ID ${id}`);
+            }
+          }
+        } catch (userError) {
+          console.error('Error updating member user (non-critical):', userError);
+          // Member user güncelleme hatası ana işlemi durdurmamalı
+        }
+      }
+      
       return { success: true, message: 'Üye güncellendi' };
     } catch (error) {
       console.error('Update member error:', error);
