@@ -186,22 +186,28 @@ function AppContent() {
               </PublicRoute>
             } 
           />
-          <Route 
-            path="/create-admin" 
-            element={<CreateAdminPage />} 
-          />
-          <Route 
-            path="/check-admin" 
-            element={<CheckAdminPage />} 
-          />
-          <Route 
-            path="/debug-firebase" 
-            element={<DebugFirebasePage />} 
-          />
-          <Route 
-            path="/firebase-test" 
-            element={<FirebaseTestPage />} 
-          />
+          {/* Debug/Admin Routes - Only accessible in development or by admin */}
+          {import.meta.env.DEV && (
+            <>
+              <Route 
+                path="/create-admin" 
+                element={<CreateAdminPage />} 
+              />
+              <Route 
+                path="/check-admin" 
+                element={<CheckAdminPage />} 
+              />
+              <Route 
+                path="/debug-firebase" 
+                element={<DebugFirebasePage />} 
+              />
+              <Route 
+                path="/firebase-test" 
+                element={<FirebaseTestPage />} 
+              />
+            </>
+          )}
+          {/* Admin-only routes (accessible in production for admins) */}
           <Route 
             path="/clear-all-data" 
             element={

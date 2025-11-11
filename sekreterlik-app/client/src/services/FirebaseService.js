@@ -252,9 +252,14 @@ class FirebaseService {
         q = query(q, orderBy(options.orderBy.field, options.orderBy.direction || 'asc'));
       }
       
-      // Limit
+      // Limit - Default: 50 (Firebase query optimization)
       if (options.limit) {
         q = query(q, limit(options.limit));
+      } else {
+        // Production'da varsayılan limit (performans için)
+        if (import.meta.env.PROD) {
+          q = query(q, limit(50));
+        }
       }
       
       const querySnapshot = await getDocs(q);
