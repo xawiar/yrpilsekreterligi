@@ -1149,18 +1149,23 @@ class FirebaseApiService {
               continue;
             }
             
-            await FirebaseService.create(
+            const normalizedMemberId = String(memberId).trim();
+            console.log(`📝 Creating notification for member: ${normalizedMemberId}`);
+            
+            const notificationId = await FirebaseService.create(
               this.COLLECTIONS.NOTIFICATIONS,
               null,
               {
                 ...notificationData,
-                memberId: String(memberId)
+                memberId: normalizedMemberId
               },
               false
             );
+            
+            console.log(`✅ Notification created for member ${normalizedMemberId}, notificationId: ${notificationId}`);
             successCount++;
           } catch (memberError) {
-            console.error(`Error creating notification for member ${member.id}:`, memberError);
+            console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
           }
         }
         
@@ -1362,18 +1367,23 @@ class FirebaseApiService {
               continue;
             }
             
-            await FirebaseService.create(
+            const normalizedMemberId = String(memberId).trim();
+            console.log(`📝 Creating notification for member: ${normalizedMemberId}`);
+            
+            const notificationId = await FirebaseService.create(
               this.COLLECTIONS.NOTIFICATIONS,
               null,
               {
                 ...notificationData,
-                memberId: String(memberId)
+                memberId: normalizedMemberId
               },
               false
             );
+            
+            console.log(`✅ Notification created for member ${normalizedMemberId}, notificationId: ${notificationId}`);
             successCount++;
           } catch (memberError) {
-            console.error(`Error creating notification for member ${member.id}:`, memberError);
+            console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
           }
         }
         
@@ -4834,18 +4844,23 @@ class FirebaseApiService {
               continue;
             }
             
-            await FirebaseService.create(
+            const normalizedMemberId = String(memberId).trim();
+            console.log(`📝 Creating notification for member: ${normalizedMemberId}`);
+            
+            const notificationId = await FirebaseService.create(
               this.COLLECTIONS.NOTIFICATIONS,
               null,
               {
                 ...notificationData,
-                memberId: String(memberId)
+                memberId: normalizedMemberId
               },
               false
             );
+            
+            console.log(`✅ Notification created for member ${normalizedMemberId}, notificationId: ${notificationId}`);
             successCount++;
           } catch (memberError) {
-            console.error(`Error creating notification for member ${member.id}:`, memberError);
+            console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
           }
         }
         
@@ -5160,16 +5175,25 @@ class FirebaseApiService {
         return { success: false, notifications: [] };
       }
       
+      // memberId'yi normalize et
+      const normalizedMemberId = String(memberId).trim();
+      console.log('🔍 getNotifications called with memberId:', normalizedMemberId);
+      
       const allNotifications = await FirebaseService.getAll(this.COLLECTIONS.NOTIFICATIONS, {}, false);
+      console.log(`📬 Total notifications in database: ${allNotifications?.length || 0}`);
       
       if (!allNotifications || allNotifications.length === 0) {
+        console.log('⚠️ No notifications found in database');
         return { success: true, notifications: [] };
       }
       
       let notifications = allNotifications.filter(n => {
         // Member ID eşleşmesi - sadece bu üyeye ait veya genel (memberId yok) notification'lar
         const notificationMemberId = n.memberId || n.member_id;
-        const memberMatch = !notificationMemberId || String(notificationMemberId) === String(memberId);
+        const normalizedNotificationMemberId = notificationMemberId ? String(notificationMemberId).trim() : null;
+        
+        // Member match: notification'un memberId'si yoksa (genel) veya eşleşiyorsa
+        const memberMatch = !normalizedNotificationMemberId || normalizedNotificationMemberId === normalizedMemberId;
         
         // Expire kontrolü
         const expired = n.expiresAt && new Date(n.expiresAt) <= new Date();
@@ -5177,8 +5201,16 @@ class FirebaseApiService {
         // Unread kontrolü
         const unreadMatch = !unreadOnly || !n.read;
         
-        return memberMatch && !expired && unreadMatch;
+        const shouldInclude = memberMatch && !expired && unreadMatch;
+        
+        if (!shouldInclude && normalizedNotificationMemberId) {
+          console.log(`❌ Notification filtered out: memberId=${normalizedNotificationMemberId} (expected ${normalizedMemberId}), expired=${expired}, unreadMatch=${unreadMatch}`);
+        }
+        
+        return shouldInclude;
       });
+      
+      console.log(`✅ Filtered notifications for member ${normalizedMemberId}: ${notifications.length}`);
       
       notifications.sort((a, b) => {
         const dateA = new Date(a.createdAt || a.created_at || 0);
