@@ -647,22 +647,97 @@ router.post('/update-all-credentials', async (req, res) => {
   }
 });
 
+// Find Firebase Auth user by email (server-side, requires Firebase Admin SDK)
+router.post('/find-firebase-auth-user', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'email zorunludur'
+      });
+    }
+
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+    
+    if (!firebaseAdmin) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi'
+      });
+    }
+
+    try {
+      const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
+      res.json({
+        success: true,
+        authUid: userRecord.uid,
+        email: userRecord.email
+      });
+    } catch (firebaseError) {
+      if (firebaseError.code === 'auth/user-not-found') {
+        res.json({
+          success: false,
+          message: 'Kullanıcı bulunamadı',
+          authUid: null
+        });
+      } else {
+        throw firebaseError;
+      }
+    }
+  } catch (error) {
+    console.error('Error finding Firebase Auth user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası: ' + error.message
+    });
+  }
+});
+
 // Update Firebase Auth password for a user (server-side, requires Firebase Admin SDK)
 router.post('/update-firebase-auth-password', async (req, res) => {
   try {
-    const { authUid, password } = req.body;
+    let { authUid, password, email } = req.body;
     
     console.log('🔐 Firebase Auth password update request received:', {
       authUid,
+      email,
       passwordLength: password?.length,
       passwordPreview: password ? password.substring(0, 3) + '***' : 'null'
     });
+    
+    // Eğer authUid yoksa ama email varsa, email ile kullanıcıyı bul
+    if (!authUid && email) {
+      console.log('🔍 authUid not provided, trying to find user by email:', email);
+      const { getAdmin } = require('../config/firebaseAdmin');
+      const firebaseAdmin = getAdmin();
+      
+      if (firebaseAdmin) {
+        try {
+          const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
+          authUid = userRecord.uid;
+          console.log('✅ Found user by email, authUid:', authUid);
+        } catch (emailError) {
+          if (emailError.code === 'auth/user-not-found') {
+            console.error('❌ User not found in Firebase Auth by email:', email);
+            return res.status(404).json({
+              success: false,
+              message: 'Firebase Auth\'da bu email ile kullanıcı bulunamadı'
+            });
+          } else {
+            throw emailError;
+          }
+        }
+      }
+    }
     
     if (!authUid || !password) {
       console.error('❌ Missing required fields:', { authUid: !!authUid, password: !!password });
       return res.status(400).json({
         success: false,
-        message: 'authUid ve password zorunludur'
+        message: 'authUid (veya email) ve password zorunludur'
       });
     }
 
