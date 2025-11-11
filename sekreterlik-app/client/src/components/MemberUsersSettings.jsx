@@ -228,6 +228,18 @@ const MemberUsersSettings = () => {
       setIsUpdating(true);
       setMessage('');
       
+      // Önce belirli bir TC'yi kontrol et (debug için)
+      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      if (USE_FIREBASE) {
+        try {
+          const { checkUserCredentials } = await import('../utils/checkUserCredentials');
+          const beforeCheck = await checkUserCredentials('26413642446');
+          console.log('📊 BEFORE UPDATE - TC 26413642446:', beforeCheck);
+        } catch (checkError) {
+          console.warn('Debug check failed (non-critical):', checkError);
+        }
+      }
+      
       const response = await ApiService.updateAllCredentials();
       
       if (response.success) {
@@ -235,6 +247,26 @@ const MemberUsersSettings = () => {
         const totalUpdated = results.memberUsers.updated + results.districtPresidents.updated + results.townPresidents.updated;
         const totalErrors = results.memberUsers.errors.length + results.districtPresidents.errors.length + results.townPresidents.errors.length;
         const totalDeleted = results.cleaned?.deleted || 0;
+        
+        // Güncelleme sonrası tekrar kontrol et (debug için)
+        if (USE_FIREBASE) {
+          try {
+            const { checkUserCredentials } = await import('../utils/checkUserCredentials');
+            const afterCheck = await checkUserCredentials('26413642446');
+            console.log('📊 AFTER UPDATE - TC 26413642446:', afterCheck);
+            
+            if (afterCheck.match) {
+              console.log('✅ TC 26413642446 credentials match correctly!');
+            } else {
+              console.warn('⚠️ TC 26413642446 credentials do NOT match:', {
+                usernameMatch: afterCheck.usernameMatch,
+                passwordMatch: afterCheck.passwordMatch
+              });
+            }
+          } catch (checkError) {
+            console.warn('Debug check failed (non-critical):', checkError);
+          }
+        }
         
         let message = `Güncelleme tamamlandı!\n`;
         message += `• Üye kullanıcıları: ${results.memberUsers.updated} güncellendi/oluşturuldu\n`;

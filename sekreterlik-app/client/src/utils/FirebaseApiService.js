@@ -724,6 +724,22 @@ class FirebaseApiService {
             const usernameChanged = existingUser.username !== username;
             const passwordChanged = existingUser.password !== password;
 
+            // Debug log for specific TC
+            if (username === '26413642446') {
+              console.log('🔍 DEBUG - TC 26413642446:', {
+                memberId,
+                memberName: member.name,
+                memberTC: tc,
+                memberPhone: phone,
+                normalizedUsername: username,
+                normalizedPassword: password,
+                existingUsername: existingUser.username,
+                existingPassword: existingUser.password,
+                usernameChanged,
+                passwordChanged
+              });
+            }
+
             if (usernameChanged || passwordChanged) {
               await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, existingUser.id, {
                 username,
@@ -733,9 +749,22 @@ class FirebaseApiService {
               }, false); // encrypt = false (password zaten normalize edilmiş)
 
               results.memberUsers.updated++;
-              console.log(`✅ Updated member user for member ID ${memberId} (username: ${username})`);
+              console.log(`✅ Updated member user for member ID ${memberId} (username: ${username}, password: ${password.substring(0, 3)}***)`);
+              
+              // Debug log for specific TC after update
+              if (username === '26413642446') {
+                console.log('✅ DEBUG - TC 26413642446 updated successfully:', {
+                  newUsername: username,
+                  newPassword: password
+                });
+              }
             } else {
               console.log(`ℹ️ Member user for member ID ${memberId} already up to date`);
+              
+              // Debug log for specific TC
+              if (username === '26413642446') {
+                console.log('ℹ️ DEBUG - TC 26413642446 already up to date');
+              }
             }
           } else {
             // Create new user if doesn't exist
