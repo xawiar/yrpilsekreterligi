@@ -679,8 +679,7 @@ router.post('/find-firebase-auth-user', async (req, res) => {
         email: userRecord.email
       };
       console.log('📤 Sending find response:', JSON.stringify(responseData));
-      res.setHeader('Content-Type', 'application/json');
-      res.status(200).send(JSON.stringify(responseData));
+      return res.status(200).json(responseData);
     } catch (firebaseError) {
       if (firebaseError.code === 'auth/user-not-found') {
         console.log('ℹ️ User not found in Firebase Auth by email:', email);
@@ -690,8 +689,7 @@ router.post('/find-firebase-auth-user', async (req, res) => {
           authUid: null
         };
         console.log('📤 Sending find response (not found):', JSON.stringify(responseData));
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200).send(JSON.stringify(responseData));
+        return res.status(200).json(responseData);
       } else {
         console.error('❌ Firebase Auth error:', firebaseError);
         throw firebaseError;
@@ -712,42 +710,17 @@ router.post('/update-firebase-auth-password', async (req, res) => {
     let { authUid, password, email } = req.body;
     
     console.log('🔐 Firebase Auth password update request received:', {
-      authUid,
-      email,
-      passwordLength: password?.length,
+      authUid: authUid || 'null',
+      email: email || 'null',
+      passwordLength: password?.length || 0,
       passwordPreview: password ? password.substring(0, 3) + '***' : 'null'
     });
     
-    // Eğer authUid yoksa ama email varsa, email ile kullanıcıyı bul
-    if (!authUid && email) {
-      console.log('🔍 authUid not provided, trying to find user by email:', email);
-      const { getAdmin } = require('../config/firebaseAdmin');
-      const firebaseAdmin = getAdmin();
-      
-      if (firebaseAdmin) {
-        try {
-          const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
-          authUid = userRecord.uid;
-          console.log('✅ Found user by email, authUid:', authUid);
-        } catch (emailError) {
-          if (emailError.code === 'auth/user-not-found') {
-            console.error('❌ User not found in Firebase Auth by email:', email);
-            return res.status(404).json({
-              success: false,
-              message: 'Firebase Auth\'da bu email ile kullanıcı bulunamadı'
-            });
-          } else {
-            throw emailError;
-          }
-        }
-      }
-    }
-    
-    if (!authUid || !password) {
-      console.error('❌ Missing required fields:', { authUid: !!authUid, password: !!password });
+    if (!password) {
+      console.error('❌ Password is required');
       return res.status(400).json({
         success: false,
-        message: 'authUid (veya email) ve password zorunludur'
+        message: 'Password zorunludur'
       });
     }
 
@@ -762,20 +735,64 @@ router.post('/update-firebase-auth-password', async (req, res) => {
       });
     }
 
-    console.log('✅ Firebase Admin SDK initialized, updating user password...');
+    // Password'u normalize et (sadece rakamlar) - Firebase Auth minimum 6 karakter ister
+    const normalizedPassword = password.toString().replace(/\D/g, '');
+    const finalPassword = normalizedPassword.length < 6 ? normalizedPassword.padStart(6, '0') : normalizedPassword;
+    
+    console.log('🔑 Password normalization:', {
+      originalLength: password.length,
+      normalizedLength: normalizedPassword.length,
+      finalLength: finalPassword.length,
+      padded: normalizedPassword.length < 6
+    });
+    
+    // Eğer authUid yoksa ama email varsa, email ile kullanıcıyı bul
+    if (!authUid && email) {
+      console.log('🔍 authUid not provided, trying to find user by email:', email);
+      try {
+        const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
+        authUid = userRecord.uid;
+        console.log('✅ Found user by email, authUid:', authUid);
+      } catch (emailError) {
+        if (emailError.code === 'auth/user-not-found') {
+          console.log('ℹ️ User not found in Firebase Auth by email, creating new user:', email);
+          // Kullanıcı yoksa oluştur
+          try {
+            const newUser = await firebaseAdmin.auth().createUser({
+              email: email,
+              password: finalPassword,
+              emailVerified: false
+            });
+            authUid = newUser.uid;
+            console.log('✅ Created new Firebase Auth user, authUid:', authUid);
+          } catch (createError) {
+            console.error('❌ Error creating Firebase Auth user:', createError);
+            return res.status(500).json({
+              success: false,
+              message: `Firebase Auth kullanıcı oluşturma hatası: ${createError.message}`
+            });
+          }
+        } else {
+          console.error('❌ Firebase Auth error:', emailError);
+          return res.status(500).json({
+            success: false,
+            message: `Firebase Auth hatası: ${emailError.message}`
+          });
+        }
+      }
+    }
+    
+    if (!authUid) {
+      console.error('❌ authUid is required');
+      return res.status(400).json({
+        success: false,
+        message: 'authUid (veya email) zorunludur'
+      });
+    }
+
+    console.log('✅ Firebase Admin SDK initialized, updating user password for authUid:', authUid);
     
     try {
-      // Password'u normalize et (sadece rakamlar) - Firebase Auth minimum 6 karakter ister
-      const normalizedPassword = password.toString().replace(/\D/g, '');
-      const finalPassword = normalizedPassword.length < 6 ? normalizedPassword.padStart(6, '0') : normalizedPassword;
-      
-      console.log('🔑 Password normalization:', {
-        originalLength: password.length,
-        normalizedLength: normalizedPassword.length,
-        finalLength: finalPassword.length,
-        padded: normalizedPassword.length < 6
-      });
-      
       await firebaseAdmin.auth().updateUser(authUid, {
         password: finalPassword
       });
@@ -789,8 +806,9 @@ router.post('/update-firebase-auth-password', async (req, res) => {
         authUid: authUid
       };
       console.log('📤 Sending password update response:', JSON.stringify(responseData));
-      res.setHeader('Content-Type', 'application/json');
-      res.status(200).send(JSON.stringify(responseData));
+      
+      // res.json() kullan - daha güvenilir
+      return res.status(200).json(responseData);
     } catch (firebaseError) {
       console.error('❌ Firebase Auth password update error:', {
         code: firebaseError.code,
@@ -798,14 +816,14 @@ router.post('/update-firebase-auth-password', async (req, res) => {
         authUid,
         passwordLength: password?.length
       });
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: `Firebase Auth şifre güncelleme hatası: ${firebaseError.message}`
       });
     }
   } catch (error) {
     console.error('❌ Error updating Firebase Auth password:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Sunucu hatası: ' + error.message
     });
