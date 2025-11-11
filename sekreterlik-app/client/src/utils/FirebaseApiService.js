@@ -621,7 +621,8 @@ class FirebaseApiService {
       
       // Mevcut password'u al ve normalize et (karşılaştırma için)
       let oldPassword = memberUser.password || '';
-      if (oldPassword && typeof oldPassword === 'string' && oldPassword.startsWith('U2FsdGVkX1')) {
+      const wasEncrypted = oldPassword && typeof oldPassword === 'string' && oldPassword.startsWith('U2FsdGVkX1');
+      if (wasEncrypted) {
         oldPassword = decryptData(oldPassword);
       }
       const normalizedOldPassword = oldPassword.toString().replace(/\D/g, '');
@@ -629,10 +630,15 @@ class FirebaseApiService {
       const passwordChanged = normalizedOldPassword !== normalizedNewPassword;
 
       console.log('🔍 Password comparison:', {
-        oldPassword: normalizedOldPassword.substring(0, 3) + '***',
-        newPassword: normalizedNewPassword.substring(0, 3) + '***',
+        oldPasswordRaw: oldPassword.toString().substring(0, 5) + '***',
+        oldPasswordNormalized: normalizedOldPassword.substring(0, 3) + '***',
+        newPasswordRaw: password ? password.toString().substring(0, 5) + '***' : 'null',
+        newPasswordNormalized: normalizedNewPassword.substring(0, 3) + '***',
+        wasEncrypted,
         passwordChanged,
-        hasAuthUid: !!memberUser.authUid
+        hasAuthUid: !!memberUser.authUid,
+        oldPasswordLength: normalizedOldPassword.length,
+        newPasswordLength: normalizedNewPassword.length
       });
 
       // Eğer authUid yoksa ama Firebase Auth'da kullanıcı olabilir, email ile bulmayı dene
@@ -644,6 +650,8 @@ class FirebaseApiService {
           const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
             (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
           
+          console.log('📡 Sending find request to:', `${API_BASE_URL}/auth/find-firebase-auth-user`);
+          
           const findResponse = await fetch(`${API_BASE_URL}/auth/find-firebase-auth-user`, {
             method: 'POST',
             headers: {
@@ -652,18 +660,22 @@ class FirebaseApiService {
             body: JSON.stringify({ email })
           });
           
+          console.log('📥 Find response status:', findResponse.status, findResponse.statusText);
+          
           if (findResponse.ok) {
             const findData = await findResponse.json();
+            console.log('📥 Find response data:', findData);
             if (findData.success && findData.authUid) {
               authUid = findData.authUid;
               console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
               // Firestore'daki authUid'yi güncelle
               updateData.authUid = authUid;
             } else {
-              console.log('ℹ️ User not found in Firebase Auth by email:', email);
+              console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
             }
           } else {
-            console.warn('⚠️ Could not find Firebase Auth user by email:', await findResponse.text());
+            const errorText = await findResponse.text();
+            console.warn('⚠️ Could not find Firebase Auth user by email:', errorText);
           }
         } catch (error) {
           console.warn('⚠️ Could not lookup Firebase Auth user:', error);
