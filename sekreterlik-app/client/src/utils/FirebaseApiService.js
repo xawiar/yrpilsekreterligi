@@ -672,6 +672,8 @@ class FirebaseApiService {
               updateData.authUid = authUid;
             } else {
               console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
+              // Kullanıcı bulunamadı ama şifre güncellemesi yapılabilir (email ile)
+              // Email ile password update endpoint'ine gönderilebilir
             }
           } else {
             const errorText = await findResponse.text();
@@ -682,8 +684,8 @@ class FirebaseApiService {
         }
       }
 
-      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa)
-      if (authUid) {
+      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa) VEYA email ile bulunabilirse
+      if (authUid || (username && password)) {
         try {
           console.log('🔄 Updating member user in Firestore and Firebase Auth:', {
             id,
@@ -691,7 +693,8 @@ class FirebaseApiService {
             newUsername: username,
             usernameChanged,
             passwordChanged,
-            authUid: memberUser.authUid
+            authUid: authUid || 'will be found by email',
+            hasAuthUid: !!authUid
           });
           
           // Eğer username değiştiyse, authUid'i temizle ki login sırasında yeni email ile oluşturulsun
@@ -703,7 +706,17 @@ class FirebaseApiService {
           // Eğer şifre değiştiyse VEYA password parametresi gönderildiyse, Firebase Auth şifresini güncelle
           // Not: passwordChanged false olsa bile, eğer password parametresi gönderildiyse güncelleme yapılmalı
           // Çünkü kullanıcı açıkça şifreyi değiştirmek istiyor
+          // Ayrıca authUid yoksa bile email ile güncelleme yapılabilir
           const shouldUpdatePassword = (passwordChanged || (password && password.trim())) && normalizedNewPassword;
+          
+          console.log('🔍 Password update check:', {
+            shouldUpdatePassword,
+            passwordChanged,
+            passwordProvided: !!(password && password.trim()),
+            normalizedNewPassword: normalizedNewPassword ? normalizedNewPassword.substring(0, 3) + '***' : 'null',
+            hasAuthUid: !!authUid,
+            email: email
+          });
           
           if (shouldUpdatePassword) {
             console.log('🔄 Updating Firebase Auth password for user:', {
