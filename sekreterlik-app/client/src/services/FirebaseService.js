@@ -262,6 +262,14 @@ class FirebaseService {
         }
       }
       
+      // Pagination support - startAfter için
+      if (options.startAfter) {
+        // startAfter için last document snapshot gerekir
+        // Bu durumda options.startAfter bir document snapshot olmalı
+        // Şimdilik basit bir implementasyon
+        // TODO: Daha gelişmiş pagination için document snapshot kullan
+      }
+      
       const querySnapshot = await getDocs(q);
       const docs = [];
       

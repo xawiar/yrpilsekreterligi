@@ -61,29 +61,97 @@ const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
   };
 };
 
-// Input validation middleware
+// Input validation middleware - Güçlendirilmiş XSS ve SQL injection koruması
 const validateInput = (req, res, next) => {
-  // Check for SQL injection patterns
-  const sqlInjectionPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)|(\b(OR|AND)\s+\d+\s*=\s*\d+)/i;
+  // SQL injection patterns
+  const sqlInjectionPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT|TRUNCATE|GRANT|REVOKE)\b)|(\b(OR|AND)\s+\d+\s*=\s*\d+)|(--|;|\/\*|\*\/)/i;
   
-  const checkObject = (obj) => {
+  // XSS patterns
+  const xssPattern = /<script|javascript:|onerror=|onload=|onclick=|onmouseover=|<iframe|data:text\/html|vbscript:/i;
+  
+  // Path traversal patterns
+  const pathTraversalPattern = /\.\.\/|\.\.\\|\.\.%2F|\.\.%5C/i;
+  
+  // Command injection patterns
+  const commandInjectionPattern = /[;&|`$(){}[\]]/;
+  
+  const sanitizeString = (str) => {
+    if (typeof str !== 'string') return str;
+    
+    // Remove null bytes
+    str = str.replace(/\0/g, '');
+    
+    // Check for dangerous patterns
+    if (sqlInjectionPattern.test(str)) {
+      return null; // Mark as dangerous
+    }
+    if (xssPattern.test(str)) {
+      return null; // Mark as dangerous
+    }
+    if (pathTraversalPattern.test(str)) {
+      return null; // Mark as dangerous
+    }
+    
+    return str;
+  };
+  
+  const checkObject = (obj, depth = 0) => {
+    // Prevent deep nesting (DoS protection)
+    if (depth > 10) {
+      return false;
+    }
+    
     for (const key in obj) {
-      if (typeof obj[key] === 'string' && sqlInjectionPattern.test(obj[key])) {
-        return false;
-      }
-      if (typeof obj[key] === 'object' && obj[key] !== null) {
-        if (!checkObject(obj[key])) {
+      if (obj.hasOwnProperty(key)) {
+        // Check key name for dangerous patterns
+        if (sqlInjectionPattern.test(key) || xssPattern.test(key)) {
           return false;
+        }
+        
+        const value = obj[key];
+        
+        if (typeof value === 'string') {
+          const sanitized = sanitizeString(value);
+          if (sanitized === null) {
+            return false; // Dangerous content found
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          if (Array.isArray(value)) {
+            // Check array elements
+            for (const item of value) {
+              if (typeof item === 'string') {
+                const sanitized = sanitizeString(item);
+                if (sanitized === null) {
+                  return false;
+                }
+              } else if (typeof item === 'object' && item !== null) {
+                if (!checkObject(item, depth + 1)) {
+                  return false;
+                }
+              }
+            }
+          } else {
+            // Recursive check for nested objects
+            if (!checkObject(value, depth + 1)) {
+              return false;
+            }
+          }
         }
       }
     }
     return true;
   };
   
+  // Validate all input sources
   if (!checkObject(req.body) || !checkObject(req.query) || !checkObject(req.params)) {
+    console.warn('⚠️ Suspicious input detected:', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method
+    });
     return res.status(400).json({
       success: false,
-      message: 'Geçersiz giriş verisi'
+      message: 'Geçersiz giriş verisi - Güvenlik kontrolü başarısız'
     });
   }
   

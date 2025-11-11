@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const compression = require('compression');
+const helmet = require('helmet');
 const Sentry = require('@sentry/node');
 const { spawn } = require('child_process');
 const dotenv = require('dotenv');
@@ -190,23 +191,25 @@ app.use(cors({
     return callback(null, true);
   },
 }));
-// Basic security headers including a minimal CSP
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  const isProd = process.env.NODE_ENV === 'production';
-  const connectSrc = isProd ? "'self'" : ["'self'", 'http://localhost:5000', 'http://127.0.0.1:5000'].join(' ');
-  const imgSrc = "'self' data: blob:";
-  const csp = [
-    "default-src 'self'",
-    `img-src ${imgSrc}`,
-    "style-src 'self' 'unsafe-inline'",
-    `connect-src ${connectSrc}`,
-  ].join('; ');
-  res.setHeader('Content-Security-Policy', csp);
-  next();
-});
+// Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind CSS için gerekli
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // React için gerekli
+      imgSrc: ["'self'", "data:", "blob:", "https:"], // Firebase Storage ve data URI için
+      connectSrc: process.env.NODE_ENV === 'production' 
+        ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com"]
+        : ["'self'", "http://localhost:5000", "http://127.0.0.1:5000", "https://*.firebaseio.com", "https://*.googleapis.com"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Firebase için gerekli
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Firebase Storage için
+}));
 // Gzip compression for JSON/text responses (threshold 1KB)
 app.use(compression({
   threshold: 1024,

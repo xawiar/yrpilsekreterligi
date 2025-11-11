@@ -1,43 +1,52 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import MembersPage from './pages/MembersPage';
-import MeetingsPage from './pages/MeetingsPage';
-import EventsPage from './pages/EventsPage';
-import ArchivePage from './pages/ArchivePage';
-import SettingsPage from './pages/SettingsPage';
-import ManagementChartPage from './pages/ManagementChartPage';
-import MemberDashboardPage from './pages/MemberDashboardPage';
-import DistrictsPage from './pages/DistrictsPage';
-import DistrictMembersPage from './pages/DistrictMembersPage';
-import DistrictDetailsPage from './pages/DistrictDetailsPage';
-import TownMembersPage from './pages/TownMembersPage';
-import TownDetailsPage from './pages/TownDetailsPage';
-import ElectionPreparationPage from './pages/ElectionPreparationPage';
-import BallotBoxesPage from './pages/BallotBoxesPage';
-import BallotBoxDetailsPage from './pages/BallotBoxDetailsPage';
-import ObserversPage from './pages/ObserversPage';
-import RepresentativesPage from './pages/RepresentativesPage';
-import NeighborhoodsPage from './pages/NeighborhoodsPage';
-import VillagesPage from './pages/VillagesPage';
-import GroupsPage from './pages/GroupsPage';
-import BulkSmsPage from './pages/BulkSmsPage';
-import DistrictPresidentDashboardPage from './pages/DistrictPresidentDashboardPage';
-import TownPresidentDashboardPage from './pages/TownPresidentDashboardPage';
-import CalendarPage from './pages/CalendarPage';
-import CreateAdminPage from './pages/CreateAdminPage';
-import CheckAdminPage from './pages/CheckAdminPage';
-import DebugFirebasePage from './pages/DebugFirebasePage';
-import ClearAllDataPage from './pages/ClearAllDataPage';
-import FirebaseAuthUsersPage from './pages/FirebaseAuthUsersPage';
-import SyncToFirebasePage from './pages/SyncToFirebasePage';
-import FirebaseTestPage from './pages/FirebaseTestPage';
-import RemoveDuplicateMeetingsPage from './pages/RemoveDuplicateMeetingsPage';
-import Sidebar from './components/Sidebar';
-import Footer from './components/Footer';
+
+// Lazy loading - Code splitting için
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const MembersPage = lazy(() => import('./pages/MembersPage'));
+const MeetingsPage = lazy(() => import('./pages/MeetingsPage'));
+const EventsPage = lazy(() => import('./pages/EventsPage'));
+const ArchivePage = lazy(() => import('./pages/ArchivePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ManagementChartPage = lazy(() => import('./pages/ManagementChartPage'));
+const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
+const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
+const DistrictMembersPage = lazy(() => import('./pages/DistrictMembersPage'));
+const DistrictDetailsPage = lazy(() => import('./pages/DistrictDetailsPage'));
+const TownMembersPage = lazy(() => import('./pages/TownMembersPage'));
+const TownDetailsPage = lazy(() => import('./pages/TownDetailsPage'));
+const ElectionPreparationPage = lazy(() => import('./pages/ElectionPreparationPage'));
+const BallotBoxesPage = lazy(() => import('./pages/BallotBoxesPage'));
+const BallotBoxDetailsPage = lazy(() => import('./pages/BallotBoxDetailsPage'));
+const ObserversPage = lazy(() => import('./pages/ObserversPage'));
+const RepresentativesPage = lazy(() => import('./pages/RepresentativesPage'));
+const NeighborhoodsPage = lazy(() => import('./pages/NeighborhoodsPage'));
+const VillagesPage = lazy(() => import('./pages/VillagesPage'));
+const GroupsPage = lazy(() => import('./pages/GroupsPage'));
+const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
+const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
+const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
+const CheckAdminPage = lazy(() => import('./pages/CheckAdminPage'));
+const DebugFirebasePage = lazy(() => import('./pages/DebugFirebasePage'));
+const ClearAllDataPage = lazy(() => import('./pages/ClearAllDataPage'));
+const FirebaseAuthUsersPage = lazy(() => import('./pages/FirebaseAuthUsersPage'));
+const SyncToFirebasePage = lazy(() => import('./pages/SyncToFirebasePage'));
+const FirebaseTestPage = lazy(() => import('./pages/FirebaseTestPage'));
+const RemoveDuplicateMeetingsPage = lazy(() => import('./pages/RemoveDuplicateMeetingsPage'));
+const Sidebar = lazy(() => import('./components/Sidebar'));
+const Footer = lazy(() => import('./components/Footer'));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+  </div>
+);
 import PWANotification from './components/PWANotification';
 import AppInstallBanner from './components/AppInstallBanner';
 import OfflineStatus from './components/OfflineStatus';
@@ -176,8 +185,9 @@ function AppContent() {
         v7_relativeSplatPath: true
       }}
     >
-      <div className="min-h-screen bg-neutral-50">
-        <Routes>
+      <Suspense fallback={<LoadingSpinner />}>
+        <div className="min-h-screen bg-neutral-50">
+          <Routes>
           <Route 
             path="/login" 
             element={
