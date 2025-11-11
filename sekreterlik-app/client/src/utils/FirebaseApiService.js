@@ -1164,16 +1164,24 @@ class FirebaseApiService {
             const newUsername = newTc;
             const newPassword = newPhone; // Zaten normalize edilmiş (sadece rakamlar)
             
+            // ÖNEMLİ: TC veya telefon değiştiyse, authUid'yi temizle
+            // Böylece bir sonraki login'de yeni şifre ile Firebase Auth kullanıcısı oluşturulacak/güncellenecek
+            // Client-side'dan başka bir kullanıcının Firebase Auth şifresini direkt güncelleyemeyiz
+            const shouldClearAuthUid = tcChanged || phoneChanged;
+            
             // Member user'ı güncelle
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               username: newUsername,
               password: newPassword,
-              // Eğer TC değiştiyse, authUid'yi temizle (yeni email ile oluşturulsun)
-              ...(tcChanged ? { authUid: null } : {})
+              // TC veya telefon değiştiyse, authUid'yi temizle (bir sonraki login'de yeni şifre ile oluşturulsun)
+              ...(shouldClearAuthUid ? { authUid: null } : {})
             }, false); // encrypt = false
             
             console.log(`✅ Member user updated automatically for member ID ${id} (TC or phone changed)`);
             console.log(`   Username: ${newUsername}, Password: ${newPassword.substring(0, 3)}***`);
+            if (shouldClearAuthUid) {
+              console.log(`   ⚠️ authUid cleared - user will need to login again with new password`);
+            }
           } else {
             // Member user yoksa oluştur
             if (newTc && newPhone) {
