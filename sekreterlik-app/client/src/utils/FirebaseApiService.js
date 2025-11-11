@@ -710,6 +710,7 @@ class FirebaseApiService {
                 },
                 body: JSON.stringify({
                   authUid: authUid,
+                  email: email, // Email de gönder (authUid yoksa email ile bulunabilir)
                   password: normalizedNewPassword
                 })
               });
