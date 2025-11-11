@@ -286,7 +286,8 @@ const MemberUsersSettings = () => {
       let adminEmail = 'admin@ilsekreterlik.local';
       let adminPassword = 'admin123';
       try {
-        const adminDoc = await FirebaseService.getById('admin', 'main');
+        const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+        const adminDoc = await FirebaseService.getById(FirebaseApiService.COLLECTIONS.ADMIN, 'main');
         if (adminDoc && adminDoc.email) {
           adminEmail = adminDoc.email;
         }
@@ -345,9 +346,11 @@ const MemberUsersSettings = () => {
             console.log(`✅ Firebase Auth user created: ${user.username} -> ${authUser.user.uid}`);
             
             // Firestore'da authUid'yi güncelle
-            await FirebaseService.update('member_users', user.id, {
+            // FirebaseApiService.COLLECTIONS.MEMBER_USERS kullan
+            const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+            await FirebaseService.update(FirebaseApiService.COLLECTIONS.MEMBER_USERS, user.id, {
               authUid: authUser.user.uid
-            }, true);
+            }, false); // encrypt = false (authUid şifrelenmez)
             
             successCount++;
             
