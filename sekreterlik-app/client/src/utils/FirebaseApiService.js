@@ -598,6 +598,14 @@ class FirebaseApiService {
         return { success: false, message: 'Kullanıcı bulunamadı' };
       }
 
+      console.log('🔍 updateMemberUser called:', {
+        id,
+        username,
+        passwordLength: password?.length,
+        memberUserAuthUid: memberUser.authUid,
+        memberUserUsername: memberUser.username
+      });
+
       const updateData = { username };
       const oldUsername = memberUser.username;
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
@@ -620,8 +628,28 @@ class FirebaseApiService {
       const normalizedNewPassword = password ? password.toString().replace(/\D/g, '') : normalizedOldPassword;
       const passwordChanged = normalizedOldPassword !== normalizedNewPassword;
 
+      console.log('🔍 Password comparison:', {
+        oldPassword: normalizedOldPassword.substring(0, 3) + '***',
+        newPassword: normalizedNewPassword.substring(0, 3) + '***',
+        passwordChanged,
+        hasAuthUid: !!memberUser.authUid
+      });
+
+      // Eğer authUid yoksa ama Firebase Auth'da kullanıcı olabilir, email ile bulmayı dene
+      let authUid = memberUser.authUid;
+      if (!authUid && username) {
+        console.log('🔍 No authUid found, trying to find user in Firebase Auth by email:', email);
+        try {
+          // Firebase Auth'da kullanıcıyı email ile bul (server-side endpoint gerekir)
+          // Şimdilik sadece log'la, sonra endpoint eklenebilir
+          console.log('⚠️ authUid not found in Firestore, Firebase Auth lookup would require server-side endpoint');
+        } catch (error) {
+          console.warn('⚠️ Could not lookup Firebase Auth user:', error);
+        }
+      }
+
       // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa)
-      if (memberUser.authUid) {
+      if (authUid) {
         try {
           console.log('🔄 Updating member user in Firestore and Firebase Auth:', {
             id,
@@ -641,7 +669,7 @@ class FirebaseApiService {
           // Eğer şifre değiştiyse, Firebase Auth şifresini güncelle
           if (passwordChanged && normalizedNewPassword) {
             console.log('🔄 Updating Firebase Auth password for user:', {
-              authUid: memberUser.authUid,
+              authUid: authUid,
               oldPassword: normalizedOldPassword.substring(0, 3) + '***',
               newPassword: normalizedNewPassword.substring(0, 3) + '***',
               newPasswordLength: normalizedNewPassword.length
@@ -659,7 +687,7 @@ class FirebaseApiService {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  authUid: memberUser.authUid,
+                  authUid: authUid,
                   password: normalizedNewPassword
                 })
               });
