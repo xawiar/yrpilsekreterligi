@@ -652,7 +652,14 @@ router.post('/update-firebase-auth-password', async (req, res) => {
   try {
     const { authUid, password } = req.body;
     
+    console.log('🔐 Firebase Auth password update request received:', {
+      authUid,
+      passwordLength: password?.length,
+      passwordPreview: password ? password.substring(0, 3) + '***' : 'null'
+    });
+    
     if (!authUid || !password) {
+      console.error('❌ Missing required fields:', { authUid: !!authUid, password: !!password });
       return res.status(400).json({
         success: false,
         message: 'authUid ve password zorunludur'
@@ -663,30 +670,51 @@ router.post('/update-firebase-auth-password', async (req, res) => {
     const firebaseAdmin = getAdmin();
     
     if (!firebaseAdmin) {
+      console.error('❌ Firebase Admin SDK not initialized');
       return res.status(503).json({
         success: false,
         message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
       });
     }
 
+    console.log('✅ Firebase Admin SDK initialized, updating user password...');
+    
     try {
-      await firebaseAdmin.auth().updateUser(authUid, {
-        password: password
+      // Password'u normalize et (sadece rakamlar) - Firebase Auth minimum 6 karakter ister
+      const normalizedPassword = password.toString().replace(/\D/g, '');
+      const finalPassword = normalizedPassword.length < 6 ? normalizedPassword.padStart(6, '0') : normalizedPassword;
+      
+      console.log('🔑 Password normalization:', {
+        originalLength: password.length,
+        normalizedLength: normalizedPassword.length,
+        finalLength: finalPassword.length,
+        padded: normalizedPassword.length < 6
       });
+      
+      await firebaseAdmin.auth().updateUser(authUid, {
+        password: finalPassword
+      });
+      
+      console.log('✅ Firebase Auth password updated successfully for authUid:', authUid);
       
       res.json({
         success: true,
         message: 'Firebase Auth şifresi güncellendi'
       });
     } catch (firebaseError) {
-      console.error('Firebase Auth password update error:', firebaseError);
+      console.error('❌ Firebase Auth password update error:', {
+        code: firebaseError.code,
+        message: firebaseError.message,
+        authUid,
+        passwordLength: password?.length
+      });
       res.status(500).json({
         success: false,
         message: `Firebase Auth şifre güncelleme hatası: ${firebaseError.message}`
       });
     }
   } catch (error) {
-    console.error('Error updating Firebase Auth password:', error);
+    console.error('❌ Error updating Firebase Auth password:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası: ' + error.message

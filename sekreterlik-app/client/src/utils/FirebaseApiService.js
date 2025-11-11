@@ -640,9 +640,19 @@ class FirebaseApiService {
           
           // Eğer şifre değiştiyse, Firebase Auth şifresini güncelle
           if (passwordChanged && normalizedNewPassword) {
-            console.log('🔄 Updating Firebase Auth password for user:', memberUser.authUid);
+            console.log('🔄 Updating Firebase Auth password for user:', {
+              authUid: memberUser.authUid,
+              oldPassword: normalizedOldPassword.substring(0, 3) + '***',
+              newPassword: normalizedNewPassword.substring(0, 3) + '***',
+              newPasswordLength: normalizedNewPassword.length
+            });
             try {
-              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+              // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
+              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+                (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
+              
+              console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-password`);
+              
               const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
                 method: 'POST',
                 headers: {
@@ -654,17 +664,33 @@ class FirebaseApiService {
                 })
               });
               
+              console.log('📥 Response status:', response.status, response.statusText);
+              
               if (response.ok) {
-                console.log('✅ Firebase Auth password updated successfully');
+                const responseData = await response.json();
+                console.log('✅ Firebase Auth password updated successfully:', responseData);
               } else {
                 const errorData = await response.json();
-                console.error('❌ Firebase Auth password update failed:', errorData);
+                console.error('❌ Firebase Auth password update failed:', {
+                  status: response.status,
+                  statusText: response.statusText,
+                  error: errorData
+                });
                 // Hata olsa bile devam et (Firestore güncellemesi başarılı)
               }
             } catch (firebaseError) {
-              console.error('❌ Firebase Auth password update error:', firebaseError);
+              console.error('❌ Firebase Auth password update error:', {
+                error: firebaseError,
+                message: firebaseError.message,
+                stack: firebaseError.stack
+              });
               // Hata olsa bile devam et (Firestore güncellemesi başarılı)
             }
+          } else {
+            console.log('ℹ️ Password not changed, skipping Firebase Auth update:', {
+              passwordChanged,
+              normalizedNewPassword: normalizedNewPassword ? normalizedNewPassword.substring(0, 3) + '***' : 'null'
+            });
           }
         } catch (authError) {
           console.warn('⚠️ Firebase Auth update preparation failed (non-critical):', authError);
@@ -1365,9 +1391,20 @@ class FirebaseApiService {
             
             // Firebase Auth şifresini güncelle (eğer authUid varsa ve şifre değiştiyse)
             if (memberUser.authUid && phoneChanged) {
+              console.log(`🔄 Updating Firebase Auth password for member ID ${id}:`, {
+                authUid: memberUser.authUid,
+                oldPhone: oldPhone.substring(0, 3) + '***',
+                newPhone: newPhone.substring(0, 3) + '***',
+                newPassword: newPassword.substring(0, 3) + '***',
+                newPasswordLength: newPassword.length
+              });
               try {
                 // Server-side endpoint'e istek gönder (Firebase Admin SDK ile şifre güncellemesi için)
-                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+                  (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
+                
+                console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-password`);
+                
                 const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
                   method: 'POST',
                   headers: {
@@ -1379,19 +1416,32 @@ class FirebaseApiService {
                   })
                 });
                 
+                console.log('📥 Response status:', response.status, response.statusText);
+                
                 if (response.ok) {
-                  console.log(`✅ Firebase Auth password updated for member ID ${id} (authUid: ${memberUser.authUid})`);
+                  const responseData = await response.json();
+                  console.log(`✅ Firebase Auth password updated for member ID ${id} (authUid: ${memberUser.authUid}):`, responseData);
                 } else {
                   const errorData = await response.json();
-                  console.error(`❌ Firebase Auth password update failed for member ID ${id}:`, errorData);
+                  console.error(`❌ Firebase Auth password update failed for member ID ${id}:`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorData
+                  });
                   // Hata olsa bile devam et (Firestore güncellemesi başarılı)
                 }
               } catch (firebaseError) {
-                console.error(`❌ Firebase Auth password update error for member ID ${id}:`, firebaseError);
+                console.error(`❌ Firebase Auth password update error for member ID ${id}:`, {
+                  error: firebaseError,
+                  message: firebaseError.message,
+                  stack: firebaseError.stack
+                });
                 // Hata olsa bile devam et (Firestore güncellemesi başarılı)
               }
             } else if (tcChanged) {
               console.log(`   ⚠️ TC changed - authUid cleared, user will need to login again with new username`);
+            } else if (memberUser.authUid && !phoneChanged) {
+              console.log(`   ℹ️ Phone not changed, skipping Firebase Auth update for member ID ${id}`);
             }
           } else {
             // Member user yoksa oluştur
