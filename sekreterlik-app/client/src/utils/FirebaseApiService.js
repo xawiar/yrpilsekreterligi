@@ -779,16 +779,15 @@ class FirebaseApiService {
             }
             
             // authUid olsun ya da olmasın, email ile password update yapılabilir
-            {
-              console.log('🔄 Updating Firebase Auth password for user:', {
-                authUid: authUid,
-                oldPassword: normalizedOldPassword.substring(0, 3) + '***',
-                newPassword: normalizedNewPassword.substring(0, 3) + '***',
-                newPasswordLength: normalizedNewPassword.length,
-                passwordChanged,
-                passwordProvided: !!(password && password.trim())
-              });
-              try {
+            console.log('🔄 Updating Firebase Auth password for user:', {
+              authUid: authUid,
+              oldPassword: normalizedOldPassword.substring(0, 3) + '***',
+              newPassword: normalizedNewPassword.substring(0, 3) + '***',
+              newPasswordLength: normalizedNewPassword.length,
+              passwordChanged,
+              passwordProvided: !!(password && password.trim())
+            });
+            try {
                 // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
                 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
                   (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
