@@ -657,6 +657,145 @@ class FirebaseApiService {
     }
   }
 
+  // Update all user credentials based on current member data
+  static async updateAllCredentials() {
+    try {
+      const results = {
+        memberUsers: { updated: 0, errors: [] },
+        districtPresidents: { updated: 0, errors: [] },
+        townPresidents: { updated: 0, errors: [] }
+      };
+
+      console.log('🔄 Starting Firebase credentials update...');
+
+      // Get all active (non-archived) members
+      const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+        where: [{ field: 'archived', operator: '==', value: false }]
+      }, true); // decrypt = true (TC ve telefon decrypt edilmeli)
+
+      console.log(`📊 Found ${allMembers.length} active members`);
+
+      // Get all existing member users
+      const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS, {
+        where: [{ field: 'userType', operator: '==', value: 'member' }]
+      }, false);
+
+      // Create a map of memberId -> memberUser for quick lookup
+      const memberUserMap = new Map();
+      allMemberUsers.forEach(user => {
+        const memberId = user.memberId || user.member_id;
+        if (memberId) {
+          memberUserMap.set(String(memberId), user);
+        }
+      });
+
+      // Update or create member users
+      for (const member of allMembers) {
+        try {
+          const memberId = String(member.id || member.memberId || member.member_id);
+          if (!memberId) {
+            results.memberUsers.errors.push(`Member has no ID: ${member.name || 'Unknown'}`);
+            continue;
+          }
+
+          // TC ve telefon numarasını al
+          const tc = member.tc || '';
+          const phone = member.phone || '';
+
+          if (!tc || !phone) {
+            results.memberUsers.errors.push(`Member ID ${memberId}: TC or phone missing`);
+            continue;
+          }
+
+          // Username = TC, Password = phone (normalized - sadece rakamlar)
+          const username = tc.toString().replace(/\D/g, ''); // Sadece rakamlar
+          const password = phone.toString().replace(/\D/g, ''); // Sadece rakamlar
+
+          if (!username || !password) {
+            results.memberUsers.errors.push(`Member ID ${memberId}: Invalid TC or phone`);
+            continue;
+          }
+
+          // Check if user exists for this member
+          const existingUser = memberUserMap.get(memberId);
+
+          if (existingUser) {
+            // Update existing user - TC ve telefon numarasına göre güncelle
+            const usernameChanged = existingUser.username !== username;
+            const passwordChanged = existingUser.password !== password;
+
+            if (usernameChanged || passwordChanged) {
+              await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, existingUser.id, {
+                username,
+                password,
+                // Eğer username değiştiyse, authUid'yi temizle (yeni email ile oluşturulsun)
+                ...(usernameChanged ? { authUid: null } : {})
+              }, false); // encrypt = false (password zaten normalize edilmiş)
+
+              results.memberUsers.updated++;
+              console.log(`✅ Updated member user for member ID ${memberId} (username: ${username})`);
+            } else {
+              console.log(`ℹ️ Member user for member ID ${memberId} already up to date`);
+            }
+          } else {
+            // Create new user if doesn't exist
+            // Check if username already exists
+            const userWithSameUsername = allMemberUsers.find(
+              u => u.username === username && (u.memberId || u.member_id) !== memberId
+            );
+
+            if (!userWithSameUsername) {
+              await FirebaseService.create(
+                this.COLLECTIONS.MEMBER_USERS,
+                null,
+                {
+                  memberId: memberId,
+                  username,
+                  password,
+                  userType: 'member',
+                  isActive: true
+                },
+                false // encrypt = false
+              );
+
+              results.memberUsers.updated++;
+              console.log(`✅ Created member user for member ID ${memberId} (username: ${username})`);
+            } else {
+              results.memberUsers.errors.push(`Member ID ${memberId}: Username ${username} already taken by another user`);
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Error processing member ID ${member.id}:`, error);
+          results.memberUsers.errors.push(`Member ID ${member.id}: ${error.message}`);
+        }
+      }
+
+      // TODO: District presidents ve town presidents için de benzer güncelleme yapılabilir
+      // Şimdilik sadece member users güncelleniyor
+
+      console.log(`✅ Firebase credentials update completed!`);
+      console.log(`   - Member users: ${results.memberUsers.updated} updated/created`);
+      console.log(`   - Errors: ${results.memberUsers.errors.length}`);
+
+      return {
+        success: true,
+        message: 'Kullanıcı bilgileri güncellendi',
+        results
+      };
+    } catch (error) {
+      console.error('❌ Error updating all credentials:', error);
+      return {
+        success: false,
+        message: 'Kullanıcı bilgileri güncellenirken hata oluştu: ' + error.message,
+        results: {
+          memberUsers: { updated: 0, errors: [error.message] },
+          districtPresidents: { updated: 0, errors: [] },
+          townPresidents: { updated: 0, errors: [] }
+        }
+      };
+    }
+  }
+
   // Members API
   static async getMembers(archived = false) {
     try {
