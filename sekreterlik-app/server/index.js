@@ -103,6 +103,10 @@ const { cache } = require('./middleware/cache');
 // Import MongoDB connection
 const { connectToMongoDB } = require('./config/mongodb');
 
+// Initialize Firebase Admin SDK
+const { initFirebaseAdmin } = require('./config/firebaseAdmin');
+initFirebaseAdmin();
+
 // Import models
 const Admin = require('./models/Admin');
 const MemberUser = require('./models/MemberUser');

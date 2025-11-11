@@ -669,7 +669,7 @@ class FirebaseApiService {
   static async updateAllCredentials() {
     try {
       const results = {
-        memberUsers: { updated: 0, errors: [] },
+        memberUsers: { updated: 0, errors: [], firebaseAuthUpdated: 0, firebaseAuthErrors: [] },
         districtPresidents: { updated: 0, errors: [] },
         townPresidents: { updated: 0, errors: [] }
       };
@@ -746,6 +746,35 @@ class FirebaseApiService {
               }, false); // encrypt = false (password zaten normalize edilmiş)
 
               results.memberUsers.updated++;
+              
+              // Firebase Auth şifresini güncelle (eğer authUid varsa)
+              if (existingUser.authUid && passwordChanged) {
+                try {
+                  // Server-side endpoint'e istek gönder (Firebase Admin SDK ile şifre güncellemesi için)
+                  const response = await fetch('/api/auth/update-firebase-auth-password', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      authUid: existingUser.authUid,
+                      password: password
+                    })
+                  });
+                  
+                  if (response.ok) {
+                    results.memberUsers.firebaseAuthUpdated++;
+                    console.log(`✅ Firebase Auth password updated for member ID ${memberId} (authUid: ${existingUser.authUid})`);
+                  } else {
+                    const errorData = await response.json();
+                    results.memberUsers.firebaseAuthErrors.push(`Member ID ${memberId}: ${errorData.message || 'Firebase Auth update failed'}`);
+                    console.error(`❌ Firebase Auth password update failed for member ID ${memberId}:`, errorData);
+                  }
+                } catch (firebaseError) {
+                  results.memberUsers.firebaseAuthErrors.push(`Member ID ${memberId}: ${firebaseError.message}`);
+                  console.error(`❌ Firebase Auth password update error for member ID ${memberId}:`, firebaseError);
+                }
+              }
             }
           } else {
             // Create new user if doesn't exist
@@ -785,7 +814,11 @@ class FirebaseApiService {
 
       console.log(`✅ Firebase credentials update completed!`);
       console.log(`   - Member users: ${results.memberUsers.updated} updated/created`);
+      console.log(`   - Firebase Auth passwords: ${results.memberUsers.firebaseAuthUpdated} updated`);
       console.log(`   - Errors: ${results.memberUsers.errors.length}`);
+      if (results.memberUsers.firebaseAuthErrors.length > 0) {
+        console.log(`   - Firebase Auth errors: ${results.memberUsers.firebaseAuthErrors.length}`);
+      }
 
       return {
         success: true,
@@ -798,7 +831,7 @@ class FirebaseApiService {
         success: false,
         message: 'Kullanıcı bilgileri güncellenirken hata oluştu: ' + error.message,
         results: {
-          memberUsers: { updated: 0, errors: [error.message] },
+          memberUsers: { updated: 0, errors: [error.message], firebaseAuthUpdated: 0, firebaseAuthErrors: [] },
           districtPresidents: { updated: 0, errors: [] },
           townPresidents: { updated: 0, errors: [] }
         }
