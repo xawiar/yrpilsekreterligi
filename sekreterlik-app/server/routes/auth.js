@@ -822,9 +822,15 @@ router.post('/update-firebase-auth-password', async (req, res) => {
         authUid: authUid
       };
       console.log('📤 Sending password update response:', JSON.stringify(responseData));
+      console.log('📤 Response data type:', typeof responseData);
+      console.log('📤 Response data keys:', Object.keys(responseData));
       
       // res.json() kullan - daha güvenilir
-      return res.status(200).json(responseData);
+      // Compression middleware'i bypass etmek için Content-Length header'ı ekle
+      const jsonResponse = JSON.stringify(responseData);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Length', Buffer.byteLength(jsonResponse));
+      res.status(200).end(jsonResponse);
     } catch (firebaseError) {
       console.error('❌ Firebase Auth password update error:', {
         code: firebaseError.code,
