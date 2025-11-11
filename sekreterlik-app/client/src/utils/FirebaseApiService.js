@@ -3774,7 +3774,7 @@ class FirebaseApiService {
                   }
                 }
                 
-                // Firestore'a kaydet
+                // Firestore'a kaydet (encrypt = false - password şifrelenmemeli)
                 await FirebaseService.create(
                   this.COLLECTIONS.MEMBER_USERS,
                   null,
@@ -3787,7 +3787,8 @@ class FirebaseApiService {
                     chairmanPhone: cleanedData.chairman_phone,
                     isActive: true,
                     authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
-                  }
+                  },
+                  false // encrypt = false - password şifrelenmemeli
                 );
                 console.log('✅ Created town president user for town ID:', townId, 'Username:', username, 'Password:', password);
               }
