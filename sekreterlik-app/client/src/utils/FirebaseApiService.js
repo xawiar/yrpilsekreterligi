@@ -760,7 +760,8 @@ class FirebaseApiService {
           // Not: passwordChanged false olsa bile, eğer password parametresi gönderildiyse güncelleme yapılmalı
           // Çünkü kullanıcı açıkça şifreyi değiştirmek istiyor
           // Ayrıca authUid yoksa bile email ile güncelleme yapılabilir
-          const shouldUpdatePassword = (passwordChanged || (password && password.trim())) && normalizedNewPassword;
+          // ÖNEMLİ: password parametresi gönderildiyse MUTLAKA güncelleme yap (kullanıcı açıkça şifre değiştirmek istiyor)
+          const shouldUpdatePassword = (password && password.trim() && normalizedNewPassword) || (passwordChanged && normalizedNewPassword);
           
           console.log('🔍 Password update check:', {
             shouldUpdatePassword,
@@ -885,7 +886,15 @@ class FirebaseApiService {
       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData, false);
       
       console.log('✅ Member user updated successfully in Firestore:', id);
-      return { success: true, message: 'Kullanıcı güncellendi' };
+      
+      // Firebase Auth güncellemesi yapıldı mı kontrol et
+      const firebaseAuthUpdated = shouldUpdatePassword && (authUid || email);
+      
+      return { 
+        success: true, 
+        message: 'Kullanıcı güncellendi', 
+        firebaseAuthUpdated: firebaseAuthUpdated 
+      };
     } catch (error) {
       console.error('Update member user error:', error);
       return { success: false, message: 'Kullanıcı güncellenirken hata oluştu: ' + error.message };
