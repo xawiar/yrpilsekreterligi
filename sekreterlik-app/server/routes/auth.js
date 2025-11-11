@@ -679,7 +679,10 @@ router.post('/find-firebase-auth-user', async (req, res) => {
         email: userRecord.email
       };
       console.log('📤 Sending find response:', JSON.stringify(responseData));
-      return res.status(200).json(responseData);
+      const jsonResponse = JSON.stringify(responseData);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Length', Buffer.byteLength(jsonResponse));
+      return res.status(200).end(jsonResponse);
     } catch (firebaseError) {
       if (firebaseError.code === 'auth/user-not-found') {
         console.log('ℹ️ User not found in Firebase Auth by email:', email);
@@ -689,7 +692,10 @@ router.post('/find-firebase-auth-user', async (req, res) => {
           authUid: null
         };
         console.log('📤 Sending find response (not found):', JSON.stringify(responseData));
-        return res.status(200).json(responseData);
+        const jsonResponse = JSON.stringify(responseData);
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Length', Buffer.byteLength(jsonResponse));
+        return res.status(200).end(jsonResponse);
       } else {
         console.error('❌ Firebase Auth error:', firebaseError);
         throw firebaseError;

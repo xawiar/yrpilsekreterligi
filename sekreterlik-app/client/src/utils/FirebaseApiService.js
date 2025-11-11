@@ -738,13 +738,14 @@ class FirebaseApiService {
           });
           
           if (shouldUpdatePassword) {
-            // Eğer authUid yoksa ve email ile de bulunamadıysa, hata göster
+            // Eğer authUid yoksa bile email ile password update endpoint'ine gönder
+            // Server-side'da kullanıcı bulunamazsa oluşturulacak
             if (!authUid) {
-              console.error('❌ Cannot update Firebase Auth password: authUid is null and user not found by email:', email);
-              // Hata mesajı göster ama Firestore güncellemesi devam edecek
-              console.warn('⚠️ Firebase Auth password will not be updated, but Firestore will be updated');
-              // Devam et - Firestore güncellemesi yapılacak
-            } else {
+              console.log('⚠️ authUid is null, but sending password update request with email - server will create user if needed:', email);
+            }
+            
+            // authUid olsun ya da olmasın, email ile password update yapılabilir
+            {
               console.log('🔄 Updating Firebase Auth password for user:', {
                 authUid: authUid,
                 oldPassword: normalizedOldPassword.substring(0, 3) + '***',
@@ -765,11 +766,11 @@ class FirebaseApiService {
                   headers: {
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify({
-                    authUid: authUid,
-                    email: email, // Email de gönder (authUid yoksa email ile bulunabilir)
-                    password: normalizedNewPassword
-                  })
+                body: JSON.stringify({
+                  authUid: authUid || null, // null olsa bile gönder
+                  email: email, // Email MUTLAKA gönder (authUid yoksa email ile bulunabilir veya oluşturulabilir)
+                  password: normalizedNewPassword
+                })
                 });
               
               console.log('📥 Response status:', response.status, response.statusText);
