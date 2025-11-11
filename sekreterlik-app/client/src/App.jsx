@@ -47,11 +47,12 @@ const LoadingSpinner = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
   </div>
 );
-import PWANotification from './components/PWANotification';
-import AppInstallBanner from './components/AppInstallBanner';
-import OfflineStatus from './components/OfflineStatus';
+
+// Non-lazy components (small, frequently used)
 import Chatbot from './components/Chatbot';
-// import PerformanceMonitor from './components/PerformanceMonitor'; // Disabled - causes localhost:5000 errors
+const PWANotification = lazy(() => import('./components/PWANotification'));
+const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
+const OfflineStatus = lazy(() => import('./components/OfflineStatus'));
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -369,10 +370,11 @@ function AppContent() {
         </button>
       )}
       
-      {/* Chatbot Modal - Only show for admin users */}
-      {isLoggedIn && user?.role === 'admin' && (
-        <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
-      )}
+        {/* Chatbot Modal - Only show for admin users */}
+        {isLoggedIn && user?.role === 'admin' && (
+          <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
+        )}
+      </Suspense>
     </Router>
   );
 }
