@@ -799,9 +799,13 @@ class FirebaseApiService {
             }
           } else {
             // Create new user if doesn't exist
-            // Check if username already exists
+            // Check if username already exists (normalize edilmiş username ile karşılaştır)
             const userWithSameUsername = allMemberUsers.find(
-              u => u.username === username && (u.memberId || u.member_id) !== memberId
+              u => {
+                const uUsername = (u.username || '').toString().replace(/\D/g, '');
+                const uMemberId = u.memberId || u.member_id;
+                return uUsername === username && String(uMemberId) !== memberId;
+              }
             );
 
             if (!userWithSameUsername) {
