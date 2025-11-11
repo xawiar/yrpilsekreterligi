@@ -647,4 +647,51 @@ router.post('/update-all-credentials', async (req, res) => {
   }
 });
 
+// Update Firebase Auth password for a user (server-side, requires Firebase Admin SDK)
+router.post('/update-firebase-auth-password', async (req, res) => {
+  try {
+    const { authUid, password } = req.body;
+    
+    if (!authUid || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'authUid ve password zorunludur'
+      });
+    }
+
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+    
+    if (!firebaseAdmin) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
+      });
+    }
+
+    try {
+      await firebaseAdmin.auth().updateUser(authUid, {
+        password: password
+      });
+      
+      res.json({
+        success: true,
+        message: 'Firebase Auth şifresi güncellendi'
+      });
+    } catch (firebaseError) {
+      console.error('Firebase Auth password update error:', firebaseError);
+      res.status(500).json({
+        success: false,
+        message: `Firebase Auth şifre güncelleme hatası: ${firebaseError.message}`
+      });
+    }
+  } catch (error) {
+    console.error('Error updating Firebase Auth password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
