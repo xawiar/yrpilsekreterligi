@@ -5349,60 +5349,126 @@ class FirebaseApiService {
 
   static async sendTestNotification(userId = null) {
     // Firebase'de push notification göndermek için server-side gerekir
-    // Client-side'da sadece local browser notification gösterilebilir (test için)
+    // Client-side'da Service Worker üzerinden notification göster
     try {
-      // Browser'ın native Notification API'sini kullan
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification('Test Bildirimi', {
-          body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
-          icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png', // badge-72x72.png yerine icon kullan
-          tag: 'test-notification',
-          requireInteraction: true,
-          vibrate: [200, 100, 200]
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-        };
-
-        return {
-          success: true,
-          message: 'Test bildirimi gösterildi (local notification)'
-        };
-      } else if ('Notification' in window && Notification.permission !== 'denied') {
-        // İzin iste
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          const notification = new Notification('Test Bildirimi', {
+      // Service Worker üzerinden notification göster
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          
+          // Service Worker üzerinden notification göster
+          await registration.showNotification('Test Bildirimi', {
             body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
             icon: '/icon-192x192.png',
-            badge: '/icon-192x192.png', // badge-72x72.png yerine icon kullan
+            badge: '/icon-192x192.png',
             tag: 'test-notification',
             requireInteraction: true,
-            vibrate: [200, 100, 200]
+            vibrate: [200, 100, 200],
+            data: {
+              url: window.location.href,
+              timestamp: Date.now()
+            },
+            actions: [
+              {
+                action: 'view',
+                title: 'Görüntüle'
+              },
+              {
+                action: 'close',
+                title: 'Kapat'
+              }
+            ]
           });
-
-          notification.onclick = () => {
-            window.focus();
-            notification.close();
-          };
 
           return {
             success: true,
-            message: 'Test bildirimi gösterildi (local notification)'
+            message: 'Test bildirimi gösterildi (Service Worker üzerinden)'
           };
-        } else {
-          return {
-            success: false,
-            message: 'Bildirim izni verilmedi'
-          };
+        } catch (swError) {
+          console.warn('Service Worker notification failed, trying native Notification:', swError);
+          
+          // Service Worker başarısız olursa, native Notification'ı dene (sadece main thread'de)
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            // İzin kontrolü
+            if (Notification.permission === 'granted') {
+              try {
+                const notification = new Notification('Test Bildirimi', {
+                  body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
+                  icon: '/icon-192x192.png',
+                  badge: '/icon-192x192.png',
+                  tag: 'test-notification',
+                  requireInteraction: true,
+                  vibrate: [200, 100, 200]
+                });
+
+                notification.onclick = () => {
+                  window.focus();
+                  notification.close();
+                };
+
+                return {
+                  success: true,
+                  message: 'Test bildirimi gösterildi (native notification)'
+                };
+              } catch (nativeError) {
+                // Native Notification da başarısız olursa
+                return {
+                  success: false,
+                  message: 'Bildirim gösterilemedi. Lütfen tarayıcı ayarlarından bildirim izni verin.'
+                };
+              }
+            } else if (Notification.permission !== 'denied') {
+              // İzin iste
+              const permission = await Notification.requestPermission();
+              if (permission === 'granted') {
+                try {
+                  const notification = new Notification('Test Bildirimi', {
+                    body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
+                    icon: '/icon-192x192.png',
+                    badge: '/icon-192x192.png',
+                    tag: 'test-notification',
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200]
+                  });
+
+                  notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                  };
+
+                  return {
+                    success: true,
+                    message: 'Test bildirimi gösterildi (native notification)'
+                  };
+                } catch (nativeError) {
+                  return {
+                    success: false,
+                    message: 'Bildirim gösterilemedi. Lütfen tarayıcı ayarlarından bildirim izni verin.'
+                  };
+                }
+              } else {
+                return {
+                  success: false,
+                  message: 'Bildirim izni verilmedi'
+                };
+              }
+            } else {
+              return {
+                success: false,
+                message: 'Bildirim izni reddedilmiş. Lütfen tarayıcı ayarlarından izin verin.'
+              };
+            }
+          } else {
+            return {
+              success: false,
+              message: 'Bildirimler bu tarayıcıda desteklenmiyor.'
+            };
+          }
         }
       } else {
         return {
           success: false,
-          message: 'Bildirimler desteklenmiyor veya izin verilmedi. Lütfen tarayıcı ayarlarından izin verin.'
+          message: 'Service Worker desteklenmiyor. Bildirimler gösterilemez.'
         };
       }
     } catch (error) {
