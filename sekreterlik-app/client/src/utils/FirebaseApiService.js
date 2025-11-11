@@ -729,12 +729,12 @@ class FirebaseApiService {
           const existingUser = memberUserMap.get(memberId);
 
           if (existingUser) {
-            // Update existing user - TC ve telefon numarasına göre güncelle
+            // Mevcut password'u kontrol et - şifrelenmiş mi?
+            const isPasswordEncrypted = typeof existingUser.password === 'string' && existingUser.password.startsWith('U2FsdGVkX1');
+            
             // Mevcut password'u al ve decrypt et (eğer şifrelenmişse)
             let existingPassword = existingUser.password || '';
-            
-            // Eğer password şifrelenmişse (U2FsdGVkX1 ile başlıyorsa), decrypt et
-            if (typeof existingPassword === 'string' && existingPassword.startsWith('U2FsdGVkX1')) {
+            if (isPasswordEncrypted) {
               try {
                 const { decryptData } = await import('../utils/crypto');
                 existingPassword = decryptData(existingPassword) || existingPassword;
@@ -751,10 +751,13 @@ class FirebaseApiService {
             const usernameChanged = existingUsername !== username;
             const passwordChanged = normalizedExistingPassword !== password;
 
-            // Eğer password şifrelenmişse veya değiştiyse, güncelle
-            const needsUpdate = usernameChanged || passwordChanged || (typeof existingUser.password === 'string' && existingUser.password.startsWith('U2FsdGVkX1'));
+            // ÖNEMLİ: Eğer password şifrelenmişse, MUTLAKA güncelle (decrypt edip tekrar kaydet)
+            // Ayrıca username veya password değiştiyse de güncelle
+            const needsUpdate = isPasswordEncrypted || usernameChanged || passwordChanged;
 
             if (needsUpdate) {
+              console.log(`🔄 Updating member user for member ID ${memberId}${isPasswordEncrypted ? ' (encrypted password detected)' : ''}${usernameChanged ? ' (username changed)' : ''}${passwordChanged ? ' (password changed)' : ''}`);
+              
               await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, existingUser.id, {
                 username,
                 password, // Normalize edilmiş password (şifrelenmemiş)
