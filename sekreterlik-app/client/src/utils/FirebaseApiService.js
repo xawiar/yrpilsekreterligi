@@ -663,17 +663,36 @@ class FirebaseApiService {
           console.log('📥 Find response status:', findResponse.status, findResponse.statusText);
           
           if (findResponse.ok) {
-            const findData = await findResponse.json();
-            console.log('📥 Find response data:', findData);
-            if (findData.success && findData.authUid) {
-              authUid = findData.authUid;
-              console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
-              // Firestore'daki authUid'yi güncelle
-              updateData.authUid = authUid;
-            } else {
-              console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
-              // Kullanıcı bulunamadı ama şifre güncellemesi yapılabilir (email ile)
-              // Email ile password update endpoint'ine gönderilebilir
+            try {
+              const findResponseText = await findResponse.text();
+              console.log('📥 Find response text:', findResponseText);
+              
+              let findData;
+              if (findResponseText) {
+                try {
+                  findData = JSON.parse(findResponseText);
+                } catch (parseError) {
+                  console.warn('⚠️ Find response is not valid JSON:', findResponseText);
+                  findData = { success: false, message: 'Invalid JSON response' };
+                }
+              } else {
+                findData = { success: false, message: 'Empty response' };
+              }
+              
+              console.log('📥 Find response data:', findData);
+              
+              if (findData.success && findData.authUid) {
+                authUid = findData.authUid;
+                console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
+                // Firestore'daki authUid'yi güncelle
+                updateData.authUid = authUid;
+              } else {
+                console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
+                // Kullanıcı bulunamadı ama şifre güncellemesi yapılabilir (email ile)
+                // Email ile password update endpoint'ine gönderilebilir
+              }
+            } catch (findError) {
+              console.error('❌ Error parsing find response:', findError);
             }
           } else {
             const errorText = await findResponse.text();
