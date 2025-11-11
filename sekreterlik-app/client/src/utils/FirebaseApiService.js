@@ -626,7 +626,7 @@ class FirebaseApiService {
       // ÖNEMLİ: Member ID ile eşleştirme yap
       // Email formatı: memberId@ilsekreterlik.local (TC değil, member ID)
       const memberId = memberUser.memberId || memberUser.member_id || id;
-      const email = `${memberId}@ilsekreterlik.local`;
+      let email = `${memberId}@ilsekreterlik.local`; // let olarak tanımla (sonra güncellenebilir)
       const oldEmail = oldUsername.includes('@') ? oldUsername : `${oldUsername}@ilsekreterlik.local`;
       
       // Username değiştiyse, email değişmiş olabilir
