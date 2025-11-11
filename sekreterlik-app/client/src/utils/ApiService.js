@@ -2098,11 +2098,29 @@ class ApiService {
 
   // Push Notification API
   static async getVapidKey() {
-    const response = await fetch(`${API_BASE_URL}/push-subscriptions/vapid-key`);
-    return response.json();
+    // Firebase kullanılıyorsa FirebaseApiService'e yönlendir
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getVapidKey();
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/vapid-key`);
+      return response.json();
+    } catch (error) {
+      console.error('Error getting VAPID key:', error);
+      return {
+        success: false,
+        message: error.message || 'VAPID anahtarı alınırken hata oluştu'
+      };
+    }
   }
 
   static async subscribeToPush(subscriptionData) {
+    // Firebase kullanılıyorsa FirebaseApiService'e yönlendir
+    if (USE_FIREBASE) {
+      return FirebaseApiService.subscribeToPush(subscriptionData);
+    }
+    
     // If userId is not provided, try to get it from localStorage
     if (!subscriptionData.userId) {
       try {
@@ -2160,33 +2178,77 @@ class ApiService {
   }
 
   static async unsubscribeFromPush() {
-    const response = await fetch(`${API_BASE_URL}/push-subscriptions/unsubscribe`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-    return response.json();
+    // Firebase kullanılıyorsa FirebaseApiService'e yönlendir
+    if (USE_FIREBASE) {
+      return FirebaseApiService.unsubscribeFromPush();
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/unsubscribe`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error unsubscribing from push:', error);
+      return {
+        success: false,
+        message: error.message || 'Abonelik iptal edilirken hata oluştu'
+      };
+    }
   }
 
   static async sendTestNotification(userId = null) {
+    // Firebase kullanılıyorsa FirebaseApiService'e yönlendir
+    if (USE_FIREBASE) {
+      return FirebaseApiService.sendTestNotification(userId);
+    }
+    
     // Try to get userId from localStorage if not provided
     if (!userId) {
       try {
-        const authData = localStorage.getItem('auth');
-        if (authData) {
-          const parsed = JSON.parse(authData);
-          userId = parsed.user?.id || parsed.user?.memberId;
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          userId = user?.id || user?.memberId || user?.uid;
+        }
+        
+        // Also try from window.userId
+        if (!userId && typeof window !== 'undefined' && window.userId) {
+          userId = window.userId;
         }
       } catch (e) {
         console.warn('Could not get userId from localStorage:', e);
       }
     }
     
-    const response = await fetch(`${API_BASE_URL}/push-subscriptions/test`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ userId }),
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/test`, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Test bildirimi gönderilemedi'
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      return {
+        success: false,
+        message: error.message || 'Test bildirimi gönderilirken hata oluştu'
+      };
+    }
   }
 
   static async sendNotificationToAll(title, body) {

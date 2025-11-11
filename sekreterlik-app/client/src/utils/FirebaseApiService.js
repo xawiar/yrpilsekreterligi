@@ -5047,6 +5047,181 @@ class FirebaseApiService {
       return { success: false };
     }
   }
+
+  // Push Notification API - Firebase'de push notification göndermek için server-side gerekir
+  // Client-side'da sadece local browser notification gösterilebilir (test için)
+  static async getVapidKey() {
+    // VAPID key Firebase'de de aynı (server'dan alınmalı, ama şimdilik hardcoded)
+    // Production'da bu key server'dan alınmalı
+    return {
+      success: true,
+      publicKey: 'BO9vjwvHvLDxeP-H2IY92hsQlWGYTCW7NpX3M0GAyooyTbT30Y_0q_ahIsomr38bsL2Nbh7DHEZKMD7YTsiEYf8'
+    };
+  }
+
+  static async subscribeToPush(subscriptionData) {
+    // Firebase'de push subscription'ları Firestore'da sakla
+    try {
+      const PUSH_SUBSCRIPTIONS = 'push_subscriptions';
+      const userId = subscriptionData.userId;
+      
+      if (!userId) {
+        return {
+          success: false,
+          message: 'Kullanıcı ID gerekli'
+        };
+      }
+
+      // Subscription'ı Firestore'a kaydet
+      const subscriptionDoc = {
+        userId: String(userId),
+        endpoint: subscriptionData.subscription.endpoint,
+        p256dh: subscriptionData.subscription.keys.p256dh,
+        auth: subscriptionData.subscription.keys.auth,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Mevcut subscription'ı kontrol et
+      const existing = await FirebaseService.findByField(
+        PUSH_SUBSCRIPTIONS,
+        'userId',
+        String(userId)
+      );
+
+      if (existing && existing.length > 0) {
+        // Güncelle
+        await FirebaseService.update(
+          PUSH_SUBSCRIPTIONS,
+          existing[0].id,
+          subscriptionDoc,
+          false
+        );
+      } else {
+        // Yeni oluştur
+        await FirebaseService.create(
+          PUSH_SUBSCRIPTIONS,
+          null,
+          subscriptionDoc,
+          false
+        );
+      }
+
+      return {
+        success: true,
+        message: 'Push notification aboneliği başarılı'
+      };
+    } catch (error) {
+      console.error('Error subscribing to push:', error);
+      return {
+        success: false,
+        message: error.message || 'Bildirim aboneliği sırasında hata oluştu'
+      };
+    }
+  }
+
+  static async unsubscribeFromPush() {
+    // Firebase'de subscription'ı sil
+    try {
+      const PUSH_SUBSCRIPTIONS = 'push_subscriptions';
+      const userData = localStorage.getItem('user');
+      
+      if (userData) {
+        const user = JSON.parse(userData);
+        const userId = user?.id || user?.memberId || user?.uid;
+        
+        if (userId) {
+          const existing = await FirebaseService.getAll(PUSH_SUBSCRIPTIONS, {
+            where: [{ field: 'userId', operator: '==', value: String(userId) }],
+            limit: 1
+          }, false);
+
+          if (existing && existing.length > 0) {
+            await FirebaseService.delete(PUSH_SUBSCRIPTIONS, existing[0].id);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Push notification aboneliği iptal edildi'
+      };
+    } catch (error) {
+      console.error('Error unsubscribing from push:', error);
+      return {
+        success: false,
+        message: error.message || 'Abonelik iptal edilirken hata oluştu'
+      };
+    }
+  }
+
+  static async sendTestNotification(userId = null) {
+    // Firebase'de push notification göndermek için server-side gerekir
+    // Client-side'da sadece local browser notification gösterilebilir (test için)
+    try {
+      // Browser'ın native Notification API'sini kullan
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification('Test Bildirimi', {
+          body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
+          icon: '/icon-192x192.png',
+          badge: '/badge-72x72.png',
+          tag: 'test-notification',
+          requireInteraction: true,
+          vibrate: [200, 100, 200]
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        return {
+          success: true,
+          message: 'Test bildirimi gösterildi (local notification)'
+        };
+      } else if ('Notification' in window && Notification.permission !== 'denied') {
+        // İzin iste
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const notification = new Notification('Test Bildirimi', {
+            body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
+            icon: '/icon-192x192.png',
+            badge: '/badge-72x72.png',
+            tag: 'test-notification',
+            requireInteraction: true,
+            vibrate: [200, 100, 200]
+          });
+
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+
+          return {
+            success: true,
+            message: 'Test bildirimi gösterildi (local notification)'
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Bildirim izni verilmedi'
+          };
+        }
+      } else {
+        return {
+          success: false,
+          message: 'Bildirimler desteklenmiyor veya izin verilmedi. Lütfen tarayıcı ayarlarından izin verin.'
+        };
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      return {
+        success: false,
+        message: error.message || 'Test bildirimi gösterilirken hata oluştu'
+      };
+    }
+  }
 }
 
 export default FirebaseApiService;
