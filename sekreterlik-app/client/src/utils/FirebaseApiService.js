@@ -5167,7 +5167,7 @@ class FirebaseApiService {
       }
       
       let notifications = allNotifications.filter(n => {
-        // Member ID eşleşmesi - hem null/undefined hem de string karşılaştırması
+        // Member ID eşleşmesi - sadece bu üyeye ait veya genel (memberId yok) notification'lar
         const notificationMemberId = n.memberId || n.member_id;
         const memberMatch = !notificationMemberId || String(notificationMemberId) === String(memberId);
         
