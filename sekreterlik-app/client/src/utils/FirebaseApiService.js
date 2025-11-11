@@ -676,9 +676,10 @@ class FirebaseApiService {
       console.log(`📊 Found ${allMembers.length} active members`);
 
       // Get all existing member users
+      // decrypt = false çünkü password zaten normalize edilmiş (şifrelenmemiş) olarak saklanıyor
       const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS, {
         where: [{ field: 'userType', operator: '==', value: 'member' }]
-      }, false);
+      }, false); // decrypt = false (password şifrelenmemiş olarak saklanıyor)
 
       // Create a map of memberId -> memberUser for quick lookup
       const memberUserMap = new Map();
