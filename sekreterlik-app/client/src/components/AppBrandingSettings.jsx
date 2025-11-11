@@ -30,35 +30,71 @@ const AppBrandingSettings = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
+      // Önce localStorage'dan yükle (hızlı erişim için)
+      const cachedSettings = localStorage.getItem('appBranding');
+      if (cachedSettings) {
+        try {
+          const cached = JSON.parse(cachedSettings);
+          setSettings(cached);
+          // Preview'ları da ayarla
+          setPreview({
+            logo: cached.logoUrl || null,
+            icon192: cached.icon192Url || null,
+            icon512: cached.icon512Url || null,
+            badge: cached.badgeUrl || null,
+            notificationIcon: cached.notificationIconUrl || null
+          });
+        } catch (e) {
+          console.warn('Error parsing cached settings:', e);
+        }
+      }
+      
       // Firebase veya SQLite'dan ayarları yükle
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       if (USE_FIREBASE) {
-        const brandingSettings = await FirebaseService.findByField(
-          'app_settings',
-          'type',
-          'branding'
-        );
-        
-        if (brandingSettings && brandingSettings.length > 0) {
-          const data = brandingSettings[0];
-          setSettings({
-            appName: data.appName || '',
-            appDescription: data.appDescription || '',
-            logoUrl: data.logoUrl || '',
-            icon192Url: data.icon192Url || '',
-            icon512Url: data.icon512Url || '',
-            badgeUrl: data.badgeUrl || '',
-            notificationIconUrl: data.notificationIconUrl || '',
-            headerInfoText: data.headerInfoText || ''
-          });
+        try {
+          const allSettings = await FirebaseService.getAll('app_settings', {}, false);
+          const brandingSettings = allSettings.filter(s => s.type === 'branding');
+          
+          if (brandingSettings && brandingSettings.length > 0) {
+            const data = brandingSettings[0];
+            const loadedSettings = {
+              appName: data.appName || '',
+              appDescription: data.appDescription || '',
+              logoUrl: data.logoUrl || '',
+              icon192Url: data.icon192Url || '',
+              icon512Url: data.icon512Url || '',
+              badgeUrl: data.badgeUrl || '',
+              notificationIconUrl: data.notificationIconUrl || '',
+              headerInfoText: data.headerInfoText || ''
+            };
+            setSettings(loadedSettings);
+            // Preview'ları da ayarla
+            setPreview({
+              logo: loadedSettings.logoUrl || null,
+              icon192: loadedSettings.icon192Url || null,
+              icon512: loadedSettings.icon512Url || null,
+              badge: loadedSettings.badgeUrl || null,
+              notificationIcon: loadedSettings.notificationIconUrl || null
+            });
+            // localStorage'a da kaydet
+            localStorage.setItem('appBranding', JSON.stringify(loadedSettings));
+          }
+        } catch (firebaseError) {
+          console.error('Error loading from Firebase:', firebaseError);
         }
       } else {
         // SQLite için API çağrısı
-        const response = await fetch('/api/settings/branding');
-        if (response.ok) {
-          const data = await response.json();
-          setSettings(data);
+        try {
+          const response = await fetch('/api/settings/branding');
+          if (response.ok) {
+            const data = await response.json();
+            setSettings(data);
+            localStorage.setItem('appBranding', JSON.stringify(data));
+          }
+        } catch (apiError) {
+          console.error('Error loading from API:', apiError);
         }
       }
     } catch (error) {
@@ -85,45 +121,225 @@ const AppBrandingSettings = () => {
       setSaving(true);
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
+      // localStorage'a önce kaydet (hızlı erişim için)
+      localStorage.setItem('appBranding', JSON.stringify(settings));
+      
       if (USE_FIREBASE) {
         // Firebase'e kaydet
-        const existing = await FirebaseService.findByField(
-          'app_settings',
-          'type',
-          'branding'
-        );
-        
-        const settingsData = {
-          type: 'branding',
-          ...settings,
-          updatedAt: new Date().toISOString()
-        };
-        
-        if (existing && existing.length > 0) {
-          await FirebaseService.update('app_settings', existing[0].id, settingsData, false);
-        } else {
-          await FirebaseService.create('app_settings', null, settingsData, false);
+        try {
+          const allSettings = await FirebaseService.getAll('app_settings', {}, false);
+          const existing = allSettings.find(s => s.type === 'branding');
+          
+          const settingsData = {
+            type: 'branding',
+            ...settings,
+            createdAt: existing?.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          if (existing && existing.id) {
+            await FirebaseService.update('app_settings', existing.id, settingsData, false);
+            console.log('✅ Branding settings updated in Firebase');
+          } else {
+            await FirebaseService.create('app_settings', null, settingsData, false);
+            console.log('✅ Branding settings created in Firebase');
+          }
+        } catch (firebaseError) {
+          console.error('Error saving to Firebase:', firebaseError);
+          throw firebaseError;
         }
       } else {
         // SQLite için API çağrısı
-        await fetch('/api/settings/branding', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings)
-        });
+        try {
+          const response = await fetch('/api/settings/branding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+          });
+          if (!response.ok) {
+            throw new Error('API request failed');
+          }
+        } catch (apiError) {
+          console.error('Error saving to API:', apiError);
+          throw apiError;
+        }
       }
       
-      // localStorage'a da kaydet (hızlı erişim için)
-      localStorage.setItem('appBranding', JSON.stringify(settings));
+      // Manifest.json'u güncelle
+      await updateManifest();
       
-      // Sayfayı yenile (değişikliklerin görünmesi için)
-      alert('Ayarlar kaydedildi! Sayfa yenilenecek...');
-      window.location.reload();
+      // Service Worker'ı güncelle (PWA güncellemesi için)
+      await triggerServiceWorkerUpdate();
+      
+      // Branding updated event'i gönder (diğer component'lerin güncellenmesi için)
+      window.dispatchEvent(new Event('brandingUpdated'));
+      
+      alert('Ayarlar kaydedildi! Uygulama güncellemesi için "Uygulama Güncelle" butonuna tıklayın.');
     } catch (error) {
       console.error('Error saving branding settings:', error);
-      alert('Ayarlar kaydedilirken hata oluştu');
+      alert('Ayarlar kaydedilirken hata oluştu: ' + error.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateManifest = async () => {
+    try {
+      const manifest = {
+        name: settings.appName || 'Sekreterlik Yönetim Sistemi',
+        short_name: settings.appName?.substring(0, 12) || 'Sekreterlik',
+        description: settings.appDescription || 'Parti sekreterlik yönetim sistemi',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#3b82f6',
+        orientation: 'portrait-primary',
+        scope: '/',
+        lang: 'tr',
+        dir: 'ltr',
+        categories: ['productivity', 'business'],
+        icons: [
+          {
+            src: settings.icon192Url || '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: settings.icon512Url || '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          }
+        ]
+      };
+      
+      // Manifest'i localStorage'a kaydet (runtime'da kullanmak için)
+      localStorage.setItem('appManifest', JSON.stringify(manifest));
+      
+      // Document title'ı güncelle
+      if (settings.appName) {
+        document.title = settings.appName;
+      }
+      
+      // Meta description'ı güncelle
+      let metaDescription = document.querySelector('meta[name="description"]');
+      if (!metaDescription) {
+        metaDescription = document.createElement('meta');
+        metaDescription.name = 'description';
+        document.head.appendChild(metaDescription);
+      }
+      metaDescription.content = settings.appDescription || 'Parti sekreterlik yönetim sistemi';
+      
+      console.log('✅ Manifest updated');
+    } catch (error) {
+      console.error('Error updating manifest:', error);
+    }
+  };
+
+  const triggerServiceWorkerUpdate = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        // Service Worker'ı güncellemek için unregister edip yeniden register et
+        await registration.update();
+        console.log('✅ Service Worker update triggered');
+      }
+    } catch (error) {
+      console.error('Error triggering service worker update:', error);
+    }
+  };
+
+  const handleUpdateApp = async () => {
+    try {
+      // Tüm kullanıcılara in-app notification oluştur (güncelleme bildirimi)
+      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      
+      if (USE_FIREBASE) {
+        try {
+          const { default: FirebaseService } = await import('../services/FirebaseService');
+          
+          // Tüm aktif üyeleri al
+          const allMembers = await FirebaseService.getAll('members', {
+            where: [{ field: 'archived', operator: '==', value: false }]
+          }, false);
+          
+          if (allMembers && allMembers.length > 0) {
+            const notificationData = {
+              title: 'Uygulama Güncellemesi',
+              body: 'Yeni bir güncelleme mevcut! Uygulamayı yenileyin.',
+              type: 'update',
+              data: JSON.stringify({
+                action: 'reload',
+                url: window.location.href
+              }),
+              read: false,
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
+            };
+            
+            // Her üye için notification oluştur
+            let successCount = 0;
+            for (const member of allMembers) {
+              try {
+                const memberId = member.id || member.memberId || member.member_id;
+                if (!memberId) continue;
+                
+                await FirebaseService.create(
+                  'notifications',
+                  null,
+                  {
+                    ...notificationData,
+                    memberId: String(memberId)
+                  },
+                  false
+                );
+                successCount++;
+              } catch (memberError) {
+                console.error(`Error creating update notification for member ${member.id}:`, memberError);
+              }
+            }
+            
+            console.log(`✅ Update notification created for ${successCount}/${allMembers.length} members`);
+          }
+        } catch (notificationError) {
+          console.warn('Error creating update notifications:', notificationError);
+          // Notification hatası güncellemeyi engellemez
+        }
+      }
+      
+      // Service Worker güncellemesi
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Tüm service worker'ları unregister et
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+        
+        // Cache'i temizle
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+        
+        // Yeni service worker'ı register et
+        await navigator.serviceWorker.register('/sw.js');
+        
+        // Branding updated event'i gönder
+        window.dispatchEvent(new Event('brandingUpdated'));
+        
+        alert('Uygulama güncellemesi başlatıldı! Tüm kullanıcılara bildirim gönderildi. Sayfa yenilenecek...');
+        window.location.reload();
+      } else {
+        alert('Service Worker desteklenmiyor. Sayfa yenilenecek...');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error updating app:', error);
+      alert('Uygulama güncellenirken hata oluştu. Sayfa yenilenecek...');
+      window.location.reload();
     }
   };
 
@@ -274,8 +490,19 @@ const AppBrandingSettings = () => {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+      {/* Save and Update Buttons */}
+      <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={handleUpdateApp}
+          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+        >
+          <span className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Uygulama Güncelle
+          </span>
+        </button>
         <button
           onClick={handleSave}
           disabled={saving}
@@ -283,6 +510,13 @@ const AppBrandingSettings = () => {
         >
           {saving ? 'Kaydediliyor...' : 'Kaydet'}
         </button>
+      </div>
+      
+      <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+          <strong>Not:</strong> Ayarları kaydettikten sonra, mobil uygulamada değişikliklerin görünmesi için "Uygulama Güncelle" butonuna tıklayın. 
+          Bu işlem tüm kullanıcılara güncelleme bildirimi gönderecektir.
+        </p>
       </div>
     </div>
   );

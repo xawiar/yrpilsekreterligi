@@ -1,11 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getBrandingSettings } from '../utils/brandingLoader';
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [branding, setBranding] = useState(null);
+
+  useEffect(() => {
+    const loadBranding = () => {
+      const settings = getBrandingSettings();
+      setBranding(settings);
+    };
+    loadBranding();
+    window.addEventListener('storage', loadBranding);
+    window.addEventListener('brandingUpdated', loadBranding);
+    return () => {
+      window.removeEventListener('storage', loadBranding);
+      window.removeEventListener('brandingUpdated', loadBranding);
+    };
+  }, []);
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -21,10 +37,20 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <h1 className="text-lg sm:text-xl font-bold text-indigo-700 dark:text-indigo-400">Parti Sekreterliği</h1>
+            <div className="flex-shrink-0 flex items-center space-x-2">
+              {branding?.logoUrl && (
+                <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
+              )}
+              <h1 className="text-lg sm:text-xl font-bold text-indigo-700 dark:text-indigo-400">
+                {branding?.appName || 'Parti Sekreterliği'}
+              </h1>
             </div>
           </div>
+          {branding?.headerInfoText && (
+            <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 px-2">
+              {branding.headerInfoText}
+            </div>
+          )}
           <div className="flex items-center">
             <div className="ml-3 relative">
               <div className="flex items-center space-x-4">
@@ -46,4 +72,5 @@ const Navbar = () => {
   );
 };
 
+export default Navbar;
 export default Navbar;

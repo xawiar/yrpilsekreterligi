@@ -1,12 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { getBrandingSettings } from '../utils/brandingLoader';
 
 const Sidebar = ({ onMobileMenuClose }) => {
   const location = useLocation();
   const { logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const [branding, setBranding] = useState(null);
+
+  useEffect(() => {
+    const loadBranding = () => {
+      const settings = getBrandingSettings();
+      setBranding(settings);
+    };
+    loadBranding();
+    // localStorage değişikliklerini dinle
+    window.addEventListener('storage', loadBranding);
+    // Custom event dinle (aynı sayfada değişiklik olduğunda)
+    window.addEventListener('brandingUpdated', loadBranding);
+    return () => {
+      window.removeEventListener('storage', loadBranding);
+      window.removeEventListener('brandingUpdated', loadBranding);
+    };
+  }, []);
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: (
@@ -78,13 +96,30 @@ const Sidebar = ({ onMobileMenuClose }) => {
   return (
     <div className="flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-screen lg:rounded-r-2xl">
       {/* Desktop Header - Hidden on mobile */}
-      <div className="hidden lg:flex items-center justify-center h-16 border-b border-gray-100 dark:border-gray-700">
-        <h1 className="text-lg font-bold text-indigo-700 dark:text-indigo-400">Parti Sekreterliği</h1>
+      <div className="hidden lg:flex flex-col items-center justify-center h-auto min-h-16 border-b border-gray-100 dark:border-gray-700 px-4 py-3">
+        {branding?.logoUrl ? (
+          <img src={branding.logoUrl} alt="Logo" className="h-10 w-auto mb-2 object-contain" />
+        ) : null}
+        <h1 className="text-lg font-bold text-indigo-700 dark:text-indigo-400 text-center">
+          {branding?.appName || 'Parti Sekreterliği'}
+        </h1>
+        {branding?.headerInfoText && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1 px-2">
+            {branding.headerInfoText}
+          </p>
+        )}
       </div>
       
       {/* Mobile Header - Hidden on desktop */}
       <div className="lg:hidden flex items-center justify-between h-16 border-b border-gray-100 dark:border-gray-700 px-4">
-        <h1 className="text-lg font-bold text-indigo-700 dark:text-indigo-400">Parti Sekreterliği</h1>
+        <div className="flex items-center space-x-2">
+          {branding?.logoUrl && (
+            <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
+          )}
+          <h1 className="text-lg font-bold text-indigo-700 dark:text-indigo-400">
+            {branding?.appName || 'Parti Sekreterliği'}
+          </h1>
+        </div>
         {onMobileMenuClose && (
           <button
             onClick={onMobileMenuClose}

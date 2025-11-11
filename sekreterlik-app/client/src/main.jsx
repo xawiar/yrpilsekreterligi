@@ -3,6 +3,14 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import * as Sentry from '@sentry/react'
+import { loadBrandingSettings } from './utils/brandingLoader'
+
+// Uygulama başladığında branding ayarlarını yükle
+loadBrandingSettings().then(settings => {
+  if (settings) {
+    console.log('✅ Branding settings loaded');
+  }
+});
 
 // Firebase kullanımı kontrolü
 const USE_FIREBASE = 
