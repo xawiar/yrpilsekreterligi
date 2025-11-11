@@ -749,15 +749,47 @@ class FirebaseApiService {
               console.log('📥 Response status:', response.status, response.statusText);
               
               if (response.ok) {
-                const responseData = await response.json();
-                console.log('✅ Firebase Auth password updated successfully:', responseData);
+                try {
+                  const responseText = await response.text();
+                  console.log('📥 Response text:', responseText);
+                  
+                  let responseData;
+                  if (responseText) {
+                    try {
+                      responseData = JSON.parse(responseText);
+                    } catch (parseError) {
+                      console.warn('⚠️ Response is not valid JSON, treating as success');
+                      responseData = { success: true, message: responseText || 'Password updated' };
+                    }
+                  } else {
+                    responseData = { success: true, message: 'Password updated (empty response)' };
+                  }
+                  
+                  console.log('✅ Firebase Auth password updated successfully:', responseData);
+                } catch (responseError) {
+                  console.error('❌ Error parsing response:', responseError);
+                  // Hata olsa bile devam et (Firestore güncellemesi başarılı)
+                }
               } else {
-                const errorData = await response.json();
-                console.error('❌ Firebase Auth password update failed:', {
-                  status: response.status,
-                  statusText: response.statusText,
-                  error: errorData
-                });
+                try {
+                  const errorText = await response.text();
+                  let errorData;
+                  try {
+                    errorData = JSON.parse(errorText);
+                  } catch (parseError) {
+                    errorData = { message: errorText || 'Unknown error' };
+                  }
+                  console.error('❌ Firebase Auth password update failed:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorData
+                  });
+                } catch (errorParseError) {
+                  console.error('❌ Firebase Auth password update failed (could not parse error):', {
+                    status: response.status,
+                    statusText: response.statusText
+                  });
+                }
                 // Hata olsa bile devam et (Firestore güncellemesi başarılı)
               }
             } catch (firebaseError) {

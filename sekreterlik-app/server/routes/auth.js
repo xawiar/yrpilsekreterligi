@@ -772,9 +772,11 @@ router.post('/update-firebase-auth-password', async (req, res) => {
       
       console.log('✅ Firebase Auth password updated successfully for authUid:', authUid);
       
-      res.json({
+      // Response'u düzgün gönder
+      res.status(200).json({
         success: true,
-        message: 'Firebase Auth şifresi güncellendi'
+        message: 'Firebase Auth şifresi güncellendi',
+        authUid: authUid
       });
     } catch (firebaseError) {
       console.error('❌ Firebase Auth password update error:', {
