@@ -64,13 +64,22 @@ console.warn = (...args) => {
 
 // Also filter console.log for network errors (some libraries log errors via console.log)
 // Production'da console.log'ları tamamen kaldır (performans ve güvenlik için)
+// Ancak notification debug log'larını koru
 console.log = (...args) => {
-  // Production'da hiçbir console.log gösterilmez
+  const message = args.join(' ');
+  
+  // Notification debug log'larını her zaman göster (🔔, 📬, ✅, ❌, 📝, 🔍, 📊 gibi emoji'lerle başlayanlar)
+  const isNotificationDebug = /^[🔔📬✅❌📝🔍📊⚠️]/.test(message);
+  if (isNotificationDebug) {
+    originalConsoleLog.apply(console, args);
+    return;
+  }
+  
+  // Production'da diğer console.log'ları kaldır
   if (import.meta.env.PROD) {
     return; // Silently ignore all console.log in production
   }
   
-  const message = args.join(' ');
   if (USE_FIREBASE && (
     message.includes('ERR_CONNECTION_REFUSED') ||
     message.includes('localhost:5000') ||
