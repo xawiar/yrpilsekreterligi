@@ -235,11 +235,22 @@ class VisitController {
             const selectedLocationTypes = JSON.parse(event.selected_location_types);
             const selectedLocations = JSON.parse(event.selected_locations);
             
+            console.log(`Processing event ID ${event.id}:`, {
+              selectedLocationTypes,
+              selectedLocations
+            });
+            
             for (const locationType of selectedLocationTypes) {
               const locationIds = selectedLocations[locationType];
               if (locationIds && Array.isArray(locationIds)) {
                 for (const locationId of locationIds) {
-                  await this.incrementVisit(locationType, locationId);
+                  // Normalize locationId to number if possible
+                  const normalizedId = typeof locationId === 'string' && !isNaN(locationId) 
+                    ? parseInt(locationId, 10) 
+                    : locationId;
+                  
+                  console.log(`Incrementing visit for ${locationType} ID ${normalizedId}`);
+                  await this.incrementVisit(locationType, normalizedId);
                 }
               }
             }
@@ -247,6 +258,10 @@ class VisitController {
           }
         } catch (eventError) {
           console.error(`Error processing event ID ${event.id}:`, eventError);
+          console.error('Event data:', {
+            selected_location_types: event.selected_location_types,
+            selected_locations: event.selected_locations
+          });
         }
       }
       
