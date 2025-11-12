@@ -1,15 +1,25 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-const MobileBottomNav = () => {
+const MobileBottomNav = ({ grantedPermissions = [], memberPosition = null }) => {
   const location = useLocation();
 
   const isActive = (path) => {
     return location.pathname === path;
   };
 
-  const navItems = [
-    {
+  // Check if user has specific permissions
+  const hasCreateMeeting = grantedPermissions.includes('create_meeting');
+  const hasCreateEvent = grantedPermissions.includes('create_event');
+  const hasAddSTK = grantedPermissions.includes('add_stk');
+  const hasAddPublicInstitution = grantedPermissions.includes('add_public_institution');
+  const isSTKPresident = memberPosition === 'STK Birim Başkanı' || memberPosition === 'STK birim başk' || memberPosition === 'Stk Birim Başk';
+
+  const navItems = [];
+
+  // Add quick meeting button if user has permission
+  if (hasCreateMeeting || isSTKPresident) {
+    navItems.push({
       name: 'Hızlı Toplantı',
       href: '#quick-meeting',
       icon: (
@@ -19,8 +29,12 @@ const MobileBottomNav = () => {
       ),
       isQuickAction: true,
       action: 'quick-meeting',
-    },
-    {
+    });
+  }
+
+  // Add quick event button if user has permission
+  if (hasCreateEvent || isSTKPresident) {
+    navItems.push({
       name: 'Hızlı Etkinlik',
       href: '#quick-event',
       icon: (
@@ -30,8 +44,12 @@ const MobileBottomNav = () => {
       ),
       isQuickAction: true,
       action: 'quick-event',
-    },
-    {
+    });
+  }
+
+  // Add members link (always show if we have any permissions)
+  if (navItems.length > 0) {
+    navItems.push({
       name: 'Üyeler',
       href: '/members',
       icon: (
@@ -39,18 +57,20 @@ const MobileBottomNav = () => {
           <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
         </svg>
       ),
-    },
-    {
-      name: 'Menü',
-      href: '#menu',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-        </svg>
-      ),
-      isMenu: true,
-    },
-  ];
+    });
+  }
+
+  // Add menu button (always show)
+  navItems.push({
+    name: 'Menü',
+    href: '#menu',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+      </svg>
+    ),
+    isMenu: true,
+  });
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-area-inset-bottom shadow-lg">

@@ -370,41 +370,23 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     setIsUploading(true);
     
     try {
-      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' || 
-                           import.meta.env.VITE_USE_FIREBASE === true ||
-                           String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('memberId', member.id);
 
-      let photoUrl;
+      // Upload photo
+      const response = await fetch('/api/members/upload-photo', {
+        method: 'POST',
+        body: formData
+      });
 
-      if (USE_FIREBASE) {
-        // Upload to Firebase Storage
-        const { uploadMemberPhoto } = await import('../utils/photoStorage');
-        photoUrl = await uploadMemberPhoto(file, member.id);
-        
-        // Update member photo in Firebase
-        const ApiService = (await import('../utils/ApiService')).default;
-        await ApiService.updateMember(member.id, { photo: photoUrl });
-      } else {
-        // Upload to server (traditional method)
-        const formData = new FormData();
-        formData.append('photo', file);
-        formData.append('memberId', member.id);
-
-        const response = await fetch('/api/members/upload-photo', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          throw new Error('Fotoğraf yüklenirken hata oluştu');
-        }
-
+      if (response.ok) {
         const result = await response.json();
-        photoUrl = result.photoUrl;
+        setPhoto(result.photoUrl);
+        alert('Fotoğraf başarıyla yüklendi');
+      } else {
+        throw new Error('Fotoğraf yüklenirken hata oluştu');
       }
-
-      setPhoto(photoUrl);
-      alert('Fotoğraf başarıyla yüklendi');
     } catch (error) {
       console.error('Photo upload error:', error);
       alert('Fotoğraf yüklenirken hata oluştu: ' + error.message);
@@ -594,19 +576,9 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
                     loading="lazy"
                     onError={(e) => {
                       console.error('Image load error:', e);
-                      // Hide image and show placeholder
                       e.target.style.display = 'none';
-                      const placeholder = e.target.nextElementSibling;
-                      if (placeholder) {
-                        placeholder.style.display = 'flex';
-                      }
                     }}
                   />
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-gray-200 hidden">
-                    <span className="text-lg sm:text-2xl font-bold text-indigo-800">
-                      {member.name.charAt(0)}
-                    </span>
-                  </div>
                 ) : (
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-gray-200">
                     <span className="text-lg sm:text-2xl font-bold text-indigo-800">

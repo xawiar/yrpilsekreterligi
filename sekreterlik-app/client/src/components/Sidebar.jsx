@@ -291,7 +291,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
           })}
         </ul>
       </nav>
-      <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-2">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-2 lg:static lg:mt-0 sticky bottom-0 bg-white dark:bg-gray-800 z-10">
         <button
           onClick={toggleTheme}
           className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm"

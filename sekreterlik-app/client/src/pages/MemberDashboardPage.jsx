@@ -26,6 +26,7 @@ import PollVotingComponent from '../components/PollVotingComponent';
 import PollResultsComponent from '../components/PollResultsComponent';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import Modal from '../components/Modal';
+import MobileBottomNav from '../components/MobileBottomNav';
 
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
@@ -1632,6 +1633,22 @@ const MemberDashboardPage = () => {
         )}
       </div>
       <Footer />
+      
+      {/* Mobile Bottom Navigation - Only show if user has action permissions */}
+      {(
+        grantedPermissions.includes('add_stk') ||
+        grantedPermissions.includes('create_meeting') ||
+        grantedPermissions.includes('create_event') ||
+        grantedPermissions.includes('add_public_institution') ||
+        member?.position === 'STK Birim Başkanı' ||
+        member?.position === 'STK birim başk' ||
+        member?.position === 'Stk Birim Başk'
+      ) && (
+        <MobileBottomNav 
+          grantedPermissions={grantedPermissions}
+          memberPosition={member?.position}
+        />
+      )}
     </div>
   );
 };
