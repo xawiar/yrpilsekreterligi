@@ -1,6 +1,38 @@
 import React from 'react';
 
-const SettingsTabs = ({ activeTab, setActiveTab }) => {
+const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmin = false }) => {
+  // Check if user has permission for a tab
+  const hasPermission = (tabName) => {
+    if (isAdmin) return true;
+
+    const permissionMap = {
+      'admin': true, // Everyone can see their own info
+      'regions': grantedPermissions.includes('add_region'),
+      'positions': grantedPermissions.includes('add_position'),
+      'member-users': grantedPermissions.includes('manage_member_users'),
+      'districts': grantedPermissions.includes('add_district'),
+      'towns': grantedPermissions.includes('add_town'),
+      'neighborhoods': grantedPermissions.includes('add_neighborhood'),
+      'villages': grantedPermissions.includes('add_village'),
+      'stks': grantedPermissions.includes('manage_stk') || grantedPermissions.includes('add_stk'),
+      'public-institutions': grantedPermissions.includes('add_public_institution'),
+      'mosques': grantedPermissions.includes('add_mosque'),
+      'event-categories': grantedPermissions.includes('manage_event_categories'),
+      'authorization': false, // Admin only
+      'bylaws': grantedPermissions.includes('manage_bylaws'),
+      'groq-api': false, // Admin only
+      'firebase-config': false, // Admin only
+      'deployment-config': false, // Admin only
+      'sms-config': false, // Admin only
+      'firebase-sync': false, // Admin only
+      'polls': grantedPermissions.includes('manage_polls'),
+      'member-dashboard-analytics': grantedPermissions.includes('access_member_dashboard_analytics'),
+      'app-branding': grantedPermissions.includes('manage_app_branding'),
+    };
+
+    return permissionMap[tabName] || false;
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-2 mb-6 border border-gray-100 dark:border-gray-700">
       <nav className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -18,6 +50,7 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           Kullanıcı Bilgileri
         </button>
         
+        {hasPermission('regions') && (
         <button
           onClick={() => setActiveTab('regions')}
           className={`${
@@ -31,7 +64,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Bölge Ekle
         </button>
+        )}
         
+        {hasPermission('positions') && (
         <button
           onClick={() => setActiveTab('positions')}
           className={`${
@@ -45,7 +80,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Görev Ekle
         </button>
+        )}
         
+        {hasPermission('member-users') && (
         <button
           onClick={() => setActiveTab('member-users')}
           className={`${
@@ -59,7 +96,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Üye Kullanıcıları
         </button>
+        )}
         
+        {hasPermission('districts') && (
         <button
           onClick={() => setActiveTab('districts')}
           className={`${
@@ -73,7 +112,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           İlçe Ekle
         </button>
+        )}
         
+        {hasPermission('towns') && (
         <button
           onClick={() => setActiveTab('towns')}
           className={`${
@@ -87,7 +128,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Belde Ekle
         </button>
+        )}
         
+        {hasPermission('neighborhoods') && (
         <button
           onClick={() => setActiveTab('neighborhoods')}
           className={`${
@@ -101,7 +144,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Mahalle Ekle
         </button>
+        )}
         
+        {hasPermission('villages') && (
         <button
           onClick={() => setActiveTab('villages')}
           className={`${
@@ -115,7 +160,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Köy Ekle
         </button>
+        )}
         
+        {hasPermission('stks') && (
         <button
           onClick={() => setActiveTab('stks')}
           className={`${
@@ -129,7 +176,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           STK Ekle
         </button>
+        )}
         
+        {hasPermission('public-institutions') && (
         <button
           onClick={() => setActiveTab('public-institutions')}
           className={`${
@@ -143,7 +192,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Kamu Kurumu Ekle
         </button>
+        )}
         
+        {hasPermission('mosques') && (
         <button
           onClick={() => setActiveTab('mosques')}
           className={`${
@@ -157,7 +208,9 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Cami Ekle
         </button>
+        )}
         
+        {hasPermission('event-categories') && (
         <button
           onClick={() => setActiveTab('event-categories')}
           className={`${
@@ -171,8 +224,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Etkinlik Kategorileri
         </button>
+        )}
         
-        {/* Yetkilendirme */}
+        {/* Yetkilendirme - Admin only */}
+        {hasPermission('authorization') && (
         <button
           onClick={() => setActiveTab('authorization')}
           className={`${
@@ -186,8 +241,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Yetkilendirme
         </button>
+        )}
         
         {/* Parti Tüzüğü */}
+        {hasPermission('bylaws') && (
         <button
           onClick={() => setActiveTab('bylaws')}
           className={`${
@@ -201,8 +258,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Parti Tüzüğü
         </button>
+        )}
         
-        {/* Groq Chatbot API */}
+        {/* Groq Chatbot API - Admin only */}
+        {hasPermission('groq-api') && (
         <button
           onClick={() => setActiveTab('groq-api')}
           className={`${
@@ -216,8 +275,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Chatbot API
         </button>
+        )}
         
-        {/* Firebase Yapılandırması */}
+        {/* Firebase Yapılandırması - Admin only */}
+        {hasPermission('firebase-config') && (
         <button
           onClick={() => setActiveTab('firebase-config')}
           className={`${
@@ -231,8 +292,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Firebase Yapılandırması
         </button>
+        )}
         
-        {/* Deployment Yapılandırması */}
+        {/* Deployment Yapılandırması - Admin only */}
+        {hasPermission('deployment-config') && (
         <button
           onClick={() => setActiveTab('deployment-config')}
           className={`${
@@ -246,8 +309,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Deployment Yapılandırması
         </button>
+        )}
         
-        {/* SMS Yapılandırması */}
+        {/* SMS Yapılandırması - Admin only */}
+        {hasPermission('sms-config') && (
         <button
           onClick={() => setActiveTab('sms-config')}
           className={`${
@@ -261,8 +326,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           SMS Yapılandırması
         </button>
+        )}
         
-        {/* Firebase'e Veri Aktarımı */}
+        {/* Firebase'e Veri Aktarımı - Admin only */}
+        {hasPermission('firebase-sync') && (
         <button
           onClick={() => setActiveTab('firebase-sync')}
           className={`${
@@ -276,8 +343,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Firebase'e Veri Aktarımı
         </button>
+        )}
         
         {/* Anket/Oylama */}
+        {hasPermission('polls') && (
         <button
           onClick={() => setActiveTab('polls')}
           className={`${
@@ -291,8 +360,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Anket/Oylama
         </button>
+        )}
         
         {/* Üye Dashboard Analytics */}
+        {hasPermission('member-dashboard-analytics') && (
         <button
           onClick={() => setActiveTab('member-dashboard-analytics')}
           className={`${
@@ -306,8 +377,10 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Üye Dashboard Analytics
         </button>
+        )}
         
         {/* Uygulama Görünümü */}
+        {hasPermission('app-branding') && (
         <button
           onClick={() => setActiveTab('app-branding')}
           className={`${
@@ -321,6 +394,7 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           </svg>
           Uygulama Görünümü
         </button>
+        )}
         
       </nav>
     </div>
