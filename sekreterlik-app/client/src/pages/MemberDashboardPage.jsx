@@ -24,7 +24,6 @@ import GroupsPage from './GroupsPage';
 import Footer from '../components/Footer';
 import PollVotingComponent from '../components/PollVotingComponent';
 import PollResultsComponent from '../components/PollResultsComponent';
-import { usePushNotifications } from '../hooks/usePushNotifications';
 import Modal from '../components/Modal';
 import MobileBottomNav from '../components/MobileBottomNav';
 
@@ -38,12 +37,8 @@ const MemberDashboardPage = () => {
   const [memberRegistrations, setMemberRegistrations] = useState([]);
   const [polls, setPolls] = useState([]);
   const [pollResults, setPollResults] = useState({});
-  const [notifications, setNotifications] = useState([]);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isPushLoading, setIsPushLoading] = useState(false);
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'public-institution-management', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -53,23 +48,11 @@ const MemberDashboardPage = () => {
   const sessionIdRef = useRef(null);
   const sessionStartTimeRef = useRef(null);
   const pageViewsRef = useRef(0);
-  
-  // Push notifications
-  const memberIdForPush = user?.memberId || user?.id;
-  const {
-    isSupported: isPushSupported,
-    isSubscribed: isPushSubscribed,
-    subscribe: subscribeToPush,
-    requestPermission: requestPushPermission,
-    sendTestNotification,
-    error: pushError
-  } = usePushNotifications(memberIdForPush);
 
   useEffect(() => {
     if (user && user.role === 'member') {
       fetchMemberData();
       startAnalyticsSession();
-      initializePushNotifications();
     }
     
     // Cleanup: End session when component unmounts
@@ -77,6 +60,34 @@ const MemberDashboardPage = () => {
       endAnalyticsSession();
     };
   }, [user]);
+
+  // Listen for mobile quick actions
+  useEffect(() => {
+    const handleQuickAction = (event) => {
+      const { action } = event.detail;
+      switch (action) {
+        case 'add-member':
+          setCurrentView('add-member');
+          break;
+        case 'create-meeting':
+          setCurrentView('create-meeting');
+          break;
+        case 'add-stk':
+          setCurrentView('stk-management');
+          break;
+        case 'add-public-institution':
+          setCurrentView('public-institution-management');
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('memberQuickAction', handleQuickAction);
+    return () => {
+      window.removeEventListener('memberQuickAction', handleQuickAction);
+    };
+  }, []);
 
   // Track page views
   useEffect(() => {
@@ -86,39 +97,6 @@ const MemberDashboardPage = () => {
     }
   }, [currentView]);
 
-  // Initialize push notifications
-  const initializePushNotifications = async () => {
-    if (!isPushSupported) {
-      console.log('Push notifications not supported');
-      return;
-    }
-
-    // Check if already subscribed
-    if (isPushSubscribed) {
-      console.log('Already subscribed to push notifications');
-      return;
-    }
-
-    try {
-      // Check existing subscription first
-      if ('serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.ready;
-        const existingSubscription = await registration.pushManager.getSubscription();
-        
-        if (existingSubscription) {
-          console.log('✅ Found existing push subscription');
-          // Update state without re-subscribing
-          return;
-        }
-      }
-
-      // If not subscribed, don't auto-subscribe
-      // Let user click the button to subscribe
-      console.log('Push notifications available but not subscribed');
-    } catch (error) {
-      console.error('Error checking push notification subscription:', error);
-    }
-  };
 
   // Start analytics session
   const startAnalyticsSession = async () => {
@@ -239,39 +217,6 @@ const MemberDashboardPage = () => {
         setPolls([]);
       }
 
-      // Fetch notifications
-      try {
-        console.log('🔔 Fetching notifications for memberId:', memberId);
-        const notificationsResponse = await ApiService.getNotifications(memberId);
-        console.log('📬 Notifications response:', notificationsResponse);
-        if (notificationsResponse.success) {
-          const fetchedNotifications = notificationsResponse.notifications || [];
-          console.log(`✅ Loaded ${fetchedNotifications.length} notifications`);
-          setNotifications(fetchedNotifications);
-        } else {
-          console.warn('⚠️ Failed to fetch notifications:', notificationsResponse);
-        }
-        
-        const unreadCountResponse = await ApiService.getUnreadNotificationCount(memberId);
-        if (unreadCountResponse.success) {
-          const unreadCount = unreadCountResponse.count || 0;
-          console.log(`📊 Unread notification count: ${unreadCount}`);
-          setUnreadNotificationCount(unreadCount);
-          
-          // Update app badge
-          if ('setAppBadge' in navigator && unreadCount > 0) {
-            navigator.setAppBadge(unreadCount).catch(err => {
-              console.warn('Could not set app badge:', err);
-            });
-          } else if ('clearAppBadge' in navigator && unreadCount === 0) {
-            navigator.clearAppBadge().catch(err => {
-              console.warn('Could not clear app badge:', err);
-            });
-          }
-        }
-      } catch (err) {
-        console.error('❌ Error fetching notifications:', err);
-      }
 
       // Fetch regions/positions for forms
       try {
@@ -735,20 +680,6 @@ const MemberDashboardPage = () => {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-end space-y-2 sm:space-y-0 sm:space-x-4">
-                {/* Notification Icon Button */}
-                <button
-                  onClick={() => setIsNotificationModalOpen(true)}
-                  className="relative inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-                >
-                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                      {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
-                    </span>
-                  )}
-                </button>
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-600">
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Kullanıcı Adı</p>
                   <p className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-gray-100">{user.username}</p>
@@ -826,67 +757,6 @@ const MemberDashboardPage = () => {
                     Bu sayfada sadece sizin bilgileriniz ve katılım durumunuz görüntülenmektedir.
                   </p>
                 </div>
-                {/* Push Notification Status */}
-                {isPushSupported && (
-                  <div className="flex-shrink-0">
-                    <div className="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
-                      <div className="flex items-center space-x-2 mb-2">
-                        {isPushSubscribed ? (
-                          <>
-                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                            <span className="text-xs font-medium">Bildirimler Aktif</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                            <span className="text-xs font-medium">Bildirimler Kapalı</span>
-                          </>
-                        )}
-                      </div>
-                      {!isPushSubscribed && (
-                        <button
-                          onClick={async () => {
-                            try {
-                              setIsPushLoading(true);
-                              const permission = await requestPushPermission();
-                              if (permission) {
-                                const success = await subscribeToPush();
-                                if (success) {
-                                  // State will update automatically, no need to reload
-                                  console.log('✅ Push notification subscription successful');
-                                } else {
-                                  alert('Bildirim aboneliği başarısız. Lütfen tekrar deneyin.');
-                                }
-                              } else {
-                                alert('Bildirim izni verilmedi. Lütfen tarayıcı ayarlarından izin verin.');
-                              }
-                            } catch (error) {
-                              console.error('Error subscribing to push:', error);
-                              alert('Bildirim aboneliği sırasında hata oluştu: ' + error.message);
-                            } finally {
-                              setIsPushLoading(false);
-                            }
-                          }}
-                          disabled={isPushLoading}
-                          className="text-xs bg-white text-indigo-600 px-3 py-1 rounded hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isPushLoading ? 'Açılıyor...' : 'Bildirimleri Aç'}
-                        </button>
-                      )}
-                      {isPushSubscribed && sendTestNotification && (
-                        <button
-                          onClick={sendTestNotification}
-                          className="text-xs bg-white text-indigo-600 px-3 py-1 rounded hover:bg-indigo-50 transition-colors mt-1"
-                        >
-                          Test Bildirimi
-                        </button>
-                      )}
-                      {pushError && (
-                        <p className="text-xs text-red-200 mt-1">{pushError}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             {/* Decorative elements */}
@@ -1368,187 +1238,6 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
-          {/* Notifications Section - Always show if there are notifications */}
-          {notifications.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900 dark:to-cyan-900">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                      Bildirimler
-                      {unreadNotificationCount > 0 && (
-                        <span className="ml-2 px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-full">
-                          {unreadNotificationCount}
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Son bildirimleriniz</p>
-                  </div>
-                  {unreadNotificationCount > 0 && (
-                    <button
-                      onClick={async () => {
-                        const memberId = user?.memberId || user?.id;
-                        if (memberId) {
-                          await ApiService.markAllNotificationsAsRead(memberId);
-                          await fetchMemberData();
-                        }
-                      }}
-                      className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                    >
-                      Tümünü Okundu İşaretle
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="p-6 space-y-3 max-h-96 overflow-y-auto">
-                {notifications.slice(0, 10).map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      notification.read
-                        ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
-                        : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900'
-                    }`}
-                    onClick={async () => {
-                      if (!notification.read) {
-                        await ApiService.markNotificationAsRead(notification.id);
-                        await fetchMemberData();
-                      }
-                    }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-semibold ${notification.read ? 'text-gray-700 dark:text-gray-300' : 'text-blue-900 dark:text-blue-100'}`}>
-                            {notification.title}
-                          </h4>
-                          {!notification.read && (
-                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                          )}
-                        </div>
-                        <p className={`text-sm ${notification.read ? 'text-gray-600 dark:text-gray-400' : 'text-blue-800 dark:text-blue-200'}`}>
-                          {notification.body}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                          {new Date(notification.createdAt || notification.created_at).toLocaleString('tr-TR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await ApiService.deleteNotification(notification.id);
-                          await fetchMemberData();
-                        }}
-                        className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notification Modal */}
-          <Modal
-            isOpen={isNotificationModalOpen}
-            onClose={() => setIsNotificationModalOpen(false)}
-            title="Bildirimler"
-          >
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <svg className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <p>Henüz bildiriminiz yok</p>
-                </div>
-              ) : (
-                notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      notification.read
-                        ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
-                        : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900'
-                    }`}
-                    onClick={async () => {
-                      if (!notification.read) {
-                        await ApiService.markNotificationAsRead(notification.id);
-                        await fetchMemberData();
-                      }
-                    }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-semibold ${notification.read ? 'text-gray-700 dark:text-gray-300' : 'text-blue-900 dark:text-blue-100'}`}>
-                            {notification.title}
-                          </h4>
-                          {!notification.read && (
-                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                          )}
-                        </div>
-                        <p className={`text-sm ${notification.read ? 'text-gray-600 dark:text-gray-400' : 'text-blue-800 dark:text-blue-200'}`}>
-                          {notification.body}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                          {new Date(notification.createdAt || notification.created_at).toLocaleString('tr-TR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await ApiService.deleteNotification(notification.id);
-                          await fetchMemberData();
-                        }}
-                        className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            {notifications.length > 0 && unreadNotificationCount > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={async () => {
-                    const memberId = user?.memberId || user?.id;
-                    if (memberId) {
-                      await ApiService.markAllNotificationsAsRead(memberId);
-                      await fetchMemberData();
-                    }
-                  }}
-                  className="w-full text-sm px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Tümünü Okundu İşaretle
-                </button>
-              </div>
-            )}
-          </Modal>
-
           {/* Active Polls Section */}
           {polls.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1634,15 +1323,12 @@ const MemberDashboardPage = () => {
       </div>
       <Footer />
       
-      {/* Mobile Bottom Navigation - Only show if user has action permissions */}
+      {/* Mobile Bottom Navigation - Only show if user has "Hızlı İşlemler" permissions */}
       {(
-        grantedPermissions.includes('add_stk') ||
+        grantedPermissions.includes('add_member') ||
         grantedPermissions.includes('create_meeting') ||
-        grantedPermissions.includes('create_event') ||
-        grantedPermissions.includes('add_public_institution') ||
-        member?.position === 'STK Birim Başkanı' ||
-        member?.position === 'STK birim başk' ||
-        member?.position === 'Stk Birim Başk'
+        grantedPermissions.includes('add_stk') ||
+        grantedPermissions.includes('add_public_institution')
       ) && (
         <MobileBottomNav 
           grantedPermissions={grantedPermissions}

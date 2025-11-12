@@ -8,55 +8,71 @@ const MobileBottomNav = ({ grantedPermissions = [], memberPosition = null }) => 
     return location.pathname === path;
   };
 
-  // Check if user has specific permissions
+  // Check if user has "Hızlı İşlemler" permissions
+  const hasAddMember = grantedPermissions.includes('add_member');
   const hasCreateMeeting = grantedPermissions.includes('create_meeting');
-  const hasCreateEvent = grantedPermissions.includes('create_event');
   const hasAddSTK = grantedPermissions.includes('add_stk');
   const hasAddPublicInstitution = grantedPermissions.includes('add_public_institution');
-  const isSTKPresident = memberPosition === 'STK Birim Başkanı' || memberPosition === 'STK birim başk' || memberPosition === 'Stk Birim Başk';
 
   const navItems = [];
 
-  // Add quick meeting button if user has permission
-  if (hasCreateMeeting || isSTKPresident) {
+  // Add Üye Ekle button if user has permission
+  if (hasAddMember) {
     navItems.push({
-      name: 'Hızlı Toplantı',
-      href: '#quick-meeting',
+      name: 'Üye Ekle',
+      href: '#add-member',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+        </svg>
+      ),
+      isQuickAction: true,
+      action: 'add-member',
+    });
+  }
+
+  // Add Toplantı Oluştur button if user has permission
+  if (hasCreateMeeting) {
+    navItems.push({
+      name: 'Toplantı Oluştur',
+      href: '#create-meeting',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
         </svg>
       ),
       isQuickAction: true,
-      action: 'quick-meeting',
+      action: 'create-meeting',
     });
   }
 
-  // Add quick event button if user has permission
-  if (hasCreateEvent || isSTKPresident) {
+  // Add STK Ekle button if user has permission
+  if (hasAddSTK) {
     navItems.push({
-      name: 'Hızlı Etkinlik',
-      href: '#quick-event',
+      name: 'STK Ekle',
+      href: '#add-stk',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
         </svg>
       ),
       isQuickAction: true,
-      action: 'quick-event',
+      action: 'add-stk',
     });
   }
 
-  // Add members link (always show if we have any permissions)
-  if (navItems.length > 0) {
+  // Add Kamu Kurumu Ekle button if user has permission
+  if (hasAddPublicInstitution) {
     navItems.push({
-      name: 'Üyeler',
-      href: '/members',
+      name: 'Kamu Kurumu Ekle',
+      href: '#add-public-institution',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
         </svg>
       ),
+      isQuickAction: true,
+      action: 'add-public-institution',
     });
   }
 
@@ -102,8 +118,8 @@ const MobileBottomNav = ({ grantedPermissions = [], memberPosition = null }) => 
               <button
                 key={item.name}
                 onClick={() => {
-                  // Quick action event
-                  const event = new CustomEvent('quickAction', { detail: { action: item.action } });
+                  // Quick action event - MemberDashboardPage'de dinlenecek
+                  const event = new CustomEvent('memberQuickAction', { detail: { action: item.action } });
                   window.dispatchEvent(event);
                 }}
                 className={`flex flex-col items-center justify-center min-w-[60px] min-h-[60px] rounded-xl transition-all duration-200 active:scale-95 ${
