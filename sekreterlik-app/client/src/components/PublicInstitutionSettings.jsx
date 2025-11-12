@@ -35,7 +35,14 @@ const PublicInstitutionSettings = () => {
       const data = await ApiService.getAllVisitCounts('public_institution');
       const counts = {};
       data.forEach(visit => {
-        counts[visit.public_institution_id] = visit.visit_count;
+        // Normalize ID to handle both string and number
+        const id = String(visit.public_institution_id);
+        counts[id] = visit.visit_count;
+        // Also store with number key for compatibility
+        const numId = Number(visit.public_institution_id);
+        if (!isNaN(numId)) {
+          counts[numId] = visit.visit_count;
+        }
       });
       setVisitCounts(counts);
     } catch (error) {
@@ -228,7 +235,7 @@ const PublicInstitutionSettings = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
-                      {visitCounts[publicInstitution.id] || 0} ziyaret
+                      {visitCounts[String(publicInstitution.id)] || visitCounts[Number(publicInstitution.id)] || 0} ziyaret
                     </span>
                   </div>
                   {publicInstitution.description && (
