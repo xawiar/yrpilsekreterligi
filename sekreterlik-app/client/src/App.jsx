@@ -41,6 +41,7 @@ const FirebaseTestPage = lazy(() => import('./pages/FirebaseTestPage'));
 const RemoveDuplicateMeetingsPage = lazy(() => import('./pages/RemoveDuplicateMeetingsPage'));
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const Footer = lazy(() => import('./components/Footer'));
+const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -180,6 +181,17 @@ function AppContent() {
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
   const { isLoggedIn, user } = useAuth();
 
+  // Mobile menu event listener
+  React.useEffect(() => {
+    const handleOpenMobileMenu = () => {
+      setIsMobileMenuOpen(true);
+    };
+    window.addEventListener('openMobileMenu', handleOpenMobileMenu);
+    return () => {
+      window.removeEventListener('openMobileMenu', handleOpenMobileMenu);
+    };
+  }, []);
+
   return (
     <Router
       future={{
@@ -296,16 +308,43 @@ function AppContent() {
                       </div>
                     </div>
                     
-                    {/* Mobile Menu Overlay */}
+                    {/* Mobile Menu Overlay with Swipe Support */}
                     {isMobileMenuOpen && (
-                      <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                      <div 
+                        className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70 transition-opacity duration-300" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <div 
+                          className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-300"
+                          onClick={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => {
+                            const touch = e.touches[0];
+                            e.currentTarget.dataset.touchStartX = touch.clientX.toString();
+                          }}
+                          onTouchMove={(e) => {
+                            const touch = e.touches[0];
+                            const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
+                            const diff = touch.clientX - startX;
+                            if (diff < 0) {
+                              e.currentTarget.style.transform = `translateX(${diff}px)`;
+                            }
+                          }}
+                          onTouchEnd={(e) => {
+                            const touch = e.changedTouches[0];
+                            const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
+                            const diff = touch.clientX - startX;
+                            if (diff < -100) {
+                              setIsMobileMenuOpen(false);
+                            }
+                            e.currentTarget.style.transform = '';
+                          }}
+                        >
                           <Sidebar onMobileMenuClose={() => setIsMobileMenuOpen(false)} />
                         </div>
                       </div>
                     )}
                     
-                    <main className="flex-1 p-2 sm:p-3 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                    <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-6">
                       <div className="w-full max-w-7xl mx-auto">
                         <Routes>
                           <Route path="/" element={<DashboardPage />} />
@@ -351,6 +390,11 @@ function AppContent() {
                     
                     {/* Footer */}
                     <Footer />
+                    
+                    {/* Mobile Bottom Navigation */}
+                    <Suspense fallback={null}>
+                      <MobileBottomNav />
+                    </Suspense>
                   </div>
                 </div>
               </AdminRoute>
