@@ -98,15 +98,8 @@ class FirebaseApiService {
             // Eğer hala encrypted görünüyorsa, manuel decrypt et
             let decryptedPassword = memberUser.password;
             
-            // ÖNEMLİ: Member ID ile eşleştirme yap
-            const memberId = memberUser.memberId || memberUser.member_id;
-            const memberIdEmail = memberId ? `${memberId}@ilsekreterlik.local` : email;
-            
             console.log('🔍 Login - Member user found:', {
               username: memberUser.username,
-              memberId,
-              memberIdEmail,
-              originalEmail: email,
               passwordFromDB: memberUser.password,
               passwordType: typeof memberUser.password,
               passwordLength: memberUser.password?.length,
@@ -144,95 +137,89 @@ class FirebaseApiService {
             
             // Şifre doğru mu kontrol et (normalize edilmiş password ile karşılaştır)
             if (normalizedDecryptedPassword === normalizedInputPassword || normalizedMemberUserPassword === normalizedInputPassword) {
-            // Şifre doğru, Firebase Auth ile senkronize et
-            // ÖNEMLİ: Firebase Auth'a kaydederken normalize edilmiş şifreyi kullan (sadece rakamlar)
-            // Firestore'da password normalize edilmiş olarak saklanıyor (sadece rakamlar)
-            const firestorePassword = normalizedMemberUserPassword || normalizedDecryptedPassword || (decryptedPassword || memberUser.password);
-            
-            // ÖNEMLİ: Member ID email kullan (TC email değil)
-            const finalEmail = memberIdEmail;
-            
-            console.log('Password correct, syncing with Firebase Auth for member:', memberUser.id);
-            console.log('🔑 Using Firestore password for Firebase Auth:', {
-              firestorePassword,
-              inputPassword: password,
-              passwordsMatch: firestorePassword === password,
-              memberId,
-              memberIdEmail,
-              originalEmail: email
-            });
-            
-            // Eğer authUid varsa ama email/username değişmişse, yeni email ile giriş yapmayı dene
-            // Eğer authUid yoksa, yeni kullanıcı oluştur
-            
-            try {
-              // Önce mevcut email ile giriş yapmayı dene (eğer authUid varsa)
-              if (memberUser.authUid) {
-                try {
-                  // Önce member ID email ile dene
-                  userCredential = await signInWithEmailAndPassword(auth, finalEmail, firestorePassword);
-                  user = userCredential.user;
-                  console.log('✅ Firebase Auth login successful with member ID email:', user.uid);
-                  
-                  // Firestore'daki kullanıcıyı güncelle (username ve authUid senkronizasyonu)
-                  await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                    authUid: user.uid,
-                    username: username // Username'i güncelle (eğer değiştiyse)
-                  }, false);
-                  
-                  console.log('✅ Firestore synced with Firebase Auth');
-                } catch (memberIdEmailError) {
-                  // Member ID email ile giriş yapılamadı, eski email ile dene
-                  console.log('⚠️ Member ID email login failed, trying with old email:', memberIdEmailError.code);
+              // Şifre doğru, Firebase Auth ile senkronize et
+              // ÖNEMLİ: Firebase Auth'a kaydederken normalize edilmiş şifreyi kullan (sadece rakamlar)
+              // Firestore'da password normalize edilmiş olarak saklanıyor (sadece rakamlar)
+              const firestorePassword = normalizedMemberUserPassword || normalizedDecryptedPassword || (decryptedPassword || memberUser.password);
+              
+              console.log('Password correct, syncing with Firebase Auth for member:', memberUser.id);
+              console.log('🔑 Using Firestore password for Firebase Auth:', {
+                firestorePassword,
+                inputPassword: password,
+                passwordsMatch: firestorePassword === password
+              });
+              
+              // Eğer authUid varsa ama email/username değişmişse, yeni email ile giriş yapmayı dene
+              // Eğer authUid yoksa, yeni kullanıcı oluştur
+              
+              try {
+                // Önce mevcut email ile giriş yapmayı dene (eğer authUid varsa)
+                if (memberUser.authUid) {
                   try {
+                    // Eski email ile giriş yapmayı dene (Firestore'daki şifre ile)
                     const oldEmail = memberUser.username.includes('@') ? memberUser.username : `${memberUser.username}@ilsekreterlik.local`;
                     userCredential = await signInWithEmailAndPassword(auth, oldEmail, firestorePassword);
                     user = userCredential.user;
-                    console.log('✅ Firebase Auth login successful with old email:', user.uid);
+                    console.log('✅ Firebase Auth login successful with existing user:', user.uid);
                     
-                    // Firestore'daki kullanıcıyı güncelle
+                    // Firestore'daki kullanıcıyı güncelle (username ve authUid senkronizasyonu)
                     await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
                       authUid: user.uid,
-                      username: username
+                      username: username // Username'i güncelle (eğer değiştiyse)
                     }, false);
                     
-                    console.log('✅ Firestore synced with Firebase Auth (old email)');
+                    console.log('✅ Firestore synced with Firebase Auth');
                   } catch (oldEmailError) {
-                    // Eski email ile de giriş yapılamadı, yeni kullanıcı oluştur (member ID email ile)
-                    console.log('⚠️ Old email login failed, creating new user with member ID email:', oldEmailError.code);
-                    userCredential = await createUserWithEmailAndPassword(auth, finalEmail, firestorePassword);
-                    user = userCredential.user;
-                    
-                    // Firestore'daki kullanıcıyı güncelle
-                    await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                      authUid: user.uid,
-                      username: username
-                    }, false);
-                    
-                    console.log('✅ Firebase Auth user created for member with member ID email:', user.uid);
+                    // Eski email ile giriş yapılamadı, yeni email ile dene
+                    console.log('⚠️ Old email login failed, trying with new email:', email);
+                    try {
+                      userCredential = await signInWithEmailAndPassword(auth, email, firestorePassword);
+                      user = userCredential.user;
+                      console.log('✅ Firebase Auth login successful with new email:', user.uid);
+                      
+                      // Firestore'daki kullanıcıyı güncelle
+                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                        authUid: user.uid,
+                        username: username
+                      }, false);
+                      
+                      console.log('✅ Firestore synced with Firebase Auth (new email)');
+                    } catch (newEmailError) {
+                      // Yeni email ile de giriş yapılamadı, yeni kullanıcı oluştur (Firestore'daki şifre ile)
+                      console.log('⚠️ New email login failed, creating new user with Firestore password:', newEmailError.code);
+                      userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
+                      user = userCredential.user;
+                      
+                      // Firestore'daki kullanıcıyı güncelle
+                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                        authUid: user.uid,
+                        username: username
+                      }, false);
+                      
+                      console.log('✅ Firebase Auth user created for member with Firestore password (phone):', user.uid);
+                    }
                   }
+                } else {
+                  // AuthUid yok, yeni kullanıcı oluştur (Firestore'daki şifre ile - telefon numarası)
+                  console.log('Creating new Firebase Auth user for member with Firestore password (phone):', memberUser.id);
+                  userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
+                  user = userCredential.user;
+                  
+                  // Firestore'daki kullanıcıyı güncelle (authUid ekle)
+                  await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                    authUid: user.uid,
+                    username: username
+                  }, false);
+                  
+                  console.log('✅ Firebase Auth user created for member with Firestore password (phone):', user.uid);
                 }
-              } else {
-                // AuthUid yok, yeni kullanıcı oluştur (member ID email ile)
-                console.log('Creating new Firebase Auth user for member with member ID email:', finalEmail);
-                userCredential = await createUserWithEmailAndPassword(auth, finalEmail, firestorePassword);
-                user = userCredential.user;
-                
-                // Firestore'daki kullanıcıyı güncelle (authUid ekle)
-                await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                  authUid: user.uid,
-                  username: username
-                }, false);
-                
-                console.log('✅ Firebase Auth user created for member with member ID email:', user.uid);
-              }
               } catch (createError) {
                 // Email zaten kullanılıyorsa (başka bir kullanıcı tarafından veya aynı kullanıcı farklı şifre ile)
                 if (createError.code === 'auth/email-already-in-use') {
-                  console.log('⚠️ Email already in use, trying to sign in with Firestore password:', finalEmail);
+                  console.log('⚠️ Email already in use, trying to sign in with Firestore password:', email);
                   try {
-                    // Firestore'daki şifre ile giriş yapmayı dene (member ID email ile)
-                    userCredential = await signInWithEmailAndPassword(auth, finalEmail, firestorePassword);
+                    // Firestore'daki şifre ile giriş yapmayı dene
+                    userCredential = await signInWithEmailAndPassword(auth, email, firestorePassword);
                     user = userCredential.user;
                     
                     // Firestore'daki kullanıcıyı güncelle (authUid ekle)
@@ -616,17 +603,12 @@ class FirebaseApiService {
         username,
         passwordLength: password?.length,
         memberUserAuthUid: memberUser.authUid,
-        memberUserUsername: memberUser.username,
-        memberId: memberUser.memberId || memberUser.member_id
+        memberUserUsername: memberUser.username
       });
 
       const updateData = { username };
       const oldUsername = memberUser.username;
-      
-      // ÖNEMLİ: Member ID ile eşleştirme yap
-      // Email formatı: memberId@ilsekreterlik.local (TC değil, member ID)
-      const memberId = memberUser.memberId || memberUser.member_id || id;
-      let email = `${memberId}@ilsekreterlik.local`; // let olarak tanımla (sonra güncellenebilir)
+      const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
       const oldEmail = oldUsername.includes('@') ? oldUsername : `${oldUsername}@ilsekreterlik.local`;
       
       // Username değiştiyse, email değişmiş olabilir
@@ -659,16 +641,12 @@ class FirebaseApiService {
         newPasswordLength: normalizedNewPassword.length
       });
 
-      // ÖNEMLİ: Member ID ile eşleştirme yap
-      // Email formatı: memberId@ilsekreterlik.local (TC değil, member ID)
+      // Eğer authUid yoksa ama Firebase Auth'da kullanıcı olabilir, email ile bulmayı dene
       let authUid = memberUser.authUid;
-      
-      // Eğer authUid yoksa, member ID ile email oluştur ve Firebase Auth'da bul
-      if (!authUid && memberId) {
-        const memberIdEmail = `${memberId}@ilsekreterlik.local`;
-        console.log('🔍 No authUid found in Firestore, trying to find user in Firebase Auth by member ID email:', memberIdEmail);
+      if (!authUid && username) {
+        console.log('🔍 No authUid found in Firestore, trying to find user in Firebase Auth by email:', email);
         try {
-          // Server-side endpoint ile Firebase Auth'da kullanıcıyı member ID email ile bul
+          // Server-side endpoint ile Firebase Auth'da kullanıcıyı email ile bul
           const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
             (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
           
@@ -679,7 +657,7 @@ class FirebaseApiService {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email: memberIdEmail })
+            body: JSON.stringify({ email })
           });
           
           console.log('📥 Find response status:', findResponse.status, findResponse.statusText);
@@ -705,36 +683,24 @@ class FirebaseApiService {
               
               if (findData.success && findData.authUid) {
                 authUid = findData.authUid;
-                console.log('✅ Found Firebase Auth user by member ID email, authUid:', authUid);
+                console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
                 // Firestore'daki authUid'yi güncelle
                 updateData.authUid = authUid;
-                // Email'i de güncelle (member ID email formatına)
-                email = memberIdEmail;
               } else {
-                console.log('ℹ️ User not found in Firebase Auth by member ID email:', memberIdEmail, findData);
-                // Kullanıcı bulunamadı, member ID email ile password update endpoint'ine gönderilecek
-                email = memberIdEmail;
+                console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
+                // Kullanıcı bulunamadı ama şifre güncellemesi yapılabilir (email ile)
+                // Email ile password update endpoint'ine gönderilebilir
               }
             } catch (findError) {
               console.error('❌ Error parsing find response:', findError);
-              // Hata olsa bile member ID email ile devam et
-              email = `${memberId}@ilsekreterlik.local`;
             }
           } else {
             const errorText = await findResponse.text();
-            console.warn('⚠️ Could not find Firebase Auth user by member ID email:', errorText);
-            // Hata olsa bile member ID email ile devam et
-            email = `${memberId}@ilsekreterlik.local`;
+            console.warn('⚠️ Could not find Firebase Auth user by email:', errorText);
           }
         } catch (error) {
           console.warn('⚠️ Could not lookup Firebase Auth user:', error);
-          // Hata olsa bile member ID email ile devam et
-          email = `${memberId}@ilsekreterlik.local`;
         }
-      } else if (!authUid && username) {
-        // Fallback: Eğer member ID yoksa, username (TC) ile email oluştur
-        email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
-        console.log('⚠️ No memberId found, using username (TC) for email:', email);
       }
 
       // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa) VEYA email ile bulunabilirse
@@ -760,8 +726,7 @@ class FirebaseApiService {
           // Not: passwordChanged false olsa bile, eğer password parametresi gönderildiyse güncelleme yapılmalı
           // Çünkü kullanıcı açıkça şifreyi değiştirmek istiyor
           // Ayrıca authUid yoksa bile email ile güncelleme yapılabilir
-          // ÖNEMLİ: password parametresi gönderildiyse MUTLAKA güncelleme yap (kullanıcı açıkça şifre değiştirmek istiyor)
-          const shouldUpdatePassword = (password && password.trim() && normalizedNewPassword) || (passwordChanged && normalizedNewPassword);
+          const shouldUpdatePassword = (passwordChanged || (password && password.trim())) && normalizedNewPassword;
           
           console.log('🔍 Password update check:', {
             shouldUpdatePassword,
@@ -773,22 +738,22 @@ class FirebaseApiService {
           });
           
           if (shouldUpdatePassword) {
-            // Eğer authUid yoksa bile email ile password update endpoint'ine gönder
-            // Server-side'da kullanıcı bulunamazsa oluşturulacak
+            // Eğer authUid yoksa ve email ile de bulunamadıysa, hata göster
             if (!authUid) {
-              console.log('⚠️ authUid is null, but sending password update request with email - server will create user if needed:', email);
-            }
-            
-            // authUid olsun ya da olmasın, email ile password update yapılabilir
-            console.log('🔄 Updating Firebase Auth password for user:', {
-              authUid: authUid,
-              oldPassword: normalizedOldPassword.substring(0, 3) + '***',
-              newPassword: normalizedNewPassword.substring(0, 3) + '***',
-              newPasswordLength: normalizedNewPassword.length,
-              passwordChanged,
-              passwordProvided: !!(password && password.trim())
-            });
-            try {
+              console.error('❌ Cannot update Firebase Auth password: authUid is null and user not found by email:', email);
+              // Hata mesajı göster ama Firestore güncellemesi devam edecek
+              console.warn('⚠️ Firebase Auth password will not be updated, but Firestore will be updated');
+              // Devam et - Firestore güncellemesi yapılacak
+            } else {
+              console.log('🔄 Updating Firebase Auth password for user:', {
+                authUid: authUid,
+                oldPassword: normalizedOldPassword.substring(0, 3) + '***',
+                newPassword: normalizedNewPassword.substring(0, 3) + '***',
+                newPasswordLength: normalizedNewPassword.length,
+                passwordChanged,
+                passwordProvided: !!(password && password.trim())
+              });
+              try {
                 // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
                 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
                   (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
@@ -800,11 +765,11 @@ class FirebaseApiService {
                   headers: {
                     'Content-Type': 'application/json',
                   },
-                body: JSON.stringify({
-                  authUid: authUid || null, // null olsa bile gönder
-                  email: email, // Email MUTLAKA gönder (authUid yoksa email ile bulunabilir veya oluşturulabilir)
-                  password: normalizedNewPassword
-                })
+                  body: JSON.stringify({
+                    authUid: authUid,
+                    email: email, // Email de gönder (authUid yoksa email ile bulunabilir)
+                    password: normalizedNewPassword
+                  })
                 });
               
               console.log('📥 Response status:', response.status, response.statusText);
@@ -861,6 +826,7 @@ class FirebaseApiService {
               });
               // Hata olsa bile devam et (Firestore güncellemesi başarılı)
             }
+            }
           } else {
             console.log('ℹ️ Password not changed, skipping Firebase Auth update:', {
               passwordChanged,
@@ -885,15 +851,7 @@ class FirebaseApiService {
       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData, false);
       
       console.log('✅ Member user updated successfully in Firestore:', id);
-      
-      // Firebase Auth güncellemesi yapıldı mı kontrol et
-      const firebaseAuthUpdated = shouldUpdatePassword && (authUid || email);
-      
-      return { 
-        success: true, 
-        message: 'Kullanıcı güncellendi', 
-        firebaseAuthUpdated: firebaseAuthUpdated 
-      };
+      return { success: true, message: 'Kullanıcı güncellendi' };
     } catch (error) {
       console.error('Update member user error:', error);
       return { success: false, message: 'Kullanıcı güncellenirken hata oluştu: ' + error.message };

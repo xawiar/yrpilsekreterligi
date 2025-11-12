@@ -679,10 +679,7 @@ router.post('/find-firebase-auth-user', async (req, res) => {
         email: userRecord.email
       };
       console.log('📤 Sending find response:', JSON.stringify(responseData));
-      const jsonResponse = JSON.stringify(responseData);
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Length', Buffer.byteLength(jsonResponse));
-      return res.status(200).end(jsonResponse);
+      return res.status(200).json(responseData);
     } catch (firebaseError) {
       if (firebaseError.code === 'auth/user-not-found') {
         console.log('ℹ️ User not found in Firebase Auth by email:', email);
@@ -692,10 +689,7 @@ router.post('/find-firebase-auth-user', async (req, res) => {
           authUid: null
         };
         console.log('📤 Sending find response (not found):', JSON.stringify(responseData));
-        const jsonResponse = JSON.stringify(responseData);
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Length', Buffer.byteLength(jsonResponse));
-        return res.status(200).end(jsonResponse);
+        return res.status(200).json(responseData);
       } else {
         console.error('❌ Firebase Auth error:', firebaseError);
         throw firebaseError;
@@ -753,6 +747,7 @@ router.post('/update-firebase-auth-password', async (req, res) => {
     });
     
     // Eğer authUid yoksa ama email varsa, email ile kullanıcıyı bul
+    let userCreated = false;
     if (!authUid && email) {
       console.log('🔍 authUid not provided, trying to find user by email:', email);
       try {
@@ -771,6 +766,7 @@ router.post('/update-firebase-auth-password', async (req, res) => {
               emailVerified: false
             });
             authUid = newUser.uid;
+            userCreated = true;
             console.log('✅ Created new Firebase Auth user, authUid:', authUid);
             // Yeni kullanıcı oluşturuldu, şifre zaten ayarlandı, direkt response gönder
             const responseData = {
@@ -828,22 +824,15 @@ router.post('/update-firebase-auth-password', async (req, res) => {
         authUid: authUid
       };
       console.log('📤 Sending password update response:', JSON.stringify(responseData));
-      console.log('📤 Response data type:', typeof responseData);
-      console.log('📤 Response data keys:', Object.keys(responseData));
       
       // res.json() kullan - daha güvenilir
-      // Compression middleware'i bypass etmek için Content-Length header'ı ekle
-      const jsonResponse = JSON.stringify(responseData);
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Length', Buffer.byteLength(jsonResponse));
-      res.status(200).end(jsonResponse);
+      return res.status(200).json(responseData);
     } catch (firebaseError) {
       console.error('❌ Firebase Auth password update error:', {
         code: firebaseError.code,
         message: firebaseError.message,
         authUid,
-        passwordLength: password?.length,
-        finalPasswordLength: finalPassword.length
+        passwordLength: password?.length
       });
       return res.status(500).json({
         success: false,
