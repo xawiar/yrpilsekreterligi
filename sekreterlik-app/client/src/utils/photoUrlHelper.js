@@ -13,7 +13,7 @@ export function normalizePhotoUrl(photoUrl) {
     return null;
   }
 
-  // If already a full HTTPS URL, return as is
+  // If already a full HTTPS URL (including Firebase Storage), return as is
   if (photoUrl.startsWith('https://')) {
     return photoUrl;
   }
