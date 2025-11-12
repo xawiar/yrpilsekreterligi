@@ -36,6 +36,7 @@ class FirebaseApiService {
     NEIGHBORHOODS: 'neighborhoods',
     VILLAGES: 'villages',
     STKS: 'stks',
+    PUBLIC_INSTITUTIONS: 'public_institutions',
     MOSQUES: 'mosques',
     EVENT_CATEGORIES: 'event_categories',
     NEIGHBORHOOD_REPRESENTATIVES: 'neighborhood_representatives',
@@ -3311,6 +3312,107 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Delete STK error:', error);
       throw new Error('STK silinirken hata oluştu');
+    }
+  }
+
+  // Public Institutions CRUD
+  static async getPublicInstitutions() {
+    try {
+      const publicInstitutions = await FirebaseService.getAll(this.COLLECTIONS.PUBLIC_INSTITUTIONS);
+      
+      // description alanını decrypt etmeye çalış (eski şifrelenmiş kayıtlar için)
+      const { decryptData } = await import('../utils/crypto');
+      
+      return publicInstitutions.map(publicInstitution => {
+        // Eğer description şifrelenmişse (eski kayıtlar için), decrypt et
+        if (publicInstitution.description && typeof publicInstitution.description === 'string' && publicInstitution.description.startsWith('U2FsdGVkX1')) {
+          try {
+            const decrypted = decryptData(publicInstitution.description);
+            if (decrypted && decrypted !== publicInstitution.description) {
+              publicInstitution.description = decrypted;
+            }
+          } catch (error) {
+            // Decrypt başarısız olursa, description'ı temizle (muhtemelen bozuk veri)
+            console.warn('Failed to decrypt description for Public Institution:', publicInstitution.id, error);
+            publicInstitution.description = null;
+          }
+        }
+        return publicInstitution;
+      });
+    } catch (error) {
+      console.error('Get Public Institutions error:', error);
+      return [];
+    }
+  }
+
+  static async createPublicInstitution(publicInstitutionData) {
+    try {
+      // description alanını şifrelemeden saklamak için özel işlem
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      
+      // description değerini temizle (boş string ise null yap)
+      const descriptionValue = publicInstitutionData.description && publicInstitutionData.description.trim() !== '' 
+        ? publicInstitutionData.description.trim() 
+        : null;
+      
+      const publicInstitutionDataWithoutDescription = { ...publicInstitutionData };
+      delete publicInstitutionDataWithoutDescription.description;
+      
+      // Önce description olmadan kaydet
+      const docId = await FirebaseService.create(
+        this.COLLECTIONS.PUBLIC_INSTITUTIONS,
+        null,
+        publicInstitutionDataWithoutDescription,
+        true // encrypt = true (description hariç diğer hassas alanlar şifrelenecek)
+      );
+      
+      // Sonra description'ı şifrelemeden ekle (null ise de ekle ki boş olduğu belli olsun)
+      const docRef = doc(db, this.COLLECTIONS.PUBLIC_INSTITUTIONS, docId);
+      await updateDoc(docRef, { description: descriptionValue }); // Şifrelenmeden sakla (null veya değer)
+      
+      return { success: true, id: docId, message: 'Kamu kurumu oluşturuldu' };
+    } catch (error) {
+      console.error('Create Public Institution error:', error);
+      throw new Error('Kamu kurumu oluşturulurken hata oluştu');
+    }
+  }
+
+  static async updatePublicInstitution(id, publicInstitutionData) {
+    try {
+      // description alanını şifrelemeden saklamak için özel işlem
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      
+      // description değerini temizle (boş string ise null yap)
+      const descriptionValue = publicInstitutionData.description && publicInstitutionData.description.trim() !== '' 
+        ? publicInstitutionData.description.trim() 
+        : null;
+      
+      const publicInstitutionDataWithoutDescription = { ...publicInstitutionData };
+      delete publicInstitutionDataWithoutDescription.description;
+      
+      // Önce description olmadan güncelle
+      await FirebaseService.update(this.COLLECTIONS.PUBLIC_INSTITUTIONS, id, publicInstitutionDataWithoutDescription);
+      
+      // Sonra description'ı şifrelemeden ekle/güncelle (null ise de ekle ki boş olduğu belli olsun)
+      const docRef = doc(db, this.COLLECTIONS.PUBLIC_INSTITUTIONS, id);
+      await updateDoc(docRef, { description: descriptionValue }); // Şifrelenmeden sakla (null veya değer)
+      
+      return { success: true, message: 'Kamu kurumu güncellendi' };
+    } catch (error) {
+      console.error('Update Public Institution error:', error);
+      throw new Error('Kamu kurumu güncellenirken hata oluştu');
+    }
+  }
+
+  static async deletePublicInstitution(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.PUBLIC_INSTITUTIONS, id);
+      return { success: true, message: 'Kamu kurumu silindi' };
+    } catch (error) {
+      console.error('Delete Public Institution error:', error);
+      throw new Error('Kamu kurumu silinirken hata oluştu');
     }
   }
 

@@ -120,14 +120,28 @@ const SettingsTabs = ({ activeTab, setActiveTab }) => {
           onClick={() => setActiveTab('stks')}
           className={`${
             activeTab === 'stks'
-              ? 'bg-indigo-100 text-indigo-700'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
           } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
           STK Ekle
+        </button>
+        
+        <button
+          onClick={() => setActiveTab('public-institutions')}
+          className={`${
+            activeTab === 'public-institutions'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+          } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          Kamu Kurumu Ekle
         </button>
         
         <button

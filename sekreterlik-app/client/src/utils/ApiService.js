@@ -1394,6 +1394,54 @@ class ApiService {
     return response.json();
   }
 
+  // Public Institutions API
+  static async getPublicInstitutions() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getPublicInstitutions();
+    }
+
+    const response = await fetch(`${API_BASE_URL}/public-institutions`);
+    return response.json();
+  }
+
+  static async createPublicInstitution(publicInstitutionData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createPublicInstitution(publicInstitutionData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/public-institutions`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(publicInstitutionData),
+    });
+    return response.json();
+  }
+
+  static async updatePublicInstitution(id, publicInstitutionData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updatePublicInstitution(id, publicInstitutionData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/public-institutions/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(publicInstitutionData),
+    });
+    return response.json();
+  }
+
+  static async deletePublicInstitution(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deletePublicInstitution(id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/public-institutions/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   // Mosques API
   static async getMosques() {
     if (USE_FIREBASE) {

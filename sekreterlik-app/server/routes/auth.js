@@ -747,14 +747,12 @@ router.post('/update-firebase-auth-password', async (req, res) => {
     });
     
     // Eğer authUid yoksa ama email varsa, email ile kullanıcıyı bul
-    let userCreated = false;
     if (!authUid && email) {
       console.log('🔍 authUid not provided, trying to find user by email:', email);
       try {
         const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
         authUid = userRecord.uid;
         console.log('✅ Found user by email, authUid:', authUid);
-        // Kullanıcı bulundu, şifreyi güncelle (aşağıdaki updateUser çağrısı yapılacak)
       } catch (emailError) {
         if (emailError.code === 'auth/user-not-found') {
           console.log('ℹ️ User not found in Firebase Auth by email, creating new user:', email);
@@ -766,16 +764,7 @@ router.post('/update-firebase-auth-password', async (req, res) => {
               emailVerified: false
             });
             authUid = newUser.uid;
-            userCreated = true;
             console.log('✅ Created new Firebase Auth user, authUid:', authUid);
-            // Yeni kullanıcı oluşturuldu, şifre zaten ayarlandı, direkt response gönder
-            const responseData = {
-              success: true,
-              message: 'Firebase Auth kullanıcısı oluşturuldu ve şifre ayarlandı',
-              authUid: authUid
-            };
-            console.log('📤 Sending create user response:', JSON.stringify(responseData));
-            return res.status(200).json(responseData);
           } catch (createError) {
             console.error('❌ Error creating Firebase Auth user:', createError);
             return res.status(500).json({
@@ -801,16 +790,9 @@ router.post('/update-firebase-auth-password', async (req, res) => {
       });
     }
 
-    // Kullanıcı bulundu veya authUid verildi, şifreyi güncelle
     console.log('✅ Firebase Admin SDK initialized, updating user password for authUid:', authUid);
     
     try {
-      console.log('🔄 Calling firebaseAdmin.auth().updateUser() with:', {
-        authUid,
-        passwordLength: finalPassword.length,
-        passwordPreview: finalPassword.substring(0, 3) + '***'
-      });
-      
       await firebaseAdmin.auth().updateUser(authUid, {
         password: finalPassword
       });

@@ -19,6 +19,7 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
   const [stks, setStks] = useState([]);
+  const [publicInstitutions, setPublicInstitutions] = useState([]);
   const [mosques, setMosques] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [responsibleMembers, setResponsibleMembers] = useState([]);
@@ -31,6 +32,7 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
     district: '',
     town: '',
     stk: '',
+    public_institution: '',
     mosque: ''
   });
 
@@ -252,12 +254,13 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
   const fetchLocationData = async () => {
     setLoadingLocations(true);
     try {
-      const [districtsData, townsData, neighborhoodsData, villagesData, stksData, mosquesData] = await Promise.all([
+      const [districtsData, townsData, neighborhoodsData, villagesData, stksData, publicInstitutionsData, mosquesData] = await Promise.all([
         ApiService.getDistricts(),
         ApiService.getTowns(),
         ApiService.getNeighborhoods(),
         ApiService.getVillages(),
         ApiService.getSTKs(),
+        ApiService.getPublicInstitutions(),
         ApiService.getMosques()
       ]);
       
@@ -266,6 +269,7 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
       setNeighborhoods(neighborhoodsData);
       setVillages(villagesData);
       setStks(stksData);
+      setPublicInstitutions(publicInstitutionsData);
       setMosques(mosquesData);
     } catch (error) {
       console.error('Error fetching location data:', error);
@@ -384,6 +388,14 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
           filtered = stks.filter(s => selectedDistrictIds.includes(s.district_id));
         } else {
           filtered = stks;
+        }
+        break;
+      case 'public_institution':
+        // Kamu kurumları bölge bazlı olabilir; eğer district_id alanı varsa filtrele
+        if ((selectedDistrictIds.length > 0) && publicInstitutions.length > 0 && 'district_id' in (publicInstitutions[0] || {})) {
+          filtered = publicInstitutions.filter(pi => selectedDistrictIds.includes(pi.district_id));
+        } else {
+          filtered = publicInstitutions;
         }
         break;
       default:
@@ -507,6 +519,9 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
       case 'stk':
         const stk = stks.find(s => s.id === locationId);
         return stk ? stk.name : '';
+      case 'public_institution':
+        const publicInstitution = publicInstitutions.find(pi => pi.id === locationId);
+        return publicInstitution ? publicInstitution.name : '';
       case 'mosque':
         const mosque = mosques.find(m => m.id === locationId);
         return mosque ? mosque.name : '';
@@ -675,6 +690,7 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
               { key: 'neighborhood', label: 'Mahalle' },
               { key: 'village', label: 'Köy' },
               { key: 'stk', label: 'STK' },
+              { key: 'public_institution', label: 'Kamu Kurumu' },
               { key: 'mosque', label: 'Cami' }
             ].map(({ key, label }) => (
               <label key={key} className="flex items-center space-x-2 cursor-pointer">
@@ -703,6 +719,7 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
                 neighborhood: 'Mahalle',
                 village: 'Köy',
                 stk: 'STK',
+                public_institution: 'Kamu Kurumu',
                 mosque: 'Cami'
               };
 

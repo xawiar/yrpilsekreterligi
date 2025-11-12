@@ -18,6 +18,7 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
   const [stks, setStks] = useState([]);
+  const [publicInstitutions, setPublicInstitutions] = useState([]);
   const [mosques, setMosques] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
 
@@ -41,12 +42,13 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
   const fetchLocations = async () => {
     try {
       setLoadingLocations(true);
-      const [districtsData, townsData, neighborhoodsData, villagesData, stksData, mosquesData] = await Promise.all([
+      const [districtsData, townsData, neighborhoodsData, villagesData, stksData, publicInstitutionsData, mosquesData] = await Promise.all([
         ApiService.getDistricts().catch(() => []),
         ApiService.getTowns().catch(() => []),
         ApiService.getNeighborhoods().catch(() => []),
         ApiService.getVillages().catch(() => []),
         ApiService.getSTKs().catch(() => []),
+        ApiService.getPublicInstitutions().catch(() => []),
         ApiService.getMosques().catch(() => [])
       ]);
       
@@ -55,6 +57,7 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
       setStks(stksData || []);
+      setPublicInstitutions(publicInstitutionsData || []);
       setMosques(mosquesData || []);
     } catch (error) {
       console.error('Error fetching locations:', error);
@@ -121,6 +124,9 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
           case 'stk':
             locations = stks.filter(s => locationIds.includes(String(s.id))).map(s => s.name);
             break;
+          case 'public_institution':
+            locations = publicInstitutions.filter(pi => locationIds.includes(String(pi.id))).map(pi => pi.name);
+            break;
           case 'mosque':
             locations = mosques.filter(m => locationIds.includes(String(m.id))).map(m => m.name);
             break;
@@ -133,6 +139,7 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
             neighborhood: 'Mahalle',
             village: 'Köy',
             stk: 'STK',
+            public_institution: 'Kamu Kurumu',
             mosque: 'Cami'
           };
           locationParts.push(`${typeLabels[type]}: ${locations.join(', ')}`);
@@ -256,7 +263,7 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
             Konum Türleri <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {['district', 'town', 'neighborhood', 'village', 'stk', 'mosque'].map(type => (
+            {['district', 'town', 'neighborhood', 'village', 'stk', 'public_institution', 'mosque'].map(type => (
               <label key={type} className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -269,7 +276,8 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
                    type === 'town' ? 'Belde' : 
                    type === 'neighborhood' ? 'Mahalle' : 
                    type === 'village' ? 'Köy' : 
-                   type === 'stk' ? 'STK' : 'Cami'}
+                   type === 'stk' ? 'STK' : 
+                   type === 'public_institution' ? 'Kamu Kurumu' : 'Cami'}
                 </span>
               </label>
             ))}
@@ -285,6 +293,7 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
             neighborhood: 'Mahalle',
             village: 'Köy',
             stk: 'STK',
+            public_institution: 'Kamu Kurumu',
             mosque: 'Cami'
           };
 
@@ -303,6 +312,9 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
               break;
             case 'stk':
               locations = stks;
+              break;
+            case 'public_institution':
+              locations = publicInstitutions;
               break;
             case 'mosque':
               locations = mosques;

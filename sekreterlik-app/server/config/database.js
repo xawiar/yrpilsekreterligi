@@ -171,6 +171,14 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Create public_institutions table (Kamu Kurumu)
+  db.run(`CREATE TABLE IF NOT EXISTS public_institutions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Create mosques table (cami)
   db.run(`CREATE TABLE IF NOT EXISTS mosques (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -510,6 +518,16 @@ db.serialize(() => {
     FOREIGN KEY (stk_id) REFERENCES stks (id) ON DELETE CASCADE
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS public_institution_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_institution_id INTEGER NOT NULL,
+    visit_count INTEGER DEFAULT 0,
+    last_visit_date DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (public_institution_id) REFERENCES public_institutions (id) ON DELETE CASCADE
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS mosque_visits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     mosque_id INTEGER NOT NULL,
@@ -566,6 +584,7 @@ const collections = {
   neighborhoods: [],
   villages: [],
   stks: [],
+  public_institutions: [],
   mosques: [],
   event_categories: [],
   neighborhood_representatives: [],
@@ -642,6 +661,10 @@ db.all('SELECT * FROM stks', [], (err, rows) => {
   if (!err) collections.stks = rows;
 });
 
+db.all('SELECT * FROM public_institutions', [], (err, rows) => {
+  if (!err) collections.public_institutions = rows;
+});
+
 db.all('SELECT * FROM mosques', [], (err, rows) => {
   if (!err) collections.mosques = rows;
 });
@@ -716,6 +739,10 @@ db.all('SELECT * FROM village_visits', [], (err, rows) => {
 
 db.all('SELECT * FROM stk_visits', [], (err, rows) => {
   if (!err) collections.stk_visits = rows;
+});
+
+db.all('SELECT * FROM public_institution_visits', [], (err, rows) => {
+  if (!err) collections.public_institution_visits = rows;
 });
 
 db.all('SELECT * FROM mosque_visits', [], (err, rows) => {

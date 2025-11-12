@@ -9,6 +9,7 @@ import TownsSettings from '../components/TownsSettings';
 import NeighborhoodsSettings from '../components/NeighborhoodsSettings';
 import VillagesSettings from '../components/VillagesSettings';
 import STKSettings from '../components/STKSettings';
+import PublicInstitutionSettings from '../components/PublicInstitutionSettings';
 import MosquesSettings from '../components/MosquesSettings';
 import EventCategoriesSettings from '../components/EventCategoriesSettings';
 import AuthorizationSettings from '../components/AuthorizationSettings';
@@ -76,6 +77,7 @@ const SettingsPage = ({ tab }) => {
           {activeTab === 'neighborhoods' && <NeighborhoodsSettings />}
           {activeTab === 'villages' && <VillagesSettings />}
           {activeTab === 'stks' && <STKSettings />}
+          {activeTab === 'public-institutions' && <PublicInstitutionSettings />}
           {activeTab === 'mosques' && <MosquesSettings />}
           {activeTab === 'event-categories' && <EventCategoriesSettings />}
           {activeTab === 'authorization' && <AuthorizationSettings />}
