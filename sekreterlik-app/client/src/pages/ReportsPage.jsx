@@ -3,6 +3,7 @@ import ApiService from '../utils/ApiService';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import { TopRegistrarsTable, TopAttendeesTable } from '../components/Dashboard';
 
 const ReportsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -43,9 +44,14 @@ const ReportsPage = () => {
     topPublicInstitutions: [],
     
     // Grafik Verileri
-    monthlyEvents: [],
-    monthlyMeetings: [],
+    monthlyEventsAndMeetings: [],
     monthlyVisits: [],
+    
+    // Dashboard Özellikleri
+    topRegistrars: [],
+    topAttendees: [],
+    upcomingEvents: [],
+    upcomingMeetings: [],
   });
 
   useEffect(() => {
@@ -71,7 +77,8 @@ const ReportsPage = () => {
         stks,
         publicInstitutions,
         stkVisitCounts,
-        publicInstitutionVisitCounts
+        publicInstitutionVisitCounts,
+        memberRegistrations
       ] = await Promise.all([
         ApiService.getMembers(),
         ApiService.getMeetings(),
@@ -86,7 +93,8 @@ const ReportsPage = () => {
         ApiService.getSTKs(),
         ApiService.getPublicInstitutions(),
         ApiService.getAllVisitCounts('stk'),
-        ApiService.getAllVisitCounts('public_institution')
+        ApiService.getAllVisitCounts('public_institution'),
+        ApiService.getMemberRegistrations()
       ]);
 
       // Tarih filtreleme
@@ -310,7 +318,7 @@ const ReportsPage = () => {
         .sort((a, b) => b.visitCount - a.visitCount)
         .slice(0, 5);
 
-      // Grafik Verileri - Aylık Etkinlik Grafiği
+      // Grafik Verileri - Aylık Etkinlik ve Toplantı Grafiği (Birleştirilmiş)
       const monthlyEventsMap = {};
       filteredEvents.forEach(event => {
         if (event.date) {
@@ -319,14 +327,7 @@ const ReportsPage = () => {
           monthlyEventsMap[monthKey] = (monthlyEventsMap[monthKey] || 0) + 1;
         }
       });
-      const monthlyEvents = Object.keys(monthlyEventsMap)
-        .sort()
-        .map(key => ({
-          month: key,
-          count: monthlyEventsMap[key]
-        }));
 
-      // Aylık Toplantı Grafiği
       const monthlyMeetingsMap = {};
       filteredMeetings.forEach(meeting => {
         if (meeting.date) {
@@ -335,11 +336,15 @@ const ReportsPage = () => {
           monthlyMeetingsMap[monthKey] = (monthlyMeetingsMap[monthKey] || 0) + 1;
         }
       });
-      const monthlyMeetings = Object.keys(monthlyMeetingsMap)
+
+      // Tüm ayları birleştir
+      const allMonths = new Set([...Object.keys(monthlyEventsMap), ...Object.keys(monthlyMeetingsMap)]);
+      const monthlyEventsAndMeetings = Array.from(allMonths)
         .sort()
         .map(key => ({
           month: key,
-          count: monthlyMeetingsMap[key]
+          events: monthlyEventsMap[key] || 0,
+          meetings: monthlyMeetingsMap[key] || 0
         }));
 
       // Aylık Ziyaret Grafiği (Tüm ziyaret türleri)
@@ -357,6 +362,126 @@ const ReportsPage = () => {
           month: key,
           count: monthlyVisitsMap[key]
         }));
+
+      // Dashboard Özellikleri - Top Registrars
+      const memberRegistrationCounts = {};
+      members.forEach(member => {
+        memberRegistrationCounts[member.id] = {
+          member,
+          count: 0
+        };
+      });
+      
+      memberRegistrations.forEach(reg => {
+        if (memberRegistrationCounts[reg.memberId]) {
+          memberRegistrationCounts[reg.memberId].count += reg.count;
+        }
+      });
+      
+      const topRegistrars = Object.values(memberRegistrationCounts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+
+      // Dashboard Özellikleri - Top Attendees
+      const memberAttendanceCounts = {};
+      members.forEach(member => {
+        memberAttendanceCounts[member.id] = {
+          member,
+          count: 0
+        };
+      });
+      
+      filteredMeetings.forEach(meeting => {
+        if (meeting.attendees) {
+          meeting.attendees.forEach(attendee => {
+            if (attendee.attended) {
+              const attendeeMemberId = attendee.memberId || attendee.member_id;
+              const memberIdStr = String(attendeeMemberId);
+              const memberIdNum = Number(attendeeMemberId);
+              
+              const matchingMemberId = Object.keys(memberAttendanceCounts).find(id => {
+                const idStr = String(id);
+                const idNum = Number(id);
+                return idStr === memberIdStr || idNum === memberIdNum || idStr === memberIdNum || idNum === memberIdStr;
+              });
+              
+              if (matchingMemberId && memberAttendanceCounts[matchingMemberId]) {
+                memberAttendanceCounts[matchingMemberId].count += 1;
+              }
+            }
+          });
+        }
+      });
+      
+      const topAttendees = Object.values(memberAttendanceCounts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+
+      // Dashboard Özellikleri - Upcoming Events and Meetings
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const nextWeek = new Date(today);
+      nextWeek.setDate(today.getDate() + 7);
+      
+      const upcomingEventsList = filteredEvents
+        .filter(event => {
+          if (!event.date || event.archived) return false;
+          try {
+            let eventDate;
+            if (event.date.includes('T')) {
+              eventDate = new Date(event.date);
+            } else if (event.date.includes('.')) {
+              const [day, month, year] = event.date.split('.');
+              eventDate = new Date(year, month - 1, day);
+            } else {
+              eventDate = new Date(event.date);
+            }
+            eventDate.setHours(0, 0, 0, 0);
+            return eventDate >= today && eventDate <= nextWeek;
+          } catch (e) {
+            return false;
+          }
+        })
+        .sort((a, b) => {
+          try {
+            const dateA = a.date.includes('T') ? new Date(a.date) : new Date(a.date.split('.').reverse().join('-'));
+            const dateB = b.date.includes('T') ? new Date(b.date) : new Date(b.date.split('.').reverse().join('-'));
+            return dateA - dateB;
+          } catch (e) {
+            return 0;
+          }
+        })
+        .slice(0, 5);
+      
+      const upcomingMeetingsList = filteredMeetings
+        .filter(meeting => {
+          if (!meeting.date || meeting.archived) return false;
+          try {
+            let meetingDate;
+            if (meeting.date.includes('T')) {
+              meetingDate = new Date(meeting.date);
+            } else if (meeting.date.includes('.')) {
+              const [day, month, year] = meeting.date.split('.');
+              meetingDate = new Date(year, month - 1, day);
+            } else {
+              meetingDate = new Date(meeting.date);
+            }
+            meetingDate.setHours(0, 0, 0, 0);
+            return meetingDate >= today && meetingDate <= nextWeek;
+          } catch (e) {
+            return false;
+          }
+        })
+        .sort((a, b) => {
+          try {
+            const dateA = a.date.includes('T') ? new Date(a.date) : new Date(a.date.split('.').reverse().join('-'));
+            const dateB = b.date.includes('T') ? new Date(b.date) : new Date(b.date.split('.').reverse().join('-'));
+            return dateA - dateB;
+          } catch (e) {
+            return 0;
+          }
+        })
+        .slice(0, 5);
 
       setStats({
         totalMembers,
@@ -378,9 +503,12 @@ const ReportsPage = () => {
         totalPublicInstitutions,
         totalPublicInstitutionVisits,
         topPublicInstitutions,
-        monthlyEvents,
-        monthlyMeetings,
+        monthlyEventsAndMeetings,
         monthlyVisits,
+        topRegistrars,
+        topAttendees,
+        upcomingEvents: upcomingEventsList,
+        upcomingMeetings: upcomingMeetingsList,
       });
     } catch (error) {
       console.error('Error fetching reports data:', error);
@@ -558,12 +686,12 @@ const ReportsPage = () => {
           </div>
         </div>
 
-        {/* Genel İstatistikler */}
+        {/* Genel İstatistikler - Dashboard ile birleştirildi */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Genel İstatistikler
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -628,6 +756,91 @@ const ReportsPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Dashboard Özellikleri - Top Registrars ve Top Attendees */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mt-6">
+            <TopRegistrarsTable topRegistrars={stats.topRegistrars} />
+            <TopAttendeesTable topAttendees={stats.topAttendees} />
+          </div>
+
+          {/* Dashboard Özellikleri - Upcoming Events and Meetings */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mt-6">
+            {/* Upcoming Events */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yaklaşan Etkinlikler</h3>
+              {stats.upcomingEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.upcomingEvents.map((event, index) => (
+                    <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{event.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {event.date && (
+                              <span>
+                                {event.date.includes('T') 
+                                  ? new Date(event.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                  : event.date}
+                              </span>
+                            )}
+                          </p>
+                          {event.location && (
+                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">📍 {event.location}</p>
+                          )}
+                        </div>
+                        {event.isPlanned && (
+                          <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                            Planlandı
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">Yaklaşan etkinlik bulunmuyor</p>
+              )}
+            </div>
+
+            {/* Upcoming Meetings */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yaklaşan Toplantılar</h3>
+              {stats.upcomingMeetings.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.upcomingMeetings.map((meeting, index) => (
+                    <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{meeting.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {meeting.date && (
+                              <span>
+                                {meeting.date.includes('T') 
+                                  ? new Date(meeting.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                  : meeting.date}
+                              </span>
+                            )}
+                          </p>
+                          {meeting.regions && meeting.regions.length > 0 && (
+                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                              📍 {meeting.regions.join(', ')}
+                            </p>
+                          )}
+                        </div>
+                        {meeting.isPlanned && (
+                          <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                            Planlandı
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">Yaklaşan toplantı bulunmuyor</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Grafikler */}
@@ -635,45 +848,25 @@ const ReportsPage = () => {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Zaman Bazlı Grafikler
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Aylık Etkinlik Grafiği */}
-            {stats.monthlyEvents.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                  Aylık Etkinlik Sayısı
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={stats.monthlyEvents}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="count" stroke="#6366F1" strokeWidth={2} name="Etkinlik Sayısı" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Aylık Toplantı Grafiği */}
-            {stats.monthlyMeetings.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                  Aylık Toplantı Sayısı
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats.monthlyMeetings}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="count" fill="#10B981" name="Toplantı Sayısı" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
+          {/* Birleştirilmiş Aylık Etkinlik ve Toplantı Grafiği */}
+          {stats.monthlyEventsAndMeetings.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Aylık Etkinlik ve Toplantı Sayısı
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={stats.monthlyEventsAndMeetings}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="events" stroke="#6366F1" strokeWidth={2} name="Etkinlik Sayısı" />
+                  <Line type="monotone" dataKey="meetings" stroke="#10B981" strokeWidth={2} name="Toplantı Sayısı" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Aylık Ziyaret Grafiği */}
           {stats.monthlyVisits.length > 0 && (
@@ -707,17 +900,18 @@ const ReportsPage = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ categoryName, eventCount }) => `${categoryName}: ${eventCount}`}
+                    label={(entry) => `${entry.categoryName}: ${entry.eventCount}`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="eventCount"
+                    nameKey="categoryName"
                   >
                     {stats.eventCategoryStats.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip formatter={(value, name, props) => [`${value} etkinlik`, props.payload.categoryName]} />
+                  <Legend formatter={(value, entry) => entry.payload.categoryName} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
