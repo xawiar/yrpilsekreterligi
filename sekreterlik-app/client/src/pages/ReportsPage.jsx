@@ -1274,6 +1274,99 @@ const ReportsPage = () => {
           )}
         </div>
 
+        {/* Performans Puanları */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Üye Performans Puanları
+          </h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Sıra
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Üye Adı
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Seviye
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Toplam Puan
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Detaylar
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {stats.performanceScores.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Henüz performans puanı hesaplanamadı
+                      </td>
+                    </tr>
+                  ) : (
+                    stats.performanceScores.slice(0, 20).map((item, index) => (
+                      <tr key={item.member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
+                            index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                            index === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' :
+                            index === 2 ? 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200' :
+                            'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {item.member.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span 
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: `${item.levelColor}20`,
+                              color: item.levelColor,
+                              border: `1px solid ${item.levelColor}40`
+                            }}
+                          >
+                            {item.level}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          {item.totalScore}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="space-y-1">
+                            <div>📅 Toplantı: {item.details.meetingAttendance} (+{item.details.breakdown.meetingPoints})</div>
+                            <div>🎉 Etkinlik: {item.details.eventAttendance} (+{item.details.breakdown.eventPoints})</div>
+                            {item.details.meetingAbsence > 0 && (
+                              <div className="text-red-600 dark:text-red-400">
+                                ❌ Mazeretsiz: {item.details.meetingAbsence} ({item.details.breakdown.absencePenalty})
+                              </div>
+                            )}
+                            {item.details.memberRegistrations > 0 && (
+                              <div>👥 Kayıt: {item.details.memberRegistrations} (+{item.details.breakdown.registrationPoints})</div>
+                            )}
+                            {item.details.breakdown.bonusPoints > 0 && (
+                              <div className="text-green-600 dark:text-green-400">
+                                ⭐ Bonus: +{item.details.breakdown.bonusPoints}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         {/* Kamu Kurumu İstatistikleri */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
