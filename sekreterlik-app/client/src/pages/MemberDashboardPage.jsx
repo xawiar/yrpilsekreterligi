@@ -43,7 +43,7 @@ const MemberDashboardPage = () => {
   const [error, setError] = useState('');
   const [isPushLoading, setIsPushLoading] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'public-institution-management', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -761,6 +761,10 @@ const MemberDashboardPage = () => {
           <SettingsPage tab="stks" />
         )}
         
+        {currentView === 'public-institution-management' && (
+          <SettingsPage tab="public-institutions" />
+        )}
+        
         {currentView === 'stk-events' && (
           <EventsPage />
         )}
@@ -981,7 +985,7 @@ const MemberDashboardPage = () => {
           )}
 
           {/* Hızlı İşlemler - görev bazlı */}
-          {(grantedPermissions.includes('add_member') || grantedPermissions.includes('create_meeting') || grantedPermissions.includes('add_stk')) && (
+          {(grantedPermissions.includes('add_member') || grantedPermissions.includes('create_meeting') || grantedPermissions.includes('add_stk') || grantedPermissions.includes('add_public_institution')) && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">

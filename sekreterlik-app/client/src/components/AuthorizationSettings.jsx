@@ -8,6 +8,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'create_meeting', label: 'Toplantı Oluşturma' },
   { key: 'create_event', label: 'Etkinlik Oluşturma' },
   { key: 'add_stk', label: 'STK Ekleme' },
+  { key: 'add_public_institution', label: 'Kamu Kurumu Ekleme' },
   { key: 'add_ballot_box', label: 'Sandık Ekleme' },
   { key: 'add_observer', label: 'Müşahit Ekleme' },
   
