@@ -17,6 +17,7 @@ const AdminSettings = () => {
   const [messageType, setMessageType] = useState('success');
   const [loading, setLoading] = useState(false);
   const [loadingInfo, setLoadingInfo] = useState(true);
+  const [recalculating, setRecalculating] = useState(false);
 
   // Load admin info on component mount
   useEffect(() => {
@@ -121,6 +122,32 @@ const AdminSettings = () => {
       setMessageType('error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecalculateVisitCounts = async () => {
+    if (!window.confirm('Tüm ziyaret sayıları yeniden hesaplanacak. Bu işlem biraz zaman alabilir. Devam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    try {
+      setRecalculating(true);
+      setMessage('');
+      const response = await ApiService.recalculateAllVisitCounts();
+      
+      if (response.success) {
+        setMessage(`Ziyaret sayıları başarıyla yeniden hesaplandı. ${response.eventsProcessed || 0} etkinlik işlendi.`);
+        setMessageType('success');
+      } else {
+        setMessage(response.message || 'Ziyaret sayıları yeniden hesaplanırken hata oluştu');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error recalculating visit counts:', error);
+      setMessage('Ziyaret sayıları yeniden hesaplanırken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      setMessageType('error');
+    } finally {
+      setRecalculating(false);
     }
   };
 
@@ -246,6 +273,40 @@ const AdminSettings = () => {
             )}
           </button>
         </form>
+      </div>
+
+      {/* Recalculate Visit Counts */}
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Sayıları Yönetimi</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Tüm etkinliklerden ziyaret sayılarını yeniden hesaplamak için bu butonu kullanın. 
+          Bu işlem STK, Kamu Kurumu, Köy, Mahalle, Cami, İlçe ve Belde için ziyaret sayılarını güncelleyecektir.
+        </p>
+        
+        {message && message.includes('Ziyaret sayıları') && (
+          <div className={`mb-4 p-3 rounded-lg shadow-sm ${
+            messageType === 'success' 
+              ? 'bg-green-100 text-green-700 border border-green-200' 
+              : 'bg-red-100 text-red-700 border border-red-200'
+          }`}>
+            {message}
+          </div>
+        )}
+        
+        <button
+          onClick={handleRecalculateVisitCounts}
+          disabled={recalculating}
+          className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          {recalculating ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Yeniden Hesaplanıyor...
+            </div>
+          ) : (
+            'Ziyaret Sayılarını Yeniden Hesapla'
+          )}
+        </button>
       </div>
     </div>
   );

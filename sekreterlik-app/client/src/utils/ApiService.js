@@ -2791,6 +2791,14 @@ class ApiService {
     return response.json();
   }
 
+  static async recalculateAllVisitCounts() {
+    const response = await fetch(`${API_BASE_URL}/visits/recalculate-all`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   // Groups API
   static async getGroups() {
     if (USE_FIREBASE) {
