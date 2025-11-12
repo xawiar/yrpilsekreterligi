@@ -375,6 +375,35 @@ const MemberDashboardPage = () => {
     );
   }
 
+  // Public Institution Management view
+  if (currentView === 'public-institution-management') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6 lg:py-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kamu Kurumu Yönetimi</h1>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Kamu kurumu ekleme, düzenleme ve silme işlemleri</p>
+                </div>
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Dashboard'a Dön
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <SettingsPage tab="public-institutions" />
+        </div>
+      </div>
+    );
+  }
+
   // STK Events view
   if (currentView === 'stk-events') {
     return (
@@ -980,6 +1009,42 @@ const MemberDashboardPage = () => {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Kamu Kurumu Yönetimi - permission-based */}
+          {grantedPermissions.includes('add_public_institution') && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Kamu Kurumu Yönetimi
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Kamu kurumu ekleme, düzenleme ve silme işlemleri</p>
+              </div>
+              <div className="p-6">
+                <button
+                  onClick={() => {
+                    console.log('Kamu Kurumu Ekleme butonuna tıklandı');
+                    setCurrentView('public-institution-management');
+                  }}
+                  className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md w-full"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu ekleyin ve yönetin</p>
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
           )}
