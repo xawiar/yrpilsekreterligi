@@ -41,6 +41,9 @@ const MosquesSettings = () => {
       setTowns(townsData);
       setNeighborhoods(neighborhoodsData);
       setVillages(villagesData);
+      
+      // Ziyaret sayılarını yükle
+      await fetchVisitCounts();
     } catch (error) {
       console.error('Error fetching data:', error);
       setMessage('Veriler yüklenirken hata oluştu');
@@ -50,46 +53,13 @@ const MosquesSettings = () => {
     }
   };
 
-  // Mosques yüklendikten sonra ziyaret sayılarını hesapla
-  useEffect(() => {
-    if (mosques.length > 0) {
-      fetchVisitCounts();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mosques]);
-
   const fetchVisitCounts = async () => {
     try {
-      // Etkinliklerden gerçek ziyaret sayılarını hesapla
-      const events = await ApiService.getEvents(false); // Sadece aktif etkinlikler
-      
+      const data = await ApiService.getAllVisitCounts('mosque');
       const counts = {};
-      
-      // Tüm camiler için başlangıç değeri 0
-      mosques.forEach(mosque => {
-        counts[mosque.id] = 0;
+      data.forEach(visit => {
+        counts[visit.mosque_id] = visit.visit_count;
       });
-      
-      // Her etkinlik için cami ziyaret sayılarını hesapla
-      events.forEach(event => {
-        if (event.selectedLocationTypes && event.selectedLocations) {
-          const locationTypes = event.selectedLocationTypes;
-          const locations = event.selectedLocations;
-          
-          if (locationTypes.includes('mosque') && locations.mosque) {
-            const mosqueIds = locations.mosque;
-            mosqueIds.forEach(mosqueId => {
-              const id = String(mosqueId);
-              if (counts[id] !== undefined) {
-                counts[id] = (counts[id] || 0) + 1;
-              } else {
-                counts[id] = 1;
-              }
-            });
-          }
-        }
-      });
-      
       setVisitCounts(counts);
     } catch (error) {
       console.error('Error fetching visit counts:', error);

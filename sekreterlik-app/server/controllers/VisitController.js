@@ -209,7 +209,7 @@ class VisitController {
       console.log('Starting visit counts recalculation...');
       
       // Reset all visit counts to 0
-      const locationTypes = ['district', 'town', 'neighborhood', 'village', 'stk'];
+      const locationTypes = ['district', 'town', 'neighborhood', 'village', 'stk', 'public_institution', 'mosque'];
       for (const locationType of locationTypes) {
         await db.run(`UPDATE ${locationType}_visits SET visit_count = 0, updated_at = CURRENT_TIMESTAMP`);
         // Update in-memory collections
