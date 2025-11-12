@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import Modal from './Modal';
 
 const STKSettings = () => {
   const [stks, setStks] = useState([]);
@@ -10,6 +11,10 @@ const STKSettings = () => {
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [showVisitsModal, setShowVisitsModal] = useState(false);
+  const [selectedSTK, setSelectedSTK] = useState(null);
+  const [visitEvents, setVisitEvents] = useState([]);
+  const [loadingVisits, setLoadingVisits] = useState(false);
 
   useEffect(() => {
     fetchSTKs();
@@ -116,6 +121,21 @@ const STKSettings = () => {
     setEditingSTK(null);
     setShowForm(false);
     setMessage('');
+  };
+
+  const handleShowVisits = async (stk) => {
+    setSelectedSTK(stk);
+    setShowVisitsModal(true);
+    setLoadingVisits(true);
+    try {
+      const events = await ApiService.getVisitsForLocation('stk', stk.id);
+      setVisitEvents(events);
+    } catch (error) {
+      console.error('Error fetching visits:', error);
+      setVisitEvents([]);
+    } finally {
+      setLoadingVisits(false);
+    }
   };
 
   if (loading) {
@@ -230,13 +250,16 @@ const STKSettings = () => {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-1">
                     <h4 className="text-sm font-medium text-gray-900">{stk.name}</h4>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    <button
+                      onClick={() => handleShowVisits(stk)}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer transition-colors"
+                    >
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                       {visitCounts[String(stk.id)] || visitCounts[Number(stk.id)] || 0} ziyaret
-                    </span>
+                    </button>
                   </div>
                   {stk.description && (
                     <p className="text-sm text-gray-500 mt-1">{stk.description}</p>
@@ -265,6 +288,53 @@ const STKSettings = () => {
           )}
         </div>
       </div>
+
+      {/* Visits Modal */}
+      <Modal
+        isOpen={showVisitsModal}
+        onClose={() => setShowVisitsModal(false)}
+        title={selectedSTK ? `${selectedSTK.name} - Ziyaretler` : 'Ziyaretler'}
+        size="lg"
+      >
+        {loadingVisits ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : visitEvents.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>Bu STK için henüz ziyaret kaydı bulunmamaktadır.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {visitEvents.map((event) => (
+              <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 mb-1">{event.name}</h4>
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="font-medium">Tarih:</span> {new Date(event.date).toLocaleDateString('tr-TR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    {event.location && (
+                      <p className="text-sm text-gray-600 mb-1">
+                        <span className="font-medium">Konum:</span> {event.location}
+                      </p>
+                    )}
+                    {event.description && (
+                      <p className="text-sm text-gray-500 mt-2">{event.description}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

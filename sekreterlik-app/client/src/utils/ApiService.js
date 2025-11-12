@@ -2768,6 +2768,15 @@ class ApiService {
     return response.json();
   }
 
+  static async getVisitsForLocation(locationType, locationId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getVisitsForLocation(locationType, locationId);
+    }
+    // For non-Firebase, we would need to implement this in the backend
+    // For now, return empty array
+    return [];
+  }
+
   static async resetVisitCount(locationType, locationId) {
     const response = await fetch(`${API_BASE_URL}/visits/reset/${locationType}/${locationId}`, {
       method: 'POST',

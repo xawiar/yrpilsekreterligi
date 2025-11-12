@@ -6352,6 +6352,77 @@ class FirebaseApiService {
     }
   }
 
+  static async getVisitsForLocation(locationType, locationId) {
+    try {
+      // Get all active events
+      const events = await this.getEvents(false);
+      const locationIdStr = String(locationId);
+      
+      // Filter events that visited this location
+      const visitEvents = events.filter(event => {
+        if (!event.selectedLocationTypes || !event.selectedLocations) {
+          return false;
+        }
+
+        // Parse selectedLocationTypes
+        let selectedLocationTypes;
+        if (Array.isArray(event.selectedLocationTypes)) {
+          selectedLocationTypes = event.selectedLocationTypes;
+        } else if (typeof event.selectedLocationTypes === 'string') {
+          try {
+            selectedLocationTypes = JSON.parse(event.selectedLocationTypes);
+          } catch (e) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+
+        // Parse selectedLocations
+        let selectedLocations;
+        if (typeof event.selectedLocations === 'object' && event.selectedLocations !== null) {
+          selectedLocations = event.selectedLocations;
+        } else if (typeof event.selectedLocations === 'string') {
+          try {
+            selectedLocations = JSON.parse(event.selectedLocations);
+          } catch (e) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+
+        // Check if this location type and ID is in the event
+        if (!selectedLocationTypes.includes(locationType)) {
+          return false;
+        }
+
+        const locationIds = selectedLocations[locationType];
+        if (!locationIds || !Array.isArray(locationIds)) {
+          return false;
+        }
+
+        // Check if locationId matches (try both string and number)
+        return locationIds.some(id => 
+          String(id) === locationIdStr || 
+          (typeof id === 'number' && String(id) === locationIdStr) ||
+          (typeof locationId === 'number' && String(id) === String(locationId))
+        );
+      });
+
+      return visitEvents.map(event => ({
+        id: event.id,
+        name: event.name,
+        date: event.date,
+        location: event.location,
+        description: event.description
+      }));
+    } catch (error) {
+      console.error(`Error getting visits for ${locationType} ${locationId}:`, error);
+      return [];
+    }
+  }
+
   static async processEventLocations(eventId, selectedLocationTypes, selectedLocations) {
     try {
       const results = [];
@@ -6394,7 +6465,7 @@ class FirebaseApiService {
     try {
       console.log('Starting Firebase visit counts recalculation...');
 
-      // Get all active events
+      // Get all active events using ApiService.getEvents (same as EventsPage)
       const events = await this.getEvents(false);
       console.log(`Found ${events.length} active events to process`);
 
@@ -6425,40 +6496,71 @@ class FirebaseApiService {
       }
 
       let totalProcessed = 0;
+      let totalIncrements = 0;
 
       // Process each event
       for (const event of events) {
         try {
-          if (event.selectedLocationTypes && event.selectedLocations) {
-            const selectedLocationTypes = Array.isArray(event.selectedLocationTypes)
-              ? event.selectedLocationTypes
-              : JSON.parse(event.selectedLocationTypes || '[]');
-            
-            const selectedLocations = typeof event.selectedLocations === 'object'
-              ? event.selectedLocations
-              : JSON.parse(event.selectedLocations || '{}');
+          if (!event.selectedLocationTypes || !event.selectedLocations) {
+            console.log(`Skipping event ${event.id}: missing location data`);
+            continue;
+          }
 
-            console.log(`Processing event ID ${event.id}:`, {
-              selectedLocationTypes,
-              selectedLocations
-            });
+          // Parse selectedLocationTypes
+          let selectedLocationTypes;
+          if (Array.isArray(event.selectedLocationTypes)) {
+            selectedLocationTypes = event.selectedLocationTypes;
+          } else if (typeof event.selectedLocationTypes === 'string') {
+            try {
+              selectedLocationTypes = JSON.parse(event.selectedLocationTypes);
+            } catch (e) {
+              console.error(`Error parsing selectedLocationTypes for event ${event.id}:`, e);
+              continue;
+            }
+          } else {
+            console.log(`Skipping event ${event.id}: invalid selectedLocationTypes type`);
+            continue;
+          }
 
-            for (const locationType of selectedLocationTypes) {
-              const locationIds = selectedLocations[locationType];
-              if (locationIds && Array.isArray(locationIds)) {
-                for (const locationId of locationIds) {
-                  // Normalize locationId
-                  const normalizedId = typeof locationId === 'string' && !isNaN(locationId)
-                    ? parseInt(locationId, 10)
-                    : locationId;
+          // Parse selectedLocations
+          let selectedLocations;
+          if (typeof event.selectedLocations === 'object' && event.selectedLocations !== null) {
+            selectedLocations = event.selectedLocations;
+          } else if (typeof event.selectedLocations === 'string') {
+            try {
+              selectedLocations = JSON.parse(event.selectedLocations);
+            } catch (e) {
+              console.error(`Error parsing selectedLocations for event ${event.id}:`, e);
+              continue;
+            }
+          } else {
+            console.log(`Skipping event ${event.id}: invalid selectedLocations type`);
+            continue;
+          }
 
-                  console.log(`Incrementing visit for ${locationType} ID ${normalizedId}`);
-                  await this.incrementVisit(locationType, normalizedId);
-                }
+          if (!Array.isArray(selectedLocationTypes) || !selectedLocations || typeof selectedLocations !== 'object') {
+            console.log(`Skipping event ${event.id}: invalid parsed data`);
+            continue;
+          }
+
+          console.log(`Processing event ID ${event.id}:`, {
+            selectedLocationTypes,
+            selectedLocations
+          });
+
+          for (const locationType of selectedLocationTypes) {
+            const locationIds = selectedLocations[locationType];
+            if (locationIds && Array.isArray(locationIds)) {
+              for (const locationId of locationIds) {
+                // Normalize locationId - keep as string for Firebase
+                const normalizedId = String(locationId);
+                console.log(`Incrementing visit for ${locationType} ID ${normalizedId}`);
+                await this.incrementVisit(locationType, normalizedId);
+                totalIncrements++;
               }
             }
-            totalProcessed++;
           }
+          totalProcessed++;
         } catch (eventError) {
           console.error(`Error processing event ID ${event.id}:`, eventError);
           console.error('Event data:', {
@@ -6468,8 +6570,8 @@ class FirebaseApiService {
         }
       }
 
-      console.log(`Firebase visit counts recalculation completed. Processed ${totalProcessed} events.`);
-      return { success: true, eventsProcessed: totalProcessed, totalEvents: events.length };
+      console.log(`Firebase visit counts recalculation completed. Processed ${totalProcessed} events, ${totalIncrements} visit increments.`);
+      return { success: true, eventsProcessed: totalProcessed, totalEvents: events.length, totalIncrements };
     } catch (error) {
       console.error('Error recalculating Firebase visit counts:', error);
       throw error;
