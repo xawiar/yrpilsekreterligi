@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import removeConsole from 'vite-plugin-remove-console'
 // PWA plugin geçici olarak devre dışı - @babel/traverse sorunu nedeniyle
 // import { VitePWA } from 'vite-plugin-pwa'
 
@@ -10,6 +11,11 @@ export default defineConfig({
   
   plugins: [
     react(),
+    // Production'da console.log'ları kaldır (performans için)
+    removeConsole({
+      includes: ['log', 'warn', 'info', 'debug'],
+      exclude: ['error'] // Error'lar production'da da gösterilmeli
+    }),
     // PWA plugin geçici olarak devre dışı - @babel/traverse sorunu nedeniyle
     // TODO: @babel/traverse sorunu çözüldükten sonra tekrar aktif edilecek
     // VitePWA({

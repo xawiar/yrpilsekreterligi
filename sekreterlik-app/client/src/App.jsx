@@ -198,8 +198,8 @@ function AppContent() {
               </PublicRoute>
             } 
           />
-          {/* Debug/Admin Routes - Only accessible in development or by admin */}
-          {import.meta.env.DEV && (
+          {/* Debug/Admin Routes - Only accessible in development or by admin with debug flag */}
+          {(import.meta.env.DEV || (import.meta.env.VITE_ENABLE_DEBUG === 'true' && isLoggedIn && user?.role === 'admin')) && (
             <>
               <Route 
                 path="/create-admin" 

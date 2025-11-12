@@ -413,7 +413,7 @@ const AppBrandingSettings = () => {
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
           {preview.logo && (
-            <img src={preview.logo} alt="Logo Preview" className="w-16 h-16 object-contain rounded" />
+            <img src={preview.logo} alt="Logo Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
         </div>
       </div>
@@ -431,7 +431,7 @@ const AppBrandingSettings = () => {
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
           {preview.icon192 && (
-            <img src={preview.icon192} alt="Icon 192 Preview" className="w-16 h-16 object-contain rounded" />
+            <img src={preview.icon192} alt="Icon 192 Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
         </div>
       </div>
@@ -449,7 +449,7 @@ const AppBrandingSettings = () => {
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
           {preview.icon512 && (
-            <img src={preview.icon512} alt="Icon 512 Preview" className="w-16 h-16 object-contain rounded" />
+            <img src={preview.icon512} alt="Icon 512 Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
         </div>
       </div>
@@ -467,7 +467,7 @@ const AppBrandingSettings = () => {
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
           {preview.badge && (
-            <img src={preview.badge} alt="Badge Preview" className="w-16 h-16 object-contain rounded" />
+            <img src={preview.badge} alt="Badge Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
         </div>
       </div>
@@ -485,7 +485,7 @@ const AppBrandingSettings = () => {
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
           {preview.notificationIcon && (
-            <img src={preview.notificationIcon} alt="Notification Icon Preview" className="w-16 h-16 object-contain rounded" />
+            <img src={preview.notificationIcon} alt="Notification Icon Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
         </div>
       </div>

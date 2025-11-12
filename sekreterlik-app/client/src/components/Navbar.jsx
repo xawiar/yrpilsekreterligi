@@ -39,7 +39,7 @@ const Navbar = () => {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center space-x-2">
               {branding?.logoUrl && (
-                <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
+                <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" loading="lazy" decoding="async" />
               )}
               <h1 className="text-lg sm:text-xl font-bold text-indigo-700 dark:text-indigo-400">
                 {branding?.appName || 'Parti Sekreterliği'}

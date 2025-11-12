@@ -24,6 +24,16 @@ const ReportsPage = () => {
     totalVillageVisits: 0,
     assignedVillageRepresentatives: 0,
     villageRepresentativeAttendanceRate: 0,
+    
+    // STK İstatistikleri
+    totalSTKs: 0,
+    totalSTKVisits: 0,
+    topSTKs: [],
+    
+    // Kamu Kurumu İstatistikleri
+    totalPublicInstitutions: 0,
+    totalPublicInstitutionVisits: 0,
+    topPublicInstitutions: [],
   });
 
   useEffect(() => {
@@ -45,7 +55,11 @@ const ReportsPage = () => {
         neighborhoodVisitCounts,
         villageVisitCounts,
         neighborhoodRepresentatives,
-        villageRepresentatives
+        villageRepresentatives,
+        stks,
+        publicInstitutions,
+        stkVisitCounts,
+        publicInstitutionVisitCounts
       ] = await Promise.all([
         ApiService.getMembers(),
         ApiService.getMeetings(),
@@ -56,7 +70,11 @@ const ReportsPage = () => {
         ApiService.getAllVisitCounts('neighborhood'),
         ApiService.getAllVisitCounts('village'),
         ApiService.getNeighborhoodRepresentatives(),
-        ApiService.getVillageRepresentatives()
+        ApiService.getVillageRepresentatives(),
+        ApiService.getSTKs(),
+        ApiService.getPublicInstitutions(),
+        ApiService.getAllVisitCounts('stk'),
+        ApiService.getAllVisitCounts('public_institution')
       ]);
 
       // Genel İstatistikler
@@ -209,6 +227,50 @@ const ReportsPage = () => {
         ? Math.round((villageRepTotalAttended / villageRepTotalRequired) * 100)
         : 0;
 
+      // STK İstatistikleri
+      const totalSTKs = stks.length;
+      const totalSTKVisits = stkVisitCounts.reduce((sum, visit) => 
+        sum + (visit.visit_count || 0), 0
+      );
+      
+      // En çok ziyaret edilen STK'lar (Top 5)
+      const stkVisitMap = {};
+      stkVisitCounts.forEach(visit => {
+        const stkId = String(visit.stk_id);
+        stkVisitMap[stkId] = visit.visit_count || 0;
+      });
+      
+      const topSTKs = stks
+        .map(stk => ({
+          id: stk.id,
+          name: stk.name,
+          visitCount: stkVisitMap[String(stk.id)] || stkVisitMap[Number(stk.id)] || 0
+        }))
+        .sort((a, b) => b.visitCount - a.visitCount)
+        .slice(0, 5);
+
+      // Kamu Kurumu İstatistikleri
+      const totalPublicInstitutions = publicInstitutions.length;
+      const totalPublicInstitutionVisits = publicInstitutionVisitCounts.reduce((sum, visit) => 
+        sum + (visit.visit_count || 0), 0
+      );
+      
+      // En çok ziyaret edilen Kamu Kurumları (Top 5)
+      const publicInstitutionVisitMap = {};
+      publicInstitutionVisitCounts.forEach(visit => {
+        const institutionId = String(visit.public_institution_id);
+        publicInstitutionVisitMap[institutionId] = visit.visit_count || 0;
+      });
+      
+      const topPublicInstitutions = publicInstitutions
+        .map(institution => ({
+          id: institution.id,
+          name: institution.name,
+          visitCount: publicInstitutionVisitMap[String(institution.id)] || publicInstitutionVisitMap[Number(institution.id)] || 0
+        }))
+        .sort((a, b) => b.visitCount - a.visitCount)
+        .slice(0, 5);
+
       setStats({
         totalMembers,
         totalMeetings,
@@ -223,6 +285,12 @@ const ReportsPage = () => {
         totalVillageVisits,
         assignedVillageRepresentatives,
         villageRepresentativeAttendanceRate,
+        totalSTKs,
+        totalSTKVisits,
+        topSTKs,
+        totalPublicInstitutions,
+        totalPublicInstitutionVisits,
+        topPublicInstitutions,
       });
     } catch (error) {
       console.error('Error fetching reports data:', error);
@@ -518,6 +586,134 @@ const ReportsPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* STK İstatistikleri */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            STK İstatistikleri
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam STK</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {stats.totalSTKs}
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Ziyaret</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {stats.totalSTKVisits}
+                  </p>
+                </div>
+                <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {stats.topSTKs.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                En Çok Ziyaret Edilen STK'lar
+              </h3>
+              <div className="space-y-3">
+                {stats.topSTKs.map((stk, index) => (
+                  <div key={stk.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 font-bold mr-3">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{stk.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {stk.visitCount} ziyaret
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Kamu Kurumu İstatistikleri */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Kamu Kurumu İstatistikleri
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Kamu Kurumu</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {stats.totalPublicInstitutions}
+                  </p>
+                </div>
+                <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Ziyaret</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {stats.totalPublicInstitutionVisits}
+                  </p>
+                </div>
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                  <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {stats.topPublicInstitutions.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                En Çok Ziyaret Edilen Kamu Kurumları
+              </h3>
+              <div className="space-y-3">
+                {stats.topPublicInstitutions.map((institution, index) => (
+                  <div key={institution.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 font-bold mr-3">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{institution.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {institution.visitCount} ziyaret
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
