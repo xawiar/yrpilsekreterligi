@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
 
 const ReportsPage = () => {
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [stats, setStats] = useState({
     // Genel İstatistikler
     totalMembers: 0,
@@ -34,11 +41,16 @@ const ReportsPage = () => {
     totalPublicInstitutions: 0,
     totalPublicInstitutionVisits: 0,
     topPublicInstitutions: [],
+    
+    // Grafik Verileri
+    monthlyEvents: [],
+    monthlyMeetings: [],
+    monthlyVisits: [],
   });
 
   useEffect(() => {
     fetchReportsData();
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const fetchReportsData = async () => {
     try {
@@ -77,16 +89,43 @@ const ReportsPage = () => {
         ApiService.getAllVisitCounts('public_institution')
       ]);
 
+      // Tarih filtreleme
+      let filteredEvents = events;
+      let filteredMeetings = meetings;
+      
+      if (dateRange.startDate || dateRange.endDate) {
+        const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+        const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+        
+        if (startDate || endDate) {
+          filteredEvents = events.filter(event => {
+            if (!event.date) return false;
+            const eventDate = new Date(event.date);
+            if (startDate && eventDate < startDate) return false;
+            if (endDate && eventDate > endDate) return false;
+            return true;
+          });
+          
+          filteredMeetings = meetings.filter(meeting => {
+            if (!meeting.date) return false;
+            const meetingDate = new Date(meeting.date);
+            if (startDate && meetingDate < startDate) return false;
+            if (endDate && meetingDate > endDate) return false;
+            return true;
+          });
+        }
+      }
+
       // Genel İstatistikler
       const totalMembers = members.length;
-      const totalMeetings = meetings.length;
-      const totalEvents = events.length;
+      const totalMeetings = filteredMeetings.length;
+      const totalEvents = filteredEvents.length;
 
       // Ortalama toplantı katılım oranı
       let totalAttendanceRate = 0;
       let validMeetings = 0;
       
-      meetings.forEach(meeting => {
+      filteredMeetings.forEach(meeting => {
         if (meeting.attendees && meeting.attendees.length > 0) {
           const totalExpected = meeting.attendees.length;
           const attendedCount = meeting.attendees.filter(a => a.attended).length;
@@ -102,7 +141,7 @@ const ReportsPage = () => {
 
       // Kategori bazında etkinlik istatistikleri
       const eventCategoryStats = eventCategories.map(category => {
-        const categoryEvents = events.filter(event => 
+        const categoryEvents = filteredEvents.filter(event => 
           event.category_id === category.id || event.categoryId === category.id
         );
         
@@ -151,7 +190,7 @@ const ReportsPage = () => {
         
         // Katıldığı ziyaret sayısı
         let attendedVisits = 0;
-        events.forEach(event => {
+        filteredEvents.forEach(event => {
           if (event.selectedLocationTypes && event.selectedLocations) {
             if (event.selectedLocationTypes.includes('neighborhood')) {
               const locationIds = event.selectedLocations.neighborhood || [];
@@ -203,7 +242,7 @@ const ReportsPage = () => {
         
         // Katıldığı ziyaret sayısı
         let attendedVisits = 0;
-        events.forEach(event => {
+        filteredEvents.forEach(event => {
           if (event.selectedLocationTypes && event.selectedLocations) {
             if (event.selectedLocationTypes.includes('village')) {
               const locationIds = event.selectedLocations.village || [];
@@ -271,6 +310,54 @@ const ReportsPage = () => {
         .sort((a, b) => b.visitCount - a.visitCount)
         .slice(0, 5);
 
+      // Grafik Verileri - Aylık Etkinlik Grafiği
+      const monthlyEventsMap = {};
+      filteredEvents.forEach(event => {
+        if (event.date) {
+          const date = new Date(event.date);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyEventsMap[monthKey] = (monthlyEventsMap[monthKey] || 0) + 1;
+        }
+      });
+      const monthlyEvents = Object.keys(monthlyEventsMap)
+        .sort()
+        .map(key => ({
+          month: key,
+          count: monthlyEventsMap[key]
+        }));
+
+      // Aylık Toplantı Grafiği
+      const monthlyMeetingsMap = {};
+      filteredMeetings.forEach(meeting => {
+        if (meeting.date) {
+          const date = new Date(meeting.date);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyMeetingsMap[monthKey] = (monthlyMeetingsMap[monthKey] || 0) + 1;
+        }
+      });
+      const monthlyMeetings = Object.keys(monthlyMeetingsMap)
+        .sort()
+        .map(key => ({
+          month: key,
+          count: monthlyMeetingsMap[key]
+        }));
+
+      // Aylık Ziyaret Grafiği (Tüm ziyaret türleri)
+      const monthlyVisitsMap = {};
+      [...neighborhoodVisitCounts, ...villageVisitCounts, ...stkVisitCounts, ...publicInstitutionVisitCounts].forEach(visit => {
+        if (visit.last_visit_date || visit.updated_at) {
+          const date = new Date(visit.last_visit_date || visit.updated_at);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyVisitsMap[monthKey] = (monthlyVisitsMap[monthKey] || 0) + (visit.visit_count || 0);
+        }
+      });
+      const monthlyVisits = Object.keys(monthlyVisitsMap)
+        .sort()
+        .map(key => ({
+          month: key,
+          count: monthlyVisitsMap[key]
+        }));
+
       setStats({
         totalMembers,
         totalMeetings,
@@ -291,6 +378,9 @@ const ReportsPage = () => {
         totalPublicInstitutions,
         totalPublicInstitutionVisits,
         topPublicInstitutions,
+        monthlyEvents,
+        monthlyMeetings,
+        monthlyVisits,
       });
     } catch (error) {
       console.error('Error fetching reports data:', error);
@@ -298,6 +388,94 @@ const ReportsPage = () => {
       setLoading(false);
     }
   };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Raporlar - Genel İstatistikler', 14, 22);
+    
+    doc.setFontSize(12);
+    let yPos = 35;
+    
+    // Genel İstatistikler
+    doc.setFontSize(14);
+    doc.text('Genel İstatistikler', 14, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.text(`Toplam Üye: ${stats.totalMembers}`, 14, yPos);
+    yPos += 7;
+    doc.text(`Toplam Toplantı: ${stats.totalMeetings}`, 14, yPos);
+    yPos += 7;
+    doc.text(`Ortalama Katılım Oranı: ${stats.avgMeetingAttendanceRate}%`, 14, yPos);
+    yPos += 7;
+    doc.text(`Toplam Etkinlik: ${stats.totalEvents}`, 14, yPos);
+    yPos += 10;
+    
+    // STK İstatistikleri
+    doc.setFontSize(14);
+    doc.text('STK İstatistikleri', 14, yPos);
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.text(`Toplam STK: ${stats.totalSTKs}`, 14, yPos);
+    yPos += 7;
+    doc.text(`Toplam STK Ziyaret: ${stats.totalSTKVisits}`, 14, yPos);
+    yPos += 10;
+    
+    // Kamu Kurumu İstatistikleri
+    doc.setFontSize(14);
+    doc.text('Kamu Kurumu İstatistikleri', 14, yPos);
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.text(`Toplam Kamu Kurumu: ${stats.totalPublicInstitutions}`, 14, yPos);
+    yPos += 7;
+    doc.text(`Toplam Kamu Kurumu Ziyaret: ${stats.totalPublicInstitutionVisits}`, 14, yPos);
+    
+    doc.save('raporlar.pdf');
+  };
+
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    
+    // Genel İstatistikler
+    const generalData = [
+      ['Metrik', 'Değer'],
+      ['Toplam Üye', stats.totalMembers],
+      ['Toplam Toplantı', stats.totalMeetings],
+      ['Ortalama Katılım Oranı (%)', stats.avgMeetingAttendanceRate],
+      ['Toplam Etkinlik', stats.totalEvents],
+    ];
+    const generalSheet = XLSX.utils.aoa_to_sheet(generalData);
+    XLSX.utils.book_append_sheet(workbook, generalSheet, 'Genel İstatistikler');
+    
+    // STK İstatistikleri
+    const stkData = [
+      ['STK Adı', 'Ziyaret Sayısı'],
+      ...stats.topSTKs.map(stk => [stk.name, stk.visitCount])
+    ];
+    const stkSheet = XLSX.utils.aoa_to_sheet(stkData);
+    XLSX.utils.book_append_sheet(workbook, stkSheet, 'STK İstatistikleri');
+    
+    // Kamu Kurumu İstatistikleri
+    const publicInstitutionData = [
+      ['Kamu Kurumu Adı', 'Ziyaret Sayısı'],
+      ...stats.topPublicInstitutions.map(inst => [inst.name, inst.visitCount])
+    ];
+    const publicInstitutionSheet = XLSX.utils.aoa_to_sheet(publicInstitutionData);
+    XLSX.utils.book_append_sheet(workbook, publicInstitutionSheet, 'Kamu Kurumu İstatistikleri');
+    
+    // Kategori Bazında Etkinlik
+    const categoryData = [
+      ['Kategori', 'Etkinlik Sayısı', 'Toplam Katılım'],
+      ...stats.eventCategoryStats.map(cat => [cat.categoryName, cat.eventCount, cat.totalAttendance])
+    ];
+    const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
+    XLSX.utils.book_append_sheet(workbook, categorySheet, 'Kategori İstatistikleri');
+    
+    XLSX.writeFile(workbook, 'raporlar.xlsx');
+  };
+
+  const COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
 
   if (loading) {
     return (
@@ -313,11 +491,71 @@ const ReportsPage = () => {
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Raporlar</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Genel istatistikler ve performans metrikleri
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Raporlar</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Genel istatistikler ve performans metrikleri
+            </p>
+          </div>
+          
+          {/* Export Butonları */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleExportPDF}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              PDF İndir
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Excel İndir
+            </button>
+          </div>
+        </div>
+
+        {/* Tarih Filtreleme */}
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Başlangıç Tarihi
+              </label>
+              <input
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Bitiş Tarihi
+              </label>
+              <input
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => setDateRange({ startDate: '', endDate: '' })}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Filtreyi Temizle
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Genel İstatistikler */}
@@ -390,6 +628,100 @@ const ReportsPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Grafikler */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Zaman Bazlı Grafikler
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Aylık Etkinlik Grafiği */}
+            {stats.monthlyEvents.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                  Aylık Etkinlik Sayısı
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={stats.monthlyEvents}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="count" stroke="#6366F1" strokeWidth={2} name="Etkinlik Sayısı" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Aylık Toplantı Grafiği */}
+            {stats.monthlyMeetings.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                  Aylık Toplantı Sayısı
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={stats.monthlyMeetings}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill="#10B981" name="Toplantı Sayısı" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Aylık Ziyaret Grafiği */}
+          {stats.monthlyVisits.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Aylık Ziyaret Trendi
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={stats.monthlyVisits}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="count" stroke="#8B5CF6" strokeWidth={2} name="Ziyaret Sayısı" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Kategori Bazında Etkinlik Pasta Grafiği */}
+          {stats.eventCategoryStats.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Kategori Bazında Etkinlik Dağılımı
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={stats.eventCategoryStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ categoryName, eventCount }) => `${categoryName}: ${eventCount}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="eventCount"
+                  >
+                    {stats.eventCategoryStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Etkinlik Kategori İstatistikleri */}

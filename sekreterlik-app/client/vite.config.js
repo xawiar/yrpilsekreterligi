@@ -83,7 +83,9 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          'ui-vendor': ['bootstrap']
+          'ui-vendor': ['bootstrap'],
+          'chart-vendor': ['recharts'],
+          'export-vendor': ['xlsx', 'jspdf']
         }
       }
     }
