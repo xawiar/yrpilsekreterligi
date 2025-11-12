@@ -594,9 +594,9 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
       console.log('Event created successfully:', response);
       
       // Process visit counts for selected locations
-      // Skip for Firebase as it's not implemented yet
-      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      if (!USE_FIREBASE && response && response.id) {
+      // Firebase'de createEvent içinde otomatik olarak yapılıyor, ama yine de burada da çağıralım
+      // (createEvent içinde hata olursa burada tekrar deneyebiliriz)
+      if (response && response.id) {
         try {
           const visitResults = await ApiService.processEventLocations(
             response.id,

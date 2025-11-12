@@ -2762,9 +2762,7 @@ class ApiService {
 
   static async getAllVisitCounts(locationType) {
     if (USE_FIREBASE) {
-      // Firebase'de visit counts yok - boş array döndür
-      // TODO: Eğer visit counts Firebase'de implement edilirse buraya ekle
-      return [];
+      return FirebaseApiService.getAllVisitCounts(locationType);
     }
     const response = await fetch(`${API_BASE_URL}/visits/counts/${locationType}`);
     return response.json();
@@ -2779,6 +2777,9 @@ class ApiService {
   }
 
   static async processEventLocations(eventId, selectedLocationTypes, selectedLocations) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.processEventLocations(eventId, selectedLocationTypes, selectedLocations);
+    }
     const response = await fetch(`${API_BASE_URL}/visits/process-event`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -2792,6 +2793,9 @@ class ApiService {
   }
 
   static async recalculateAllVisitCounts() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.recalculateAllVisitCounts();
+    }
     const response = await fetch(`${API_BASE_URL}/visits/recalculate-all`, {
       method: 'POST',
       headers: this.getAuthHeaders(),

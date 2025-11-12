@@ -59,7 +59,16 @@ class FirebaseApiService {
     ARCHIVE: 'archive',
     GROUPS: 'groups',
     POSITION_PERMISSIONS: 'position_permissions',
-    SCHEDULED_SMS: 'scheduled_sms'
+    SCHEDULED_SMS: 'scheduled_sms',
+    // Visit counts collections
+    DISTRICT_VISITS: 'district_visits',
+    TOWN_VISITS: 'town_visits',
+    NEIGHBORHOOD_VISITS: 'neighborhood_visits',
+    VILLAGE_VISITS: 'village_visits',
+    STK_VISITS: 'stk_visits',
+    PUBLIC_INSTITUTION_VISITS: 'public_institution_visits',
+    MOSQUE_VISITS: 'mosque_visits',
+    EVENT_VISITS: 'event_visits'
   };
 
   // Auth API
@@ -2018,6 +2027,21 @@ class FirebaseApiService {
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası etkinlik oluşturmayı engellemez
+      }
+      
+      // Process visit counts for selected locations (Firebase)
+      if (finalEventData.selectedLocationTypes && finalEventData.selectedLocations && docId) {
+        try {
+          await this.processEventLocations(
+            docId,
+            finalEventData.selectedLocationTypes,
+            finalEventData.selectedLocations
+          );
+          console.log('Visit counts updated for Firebase event:', docId);
+        } catch (visitError) {
+          console.error('Error updating visit counts for Firebase event:', visitError);
+          // Don't fail event creation if visit count update fails
+        }
       }
       
       return { success: true, id: docId, message: 'Etkinlik oluşturuldu' };
@@ -6239,6 +6263,246 @@ class FirebaseApiService {
         message: error.message || 'Test bildirimi gösterilirken hata oluştu'
       };
     }
+  }
+
+  // Visit Counts API - Firebase implementation
+  static async incrementVisit(locationType, locationId) {
+    try {
+      const collectionName = this.getVisitCollectionName(locationType);
+      if (!collectionName) {
+        throw new Error(`Invalid location type: ${locationType}`);
+      }
+
+      const idField = this.getVisitIdField(locationType);
+      const normalizedId = String(locationId);
+
+      // Check if visit record exists - try both string and number ID
+      let existingVisits = await FirebaseService.findByField(
+        collectionName,
+        idField,
+        normalizedId,
+        false // decrypt = false
+      );
+
+      // If not found with string, try with number
+      if ((!existingVisits || existingVisits.length === 0) && !isNaN(normalizedId)) {
+        existingVisits = await FirebaseService.findByField(
+          collectionName,
+          idField,
+          Number(normalizedId),
+          false // decrypt = false
+        );
+      }
+
+      if (existingVisits && existingVisits.length > 0) {
+        // Update existing record
+        const existingVisit = existingVisits[0];
+        const visitId = existingVisit.id;
+        const newCount = (existingVisit.visit_count || 0) + 1;
+
+        await FirebaseService.update(
+          collectionName,
+          visitId,
+          {
+            visit_count: newCount,
+            last_visit_date: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          false // encrypt = false
+        );
+
+        return { success: true, visitCount: newCount };
+      } else {
+        // Create new record
+        const visitData = {
+          [idField]: normalizedId,
+          visit_count: 1,
+          last_visit_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        await FirebaseService.create(
+          collectionName,
+          null,
+          visitData,
+          false // encrypt = false
+        );
+
+        return { success: true, visitCount: 1 };
+      }
+    } catch (error) {
+      console.error(`Error incrementing visit for ${locationType}:`, error);
+      throw error;
+    }
+  }
+
+  static async getAllVisitCounts(locationType) {
+    try {
+      const collectionName = this.getVisitCollectionName(locationType);
+      if (!collectionName) {
+        return [];
+      }
+
+      const visits = await FirebaseService.getAll(collectionName, {}, false);
+      return visits || [];
+    } catch (error) {
+      console.error(`Error getting all visit counts for ${locationType}:`, error);
+      return [];
+    }
+  }
+
+  static async processEventLocations(eventId, selectedLocationTypes, selectedLocations) {
+    try {
+      const results = [];
+
+      for (const locationType of selectedLocationTypes) {
+        const locationIds = selectedLocations[locationType];
+        if (locationIds && Array.isArray(locationIds)) {
+          for (const locationId of locationIds) {
+            // Normalize locationId
+            const normalizedId = typeof locationId === 'string' && !isNaN(locationId)
+              ? parseInt(locationId, 10)
+              : locationId;
+
+            const result = await this.incrementVisit(locationType, normalizedId);
+            results.push({
+              locationType,
+              locationId: normalizedId,
+              visitCount: result.visitCount
+            });
+          }
+        }
+      }
+
+      // Also increment event visit count
+      const eventResult = await this.incrementVisit('event', eventId);
+      results.push({
+        locationType: 'event',
+        locationId: eventId,
+        visitCount: eventResult.visitCount
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error processing event locations:', error);
+      throw error;
+    }
+  }
+
+  static async recalculateAllVisitCounts() {
+    try {
+      console.log('Starting Firebase visit counts recalculation...');
+
+      // Get all active events
+      const events = await this.getEvents(false);
+      console.log(`Found ${events.length} active events to process`);
+
+      // Reset all visit counts to 0
+      const locationTypes = ['district', 'town', 'neighborhood', 'village', 'stk', 'public_institution', 'mosque'];
+      
+      for (const locationType of locationTypes) {
+        const collectionName = this.getVisitCollectionName(locationType);
+        if (collectionName) {
+          try {
+            const allVisits = await FirebaseService.getAll(collectionName, {}, false);
+            for (const visit of allVisits || []) {
+              await FirebaseService.update(
+                collectionName,
+                visit.id,
+                {
+                  visit_count: 0,
+                  updated_at: new Date().toISOString()
+                },
+                false // encrypt = false
+              );
+            }
+            console.log(`Reset ${locationType} visits (${allVisits?.length || 0} records)`);
+          } catch (error) {
+            console.error(`Error resetting ${locationType} visits:`, error);
+          }
+        }
+      }
+
+      let totalProcessed = 0;
+
+      // Process each event
+      for (const event of events) {
+        try {
+          if (event.selectedLocationTypes && event.selectedLocations) {
+            const selectedLocationTypes = Array.isArray(event.selectedLocationTypes)
+              ? event.selectedLocationTypes
+              : JSON.parse(event.selectedLocationTypes || '[]');
+            
+            const selectedLocations = typeof event.selectedLocations === 'object'
+              ? event.selectedLocations
+              : JSON.parse(event.selectedLocations || '{}');
+
+            console.log(`Processing event ID ${event.id}:`, {
+              selectedLocationTypes,
+              selectedLocations
+            });
+
+            for (const locationType of selectedLocationTypes) {
+              const locationIds = selectedLocations[locationType];
+              if (locationIds && Array.isArray(locationIds)) {
+                for (const locationId of locationIds) {
+                  // Normalize locationId
+                  const normalizedId = typeof locationId === 'string' && !isNaN(locationId)
+                    ? parseInt(locationId, 10)
+                    : locationId;
+
+                  console.log(`Incrementing visit for ${locationType} ID ${normalizedId}`);
+                  await this.incrementVisit(locationType, normalizedId);
+                }
+              }
+            }
+            totalProcessed++;
+          }
+        } catch (eventError) {
+          console.error(`Error processing event ID ${event.id}:`, eventError);
+          console.error('Event data:', {
+            selectedLocationTypes: event.selectedLocationTypes,
+            selectedLocations: event.selectedLocations
+          });
+        }
+      }
+
+      console.log(`Firebase visit counts recalculation completed. Processed ${totalProcessed} events.`);
+      return { success: true, eventsProcessed: totalProcessed, totalEvents: events.length };
+    } catch (error) {
+      console.error('Error recalculating Firebase visit counts:', error);
+      throw error;
+    }
+  }
+
+  // Helper methods for visit counts
+  static getVisitCollectionName(locationType) {
+    const mapping = {
+      district: this.COLLECTIONS.DISTRICT_VISITS,
+      town: this.COLLECTIONS.TOWN_VISITS,
+      neighborhood: this.COLLECTIONS.NEIGHBORHOOD_VISITS,
+      village: this.COLLECTIONS.VILLAGE_VISITS,
+      stk: this.COLLECTIONS.STK_VISITS,
+      public_institution: this.COLLECTIONS.PUBLIC_INSTITUTION_VISITS,
+      mosque: this.COLLECTIONS.MOSQUE_VISITS,
+      event: this.COLLECTIONS.EVENT_VISITS
+    };
+    return mapping[locationType];
+  }
+
+  static getVisitIdField(locationType) {
+    const mapping = {
+      district: 'district_id',
+      town: 'town_id',
+      neighborhood: 'neighborhood_id',
+      village: 'village_id',
+      stk: 'stk_id',
+      public_institution: 'public_institution_id',
+      mosque: 'mosque_id',
+      event: 'event_id'
+    };
+    return mapping[locationType] || `${locationType}_id`;
   }
 }
 
