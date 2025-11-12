@@ -322,24 +322,69 @@ const ReportsPage = () => {
       const monthlyEventsMap = {};
       filteredEvents.forEach(event => {
         if (event.date) {
-          const date = new Date(event.date);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          monthlyEventsMap[monthKey] = (monthlyEventsMap[monthKey] || 0) + 1;
+          let date;
+          try {
+            // Farklı tarih formatlarını handle et
+            if (typeof event.date === 'string') {
+              if (event.date.includes('T')) {
+                date = new Date(event.date);
+              } else if (event.date.includes('.')) {
+                // DD.MM.YYYY formatı
+                const [day, month, year] = event.date.split('.');
+                date = new Date(year, month - 1, day);
+              } else {
+                date = new Date(event.date);
+              }
+            } else {
+              date = new Date(event.date);
+            }
+            
+            // Geçerli tarih kontrolü
+            if (!isNaN(date.getTime()) && date.getFullYear() > 2000) {
+              const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              monthlyEventsMap[monthKey] = (monthlyEventsMap[monthKey] || 0) + 1;
+            }
+          } catch (e) {
+            console.warn('Invalid event date:', event.date, e);
+          }
         }
       });
 
       const monthlyMeetingsMap = {};
       filteredMeetings.forEach(meeting => {
         if (meeting.date) {
-          const date = new Date(meeting.date);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          monthlyMeetingsMap[monthKey] = (monthlyMeetingsMap[monthKey] || 0) + 1;
+          let date;
+          try {
+            // Farklı tarih formatlarını handle et
+            if (typeof meeting.date === 'string') {
+              if (meeting.date.includes('T')) {
+                date = new Date(meeting.date);
+              } else if (meeting.date.includes('.')) {
+                // DD.MM.YYYY formatı
+                const [day, month, year] = meeting.date.split('.');
+                date = new Date(year, month - 1, day);
+              } else {
+                date = new Date(meeting.date);
+              }
+            } else {
+              date = new Date(meeting.date);
+            }
+            
+            // Geçerli tarih kontrolü
+            if (!isNaN(date.getTime()) && date.getFullYear() > 2000) {
+              const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              monthlyMeetingsMap[monthKey] = (monthlyMeetingsMap[monthKey] || 0) + 1;
+            }
+          } catch (e) {
+            console.warn('Invalid meeting date:', meeting.date, e);
+          }
         }
       });
 
-      // Tüm ayları birleştir
+      // Tüm ayları birleştir ve geçersiz verileri filtrele
       const allMonths = new Set([...Object.keys(monthlyEventsMap), ...Object.keys(monthlyMeetingsMap)]);
       const monthlyEventsAndMeetings = Array.from(allMonths)
+        .filter(key => key && !key.includes('NaN') && key.match(/^\d{4}-\d{2}$/)) // Geçerli format kontrolü
         .sort()
         .map(key => ({
           month: key,
@@ -347,16 +392,49 @@ const ReportsPage = () => {
           meetings: monthlyMeetingsMap[key] || 0
         }));
 
-      // Aylık Ziyaret Grafiği (Tüm ziyaret türleri)
+      // Aylık Ziyaret Grafiği - Etkinliklerden ziyaret tarihlerini çıkar
       const monthlyVisitsMap = {};
-      [...neighborhoodVisitCounts, ...villageVisitCounts, ...stkVisitCounts, ...publicInstitutionVisitCounts].forEach(visit => {
-        if (visit.last_visit_date || visit.updated_at) {
-          const date = new Date(visit.last_visit_date || visit.updated_at);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          monthlyVisitsMap[monthKey] = (monthlyVisitsMap[monthKey] || 0) + (visit.visit_count || 0);
+      
+      // Her etkinlik için ziyaret edilen lokasyonları kontrol et
+      filteredEvents.forEach(event => {
+        if (event.date && event.selectedLocationTypes && event.selectedLocations) {
+          let eventDate;
+          try {
+            // Tarih parse et
+            if (typeof event.date === 'string') {
+              if (event.date.includes('T')) {
+                eventDate = new Date(event.date);
+              } else if (event.date.includes('.')) {
+                const [day, month, year] = event.date.split('.');
+                eventDate = new Date(year, month - 1, day);
+              } else {
+                eventDate = new Date(event.date);
+              }
+            } else {
+              eventDate = new Date(event.date);
+            }
+            
+            // Geçerli tarih kontrolü
+            if (!isNaN(eventDate.getTime()) && eventDate.getFullYear() > 2000) {
+              const monthKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}`;
+              
+              // Her lokasyon tipi için ziyaret sayısını hesapla
+              event.selectedLocationTypes.forEach(locationType => {
+                const locations = event.selectedLocations[locationType] || [];
+                const visitCount = locations.length;
+                if (visitCount > 0) {
+                  monthlyVisitsMap[monthKey] = (monthlyVisitsMap[monthKey] || 0) + visitCount;
+                }
+              });
+            }
+          } catch (e) {
+            console.warn('Invalid event date for visits:', event.date, e);
+          }
         }
       });
+      
       const monthlyVisits = Object.keys(monthlyVisitsMap)
+        .filter(key => key && !key.includes('NaN') && key.match(/^\d{4}-\d{2}$/)) // Geçerli format kontrolü
         .sort()
         .map(key => ({
           month: key,
