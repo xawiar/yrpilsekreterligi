@@ -172,82 +172,82 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
       <form onSubmit={handleSubmit}>
         <div className="space-y-3 sm:space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Toplantı Adı <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={meetingName}
               onChange={(e) => setMeetingName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               placeholder="Toplantı adını girin"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tarih ve Saat <span className="text-red-500">*</span>
             </label>
             <input
               type="datetime-local"
               value={meetingDate}
               onChange={(e) => setMeetingDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Bölgeler <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
               {regions.map((region, idx) => (
-              <label key={`${region.id ?? region.name}-${idx}`} className="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition duration-200 cursor-pointer">
+              <label key={`${region.id ?? region.name}-${idx}`} className="flex items-center p-2 sm:p-3 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition duration-200 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedRegions.includes(region.name)}
                     onChange={() => handleRegionChange(region.name)}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{region.name}</span>
+                  <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm text-gray-700">{region.name}</span>
                 </label>
               ))}
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Toplantı Notları
             </label>
             <textarea
               value={meetingNotes}
               onChange={(e) => setMeetingNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               placeholder="Toplantı notlarını girin"
             />
           </div>
           
           {selectedRegions.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Katılımcı Yoklaması
               </label>
               {loading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                <div className="flex justify-center py-3 sm:py-4">
+                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-indigo-600"></div>
                 </div>
               ) : members.length > 0 ? (
                 <div className="border rounded-lg overflow-hidden shadow-sm overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gradient-to-r from-indigo-500 to-purple-600">
                       <tr>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                        <th className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                           Üye
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                        <th className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                           Katılım
                         </th>
                       </tr>
@@ -255,20 +255,20 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {members.map(member => (
                         <tr key={member.id} className="hover:bg-gray-50 transition duration-150">
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">
+                          <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 text-xs sm:text-sm font-medium text-gray-900">
                             {formatMemberName(member.name)}
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
-                            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+                          <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 text-xs sm:text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row sm:space-x-2 md:space-x-4 space-y-1 sm:space-y-0">
                               <label className="flex items-center">
                                 <input
                                   type="radio"
                                   name={`attendance-${member.id}`}
                                   checked={attendance[String(member.id)] === true}
                                   onChange={() => handleAttendanceChange(member.id, true)}
-                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                                  className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                <span className="ml-1">Katıldı</span>
+                                <span className="ml-1 text-xs sm:text-sm">Katıldı</span>
                               </label>
                               <label className="flex items-center">
                                 <input
@@ -276,9 +276,9 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                                   name={`attendance-${member.id}`}
                                   checked={attendance[String(member.id)] === false && !excuse[String(member.id)]}
                                   onChange={() => handleAttendanceChange(member.id, false)}
-                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                                  className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                <span className="ml-1">Katılmadı</span>
+                                <span className="ml-1 text-xs sm:text-sm">Katılmadı</span>
                               </label>
                               {/* Updated excuse option with direct selection and reason field */}
                               <div className="flex flex-col">
@@ -288,9 +288,9 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
                                     name={`attendance-${member.id}`}
                                     checked={excuse[String(member.id)] === true}
                                     onChange={() => handleExcuseChange(member.id, true)}
-                                    className="h-4 w-4 text-yellow-600 focus:ring-yellow-500"
+                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-600 focus:ring-yellow-500"
                                   />
-                                  <span className="ml-1">Mazeretli</span>
+                                  <span className="ml-1 text-xs sm:text-sm">Mazeretli</span>
                                 </label>
                                 {excuse[String(member.id)] === true && (
                                   <input

@@ -205,50 +205,50 @@ const DistrictPresidentDashboardPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <div className="space-y-4 sm:space-y-6">
           {/* District Info Card */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600">
-              <h2 className="text-xl font-bold text-white">İlçe Bilgileri</h2>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-indigo-600">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">İlçe Bilgileri</h2>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-3 sm:p-4 md:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">İlçe Adı</h3>
-                  <p className="text-gray-600">{district?.name}</p>
+                  <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">İlçe Adı</h3>
+                  <p className="text-sm sm:text-base text-gray-600">{district?.name}</p>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Bağlı Olduğu İl</h3>
-                  <p className="text-gray-600">{district?.provinceName}</p>
+                  <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">Bağlı Olduğu İl</h3>
+                  <p className="text-sm sm:text-base text-gray-600">{district?.provinceName}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Management Members Section */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-                <h2 className="text-xl font-bold text-white">Yönetim Kurulu Üyeleri</h2>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gradient-to-r from-indigo-500 to-purple-600">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">Yönetim Kurulu Üyeleri</h2>
                 <button
                   onClick={() => setShowAddMemberForm(true)}
-                  className="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base bg-white text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors font-medium active:scale-95"
                 >
                   Yeni Üye Ekle
                 </button>
               </div>
             </div>
             
-            <div className="p-6">
+            <div className="p-3 sm:p-4 md:p-6">
               {/* Search */}
-              <div className="mb-6">
+              <div className="mb-3 sm:mb-4 md:mb-6">
                 <input
                   type="text"
                   placeholder="Üye ara..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
 
@@ -257,11 +257,11 @@ const DistrictPresidentDashboardPage = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Görev</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-2 sm:px-3 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
+                      <th className="px-2 sm:px-3 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
+                      <th className="px-2 sm:px-3 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Görev</th>
+                      <th className="px-2 sm:px-3 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Telefon</th>
+                      <th className="px-2 sm:px-3 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">

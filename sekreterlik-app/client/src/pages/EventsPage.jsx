@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import CreateEventForm from '../components/CreateEventForm';
@@ -15,9 +16,10 @@ import {
 import { LoadingSpinner } from '../components/UI';
 
 const EventsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get('create') === 'true');
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -31,6 +33,13 @@ const EventsPage = () => {
   useEffect(() => {
     fetchEvents();
     fetchMembers();
+    
+    // Check if create modal should be opened from URL
+    if (searchParams.get('create') === 'true') {
+      setIsCreateModalOpen(true);
+      // Remove query parameter from URL
+      setSearchParams({});
+    }
   }, []);
 
   useEffect(() => {

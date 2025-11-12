@@ -806,9 +806,9 @@ const MemberDashboardPage = () => {
         
 
         {currentView === 'dashboard' && (
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-6 md:space-y-8">
           {/* Welcome Card */}
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-black bg-opacity-10"></div>
             <div className="relative z-10">
               <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
@@ -820,8 +820,8 @@ const MemberDashboardPage = () => {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-2">Kişisel Dashboard</h2>
-                  <p className="text-indigo-100 text-sm sm:text-base lg:text-lg">
+                  <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold mb-1 sm:mb-2">Kişisel Dashboard</h2>
+                  <p className="text-indigo-100 text-xs sm:text-sm md:text-base lg:text-lg">
                     Bu sayfada sadece sizin bilgileriniz ve katılım durumunuz görüntülenmektedir.
                   </p>
                 </div>
@@ -895,35 +895,35 @@ const MemberDashboardPage = () => {
 
           {/* STK/Etkinlik Yönetimi - position-based permissions */}
           {(grantedPermissions.includes('manage_stk') || grantedPermissions.includes('create_event') || member.position === 'STK Birim Başkanı' || member.position === 'STK birim başk' || member.position === 'Stk Birim Başk') && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900 dark:to-blue-900">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900 dark:to-blue-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                   STK Yönetimi
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">STK ekleme ve etkinlik oluşturma işlemleri</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">STK ekleme ve etkinlik oluşturma işlemleri</p>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 sm:p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                   {(grantedPermissions.includes('manage_stk') || member.position === 'STK Birim Başkanı' || member.position === 'STK birim başk' || member.position === 'Stk Birim Başk') && (
                   <button
                     onClick={() => {
                       console.log('STK Ekleme butonuna tıklandı');
                       setCurrentView('stk-management');
                     }}
-                    className="group p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-xl border border-green-200 dark:border-green-700 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800 dark:hover:to-green-700 transition-all duration-200 hover:shadow-md"
+                    className="group p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-lg sm:rounded-xl border border-green-200 dark:border-green-700 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800 dark:hover:to-green-700 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center group-hover:bg-green-600 dark:group-hover:bg-green-700 transition-colors duration-200">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-500 dark:bg-green-600 rounded-lg flex items-center justify-center group-hover:bg-green-600 dark:group-hover:bg-green-700 transition-colors duration-200 flex-shrink-0">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400">STK Ekleme</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Yeni STK ekleyin ve yönetin</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400">STK Ekleme</h4>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni STK ekleyin ve yönetin</p>
                       </div>
                     </div>
                   </button>
@@ -935,17 +935,17 @@ const MemberDashboardPage = () => {
                       console.log('Etkinlik Oluşturma butonuna tıklandı');
                       setCurrentView('stk-events');
                     }}
-                    className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md"
+                    className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200 flex-shrink-0">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Etkinlik Oluşturma</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Yeni etkinlik oluşturun ve yönetin</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Etkinlik Oluşturma</h4>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni etkinlik oluşturun ve yönetin</p>
                       </div>
                     </div>
                   </button>
@@ -959,32 +959,32 @@ const MemberDashboardPage = () => {
 
           {/* Seçim Hazırlıkları - Sandıklar/Müşahitler erişimi */}
           {(grantedPermissions.includes('access_ballot_boxes') || grantedPermissions.includes('add_ballot_box') || grantedPermissions.includes('access_observers') || grantedPermissions.includes('add_observer')) && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900 dark:to-orange-900">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900 dark:to-orange-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Seçim Hazırlıkları
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Sandıklar ve Müşahitler işlemleri</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Sandıklar ve Müşahitler işlemleri</p>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 sm:p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                   {(grantedPermissions.includes('access_ballot_boxes') || grantedPermissions.includes('add_ballot_box')) && (
                     <button
                       onClick={() => setCurrentView('ballot-boxes')}
-                      className="group p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 rounded-xl border border-amber-200 dark:border-amber-700 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-800 dark:hover:to-amber-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-700 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-800 dark:hover:to-amber-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center group-hover:bg-amber-600 dark:group-hover:bg-amber-700 transition-colors duration-200">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center group-hover:bg-amber-600 dark:group-hover:bg-amber-700 transition-colors duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 10h14l-1 9H6l-1-9zM8 7V5a4 4 0 118 0v2" />
                           </svg>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-700 dark:group-hover:text-amber-400">Sandıklar</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Listele ve {(grantedPermissions.includes('add_ballot_box')) ? 'sandık ekle' : 'görüntüle'}</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-700 dark:group-hover:text-amber-400">Sandıklar</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Listele ve {(grantedPermissions.includes('add_ballot_box')) ? 'sandık ekle' : 'görüntüle'}</p>
                         </div>
                       </div>
                     </button>
@@ -993,17 +993,17 @@ const MemberDashboardPage = () => {
                   {(grantedPermissions.includes('access_observers') || grantedPermissions.includes('add_observer')) && (
                     <button
                       onClick={() => setCurrentView('observers')}
-                      className="group p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-lg sm:rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-indigo-500 dark:bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 dark:group-hover:bg-indigo-700 transition-colors duration-200">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500 dark:bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 dark:group-hover:bg-indigo-700 transition-colors duration-200 flex-shrink-0">
                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m8-4a4 4 0 11-8 0 4 4 0 018 0z" />
                           </svg>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400">Müşahitler</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Listele ve {(grantedPermissions.includes('add_observer')) ? 'müşahit ekle' : 'görüntüle'}</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400">Müşahitler</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Listele ve {(grantedPermissions.includes('add_observer')) ? 'müşahit ekle' : 'görüntüle'}</p>
                         </div>
                       </div>
                     </button>
@@ -1015,33 +1015,33 @@ const MemberDashboardPage = () => {
 
           {/* Kamu Kurumu Yönetimi - permission-based */}
           {grantedPermissions.includes('add_public_institution') && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                   Kamu Kurumu Yönetimi
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Kamu kurumu ekleme, düzenleme ve silme işlemleri</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Kamu kurumu ekleme, düzenleme ve silme işlemleri</p>
               </div>
-              <div className="p-6">
+              <div className="p-3 sm:p-4 md:p-6">
                 <button
                   onClick={() => {
                     console.log('Kamu Kurumu Ekleme butonuna tıklandı');
                     setCurrentView('public-institution-management');
                   }}
-                  className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md w-full"
+                  className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md w-full active:scale-[0.98]"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200 flex-shrink-0">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu ekleyin ve yönetin</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu ekleyin ve yönetin</p>
                     </div>
                   </div>
                 </button>
@@ -1051,32 +1051,32 @@ const MemberDashboardPage = () => {
 
           {/* Hızlı İşlemler - görev bazlı */}
           {(grantedPermissions.includes('add_member') || grantedPermissions.includes('create_meeting') || grantedPermissions.includes('add_stk') || grantedPermissions.includes('add_public_institution')) && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Hızlı İşlemler
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yetkilendirildiğiniz işlemler</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Yetkilendirildiğiniz işlemler</p>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 sm:p-4 md:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {grantedPermissions.includes('add_member') && (
                     <button
                       onClick={() => setCurrentView('add-member')}
-                      className="group p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-lg sm:rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center group-hover:bg-teal-600 dark:group-hover:bg-teal-700 transition-colors duration-200">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center group-hover:bg-teal-600 dark:group-hover:bg-teal-700 transition-colors duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3M9 7a4 4 0 100 8 4 4 0 000-8z" />
                           </svg>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Üye Ekle</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Yeni üye kaydı oluştur</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Üye Ekle</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni üye kaydı oluştur</p>
                         </div>
                       </div>
                     </button>
@@ -1084,17 +1084,17 @@ const MemberDashboardPage = () => {
                   {grantedPermissions.includes('create_meeting') && (
                     <button
                       onClick={() => setCurrentView('create-meeting')}
-                      className="group p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-xl border border-purple-200 dark:border-purple-700 hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800 dark:hover:to-purple-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-lg sm:rounded-xl border border-purple-200 dark:border-purple-700 hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800 dark:hover:to-purple-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-purple-500 dark:bg-purple-600 rounded-lg flex items-center justify-center group-hover:bg-purple-600 dark:group-hover:bg-purple-700 transition-colors duration-200">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500 dark:bg-purple-600 rounded-lg flex items-center justify-center group-hover:bg-purple-600 dark:group-hover:bg-purple-700 transition-colors duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-400">Toplantı Oluştur</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Bölgelere toplantı planla</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-400">Toplantı Oluştur</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Bölgelere toplantı planla</p>
                         </div>
                       </div>
                     </button>
@@ -1102,17 +1102,17 @@ const MemberDashboardPage = () => {
                   {grantedPermissions.includes('add_stk') && (
                     <button
                       onClick={() => setCurrentView('stk-management')}
-                      className="group p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg flex items-center justify-center group-hover:bg-emerald-600 dark:group-hover:bg-emerald-700 transition-colors duration-200">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg flex items-center justify-center group-hover:bg-emerald-600 dark:group-hover:bg-emerald-700 transition-colors duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">STK Ekle</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Yeni STK kaydı oluştur</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">STK Ekle</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni STK kaydı oluştur</p>
                         </div>
                       </div>
                     </button>
@@ -1120,17 +1120,17 @@ const MemberDashboardPage = () => {
                   {grantedPermissions.includes('add_public_institution') && (
                     <button
                       onClick={() => setCurrentView('public-institution-management')}
-                      className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu kaydı oluştur</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu kaydı oluştur</p>
                         </div>
                       </div>
                     </button>

@@ -636,17 +636,17 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Event Basic Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
             Etkinlik Kategorisi *
           </label>
           <select
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             required
             disabled={loadingCategories}
           >
@@ -667,14 +667,14 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
             Etkinlik Tarihi ve Saati *
           </label>
           <input
             type="datetime-local"
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             required
           />
         </div>
@@ -716,7 +716,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         {/* Location Selection Dropdowns */}
         {selectedLocationTypes.length > 0 && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">Seçilen konum türleri için detay seçin:</p>
+            <p className="text-xs sm:text-sm text-gray-600">Seçilen konum türleri için detay seçin:</p>
             
             {selectedLocationTypes.map(locationType => {
               const locationTypeLabels = {
@@ -733,7 +733,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
 
               return (
                 <div key={locationType} className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">
                     {locationTypeLabels[locationType]}:
                   </label>
                   
@@ -744,7 +744,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
                       placeholder={`${locationTypeLabels[locationType]} ara...`}
                       value={locationSearchTerms[locationType] || ''}
                       onChange={(e) => handleLocationSearchChange(locationType, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                      className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   )}
                   
@@ -830,22 +830,22 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
           Açıklama
         </label>
         <textarea
           value={eventDescription}
           onChange={(e) => setEventDescription(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           placeholder="Etkinlik hakkında detaylı bilgi..."
         />
       </div>
 
       {/* Attendance Section */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Katılım Durumu</h3>
+        <div className="flex justify-between items-center mb-2 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">Katılım Durumu</h3>
           {responsibleMembers.length > 0 && (
             <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
               {responsibleMembers.length} sorumlu kişi
@@ -854,18 +854,18 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         </div>
         
         {/* Search Bar */}
-        <div className="mb-4">
+        <div className="mb-2 sm:mb-4">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Üye ara (isim, görev, bölge)..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
         
-        <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-          <div className="space-y-3">
+        <div className="bg-gray-50 rounded-lg p-2 sm:p-3 md:p-4 max-h-64 sm:max-h-96 overflow-y-auto">
+          <div className="space-y-2 sm:space-y-3">
             {sortedMembers.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 {searchTerm ? 'Arama kriterlerine uygun üye bulunamadı' : 'Üye bulunamadı'}
@@ -874,21 +874,21 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
               sortedMembers.map((member) => {
                 const isResponsible = responsibleMembers.some(resp => resp.id === member.id);
                 return (
-                  <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+                  <div key={member.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border ${
                     isResponsible 
                       ? 'bg-blue-50 border-blue-200' 
                       : 'bg-white border-gray-200'
                   }`}>
                 <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                  <div className="font-medium text-gray-900">{member.name}</div>
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                  <div className="text-sm sm:text-base font-medium text-gray-900">{member.name}</div>
                         {isResponsible && (
                           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                             Sorumlu
                           </span>
                         )}
                       </div>
-                  <div className="text-sm text-gray-500">{member.position} - {member.region}</div>
+                  <div className="text-xs sm:text-sm text-gray-500">{member.position} - {member.region}</div>
                 </div>
                 
                     <div className="flex items-center">

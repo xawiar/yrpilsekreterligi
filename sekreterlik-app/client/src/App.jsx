@@ -181,6 +181,8 @@ function AppContent() {
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
   const { isLoggedIn, user } = useAuth();
 
+  const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
+
   // Mobile menu event listener
   React.useEffect(() => {
     const handleOpenMobileMenu = () => {
@@ -189,6 +191,24 @@ function AppContent() {
     window.addEventListener('openMobileMenu', handleOpenMobileMenu);
     return () => {
       window.removeEventListener('openMobileMenu', handleOpenMobileMenu);
+    };
+  }, []);
+
+  // Quick action event listener
+  React.useEffect(() => {
+    const handleQuickAction = (e) => {
+      const { action } = e.detail;
+      if (action === 'quick-meeting') {
+        // Navigate to meetings page with create modal
+        window.location.href = '/meetings?create=true';
+      } else if (action === 'quick-event') {
+        // Navigate to events page with create modal
+        window.location.href = '/events?create=true';
+      }
+    };
+    window.addEventListener('quickAction', handleQuickAction);
+    return () => {
+      window.removeEventListener('quickAction', handleQuickAction);
     };
   }, []);
 
