@@ -1,0 +1,306 @@
+/**
+ * Üye Performans Puanı Hesaplama Sistemi
+ * 
+ * Puan Kriterleri:
+ * - Katıldığı toplantı başına: +10 puan
+ * - Katıldığı etkinlik başına: +10 puan
+ * - Mazeretsiz katılmadığı toplantı için: -5 puan
+ * - Mazeretli katılmadığı toplantı için: 0 puan (ceza yok)
+ * - Kaydettiği üye başına: +5 puan
+ * 
+ * Bonus Puanlar:
+ * - Düzenli katılım (ayda 3+ toplantı): +20 puan
+ * - %100 katılım oranı (son 3 ay): +50 puan
+ */
+
+/**
+ * Üye performans puanını hesapla
+ * @param {Object} member - Üye objesi
+ * @param {Array} meetings - Tüm toplantılar
+ * @param {Array} events - Tüm etkinlikler
+ * @param {Array} memberRegistrations - Üye kayıtları (registrar bilgisi ile)
+ * @param {Object} options - Hesaplama seçenekleri
+ * @returns {Object} Performans puanı ve detayları
+ */
+export const calculatePerformanceScore = (member, meetings, events, memberRegistrations = [], options = {}) => {
+  const {
+    includeBonus = true,
+    timeRange = 'all', // 'all', '3months', '6months'
+    weightRecent = false // Son 3 ayın katılımları 1.5x
+  } = options;
+
+  const memberId = String(member.id);
+  const now = new Date();
+  let startDate = null;
+
+  // Zaman aralığı belirleme
+  if (timeRange === '3months') {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+  } else if (timeRange === '6months') {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+  }
+
+  // Tarih filtreleme fonksiyonu
+  const isInRange = (dateStr) => {
+    if (!startDate || !dateStr) return true;
+    try {
+      let date;
+      if (typeof dateStr === 'string') {
+        if (dateStr.includes('T')) {
+          date = new Date(dateStr);
+        } else if (dateStr.includes('.')) {
+          const [day, month, year] = dateStr.split('.');
+          date = new Date(year, month - 1, day);
+        } else {
+          date = new Date(dateStr);
+        }
+      } else {
+        date = new Date(dateStr);
+      }
+      return date >= startDate;
+    } catch (e) {
+      return true;
+    }
+  };
+
+  let totalScore = 0;
+  const details = {
+    meetingAttendance: 0,
+    meetingAbsence: 0,
+    meetingExcused: 0,
+    eventAttendance: 0,
+    memberRegistrations: 0,
+    bonuses: {
+      regularAttendance: 0,
+      perfectAttendance: 0
+    },
+    breakdown: {
+      meetingPoints: 0,
+      eventPoints: 0,
+      absencePenalty: 0,
+      registrationPoints: 0,
+      bonusPoints: 0
+    }
+  };
+
+  // Toplantı katılımları
+  let recentMeetingCount = 0;
+  let recentAttendedCount = 0;
+  const monthlyMeetings = {};
+
+  meetings.forEach(meeting => {
+    if (!isInRange(meeting.date)) return;
+
+    const attendee = meeting.attendees?.find(att => {
+      const attId = String(att.memberId || att.member_id);
+      return attId === memberId;
+    });
+
+    if (attendee) {
+      recentMeetingCount++;
+      
+      // Tarih parse et
+      let meetingDate;
+      try {
+        if (typeof meeting.date === 'string') {
+          if (meeting.date.includes('T')) {
+            meetingDate = new Date(meeting.date);
+          } else if (meeting.date.includes('.')) {
+            const [day, month, year] = meeting.date.split('.');
+            meetingDate = new Date(year, month - 1, day);
+          } else {
+            meetingDate = new Date(meeting.date);
+          }
+        } else {
+          meetingDate = new Date(meeting.date);
+        }
+      } catch (e) {
+        return;
+      }
+
+      // Aylık toplantı sayısını takip et
+      if (meetingDate && !isNaN(meetingDate.getTime())) {
+        const monthKey = `${meetingDate.getFullYear()}-${String(meetingDate.getMonth() + 1).padStart(2, '0')}`;
+        monthlyMeetings[monthKey] = (monthlyMeetings[monthKey] || 0) + 1;
+      }
+
+      if (attendee.attended) {
+        details.meetingAttendance++;
+        recentAttendedCount++;
+        
+        // Puan hesapla (ağırlıklandırma varsa)
+        const basePoints = 10;
+        const points = weightRecent && isRecent(meeting.date) ? basePoints * 1.5 : basePoints;
+        details.breakdown.meetingPoints += points;
+        totalScore += points;
+      } else {
+        // Mazeret kontrolü
+        const hasExcuse = attendee.excuse?.hasExcuse || false;
+        if (hasExcuse) {
+          details.meetingExcused++;
+          // Mazeretli katılmama: 0 puan (ceza yok)
+        } else {
+          details.meetingAbsence++;
+          // Mazeretsiz katılmama: -5 puan
+          const penalty = -5;
+          details.breakdown.absencePenalty += penalty;
+          totalScore += penalty;
+        }
+      }
+    }
+  });
+
+  // Etkinlik katılımları
+  events.forEach(event => {
+    if (!isInRange(event.date)) return;
+
+    const attendee = event.attendees?.find(att => {
+      const attId = String(att.memberId || att.member_id);
+      return attId === memberId;
+    });
+
+    if (attendee && attendee.attended) {
+      details.eventAttendance++;
+      
+      // Puan hesapla (ağırlıklandırma varsa)
+      const basePoints = 10;
+      const points = weightRecent && isRecent(event.date) ? basePoints * 1.5 : basePoints;
+      details.breakdown.eventPoints += points;
+      totalScore += points;
+    }
+  });
+
+  // Üye kayıtları
+  const registrations = memberRegistrations.filter(reg => {
+    const regMemberId = String(reg.memberId || reg.registrar_id || reg.created_by);
+    return regMemberId === memberId;
+  });
+
+  details.memberRegistrations = registrations.length;
+  const registrationPoints = registrations.length * 5;
+  details.breakdown.registrationPoints = registrationPoints;
+  totalScore += registrationPoints;
+
+  // Bonus puanlar
+  if (includeBonus) {
+    // Düzenli katılım bonusu (ayda 3+ toplantı)
+    const monthsWith3PlusMeetings = Object.values(monthlyMeetings).filter(count => count >= 3).length;
+    if (monthsWith3PlusMeetings > 0) {
+      details.bonuses.regularAttendance = monthsWith3PlusMeetings * 20;
+      details.breakdown.bonusPoints += details.bonuses.regularAttendance;
+      totalScore += details.bonuses.regularAttendance;
+    }
+
+    // %100 katılım oranı bonusu (son 3 ay)
+    if (timeRange === '3months' || timeRange === 'all') {
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      const recentMeetings = meetings.filter(m => {
+        try {
+          let date;
+          if (typeof m.date === 'string') {
+            if (m.date.includes('T')) {
+              date = new Date(m.date);
+            } else if (m.date.includes('.')) {
+              const [day, month, year] = m.date.split('.');
+              date = new Date(year, month - 1, day);
+            } else {
+              date = new Date(m.date);
+            }
+          } else {
+            date = new Date(m.date);
+          }
+          return date >= threeMonthsAgo;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      const memberRecentMeetings = recentMeetings.filter(m => {
+        const attendee = m.attendees?.find(att => {
+          const attId = String(att.memberId || att.member_id);
+          return attId === memberId;
+        });
+        return !!attendee;
+      });
+
+      if (memberRecentMeetings.length > 0) {
+        const attendedCount = memberRecentMeetings.filter(m => {
+          const attendee = m.attendees?.find(att => {
+            const attId = String(att.memberId || att.member_id);
+            return attId === memberId;
+          });
+          return attendee?.attended;
+        }).length;
+
+        const attendanceRate = (attendedCount / memberRecentMeetings.length) * 100;
+        if (attendanceRate === 100) {
+          details.bonuses.perfectAttendance = 50;
+          details.breakdown.bonusPoints += 50;
+          totalScore += 50;
+        }
+      }
+    }
+  }
+
+  // Seviye belirleme
+  let level = 'Bronz';
+  let levelColor = '#CD7F32';
+  if (totalScore >= 301) {
+    level = 'Altın';
+    levelColor = '#FFD700';
+  } else if (totalScore >= 101) {
+    level = 'Gümüş';
+    levelColor = '#C0C0C0';
+  }
+
+  return {
+    totalScore: Math.round(totalScore),
+    level,
+    levelColor,
+    details,
+    timeRange
+  };
+};
+
+/**
+ * Tarihin son 3 ay içinde olup olmadığını kontrol et
+ */
+const isRecent = (dateStr) => {
+  if (!dateStr) return false;
+  try {
+    const now = new Date();
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+    
+    let date;
+    if (typeof dateStr === 'string') {
+      if (dateStr.includes('T')) {
+        date = new Date(dateStr);
+      } else if (dateStr.includes('.')) {
+        const [day, month, year] = dateStr.split('.');
+        date = new Date(year, month - 1, day);
+      } else {
+        date = new Date(dateStr);
+      }
+    } else {
+      date = new Date(dateStr);
+    }
+    
+    return date >= threeMonthsAgo;
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
+ * Tüm üyeler için performans puanlarını hesapla ve sırala
+ */
+export const calculateAllMemberScores = (members, meetings, events, memberRegistrations, options = {}) => {
+  return members.map(member => {
+    const score = calculatePerformanceScore(member, meetings, events, memberRegistrations, options);
+    return {
+      member,
+      ...score
+    };
+  }).sort((a, b) => b.totalScore - a.totalScore);
+};
+

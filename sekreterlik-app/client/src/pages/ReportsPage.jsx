@@ -4,6 +4,7 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { TopRegistrarsTable, TopAttendeesTable } from '../components/Dashboard';
+import { calculateAllMemberScores } from '../utils/performanceScore';
 
 const ReportsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,9 @@ const ReportsPage = () => {
     topAttendees: [],
     upcomingEvents: [],
     upcomingMeetings: [],
+    
+    // Performans Puanları
+    performanceScores: [],
   });
 
   useEffect(() => {
@@ -495,6 +499,19 @@ const ReportsPage = () => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 3);
 
+      // Performans Puanları Hesaplama
+      const performanceScores = calculateAllMemberScores(
+        members,
+        filteredMeetings,
+        filteredEvents,
+        memberRegistrations,
+        {
+          includeBonus: true,
+          timeRange: 'all',
+          weightRecent: false
+        }
+      );
+
       // Dashboard Özellikleri - Upcoming Events and Meetings
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -587,6 +604,7 @@ const ReportsPage = () => {
         topAttendees,
         upcomingEvents: upcomingEventsList,
         upcomingMeetings: upcomingMeetingsList,
+        performanceScores,
       });
     } catch (error) {
       console.error('Error fetching reports data:', error);
