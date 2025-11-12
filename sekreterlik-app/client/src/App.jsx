@@ -9,6 +9,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const MembersPage = lazy(() => import('./pages/MembersPage'));
 const MeetingsPage = lazy(() => import('./pages/MeetingsPage'));
 const EventsPage = lazy(() => import('./pages/EventsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const ArchivePage = lazy(() => import('./pages/ArchivePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ManagementChartPage = lazy(() => import('./pages/ManagementChartPage'));
@@ -326,6 +327,7 @@ function AppContent() {
             <Route path="/election-preparation/groups" element={<GroupsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />
+                          <Route path="/reports" element={<ReportsPage />} />
                           <Route path="/archive" element={<ArchivePage />} />
                           <Route path="/management-chart" element={<ManagementChartPage />} />
                           <Route path="/settings/*" element={<SettingsPage />} />
