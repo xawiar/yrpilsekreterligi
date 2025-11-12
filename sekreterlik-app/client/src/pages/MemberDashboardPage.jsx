@@ -1117,6 +1117,24 @@ const MemberDashboardPage = () => {
                       </div>
                     </button>
                   )}
+                  {grantedPermissions.includes('add_public_institution') && (
+                    <button
+                      onClick={() => setCurrentView('public-institution-management')}
+                      className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left w-full"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu kaydı oluştur</p>
+                        </div>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
