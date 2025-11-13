@@ -8,9 +8,9 @@
  * - Mazeretli katılmadığı toplantı için: 0 puan (ceza yok)
  * - Kaydettiği üye başına: +5 puan
  * 
- * Bonus Puanlar:
- * - Düzenli katılım (ayda 3+ toplantı): +20 puan
- * - %100 katılım oranı (son 3 ay): +50 puan
+ * Bonus Puanlar (Ay Sonu):
+ * - O ay tüm toplantılara katılmışsa: +200 puan/ay
+ * - O ay tüm etkinliklere katılmışsa: +100 puan/ay
  * 
  * Dinamik Seviye Sistemi:
  * - Sistemdeki ilk toplantı tarihini baz alarak max puan hesaplanır
@@ -80,8 +80,10 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
     eventAttendance: 0,
     memberRegistrations: 0,
     bonuses: {
-      regularAttendance: 0,
-      perfectAttendance: 0
+      perfectMeetingAttendance: 0,
+      perfectEventAttendance: 0,
+      perfectMeetingMonths: 0,
+      perfectEventMonths: 0
     },
     breakdown: {
       meetingPoints: 0,
@@ -190,65 +192,139 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
   details.breakdown.registrationPoints = registrationPoints;
   totalScore += registrationPoints;
 
-  // Bonus puanlar
+  // Bonus puanlar (Ay bazlı %100 katılım)
   if (includeBonus) {
-    // Düzenli katılım bonusu (ayda 3+ toplantı)
-    const monthsWith3PlusMeetings = Object.values(monthlyMeetings).filter(count => count >= 3).length;
-    if (monthsWith3PlusMeetings > 0) {
-      details.bonuses.regularAttendance = monthsWith3PlusMeetings * 20;
-      details.breakdown.bonusPoints += details.bonuses.regularAttendance;
-      totalScore += details.bonuses.regularAttendance;
-    }
+    // Aylık toplantı ve etkinlik katılımlarını grupla
+    const monthlyMeetingAttendance = {}; // { '2024-01': { total: 5, attended: 5 } }
+    const monthlyEventAttendance = {}; // { '2024-01': { total: 3, attended: 3 } }
 
-    // %100 katılım oranı bonusu (son 3 ay)
-    if (timeRange === '3months' || timeRange === 'all') {
-      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-      const recentMeetings = meetings.filter(m => {
-        try {
-          let date;
-          if (typeof m.date === 'string') {
-            if (m.date.includes('T')) {
-              date = new Date(m.date);
-            } else if (m.date.includes('.')) {
-              const [day, month, year] = m.date.split('.');
-              date = new Date(year, month - 1, day);
-            } else {
-              date = new Date(m.date);
-            }
+    // Toplantı katılımlarını aylara göre grupla
+    meetings.forEach(meeting => {
+      if (!isInRange(meeting.date)) return;
+      
+      const attendee = meeting.attendees?.find(att => {
+        const attId = String(att.memberId || att.member_id);
+        return attId === memberId;
+      });
+      
+      if (!attendee) return; // Üye bu toplantıya davet edilmemiş
+      
+      try {
+        let meetingDate;
+        if (typeof meeting.date === 'string') {
+          if (meeting.date.includes('T')) {
+            meetingDate = new Date(meeting.date);
+          } else if (meeting.date.includes('.')) {
+            const [day, month, year] = meeting.date.split('.');
+            meetingDate = new Date(year, month - 1, day);
           } else {
-            date = new Date(m.date);
+            meetingDate = new Date(meeting.date);
           }
-          return date >= threeMonthsAgo;
-        } catch (e) {
-          return false;
+        } else {
+          meetingDate = new Date(meeting.date);
         }
-      });
-
-      const memberRecentMeetings = recentMeetings.filter(m => {
-        const attendee = m.attendees?.find(att => {
-          const attId = String(att.memberId || att.member_id);
-          return attId === memberId;
-        });
-        return !!attendee;
-      });
-
-      if (memberRecentMeetings.length > 0) {
-        const attendedCount = memberRecentMeetings.filter(m => {
-          const attendee = m.attendees?.find(att => {
-            const attId = String(att.memberId || att.member_id);
-            return attId === memberId;
-          });
-          return attendee?.attended;
-        }).length;
-
-        const attendanceRate = (attendedCount / memberRecentMeetings.length) * 100;
-        if (attendanceRate === 100) {
-          details.bonuses.perfectAttendance = 50;
-          details.breakdown.bonusPoints += 50;
-          totalScore += 50;
+        
+        if (meetingDate && !isNaN(meetingDate.getTime())) {
+          const monthKey = `${meetingDate.getFullYear()}-${String(meetingDate.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!monthlyMeetingAttendance[monthKey]) {
+            monthlyMeetingAttendance[monthKey] = { total: 0, attended: 0 };
+          }
+          
+          monthlyMeetingAttendance[monthKey].total++;
+          if (attendee.attended) {
+            monthlyMeetingAttendance[monthKey].attended++;
+          }
         }
+      } catch (e) {
+        // Skip invalid dates
       }
+    });
+
+    // Etkinlik katılımlarını aylara göre grupla
+    events.forEach(event => {
+      if (!isInRange(event.date)) return;
+      
+      const attendee = event.attendees?.find(att => {
+        const attId = String(att.memberId || att.member_id);
+        return attId === memberId;
+      });
+      
+      if (!attendee) return; // Üye bu etkinliğe davet edilmemiş
+      
+      try {
+        let eventDate;
+        if (typeof event.date === 'string') {
+          if (event.date.includes('T')) {
+            eventDate = new Date(event.date);
+          } else if (event.date.includes('.')) {
+            const [day, month, year] = event.date.split('.');
+            eventDate = new Date(year, month - 1, day);
+          } else {
+            eventDate = new Date(event.date);
+          }
+        } else {
+          eventDate = new Date(event.date);
+        }
+        
+        if (eventDate && !isNaN(eventDate.getTime())) {
+          const monthKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!monthlyEventAttendance[monthKey]) {
+            monthlyEventAttendance[monthKey] = { total: 0, attended: 0 };
+          }
+          
+          monthlyEventAttendance[monthKey].total++;
+          if (attendee.attended) {
+            monthlyEventAttendance[monthKey].attended++;
+          }
+        }
+      } catch (e) {
+        // Skip invalid dates
+      }
+    });
+
+    // Ay bazlı %100 katılım bonusları
+    let perfectMeetingMonths = 0;
+    let perfectEventMonths = 0;
+
+    // Tüm toplantılara katılım bonusu (ay bazlı)
+    Object.keys(monthlyMeetingAttendance).forEach(monthKey => {
+      const monthData = monthlyMeetingAttendance[monthKey];
+      // O ay en az 1 toplantı varsa ve hepsine katılmışsa
+      if (monthData.total > 0 && monthData.attended === monthData.total) {
+        perfectMeetingMonths++;
+      }
+    });
+
+    // Tüm etkinliklere katılım bonusu (ay bazlı)
+    Object.keys(monthlyEventAttendance).forEach(monthKey => {
+      const monthData = monthlyEventAttendance[monthKey];
+      // O ay en az 1 etkinlik varsa ve hepsine katılmışsa
+      if (monthData.total > 0 && monthData.attended === monthData.total) {
+        perfectEventMonths++;
+      }
+    });
+
+    // Bonus puanları hesapla
+    const meetingBonus = perfectMeetingMonths * 200;
+    const eventBonus = perfectEventMonths * 100;
+
+    if (meetingBonus > 0) {
+      details.bonuses.perfectMeetingAttendance = meetingBonus;
+      details.breakdown.bonusPoints += meetingBonus;
+      totalScore += meetingBonus;
     }
+
+    if (eventBonus > 0) {
+      details.bonuses.perfectEventAttendance = eventBonus;
+      details.breakdown.bonusPoints += eventBonus;
+      totalScore += eventBonus;
+    }
+
+    // Bonus detaylarını güncelle
+    details.bonuses.perfectMeetingMonths = perfectMeetingMonths;
+    details.bonuses.perfectEventMonths = perfectEventMonths;
   }
 
   return {
