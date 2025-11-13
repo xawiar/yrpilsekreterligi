@@ -385,7 +385,7 @@ function AppContent() {
             <Route path="/election-preparation/groups" element={<GroupsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />
-                          <Route path="/reports" element={<ReportsPage />} />
+                          <Route path="/reports" element={<Navigate to="/" replace />} />
                           <Route path="/" element={<ReportsPage />} />
                           <Route path="/archive" element={<ArchivePage />} />
                           <Route path="/management-chart" element={<ManagementChartPage />} />
