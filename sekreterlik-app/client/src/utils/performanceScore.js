@@ -11,6 +11,15 @@
  * Bonus Puanlar:
  * - Düzenli katılım (ayda 3+ toplantı): +20 puan
  * - %100 katılım oranı (son 3 ay): +50 puan
+ * 
+ * Dinamik Seviye Sistemi:
+ * - Sistemdeki ilk toplantı tarihini baz alarak max puan hesaplanır
+ * - Seviyeler max puana göre yüzdelik olarak belirlenir:
+ *   - 95-100%: Platinyum (5 yıldız)
+ *   - 80-95%: Gold (4 yıldız)
+ *   - 50-80%: Gümüş (3 yıldız)
+ *   - 20-50%: Bronz (2 yıldız)
+ *   - 0-20%: Pasif Üye (1 yıldız)
  */
 
 /**
@@ -242,21 +251,8 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
     }
   }
 
-  // Seviye belirleme
-  let level = 'Bronz';
-  let levelColor = '#CD7F32';
-  if (totalScore >= 301) {
-    level = 'Altın';
-    levelColor = '#FFD700';
-  } else if (totalScore >= 101) {
-    level = 'Gümüş';
-    levelColor = '#C0C0C0';
-  }
-
   return {
     totalScore: Math.round(totalScore),
-    level,
-    levelColor,
     details,
     timeRange
   };
@@ -292,14 +288,139 @@ const isRecent = (dateStr) => {
 };
 
 /**
+ * Sistemdeki ilk toplantı tarihini bul
+ */
+const findFirstMeetingDate = (meetings) => {
+  if (!meetings || meetings.length === 0) return null;
+  
+  let firstDate = null;
+  meetings.forEach(meeting => {
+    if (!meeting.date) return;
+    
+    try {
+      let date;
+      if (typeof meeting.date === 'string') {
+        if (meeting.date.includes('T')) {
+          date = new Date(meeting.date);
+        } else if (meeting.date.includes('.')) {
+          const [day, month, year] = meeting.date.split('.');
+          date = new Date(year, month - 1, day);
+        } else {
+          date = new Date(meeting.date);
+        }
+      } else {
+        date = new Date(meeting.date);
+      }
+      
+      if (!isNaN(date.getTime()) && date.getFullYear() > 2000) {
+        if (!firstDate || date < firstDate) {
+          firstDate = date;
+        }
+      }
+    } catch (e) {
+      // Skip invalid dates
+    }
+  });
+  
+  return firstDate;
+};
+
+/**
+ * Maksimum puanı hesapla (tüm toplantılara katılım + tüm etkinliklere katılım + aylık 3 üye kaydı)
+ */
+const calculateMaxScore = (meetings, events, firstMeetingDate) => {
+  if (!firstMeetingDate) return 1000; // Default max score if no meetings
+  
+  const now = new Date();
+  const monthsSinceFirst = Math.max(1, Math.ceil((now - firstMeetingDate) / (1000 * 60 * 60 * 24 * 30))); // Ay sayısı
+  
+  // Toplantı puanları (her toplantı +10)
+  const meetingPoints = meetings.length * 10;
+  
+  // Etkinlik puanları (her etkinlik +10)
+  const eventPoints = events.length * 10;
+  
+  // Üye kayıt puanları (aylık 3 üye * 5 puan = 15 puan/ay)
+  const registrationPoints = monthsSinceFirst * 15; // Aylık 3 üye * 5 puan
+  
+  // Bonus puanlar hariç (bonus puanlar dinamik olduğu için max hesaplamaya dahil edilmiyor)
+  
+  return meetingPoints + eventPoints + registrationPoints;
+};
+
+/**
+ * Seviye belirleme (max puana göre yüzdelik)
+ */
+const determineLevel = (score, maxScore) => {
+  if (maxScore === 0) {
+    return {
+      level: 'Pasif Üye',
+      levelColor: '#808080',
+      stars: 1,
+      percentage: 0
+    };
+  }
+  
+  const percentage = (score / maxScore) * 100;
+  
+  if (percentage >= 95) {
+    return {
+      level: 'Platinyum',
+      levelColor: '#E5E4E2',
+      stars: 5,
+      percentage: Math.round(percentage)
+    };
+  } else if (percentage >= 80) {
+    return {
+      level: 'Gold',
+      levelColor: '#FFD700',
+      stars: 4,
+      percentage: Math.round(percentage)
+    };
+  } else if (percentage >= 50) {
+    return {
+      level: 'Gümüş',
+      levelColor: '#C0C0C0',
+      stars: 3,
+      percentage: Math.round(percentage)
+    };
+  } else if (percentage >= 20) {
+    return {
+      level: 'Bronz',
+      levelColor: '#CD7F32',
+      stars: 2,
+      percentage: Math.round(percentage)
+    };
+  } else {
+    return {
+      level: 'Pasif Üye',
+      levelColor: '#808080',
+      stars: 1,
+      percentage: Math.round(percentage)
+    };
+  }
+};
+
+/**
  * Tüm üyeler için performans puanlarını hesapla ve sırala
  */
 export const calculateAllMemberScores = (members, meetings, events, memberRegistrations, options = {}) => {
+  // İlk toplantı tarihini bul
+  const firstMeetingDate = findFirstMeetingDate(meetings);
+  
+  // Maksimum puanı hesapla
+  const maxScore = calculateMaxScore(meetings, events, firstMeetingDate);
+  
+  // Her üye için puan hesapla ve seviye belirle
   return members.map(member => {
     const score = calculatePerformanceScore(member, meetings, events, memberRegistrations, options);
+    const levelInfo = determineLevel(score.totalScore, maxScore);
+    
     return {
       member,
-      ...score
+      ...score,
+      ...levelInfo,
+      maxScore
     };
   }).sort((a, b) => b.totalScore - a.totalScore);
 };
