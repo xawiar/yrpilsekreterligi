@@ -402,6 +402,34 @@ const findFirstMeetingDate = (meetings) => {
 };
 
 /**
+ * Tarih parse helper
+ */
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    let date;
+    if (typeof dateStr === 'string') {
+      if (dateStr.includes('T')) {
+        date = new Date(dateStr);
+      } else if (dateStr.includes('.')) {
+        const [day, month, year] = dateStr.split('.');
+        date = new Date(year, month - 1, day);
+      } else {
+        date = new Date(dateStr);
+      }
+    } else {
+      date = new Date(dateStr);
+    }
+    if (!isNaN(date.getTime()) && date.getFullYear() > 2000) {
+      return date;
+    }
+  } catch (e) {
+    // Invalid date
+  }
+  return null;
+};
+
+/**
  * Maksimum puanı hesapla (tüm toplantılara katılım + tüm etkinliklere katılım + aylık 3 üye kaydı + bonus puanlar)
  */
 const calculateMaxScore = (meetings, events, firstMeetingDate) => {
@@ -409,15 +437,25 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   
   const now = new Date();
   
-  // Gerçek ay sayısını hesapla (tarih farkından)
-  let monthsSinceFirst = 0;
+  // İlk toplantı tarihinden sonraki toplantı ve etkinlikleri filtrele
+  const meetingsAfterFirst = meetings.filter(meeting => {
+    const meetingDate = parseDate(meeting.date);
+    return meetingDate && meetingDate >= firstMeetingDate;
+  });
+  
+  const eventsAfterFirst = events.filter(event => {
+    const eventDate = parseDate(event.date);
+    return eventDate && eventDate >= firstMeetingDate;
+  });
+  
+  // Ay sayısını doğru hesapla (yıl ve ay farkı)
   const startYear = firstMeetingDate.getFullYear();
   const startMonth = firstMeetingDate.getMonth();
   const endYear = now.getFullYear();
   const endMonth = now.getMonth();
   
   // Yıl ve ay farkını hesapla
-  monthsSinceFirst = (endYear - startYear) * 12 + (endMonth - startMonth);
+  let monthsSinceFirst = (endYear - startYear) * 12 + (endMonth - startMonth);
   
   // Eğer bugün ayın ilk gününden sonra ise, o ayı da say
   if (now.getDate() >= firstMeetingDate.getDate()) {
@@ -426,11 +464,11 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   
   monthsSinceFirst = Math.max(1, monthsSinceFirst); // En az 1 ay
   
-  // Toplantı puanları (her toplantı +10)
-  const meetingPoints = meetings.length * 10;
+  // Toplantı puanları (ilk toplantı tarihinden sonraki toplantılar)
+  const meetingPoints = meetingsAfterFirst.length * 10;
   
-  // Etkinlik puanları (her etkinlik +10)
-  const eventPoints = events.length * 10;
+  // Etkinlik puanları (ilk toplantı tarihinden sonraki etkinlikler)
+  const eventPoints = eventsAfterFirst.length * 10;
   
   // Üye kayıt puanları (aylık 3 üye * 5 puan = 15 puan/ay)
   const registrationPoints = monthsSinceFirst * 15; // Aylık 3 üye * 5 puan
