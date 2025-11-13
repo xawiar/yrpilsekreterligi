@@ -408,7 +408,23 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   if (!firstMeetingDate) return 1000; // Default max score if no meetings
   
   const now = new Date();
-  const monthsSinceFirst = Math.max(1, Math.ceil((now - firstMeetingDate) / (1000 * 60 * 60 * 24 * 30))); // Ay sayısı
+  
+  // Gerçek ay sayısını hesapla (tarih farkından)
+  let monthsSinceFirst = 0;
+  const startYear = firstMeetingDate.getFullYear();
+  const startMonth = firstMeetingDate.getMonth();
+  const endYear = now.getFullYear();
+  const endMonth = now.getMonth();
+  
+  // Yıl ve ay farkını hesapla
+  monthsSinceFirst = (endYear - startYear) * 12 + (endMonth - startMonth);
+  
+  // Eğer bugün ayın ilk gününden sonra ise, o ayı da say
+  if (now.getDate() >= firstMeetingDate.getDate()) {
+    monthsSinceFirst += 1;
+  }
+  
+  monthsSinceFirst = Math.max(1, monthsSinceFirst); // En az 1 ay
   
   // Toplantı puanları (her toplantı +10)
   const meetingPoints = meetings.length * 10;
