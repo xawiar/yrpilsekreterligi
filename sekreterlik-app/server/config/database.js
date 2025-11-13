@@ -23,6 +23,13 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Add manual_stars column to members table if it doesn't exist
+  db.run(`ALTER TABLE members ADD COLUMN manual_stars INTEGER DEFAULT NULL`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding manual_stars column:', err);
+    }
+  });
+
   // Create meetings table
   db.run(`CREATE TABLE IF NOT EXISTS meetings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

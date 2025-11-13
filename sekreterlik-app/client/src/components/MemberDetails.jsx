@@ -31,8 +31,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
   const [isMeetingsExpanded, setIsMeetingsExpanded] = useState(false);
   const [isRegistrationsExpanded, setIsRegistrationsExpanded] = useState(false);
   
-  // Check if user is admin
+  // Check if user is admin or district president
   const isAdmin = user && user.role === 'admin';
+  const isDistrictPresident = user && user.role === 'district_president';
+  const canSetStars = isAdmin || isDistrictPresident;
+  
+  const [manualStars, setManualStars] = useState(member.manual_stars !== null && member.manual_stars !== undefined ? parseInt(member.manual_stars) : null);
+  const [isSavingStars, setIsSavingStars] = useState(false);
   
   // Calculate meeting statistics for this member
   const stats = calculateMeetingStats ? calculateMeetingStats(member, meetings) : {
@@ -347,6 +352,21 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       alert('Notlar kaydedilirken hata oluştu: ' + error.message);
     } finally {
       setIsSavingNotes(false);
+    }
+  };
+
+  // Handle stars save
+  const handleSaveStars = async (stars) => {
+    setIsSavingStars(true);
+    try {
+      await ApiService.setMemberStars(member.id, stars);
+      setManualStars(stars);
+      alert('Yıldız başarıyla güncellendi');
+    } catch (error) {
+      console.error('Error saving stars:', error);
+      alert('Yıldız güncellenirken hata oluştu: ' + error.message);
+    } finally {
+      setIsSavingStars(false);
     }
   };
 

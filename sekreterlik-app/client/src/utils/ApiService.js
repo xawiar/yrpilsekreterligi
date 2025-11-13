@@ -293,6 +293,25 @@ class ApiService {
     return response.json();
   }
 
+  static async setMemberStars(id, stars) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.setMemberStars(id, stars);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/members/${id}/stars`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ stars }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Yıldız güncellenirken hata oluştu');
+    }
+    
+    return response.json();
+  }
+
   static async archiveMember(id) {
     if (USE_FIREBASE) {
       return FirebaseApiService.archiveMember(id);

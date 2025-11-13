@@ -296,6 +296,40 @@ class MemberController {
     }
   }
 
+  // Set manual stars for a member (admin and district_president only)
+  static async setManualStars(req, res) {
+    try {
+      const { id } = req.params;
+      const { stars } = req.body;
+      
+      // Validate stars (1-5 or null)
+      if (stars !== null && (stars < 1 || stars > 5 || !Number.isInteger(stars))) {
+        return res.status(400).json({ message: 'Yıldız değeri 1-5 arasında olmalıdır' });
+      }
+      
+      const sql = `UPDATE members SET manual_stars = ? WHERE id = ?`;
+      const result = await db.run(sql, [stars === null ? null : parseInt(stars), parseInt(id)]);
+      
+      if (result.changes === 0) {
+        return res.status(404).json({ message: 'Üye bulunamadı' });
+      }
+      
+      const updatedMember = await db.get('SELECT * FROM members WHERE id = ?', [parseInt(id)]);
+      
+      // Sync to Firebase if enabled
+      await syncAfterSqliteOperation('members', updatedMember.id, 'update');
+      
+      res.json({
+        ...updatedMember,
+        tc: decryptField(updatedMember.tc),
+        phone: decryptField(updatedMember.phone),
+      });
+    } catch (error) {
+      console.error('Error setting manual stars:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Restore archived member
   static async restore(req, res) {
     try {

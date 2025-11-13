@@ -86,4 +86,10 @@ router.post('/:id/restore', (req, res) => {
   MemberController.restore(req, res);
 });
 
+// Set manual stars for a member
+router.put('/:id/stars', (req, res) => {
+  console.log('PUT /:id/stars route called with id:', req.params.id);
+  MemberController.setManualStars(req, res);
+});
+
 module.exports = router;

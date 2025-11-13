@@ -1489,6 +1489,36 @@ class FirebaseApiService {
     }
   }
 
+  static async setMemberStars(id, stars) {
+    try {
+      console.log('🔥 Firebase setMemberStars called:', { id, stars });
+      
+      // Validate stars (1-5 or null)
+      if (stars !== null && (stars < 1 || stars > 5 || !Number.isInteger(stars))) {
+        throw new Error('Yıldız değeri 1-5 arasında olmalıdır');
+      }
+      
+      const member = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, id);
+      if (!member) {
+        throw new Error('Üye bulunamadı');
+      }
+      
+      // Update only manual_stars field
+      await FirebaseService.update(this.COLLECTIONS.MEMBERS, id, {
+        manual_stars: stars === null ? null : parseInt(stars)
+      }, true); // Encrypt if needed
+      
+      // Get updated member
+      const updatedMember = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, id);
+      console.log('✅ Member stars updated successfully');
+      
+      return updatedMember;
+    } catch (error) {
+      console.error('❌ Error setting member stars:', error);
+      throw error;
+    }
+  }
+
   static async updateMember(id, memberData) {
     try {
       // Önce eski üye bilgilerini al (TC ve telefon karşılaştırması için)

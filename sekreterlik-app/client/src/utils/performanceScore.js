@@ -485,55 +485,69 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
 
 /**
  * Seviye belirleme (max puana göre yüzdelik)
+ * Manuel yıldız ile performans yıldızının ortalamasını alır
  */
-const determineLevel = (score, maxScore) => {
+const determineLevel = (score, maxScore, manualStars = null) => {
   if (maxScore === 0) {
+    // Manuel yıldız varsa onu kullan, yoksa 1 yıldız
+    const finalStars = manualStars !== null ? manualStars : 1;
     return {
       level: 'Pasif Üye',
       levelColor: '#808080',
-      stars: 1,
+      stars: finalStars,
+      performanceStars: 1,
+      manualStars: manualStars,
+      averageStars: finalStars,
       percentage: 0
     };
   }
   
   const percentage = (score / maxScore) * 100;
   
+  // Performans puanına göre yıldız belirle
+  let performanceStars = 1;
+  let level = 'Pasif Üye';
+  let levelColor = '#808080';
+  
   if (percentage >= 95) {
-    return {
-      level: 'Platinyum',
-      levelColor: '#E5E4E2',
-      stars: 5,
-      percentage: Math.round(percentage)
-    };
+    level = 'Platinyum';
+    levelColor = '#E5E4E2';
+    performanceStars = 5;
   } else if (percentage >= 80) {
-    return {
-      level: 'Gold',
-      levelColor: '#FFD700',
-      stars: 4,
-      percentage: Math.round(percentage)
-    };
+    level = 'Gold';
+    levelColor = '#FFD700';
+    performanceStars = 4;
   } else if (percentage >= 50) {
-    return {
-      level: 'Gümüş',
-      levelColor: '#C0C0C0',
-      stars: 3,
-      percentage: Math.round(percentage)
-    };
+    level = 'Gümüş';
+    levelColor = '#C0C0C0';
+    performanceStars = 3;
   } else if (percentage >= 20) {
-    return {
-      level: 'Bronz',
-      levelColor: '#CD7F32',
-      stars: 2,
-      percentage: Math.round(percentage)
-    };
+    level = 'Bronz';
+    levelColor = '#CD7F32';
+    performanceStars = 2;
   } else {
-    return {
-      level: 'Pasif Üye',
-      levelColor: '#808080',
-      stars: 1,
-      percentage: Math.round(percentage)
-    };
+    level = 'Pasif Üye';
+    levelColor = '#808080';
+    performanceStars = 1;
   }
+  
+  // Manuel yıldız varsa, performans yıldızı ile ortalamasını al
+  let averageStars = performanceStars;
+  if (manualStars !== null && manualStars !== undefined) {
+    averageStars = Math.round((performanceStars + manualStars) / 2);
+    // Ortalama yıldızı 1-5 arasında tut
+    averageStars = Math.max(1, Math.min(5, averageStars));
+  }
+  
+  return {
+    level,
+    levelColor,
+    stars: averageStars, // Ortalama yıldızı göster
+    performanceStars, // Performans yıldızı
+    manualStars: manualStars !== null ? manualStars : null, // Manuel yıldız
+    averageStars, // Ortalama yıldız
+    percentage: Math.round(percentage)
+  };
 };
 
 /**
@@ -549,7 +563,11 @@ export const calculateAllMemberScores = (members, meetings, events, memberRegist
   // Her üye için puan hesapla ve seviye belirle
   return members.map(member => {
     const score = calculatePerformanceScore(member, meetings, events, memberRegistrations, options);
-    const levelInfo = determineLevel(score.totalScore, maxScore);
+    // Manuel yıldızı member'dan al (manual_stars field'ı)
+    const manualStars = member.manual_stars !== null && member.manual_stars !== undefined 
+      ? parseInt(member.manual_stars) 
+      : null;
+    const levelInfo = determineLevel(score.totalScore, maxScore, manualStars);
     
     return {
       member,
