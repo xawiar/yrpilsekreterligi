@@ -402,7 +402,7 @@ const findFirstMeetingDate = (meetings) => {
 };
 
 /**
- * Maksimum puanı hesapla (tüm toplantılara katılım + tüm etkinliklere katılım + aylık 3 üye kaydı)
+ * Maksimum puanı hesapla (tüm toplantılara katılım + tüm etkinliklere katılım + aylık 3 üye kaydı + bonus puanlar)
  */
 const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   if (!firstMeetingDate) return 1000; // Default max score if no meetings
@@ -419,9 +419,14 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   // Üye kayıt puanları (aylık 3 üye * 5 puan = 15 puan/ay)
   const registrationPoints = monthsSinceFirst * 15; // Aylık 3 üye * 5 puan
   
-  // Bonus puanlar hariç (bonus puanlar dinamik olduğu için max hesaplamaya dahil edilmiyor)
+  // Bonus puanlar (her ay için mükemmel katılım)
+  // Her ay tüm toplantılara katılım bonusu: +200 puan/ay
+  const meetingBonus = monthsSinceFirst * 200;
   
-  return meetingPoints + eventPoints + registrationPoints;
+  // Her ay tüm etkinliklere katılım bonusu: +100 puan/ay
+  const eventBonus = monthsSinceFirst * 100;
+  
+  return meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus;
 };
 
 /**
