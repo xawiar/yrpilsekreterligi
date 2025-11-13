@@ -16,11 +16,29 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
 
   useEffect(() => {
     if (meeting) {
+      // Convert date to datetime-local format for input field
+      let formattedDate = '';
+      if (meeting.date) {
+        try {
+          const dateObj = new Date(meeting.date);
+          if (!isNaN(dateObj.getTime())) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const hours = String(dateObj.getHours()).padStart(2, '0');
+            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+          }
+        } catch (e) {
+          console.warn('Date parsing error:', e);
+        }
+      }
+      
       setFormData({
         name: meeting.name || '',
         regions: meeting.regions || [],
         notes: meeting.notes || '',
-        date: meeting.date || ''
+        date: formattedDate || meeting.date || ''
       });
 
       // Initialize attendance data from existing meeting
