@@ -1371,10 +1371,10 @@ const ReportsPage = () => {
                             {item.details.breakdown.bonusPoints > 0 && (
                               <div className="text-green-600 dark:text-green-400 space-y-0.5">
                                 {item.details.bonuses.perfectMeetingAttendance > 0 && (
-                                  <div>⭐ Toplantı Bonus: {item.details.bonuses.perfectMeetingMonths} ay × 200 = +{item.details.bonuses.perfectMeetingAttendance}</div>
+                                  <div>⭐ Toplantı Bonus: {item.details.bonuses.perfectMeetingMonths} ay × 50 = +{item.details.bonuses.perfectMeetingAttendance}</div>
                                 )}
                                 {item.details.bonuses.perfectEventAttendance > 0 && (
-                                  <div>⭐ Etkinlik Bonus: {item.details.bonuses.perfectEventMonths} ay × 100 = +{item.details.bonuses.perfectEventAttendance}</div>
+                                  <div>⭐ Etkinlik Bonus: {item.details.bonuses.perfectEventMonths} ay × 50 = +{item.details.bonuses.perfectEventAttendance}</div>
                                 )}
                                 <div className="font-semibold">Toplam Bonus: +{item.details.breakdown.bonusPoints}</div>
                               </div>

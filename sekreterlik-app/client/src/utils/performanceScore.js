@@ -9,8 +9,8 @@
  * - Kaydettiği üye başına: +5 puan
  * 
  * Bonus Puanlar (Ay Sonu):
- * - O ay tüm toplantılara katılmışsa: +200 puan/ay
- * - O ay tüm etkinliklere katılmışsa: +100 puan/ay
+ * - O ay tüm toplantılara katılmışsa: +50 puan/ay
+ * - O ay tüm etkinliklere katılmışsa: +50 puan/ay
  * 
  * Dinamik Seviye Sistemi:
  * - Sistemdeki ilk toplantı tarihini baz alarak max puan hesaplanır
@@ -307,8 +307,8 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
     });
 
     // Bonus puanları hesapla
-    const meetingBonus = perfectMeetingMonths * 200;
-    const eventBonus = perfectEventMonths * 100;
+    const meetingBonus = perfectMeetingMonths * 50;
+    const eventBonus = perfectEventMonths * 50;
 
     if (meetingBonus > 0) {
       details.bonuses.perfectMeetingAttendance = meetingBonus;
@@ -474,11 +474,11 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   const registrationPoints = monthsSinceFirst * 15; // Aylık 3 üye * 5 puan
   
   // Bonus puanlar (her ay için mükemmel katılım)
-  // Her ay tüm toplantılara katılım bonusu: +200 puan/ay
-  const meetingBonus = monthsSinceFirst * 200;
+  // Her ay tüm toplantılara katılım bonusu: +50 puan/ay
+  const meetingBonus = monthsSinceFirst * 50;
   
-  // Her ay tüm etkinliklere katılım bonusu: +100 puan/ay
-  const eventBonus = monthsSinceFirst * 100;
+  // Her ay tüm etkinliklere katılım bonusu: +50 puan/ay
+  const eventBonus = monthsSinceFirst * 50;
   
   return meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus;
 };
