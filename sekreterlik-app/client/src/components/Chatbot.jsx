@@ -194,57 +194,60 @@ const Chatbot = ({ isOpen, onClose }) => {
         archivedEvents
       ]) => {
         // Performans puanlarını hesapla (üye yıldızları için)
-        let performanceScores = [];
-        try {
-          const { calculateAllMemberScores } = await import('../utils/performanceScore');
-          performanceScores = await calculateAllMemberScores(
-            members,
-            meetings,
-            events,
-            memberRegistrations,
-            {
-              includeBonus: true,
-              timeRange: 'all',
-              weightRecent: false
-            }
-          );
-        } catch (error) {
-          console.error('Error calculating performance scores:', error);
-        }
+        // Async IIFE kullanarak await kullanabiliriz
+        (async () => {
+          let performanceScores = [];
+          try {
+            const { calculateAllMemberScores } = await import('../utils/performanceScore');
+            performanceScores = await calculateAllMemberScores(
+              members,
+              meetings,
+              events,
+              memberRegistrations,
+              {
+                includeBonus: true,
+                timeRange: 'all',
+                weightRecent: false
+              }
+            );
+          } catch (error) {
+            console.error('Error calculating performance scores:', error);
+          }
 
-        // Update with ALL additional data
-        setSiteData(prev => ({
-          ...prev,
-          ballotBoxes,
-          observers,
-          groups,
-          districtOfficials,
-          townOfficials,
-          districtManagementMembers: managementMembersData?.districtManagementMembers || [],
-          townManagementMembers: managementMembersData?.townManagementMembers || [],
-          neighborhoodRepresentatives,
-          villageRepresentatives,
-          neighborhoodSupervisors,
-          villageSupervisors,
-          districtDeputyInspectors,
-          townDeputyInspectors,
-          neighborhoodVisitCounts,
-          villageVisitCounts,
-          stkVisitCounts,
-          publicInstitutionVisitCounts,
-          mosqueVisitCounts,
-          memberRegistrations,
-          stks,
-          publicInstitutions,
-          mosques,
-          eventCategories,
-          personalDocuments,
-          archiveDocuments,
-          archivedMembers,
-          archivedMeetings,
-          archivedEvents,
-          performanceScores
-        }));
+          // Update with ALL additional data
+          setSiteData(prev => ({
+            ...prev,
+            ballotBoxes,
+            observers,
+            groups,
+            districtOfficials,
+            townOfficials,
+            districtManagementMembers: managementMembersData?.districtManagementMembers || [],
+            townManagementMembers: managementMembersData?.townManagementMembers || [],
+            neighborhoodRepresentatives,
+            villageRepresentatives,
+            neighborhoodSupervisors,
+            villageSupervisors,
+            districtDeputyInspectors,
+            townDeputyInspectors,
+            neighborhoodVisitCounts,
+            villageVisitCounts,
+            stkVisitCounts,
+            publicInstitutionVisitCounts,
+            mosqueVisitCounts,
+            memberRegistrations,
+            stks,
+            publicInstitutions,
+            mosques,
+            eventCategories,
+            personalDocuments,
+            archiveDocuments,
+            archivedMembers,
+            archivedMeetings,
+            archivedEvents,
+            performanceScores
+          }));
+        })();
       }).catch(error => {
         console.error('Error loading additional site data:', error);
       });
