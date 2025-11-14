@@ -146,12 +146,28 @@ ${contextText}`;
       context.push(`\n=== ÜYE BİLGİLERİ ===`);
       context.push(`Toplam ${siteData.members.length} üye kayıtlı.`);
       
+      // Performans puanları/yıldızlar varsa ekle
+      const performanceScores = siteData.performanceScores || [];
+      const memberScoresMap = {};
+      performanceScores.forEach(score => {
+        memberScoresMap[String(score.member.id)] = score;
+      });
+      
       // Sadece ilk 50 üyenin özet bilgileri (token limiti için)
       const membersList = siteData.members.slice(0, MAX_ITEMS_PER_SECTION).map(m => {
         const info = [];
         info.push(`Ad: ${m.name || 'İsimsiz'}`);
         if (m.region) info.push(`Bölge: ${m.region}`);
         if (m.position) info.push(`Görev: ${m.position}`);
+        
+        // Yıldız bilgisi ekle
+        const score = memberScoresMap[String(m.id)];
+        if (score) {
+          info.push(`Yıldız: ${score.stars || score.averageStars || 0}/5`);
+          info.push(`Seviye: ${score.level || 'Belirlenmemiş'}`);
+          info.push(`Performans Puanı: ${score.totalScore || 0}`);
+        }
+        
         return info.join(' | ');
       }).join('\n');
       
@@ -231,23 +247,43 @@ ${contextText}`;
         meetingInfo.push(`Toplantı: ${meeting.name || 'İsimsiz toplantı'}`);
         if (meeting.date) meetingInfo.push(`Tarih: ${meeting.date}`);
         if (meeting.location) meetingInfo.push(`Yer: ${meeting.location}`);
+        if (meeting.regions && meeting.regions.length > 0) {
+          meetingInfo.push(`Bölgeler: ${meeting.regions.join(', ')}`);
+        }
+        if (meeting.notes) meetingInfo.push(`Notlar: ${meeting.notes}`);
         
         // Yoklama bilgileri
         if (meeting.attendees && meeting.attendees.length > 0) {
           const attended = meeting.attendees.filter(a => a.attended === true).length;
           const notAttended = meeting.attendees.length - attended;
-          meetingInfo.push(`Katılan: ${attended}, Katılmayan: ${notAttended}`);
+          const excused = meeting.attendees.filter(a => a.excuse?.hasExcuse === true).length;
+          meetingInfo.push(`Katılan: ${attended}, Katılmayan: ${notAttended}, Mazeretli: ${excused}`);
           
-          // Katılmayanların listesi
-          if (notAttended > 0) {
-            const notAttendedMembers = meeting.attendees
-              .filter(a => a.attended !== true)
+          // Katılanların listesi (ilk 10)
+          if (attended > 0) {
+            const attendedMembers = meeting.attendees
+              .filter(a => a.attended === true)
+              .slice(0, 10)
               .map(a => {
                 const member = siteData.members?.find(m => String(m.id) === String(a.memberId));
                 return member ? member.name : 'Bilinmeyen üye';
               })
               .join(', ');
-            meetingInfo.push(`Katılmayanlar: ${notAttendedMembers}`);
+            meetingInfo.push(`Katılanlar: ${attendedMembers}${attended > 10 ? ` ve ${attended - 10} kişi daha` : ''}`);
+          }
+          
+          // Katılmayanların listesi (ilk 10)
+          if (notAttended > 0) {
+            const notAttendedMembers = meeting.attendees
+              .filter(a => a.attended !== true)
+              .slice(0, 10)
+              .map(a => {
+                const member = siteData.members?.find(m => String(m.id) === String(a.memberId));
+                const excuseText = a.excuse?.hasExcuse ? ' (Mazeretli)' : '';
+                return member ? member.name + excuseText : 'Bilinmeyen üye';
+              })
+              .join(', ');
+            meetingInfo.push(`Katılmayanlar: ${notAttendedMembers}${notAttended > 10 ? ` ve ${notAttended - 10} kişi daha` : ''}`);
           }
         }
         
@@ -255,7 +291,7 @@ ${contextText}`;
       });
     }
     
-    // ETKİNLİK BİLGİLERİ (Kısaltılmış - token limiti için)
+    // ETKİNLİK BİLGİLERİ (Detaylı)
     if (siteData.events && siteData.events.length > 0) {
       const activeEvents = siteData.events.filter(e => !e.archived).slice(0, MAX_ITEMS_PER_SECTION);
       context.push(`\n=== ETKİNLİK BİLGİLERİ ===`);
@@ -266,10 +302,61 @@ ${contextText}`;
         eventInfo.push(`Etkinlik: ${event.name || 'İsimsiz etkinlik'}`);
         if (event.date) eventInfo.push(`Tarih: ${event.date}`);
         if (event.location) eventInfo.push(`Yer: ${event.location}`);
+        if (event.category) {
+          const category = siteData.eventCategories?.find(c => String(c.id) === String(event.category));
+          if (category) eventInfo.push(`Kategori: ${category.name}`);
+        }
+        if (event.description) eventInfo.push(`Açıklama: ${event.description}`);
+        
+        // Konum bilgileri
+        if (event.selectedLocationTypes && event.selectedLocations) {
+          const locationInfo = [];
+          event.selectedLocationTypes.forEach((type, index) => {
+            const locationId = event.selectedLocations[index];
+            if (type === 'district') {
+              const district = siteData.districts?.find(d => String(d.id) === String(locationId));
+              if (district) locationInfo.push(`İlçe: ${district.name}`);
+            } else if (type === 'town') {
+              const town = siteData.towns?.find(t => String(t.id) === String(locationId));
+              if (town) locationInfo.push(`Belde: ${town.name}`);
+            } else if (type === 'neighborhood') {
+              const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(locationId));
+              if (neighborhood) locationInfo.push(`Mahalle: ${neighborhood.name}`);
+            } else if (type === 'village') {
+              const village = siteData.villages?.find(v => String(v.id) === String(locationId));
+              if (village) locationInfo.push(`Köy: ${village.name}`);
+            } else if (type === 'stk') {
+              const stk = siteData.stks?.find(s => String(s.id) === String(locationId));
+              if (stk) locationInfo.push(`STK: ${stk.name}`);
+            } else if (type === 'public_institution') {
+              const publicInstitution = siteData.publicInstitutions?.find(p => String(p.id) === String(locationId));
+              if (publicInstitution) locationInfo.push(`Kamu Kurumu: ${publicInstitution.name}`);
+            } else if (type === 'mosque') {
+              const mosque = siteData.mosques?.find(m => String(m.id) === String(locationId));
+              if (mosque) locationInfo.push(`Cami: ${mosque.name}`);
+            }
+          });
+          if (locationInfo.length > 0) {
+            eventInfo.push(`Konumlar: ${locationInfo.join(', ')}`);
+          }
+        }
         
         if (event.attendees && event.attendees.length > 0) {
           const attended = event.attendees.filter(a => a.attended === true).length;
-          eventInfo.push(`Katılan: ${attended}`);
+          eventInfo.push(`Katılan: ${attended}/${event.attendees.length}`);
+          
+          // Katılanların listesi (ilk 10)
+          if (attended > 0) {
+            const attendedMembers = event.attendees
+              .filter(a => a.attended === true)
+              .slice(0, 10)
+              .map(a => {
+                const member = siteData.members?.find(m => String(m.id) === String(a.memberId));
+                return member ? member.name : 'Bilinmeyen üye';
+              })
+              .join(', ');
+            eventInfo.push(`Katılanlar: ${attendedMembers}${attended > 10 ? ` ve ${attended - 10} kişi daha` : ''}`);
+          }
         }
         
         context.push(eventInfo.join(' | '));
@@ -792,10 +879,43 @@ ${contextText}`;
       context.push(`\n=== STK'LAR (SİVİL TOPLUM KURULUŞLARI) ===`);
       context.push(`Toplam ${siteData.stks.length} STK kayıtlı.`);
       
+      // STK ziyaret sayıları
+      const stkVisitCounts = siteData.stkVisitCounts || [];
+      const stkVisitMap = {};
+      stkVisitCounts.forEach(visit => {
+        stkVisitMap[String(visit.stk_id)] = visit.visit_count || 0;
+      });
+      
       siteData.stks.forEach(stk => {
         const info = [];
         if (stk.name) info.push(`STK Adı: ${stk.name}`);
         if (stk.description) info.push(`Açıklama: ${stk.description}`);
+        const visitCount = stkVisitMap[String(stk.id)] || stkVisitMap[stk.id] || 0;
+        info.push(`Ziyaret Sayısı: ${visitCount}`);
+        if (info.length > 0) {
+          context.push(info.join(' | '));
+        }
+      });
+    }
+    
+    // KAMU KURUMLARI
+    if (siteData.publicInstitutions && siteData.publicInstitutions.length > 0) {
+      context.push(`\n=== KAMU KURUMLARI ===`);
+      context.push(`Toplam ${siteData.publicInstitutions.length} kamu kurumu kayıtlı.`);
+      
+      // Kamu kurumu ziyaret sayıları
+      const publicInstitutionVisitCounts = siteData.publicInstitutionVisitCounts || [];
+      const publicInstitutionVisitMap = {};
+      publicInstitutionVisitCounts.forEach(visit => {
+        publicInstitutionVisitMap[String(visit.public_institution_id)] = visit.visit_count || 0;
+      });
+      
+      siteData.publicInstitutions.forEach(publicInstitution => {
+        const info = [];
+        if (publicInstitution.name) info.push(`Kamu Kurumu Adı: ${publicInstitution.name}`);
+        if (publicInstitution.description) info.push(`Açıklama: ${publicInstitution.description}`);
+        const visitCount = publicInstitutionVisitMap[String(publicInstitution.id)] || publicInstitutionVisitMap[publicInstitution.id] || 0;
+        info.push(`Ziyaret Sayısı: ${visitCount}`);
         if (info.length > 0) {
           context.push(info.join(' | '));
         }
@@ -806,6 +926,13 @@ ${contextText}`;
     if (siteData.mosques && siteData.mosques.length > 0) {
       context.push(`\n=== CAMİLER ===`);
       context.push(`Toplam ${siteData.mosques.length} cami kayıtlı.`);
+      
+      // Cami ziyaret sayıları
+      const mosqueVisitCounts = siteData.mosqueVisitCounts || [];
+      const mosqueVisitMap = {};
+      mosqueVisitCounts.forEach(visit => {
+        mosqueVisitMap[String(visit.mosque_id)] = visit.visit_count || 0;
+      });
       
       siteData.mosques.forEach(mosque => {
         const district = siteData.districts?.find(d => String(d.id) === String(mosque.district_id));
@@ -819,6 +946,8 @@ ${contextText}`;
         if (town) info.push(`Belde: ${town.name}`);
         if (neighborhood) info.push(`Mahalle: ${neighborhood.name}`);
         if (village) info.push(`Köy: ${village.name}`);
+        const visitCount = mosqueVisitMap[String(mosque.id)] || mosqueVisitMap[mosque.id] || 0;
+        info.push(`Ziyaret Sayısı: ${visitCount}`);
         if (info.length > 0) {
           context.push(info.join(' | '));
         }
@@ -980,6 +1109,23 @@ ${contextText}`;
         if (member.position) basicInfo.push(`Görev: ${member.position}`);
         if (member.district) basicInfo.push(`İlçe: ${member.district}`);
         if (member.notes) basicInfo.push(`Notlar: ${member.notes}`);
+        
+        // Performans Puanı ve Yıldız Bilgisi
+        const performanceScores = siteData.performanceScores || [];
+        const memberScore = performanceScores.find(score => String(score.member.id) === memberId);
+        if (memberScore) {
+          basicInfo.push(`Performans Puanı: ${memberScore.totalScore || 0}`);
+          basicInfo.push(`Yıldız: ${memberScore.stars || memberScore.averageStars || 0}/5`);
+          basicInfo.push(`Seviye: ${memberScore.level || 'Belirlenmemiş'}`);
+          if (memberScore.performanceStars) basicInfo.push(`Performans Yıldızı: ${memberScore.performanceStars}/5`);
+          if (memberScore.manualStars !== null && memberScore.manualStars !== undefined) {
+            basicInfo.push(`Manuel Yıldız: ${memberScore.manualStars}/5`);
+          }
+          if (memberScore.percentage !== undefined) {
+            basicInfo.push(`Performans Yüzdesi: %${memberScore.percentage}`);
+          }
+        }
+        
         if (basicInfo.length > 0) {
           context.push(basicInfo.join(' | '));
         }

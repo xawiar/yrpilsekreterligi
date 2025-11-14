@@ -135,12 +135,16 @@ const Chatbot = ({ isOpen, onClose }) => {
         // Ziyaret sayıları
         ApiService.getAllVisitCounts('neighborhood').catch(() => []),
         ApiService.getAllVisitCounts('village').catch(() => []),
+        ApiService.getAllVisitCounts('stk').catch(() => []),
+        ApiService.getAllVisitCounts('public_institution').catch(() => []),
+        ApiService.getAllVisitCounts('mosque').catch(() => []),
         
         // Üye kayıtları
         ApiService.getMemberRegistrations().catch(() => []),
         
-        // STK ve Cami verileri
+        // STK, Kamu Kurumu ve Cami verileri
         ApiService.getSTKs().catch(() => []),
+        ApiService.getPublicInstitutions().catch(() => []),
         ApiService.getMosques().catch(() => []),
         
         // Etkinlik kategorileri
@@ -175,8 +179,12 @@ const Chatbot = ({ isOpen, onClose }) => {
         townDeputyInspectors,
         neighborhoodVisitCounts,
         villageVisitCounts,
+        stkVisitCounts,
+        publicInstitutionVisitCounts,
+        mosqueVisitCounts,
         memberRegistrations,
         stks,
+        publicInstitutions,
         mosques,
         eventCategories,
         personalDocuments,
@@ -185,6 +193,24 @@ const Chatbot = ({ isOpen, onClose }) => {
         archivedMeetings,
         archivedEvents
       ]) => {
+        // Performans puanlarını hesapla (üye yıldızları için)
+        let performanceScores = [];
+        try {
+          const { calculateAllMemberScores } = await import('../utils/performanceScore');
+          performanceScores = await calculateAllMemberScores(
+            members,
+            meetings,
+            events,
+            memberRegistrations,
+            {
+              includeBonus: true,
+              timeRange: 'all',
+              weightRecent: false
+            }
+          );
+        } catch (error) {
+          console.error('Error calculating performance scores:', error);
+        }
 
         // Update with ALL additional data
         setSiteData(prev => ({
@@ -204,15 +230,20 @@ const Chatbot = ({ isOpen, onClose }) => {
           townDeputyInspectors,
           neighborhoodVisitCounts,
           villageVisitCounts,
+          stkVisitCounts,
+          publicInstitutionVisitCounts,
+          mosqueVisitCounts,
           memberRegistrations,
           stks,
+          publicInstitutions,
           mosques,
           eventCategories,
           personalDocuments,
           archiveDocuments,
           archivedMembers,
           archivedMeetings,
-          archivedEvents
+          archivedEvents,
+          performanceScores
         }));
       }).catch(error => {
         console.error('Error loading additional site data:', error);
@@ -355,10 +386,10 @@ const Chatbot = ({ isOpen, onClose }) => {
         context.push(...memberContext);
       }
       
-      // Add bylaws text or URL if available (kısaltılmış - token limiti için)
+      // Add bylaws text or URL if available (daha fazla karakter - tüzük önemli)
       if (bylawsText) {
-        // Tüzük metnini kısalt (token limiti için - max 3000 karakter = ~750 token)
-        const MAX_BYLAWS_LENGTH = 3000;
+        // Tüzük metnini kısalt (token limiti için - max 50000 karakter - tüzük çok önemli)
+        const MAX_BYLAWS_LENGTH = 50000;
         const shortenedBylaws = bylawsText.length > MAX_BYLAWS_LENGTH 
           ? bylawsText.substring(0, MAX_BYLAWS_LENGTH) + '\n\n[Tüzük metni kısaltıldı - token limiti nedeniyle]'
           : bylawsText;
@@ -402,9 +433,9 @@ const Chatbot = ({ isOpen, onClose }) => {
               console.log('Bylaws fetch success:', data.success, 'Text length:', data.text?.length);
               
               if (data.success && data.text) {
-                // Tüzük metnini context'e ekle (ilk 15000 karakter - daha fazla context)
-                const text = data.text.substring(0, 15000);
-                context.push(`TÜZÜK BİLGİLERİ:\n${text}${data.text.length > 15000 ? '... (devamı var)' : ''}`);
+                // Tüzük metnini context'e ekle (ilk 50000 karakter - tüzük çok önemli)
+                const text = data.text.substring(0, 50000);
+                context.push(`TÜZÜK BİLGİLERİ:\n${text}${data.text.length > 50000 ? '... (devamı var)' : ''}`);
               } else {
                 // Backend başarısız olursa, URL'yi kullan
                 context.push(`TÜZÜK BİLGİLERİ: Parti tüzüğü şu web linkinde bulunmaktadır: ${url}. Tüzük hakkında sorular için bu linki ziyaret edebilirsiniz.`);
@@ -429,6 +460,82 @@ const Chatbot = ({ isOpen, onClose }) => {
             ? bylawsText.substring(0, maxLength) + '... (devamı var - tüzük metni çok uzun)' 
             : bylawsText;
           context.push(`TÜZÜK BİLGİLERİ:\n${textToAdd}`);
+        }
+        
+        // Dashboard İstatistikleri
+        if (siteData.members && siteData.meetings && siteData.events) {
+          const totalMembers = siteData.members.length;
+          const totalMeetings = siteData.meetings.filter(m => !m.archived).length;
+          const totalEvents = siteData.events.filter(e => !e.archived).length;
+          
+          // Ortalama toplantı katılım oranı
+          let totalAttendanceRate = 0;
+          let meetingsWithAttendees = 0;
+          siteData.meetings.filter(m => !m.archived).forEach(meeting => {
+            if (meeting.attendees && meeting.attendees.length > 0) {
+              const attended = meeting.attendees.filter(a => a.attended === true).length;
+              const rate = (attended / meeting.attendees.length) * 100;
+              totalAttendanceRate += rate;
+              meetingsWithAttendees++;
+            }
+          });
+          const avgMeetingAttendanceRate = meetingsWithAttendees > 0 
+            ? Math.round(totalAttendanceRate / meetingsWithAttendees) 
+            : 0;
+          
+          context.push(`\n=== DASHBOARD İSTATİSTİKLERİ ===`);
+          context.push(`Toplam Üye Sayısı: ${totalMembers}`);
+          context.push(`Toplam Toplantı Sayısı: ${totalMeetings}`);
+          context.push(`Ortalama Toplantı Katılım Oranı: %${avgMeetingAttendanceRate}`);
+          context.push(`Toplam Etkinlik Sayısı: ${totalEvents}`);
+          
+          // Kategori bazında etkinlik istatistikleri
+          if (siteData.eventCategories && siteData.events) {
+            const categoryStats = {};
+            siteData.events.filter(e => !e.archived).forEach(event => {
+              if (event.category) {
+                const category = siteData.eventCategories.find(c => String(c.id) === String(event.category));
+                const categoryName = category ? category.name : 'Kategori Yok';
+                categoryStats[categoryName] = (categoryStats[categoryName] || 0) + 1;
+              }
+            });
+            if (Object.keys(categoryStats).length > 0) {
+              context.push(`\nKategori Bazında Etkinlik Sayıları:`);
+              Object.entries(categoryStats).forEach(([category, count]) => {
+                context.push(`  ${category}: ${count} etkinlik`);
+              });
+            }
+          }
+          
+          // Mahalle ve köy istatistikleri
+          if (siteData.neighborhoods) {
+            context.push(`\nToplam Mahalle Sayısı: ${siteData.neighborhoods.length}`);
+            const totalNeighborhoodVisits = (siteData.neighborhoodVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
+            context.push(`Toplam Mahalle Ziyaret Sayısı: ${totalNeighborhoodVisits}`);
+            const assignedNeighborhoodReps = new Set((siteData.neighborhoodRepresentatives || []).map(r => String(r.neighborhood_id))).size;
+            context.push(`Atanmış Mahalle Temsilci Sayısı: ${assignedNeighborhoodReps}`);
+          }
+          
+          if (siteData.villages) {
+            context.push(`\nToplam Köy Sayısı: ${siteData.villages.length}`);
+            const totalVillageVisits = (siteData.villageVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
+            context.push(`Toplam Köy Ziyaret Sayısı: ${totalVillageVisits}`);
+            const assignedVillageReps = new Set((siteData.villageRepresentatives || []).map(r => String(r.village_id))).size;
+            context.push(`Atanmış Köy Temsilci Sayısı: ${assignedVillageReps}`);
+          }
+          
+          // STK ve Kamu Kurumu istatistikleri
+          if (siteData.stks) {
+            context.push(`\nToplam STK Sayısı: ${siteData.stks.length}`);
+            const totalSTKVisits = (siteData.stkVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
+            context.push(`Toplam STK Ziyaret Sayısı: ${totalSTKVisits}`);
+          }
+          
+          if (siteData.publicInstitutions) {
+            context.push(`\nToplam Kamu Kurumu Sayısı: ${siteData.publicInstitutions.length}`);
+            const totalPublicInstitutionVisits = (siteData.publicInstitutionVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
+            context.push(`Toplam Kamu Kurumu Ziyaret Sayısı: ${totalPublicInstitutionVisits}`);
+          }
         }
       }
       
