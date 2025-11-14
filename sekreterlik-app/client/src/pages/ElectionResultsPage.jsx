@@ -273,6 +273,9 @@ const ElectionResultsPage = () => {
   }
 
   const filteredResults = getFilteredResults();
+  
+  // Sonuç yoksa bile sayfa görünsün - sıfır değerlerle
+  const hasResults = filteredResults.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
@@ -285,6 +288,13 @@ const ElectionResultsPage = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {election.date ? new Date(election.date).toLocaleDateString('tr-TR') : '-'}
           </p>
+          {!hasResults && (
+            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ⚠️ Henüz seçim sonucu girilmemiş. Sonuçlar girildikçe bu sayfada görünecektir.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -414,52 +424,86 @@ const ElectionResultsPage = () => {
         </div>
 
         {/* Chart */}
-        {aggregatedResults.data.length > 0 && (
+        {election && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Genel Sonuçlar - Pasta Grafiği
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={aggregatedResults.data}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percentage }) => `${name}: %${percentage}`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {aggregatedResults.data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2">
-                {aggregatedResults.data.map((item, index) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      ></div>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
+            {aggregatedResults.data.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={aggregatedResults.data}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percentage }) => `${name}: %${percentage}`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {aggregatedResults.data.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-2">
+                  {aggregatedResults.data.map((item, index) => (
+                    <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        ></div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">{item.value.toLocaleString('tr-TR')}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">%{item.percentage}</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">{item.value.toLocaleString('tr-TR')}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">%{item.percentage}</div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  Henüz sonuç girilmemiş
+                </p>
+                <div className="space-y-2">
+                  {election.type === 'cb' && election.candidates && election.candidates.length > 0 && (
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium mb-2">Adaylar:</p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {election.candidates.map((candidate, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            {candidate}: 0 oy (%0)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(election.type === 'yerel' || election.type === 'genel') && election.parties && election.parties.length > 0 && (
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium mb-2">Partiler:</p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {election.parties.map((party, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            {party}: 0 oy (%0)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
