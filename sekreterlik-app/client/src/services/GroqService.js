@@ -366,22 +366,84 @@ ${contextText}`;
     // DİĞER BİLGİLER
     if (siteData.districts && siteData.districts.length > 0) {
       context.push(`\n=== İLÇE BİLGİLERİ ===`);
-      context.push(`${siteData.districts.length} ilçe kayıtlı: ${siteData.districts.map(d => d.name).join(', ')}`);
+      context.push(`${siteData.districts.length} ilçe kayıtlı:`);
+      siteData.districts.forEach(district => {
+        const info = [];
+        info.push(`İlçe: ${district.name}`);
+        const districtOfficial = siteData.districtOfficials?.find(o => String(o.district_id) === String(district.id));
+        if (districtOfficial) {
+          if (districtOfficial.chairman_name) info.push(`Başkan: ${districtOfficial.chairman_name}`);
+          if (districtOfficial.inspector_name) info.push(`Müfettiş: ${districtOfficial.inspector_name}`);
+        }
+        const districtMembers = siteData.districtManagementMembers?.filter(m => String(m.district_id) === String(district.id)) || [];
+        if (districtMembers.length > 0) info.push(`Yönetim Kurulu Üyesi: ${districtMembers.length}`);
+        context.push(info.join(' | '));
+      });
     }
     
     if (siteData.towns && siteData.towns.length > 0) {
       context.push(`\n=== BELDE BİLGİLERİ ===`);
-      context.push(`${siteData.towns.length} belde kayıtlı: ${siteData.towns.map(t => t.name).join(', ')}`);
+      context.push(`${siteData.towns.length} belde kayıtlı:`);
+      siteData.towns.forEach(town => {
+        const info = [];
+        info.push(`Belde: ${town.name}`);
+        const district = siteData.districts?.find(d => String(d.id) === String(town.district_id));
+        if (district) info.push(`İlçe: ${district.name}`);
+        const townOfficial = siteData.townOfficials?.find(o => String(o.town_id) === String(town.id));
+        if (townOfficial) {
+          if (townOfficial.chairman_name) info.push(`Başkan: ${townOfficial.chairman_name}`);
+          if (townOfficial.inspector_name) info.push(`Müfettiş: ${townOfficial.inspector_name}`);
+        }
+        const townMembers = siteData.townManagementMembers?.filter(m => String(m.town_id) === String(town.id)) || [];
+        if (townMembers.length > 0) info.push(`Yönetim Kurulu Üyesi: ${townMembers.length}`);
+        context.push(info.join(' | '));
+      });
     }
     
     if (siteData.neighborhoods && siteData.neighborhoods.length > 0) {
       context.push(`\n=== MAHALLE BİLGİLERİ ===`);
       context.push(`${siteData.neighborhoods.length} mahalle kayıtlı.`);
+      // İlk 20 mahallenin detayları
+      siteData.neighborhoods.slice(0, 20).forEach(neighborhood => {
+        const info = [];
+        info.push(`Mahalle: ${neighborhood.name}`);
+        const district = siteData.districts?.find(d => String(d.id) === String(neighborhood.district_id));
+        if (district) info.push(`İlçe: ${district.name}`);
+        if (neighborhood.group_no) info.push(`Grup No: ${neighborhood.group_no}`);
+        const rep = siteData.neighborhoodRepresentatives?.find(r => String(r.neighborhood_id) === String(neighborhood.id));
+        if (rep) info.push(`Temsilci: ${rep.member_name || 'Atanmamış'}`);
+        const supervisor = siteData.neighborhoodSupervisors?.find(s => String(s.neighborhood_id) === String(neighborhood.id));
+        if (supervisor) info.push(`Sorumlu: ${supervisor.member_name || 'Atanmamış'}`);
+        const visit = siteData.neighborhoodVisitCounts?.find(v => String(v.neighborhood_id) === String(neighborhood.id));
+        if (visit) info.push(`Ziyaret Sayısı: ${visit.visit_count || 0}`);
+        context.push(info.join(' | '));
+      });
+      if (siteData.neighborhoods.length > 20) {
+        context.push(`... ve ${siteData.neighborhoods.length - 20} mahalle daha`);
+      }
     }
     
     if (siteData.villages && siteData.villages.length > 0) {
       context.push(`\n=== KÖY BİLGİLERİ ===`);
       context.push(`${siteData.villages.length} köy kayıtlı.`);
+      // İlk 20 köyün detayları
+      siteData.villages.slice(0, 20).forEach(village => {
+        const info = [];
+        info.push(`Köy: ${village.name}`);
+        const district = siteData.districts?.find(d => String(d.id) === String(village.district_id));
+        if (district) info.push(`İlçe: ${district.name}`);
+        if (village.group_no) info.push(`Grup No: ${village.group_no}`);
+        const rep = siteData.villageRepresentatives?.find(r => String(r.village_id) === String(village.id));
+        if (rep) info.push(`Temsilci: ${rep.member_name || 'Atanmamış'}`);
+        const supervisor = siteData.villageSupervisors?.find(s => String(s.village_id) === String(village.id));
+        if (supervisor) info.push(`Sorumlu: ${supervisor.member_name || 'Atanmamış'}`);
+        const visit = siteData.villageVisitCounts?.find(v => String(v.village_id) === String(village.id));
+        if (visit) info.push(`Ziyaret Sayısı: ${visit.visit_count || 0}`);
+        context.push(info.join(' | '));
+      });
+      if (siteData.villages.length > 20) {
+        context.push(`... ve ${siteData.villages.length - 20} köy daha`);
+      }
     }
     
     // SİTE İŞLEVLERİ VE KULLANIM KILAVUZU
