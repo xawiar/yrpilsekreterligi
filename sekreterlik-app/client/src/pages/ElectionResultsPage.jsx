@@ -401,19 +401,19 @@ const ElectionResultsPage = () => {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Açılan Sandık</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              {filteredResults.length}
+              {hasResults ? filteredResults.length : 0}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              {aggregatedResults.total.toLocaleString('tr-TR')}
+              {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Katılım Yüzdesi</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              %{calculateParticipationPercentage()}
+              %{hasResults ? calculateParticipationPercentage() : '0.00'}
             </div>
             {election?.voter_count && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
