@@ -4118,6 +4118,72 @@ class FirebaseApiService {
   static async createBallotBoxObserver(observerData) {
     try {
       const docId = await FirebaseService.create(this.COLLECTIONS.BALLOT_BOX_OBSERVERS, null, observerData);
+      
+      // Başmüşahit eklenirken otomatik kullanıcı oluştur
+      if (observerData.is_chief_observer) {
+        try {
+          const tc = String(observerData.tc || '').trim();
+          
+          // TC ile üye bul (TC şifrelenmiş olabilir)
+          const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+          const member = members.find(m => {
+            let memberTc = String(m.tc || '').trim();
+            try {
+              if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
+                memberTc = decryptData(memberTc);
+              }
+            } catch (e) {}
+            return memberTc === tc;
+          });
+
+          if (member && member.id) {
+            // Sandık numarasını kontrol et
+            let username, password;
+            if (observerData.ballot_box_id) {
+              const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, observerData.ballot_box_id);
+              if (ballotBox && ballotBox.ballot_number) {
+                // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
+                username = String(ballotBox.ballot_number);
+                password = tc;
+              } else {
+                // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+                username = tc;
+                password = tc;
+              }
+            } else {
+              // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+              username = tc;
+              password = tc;
+            }
+
+            // Kullanıcı zaten var mı kontrol et
+            const existingUsers = await FirebaseService.findByField(
+              this.COLLECTIONS.MEMBER_USERS,
+              'memberId',
+              member.id
+            );
+            
+            if (!existingUsers || existingUsers.length === 0) {
+              // Kullanıcı yoksa oluştur
+              await this.createMemberUser(member.id, username, password);
+              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`);
+            } else {
+              const existingUser = existingUsers[0];
+              if (existingUser.username !== username) {
+                // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
+                await this.updateMemberUser(existingUser.id, username, password);
+                console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
+              }
+            }
+          } else {
+            console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+          }
+        } catch (userError) {
+          console.error('❌ Başmüşahit kullanıcısı oluşturulurken hata:', userError);
+          // Kullanıcı oluşturma hatası ana işlemi durdurmamalı
+        }
+      }
+      
       return { success: true, id: docId, message: 'Sandık gözlemcisi oluşturuldu' };
     } catch (error) {
       console.error('Create ballot box observer error:', error);
@@ -4128,6 +4194,73 @@ class FirebaseApiService {
   static async updateBallotBoxObserver(id, observerData) {
     try {
       await FirebaseService.update(this.COLLECTIONS.BALLOT_BOX_OBSERVERS, id, observerData);
+      
+      // Başmüşahit güncellenirken kullanıcı adını güncelle
+      if (observerData.is_chief_observer) {
+        try {
+          const tc = String(observerData.tc || '').trim();
+          
+          // TC ile üye bul (TC şifrelenmiş olabilir)
+          const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+          const member = members.find(m => {
+            let memberTc = String(m.tc || '').trim();
+            try {
+              if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
+                memberTc = decryptData(memberTc);
+              }
+            } catch (e) {}
+            return memberTc === tc;
+          });
+
+          if (member && member.id) {
+            // Sandık numarasını kontrol et
+            let username, password;
+            const ballotBoxId = observerData.ballot_box_id || null;
+            if (ballotBoxId) {
+              const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, ballotBoxId);
+              if (ballotBox && ballotBox.ballot_number) {
+                // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
+                username = String(ballotBox.ballot_number);
+                password = tc;
+              } else {
+                // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+                username = tc;
+                password = tc;
+              }
+            } else {
+              // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+              username = tc;
+              password = tc;
+            }
+
+            // Mevcut kullanıcıyı bul
+            const existingUsers = await FirebaseService.findByField(
+              this.COLLECTIONS.MEMBER_USERS,
+              'memberId',
+              member.id
+            );
+            
+            if (!existingUsers || existingUsers.length === 0) {
+              // Kullanıcı yoksa oluştur
+              await this.createMemberUser(member.id, username, password);
+              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`);
+            } else {
+              const existingUser = existingUsers[0];
+              if (existingUser.username !== username) {
+                // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
+                await this.updateMemberUser(existingUser.id, username, password);
+                console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
+              }
+            }
+          } else {
+            console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+          }
+        } catch (userError) {
+          console.error('❌ Başmüşahit kullanıcısı güncellenirken hata:', userError);
+          // Kullanıcı güncelleme hatası ana işlemi durdurmamalı
+        }
+      }
+      
       return { success: true, message: 'Sandık gözlemcisi güncellendi' };
     } catch (error) {
       console.error('Update ballot box observer error:', error);

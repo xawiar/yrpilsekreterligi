@@ -1,5 +1,7 @@
 const { collections } = require('../config/database');
 const db = require('../config/database');
+const MemberUser = require('../models/MemberUser');
+const { decryptField } = require('../utils/crypto');
 
 class BallotBoxObserverController {
   static async getAll(req, res) {
@@ -133,6 +135,57 @@ class BallotBoxObserverController {
       
       collections.ballot_box_observers.push(newObserver);
       
+      // Başmüşahit eklenirken otomatik kullanıcı oluştur
+      if (is_chief_observer) {
+        try {
+          // TC ile üye bul
+          const members = await db.all('SELECT * FROM members WHERE archived = 0');
+          const member = members.find(m => {
+            const memberTc = decryptField(m.tc) || m.tc;
+            return memberTc === tc;
+          });
+
+          if (member && member.id) {
+            // Sandık numarasını kontrol et
+            let username, password;
+            if (ballot_box_id) {
+              const ballotBox = await db.get('SELECT * FROM ballot_boxes WHERE id = ?', [ballot_box_id]);
+              if (ballotBox && ballotBox.ballot_number) {
+                // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
+                username = String(ballotBox.ballot_number);
+                password = tc;
+              } else {
+                // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+                username = tc;
+                password = tc;
+              }
+            } else {
+              // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+              username = tc;
+              password = tc;
+            }
+
+            // Kullanıcı zaten var mı kontrol et
+            const existingUser = await db.get('SELECT * FROM member_users WHERE member_id = ?', [member.id]);
+            
+            if (!existingUser) {
+              // Kullanıcı yoksa oluştur
+              await MemberUser.createMemberUser(member.id, username, password);
+              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`);
+            } else if (existingUser.username !== username) {
+              // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
+              await db.run('UPDATE member_users SET username = ?, password = ? WHERE id = ?', [username, password, existingUser.id]);
+              console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
+            }
+          } else {
+            console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+          }
+        } catch (userError) {
+          console.error('❌ Başmüşahit kullanıcısı oluşturulurken hata:', userError);
+          // Kullanıcı oluşturma hatası ana işlemi durdurmamalı
+        }
+      }
+      
       res.status(201).json({ message: 'Müşahit başarıyla eklendi', observer: newObserver });
     } catch (error) {
       console.error('Error creating ballot box observer:', error);
@@ -204,6 +257,57 @@ class BallotBoxObserverController {
           village_id,
           updated_at: new Date().toISOString()
         };
+      }
+      
+      // Başmüşahit güncellenirken kullanıcı adını güncelle
+      if (is_chief_observer) {
+        try {
+          // TC ile üye bul
+          const members = await db.all('SELECT * FROM members WHERE archived = 0');
+          const member = members.find(m => {
+            const memberTc = decryptField(m.tc) || m.tc;
+            return memberTc === tc;
+          });
+
+          if (member && member.id) {
+            // Sandık numarasını kontrol et
+            let username, password;
+            if (finalBallotBoxId) {
+              const ballotBox = await db.get('SELECT * FROM ballot_boxes WHERE id = ?', [finalBallotBoxId]);
+              if (ballotBox && ballotBox.ballot_number) {
+                // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
+                username = String(ballotBox.ballot_number);
+                password = tc;
+              } else {
+                // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+                username = tc;
+                password = tc;
+              }
+            } else {
+              // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+              username = tc;
+              password = tc;
+            }
+
+            // Mevcut kullanıcıyı bul
+            const existingUser = await db.get('SELECT * FROM member_users WHERE member_id = ?', [member.id]);
+            
+            if (!existingUser) {
+              // Kullanıcı yoksa oluştur
+              await MemberUser.createMemberUser(member.id, username, password);
+              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`);
+            } else if (existingUser.username !== username) {
+              // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
+              await db.run('UPDATE member_users SET username = ?, password = ? WHERE id = ?', [username, password, existingUser.id]);
+              console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
+            }
+          } else {
+            console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+          }
+        } catch (userError) {
+          console.error('❌ Başmüşahit kullanıcısı güncellenirken hata:', userError);
+          // Kullanıcı güncelleme hatası ana işlemi durdurmamalı
+        }
       }
       
       res.json({ message: 'Müşahit başarıyla güncellendi' });
