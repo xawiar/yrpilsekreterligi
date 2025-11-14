@@ -514,11 +514,19 @@ class FirebaseApiService {
         }
       }
 
-      // Başmüşahit bilgilerini al
+      // Başmüşahit bilgilerini al - sandık numarasına göre sandık bul, sonra başmüşahit bul
+      const ballotBoxes = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOXES);
+      const ballotBox = ballotBoxes.find(bb => String(bb.ballot_number) === username);
+      
+      if (!ballotBox) {
+        throw new Error('Sandık bulunamadı');
+      }
+
+      // Bu sandığa ait başmüşahitleri bul
       const observers = await FirebaseService.findByField(
         this.COLLECTIONS.BALLOT_BOX_OBSERVERS,
         'ballot_box_id',
-        memberUser.ballot_box_id || null
+        String(ballotBox.id)
       );
 
       const chiefObserver = observers.find(obs => {
@@ -537,12 +545,6 @@ class FirebaseApiService {
       if (!chiefObserver) {
         throw new Error('Başmüşahit bulunamadı');
       }
-
-      // Sandık bilgilerini al
-      const ballotBox = await FirebaseService.getById(
-        this.COLLECTIONS.BALLOT_BOXES,
-        chiefObserver.ballot_box_id
-      );
 
       return {
         success: true,
