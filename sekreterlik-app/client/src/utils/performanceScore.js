@@ -46,7 +46,7 @@ export const loadPerformanceScoreSettings = async () => {
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       if (USE_FIREBASE) {
-        const FirebaseService = (await import('./FirebaseService')).default;
+        const FirebaseService = (await import('../services/FirebaseService')).default;
         try {
           const configDoc = await FirebaseService.getById('performance_score_config', 'main', false);
           if (configDoc) {
