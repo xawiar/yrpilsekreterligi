@@ -686,7 +686,7 @@ class ApiService {
       // Firebase Storage ile belge yükle
       const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
       const FirebaseApiService = (await import('./FirebaseApiService')).default;
-      const FirebaseService = (await import('./FirebaseService')).default;
+      const FirebaseService = (await import('../services/FirebaseService')).default;
       
       const file = formData.get('document');
       const name = formData.get('name') || file.name;
