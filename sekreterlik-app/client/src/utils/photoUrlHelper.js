@@ -13,8 +13,13 @@ export function normalizePhotoUrl(photoUrl) {
     return null;
   }
 
-  // If already a full HTTPS URL, return as is
+  // If already a full HTTPS URL (Firebase Storage veya başka bir URL), return as is
   if (photoUrl.startsWith('https://')) {
+    return photoUrl;
+  }
+
+  // Firebase Storage URL'i kontrol et
+  if (photoUrl.includes('firebasestorage.googleapis.com') || photoUrl.includes('firebase.storage')) {
     return photoUrl;
   }
 
@@ -25,6 +30,13 @@ export function normalizePhotoUrl(photoUrl) {
     const path = photoUrl.replace(/^https?:\/\/(localhost|127\.0\.0\.1):5000/, '');
     // Ensure path starts with /
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${baseUrl}${normalizedPath}`;
+  }
+
+  // If it's a relative path (starts with /uploads/), prepend base URL (eski local disk dosyaları için)
+  if (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/')) {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://yrpilsekreterligi.onrender.com';
+    const normalizedPath = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
     return `${baseUrl}${normalizedPath}`;
   }
 

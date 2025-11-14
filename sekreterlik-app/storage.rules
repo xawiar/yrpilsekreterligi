@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Üye fotoğrafları
+    match /members/{memberId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Kişisel belgeler
+    match /personal-documents/{memberId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Arşiv belgeleri
+    match /archive/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Test dosyaları
+    match /test/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
