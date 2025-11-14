@@ -182,6 +182,12 @@ const GroqApiSettings = () => {
         return;
       }
 
+      if (selectedProvider === 'gemini' && !currentKey.trim().startsWith('AIzaSy')) {
+        setMessage('Geçersiz Gemini API anahtarı formatı. API anahtarı "AIzaSy" ile başlamalıdır.');
+        setMessageType('error');
+        return;
+      }
+
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       if (USE_FIREBASE) {
