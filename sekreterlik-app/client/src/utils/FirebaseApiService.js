@@ -524,33 +524,56 @@ class FirebaseApiService {
         }
       }
 
-      // Başmüşahit bilgilerini al - sandık numarasına göre sandık bul, sonra başmüşahit bul
+      // Başmüşahit bilgilerini al
+      // Kullanıcı adı sandık numarası ise sandık bul, TC ise direkt başmüşahit bul
+      const username = memberUser.username;
+      let ballotBox = null;
+      let chiefObserver = null;
+
+      // Kullanıcı adı sandık numarası mı kontrol et
       const ballotBoxes = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOXES);
-      const ballotBox = ballotBoxes.find(bb => String(bb.ballot_number) === username);
+      ballotBox = ballotBoxes.find(bb => String(bb.ballot_number) === username);
       
-      if (!ballotBox) {
-        throw new Error('Sandık bulunamadı');
-      }
+      if (ballotBox) {
+        // Sandık bulundu - bu sandığa ait başmüşahitleri bul
+        const observers = await FirebaseService.findByField(
+          this.COLLECTIONS.BALLOT_BOX_OBSERVERS,
+          'ballot_box_id',
+          String(ballotBox.id)
+        );
 
-      // Bu sandığa ait başmüşahitleri bul
-      const observers = await FirebaseService.findByField(
-        this.COLLECTIONS.BALLOT_BOX_OBSERVERS,
-        'ballot_box_id',
-        String(ballotBox.id)
-      );
-
-      const chiefObserver = observers.find(obs => {
-        let obsTc = obs.tc;
-        try {
-          if (obsTc && obsTc.startsWith('U2FsdGVkX1')) {
-            obsTc = decryptData(obsTc);
-          }
-        } catch (e) {
-          // Decrypt başarısız, direkt kullan
+        chiefObserver = observers.find(obs => {
+          let obsTc = obs.tc;
+          try {
+            if (obsTc && obsTc.startsWith('U2FsdGVkX1')) {
+              obsTc = decryptData(obsTc);
+            }
+          } catch (e) {}
+          return (obs.is_chief_observer === true || obs.is_chief_observer === 1) &&
+                 (obsTc === tcStr || obs.tc === tcStr);
+        });
+      } else {
+        // Kullanıcı adı TC ise - TC ile başmüşahit bul
+        const allObservers = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOX_OBSERVERS);
+        chiefObserver = allObservers.find(obs => {
+          let obsTc = obs.tc;
+          try {
+            if (obsTc && obsTc.startsWith('U2FsdGVkX1')) {
+              obsTc = decryptData(obsTc);
+            }
+          } catch (e) {}
+          return (obs.is_chief_observer === true || obs.is_chief_observer === 1) &&
+                 (obsTc === tcStr || obs.tc === tcStr);
+        });
+        
+        // Başmüşahit bulunduysa sandığını al
+        if (chiefObserver && chiefObserver.ballot_box_id) {
+          ballotBox = await FirebaseService.getById(
+            this.COLLECTIONS.BALLOT_BOXES,
+            chiefObserver.ballot_box_id
+          );
         }
-        return (obs.is_chief_observer === true || obs.is_chief_observer === 1) &&
-               (obsTc === tc || obs.tc === tc);
-      });
+      }
 
       if (!chiefObserver) {
         throw new Error('Başmüşahit bulunamadı');
