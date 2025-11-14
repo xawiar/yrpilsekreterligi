@@ -641,6 +641,41 @@ const TownPresidentDashboardPage = () => {
       } else {
         await ApiService.createBallotBoxObserver(observerData);
         setMessage('Müşahit başarıyla eklendi');
+        
+        // Başmüşahit eklenirken, eğer sandık numarası varsa kullanıcı oluştur
+        if (observerData.is_chief_observer && observerData.ballot_box_id) {
+          try {
+            // Sandık numarasını al
+            if (selectedBallotBox && selectedBallotBox.ballot_number) {
+              const ballotNumber = String(selectedBallotBox.ballot_number);
+              const tc = String(observerData.tc).trim();
+              
+              // TC'yi kullanarak üye bul
+              const members = await ApiService.getMembers();
+              const member = members.find(m => {
+                const memberTc = String(m.tc || '').trim();
+                return memberTc === tc;
+              });
+
+              if (member && member.id) {
+                // Üye bulundu, kullanıcı oluştur
+                // Kullanıcı adı: sandık numarası, Şifre: TC
+                try {
+                  await ApiService.createMemberUser(member.id, ballotNumber, tc);
+                  console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
+                } catch (userError) {
+                  // Kullanıcı zaten varsa veya başka bir hata varsa, sessizce devam et
+                  console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);
+                }
+              } else {
+                console.warn('⚠️ Başmüşahit için üye bulunamadı, kullanıcı oluşturulmadı. TC:', tc);
+              }
+            }
+          } catch (userCreationError) {
+            // Kullanıcı oluşturma hatası ana işlemi durdurmamalı
+            console.warn('⚠️ Başmüşahit kullanıcısı oluşturulurken hata:', userCreationError);
+          }
+        }
       }
       
       setShowAddObserverForm(false);
