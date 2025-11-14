@@ -68,7 +68,9 @@ class FirebaseApiService {
     STK_VISITS: 'stk_visits',
     PUBLIC_INSTITUTION_VISITS: 'public_institution_visits',
     MOSQUE_VISITS: 'mosque_visits',
-    EVENT_VISITS: 'event_visits'
+    EVENT_VISITS: 'event_visits',
+    WOMEN_BRANCH_PRESIDENTS: 'women_branch_presidents',
+    YOUTH_BRANCH_PRESIDENTS: 'youth_branch_presidents'
   };
 
   // Auth API
