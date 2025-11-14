@@ -70,7 +70,9 @@ class FirebaseApiService {
     MOSQUE_VISITS: 'mosque_visits',
     EVENT_VISITS: 'event_visits',
     WOMEN_BRANCH_PRESIDENTS: 'women_branch_presidents',
-    YOUTH_BRANCH_PRESIDENTS: 'youth_branch_presidents'
+    YOUTH_BRANCH_PRESIDENTS: 'youth_branch_presidents',
+    ELECTIONS: 'elections',
+    ELECTION_RESULTS: 'election_results'
   };
 
   // Auth API
@@ -3647,6 +3649,62 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Delete event category error:', error);
       throw new Error('Etkinlik kategorisi silinirken hata oluştu');
+    }
+  }
+
+  // Elections CRUD
+  static async getElections() {
+    try {
+      return await FirebaseService.getAll(this.COLLECTIONS.ELECTIONS, {}, false);
+    } catch (error) {
+      console.error('Get elections error:', error);
+      return [];
+    }
+  }
+
+  static async createElection(electionData) {
+    try {
+      const docId = await FirebaseService.create(
+        this.COLLECTIONS.ELECTIONS,
+        null,
+        {
+          ...electionData,
+          date: electionData.date ? new Date(electionData.date).toISOString() : null
+        },
+        false // Şifreleme yok
+      );
+      return { success: true, id: docId, message: 'Seçim oluşturuldu' };
+    } catch (error) {
+      console.error('Create election error:', error);
+      throw new Error('Seçim oluşturulurken hata oluştu');
+    }
+  }
+
+  static async updateElection(id, electionData) {
+    try {
+      await FirebaseService.update(
+        this.COLLECTIONS.ELECTIONS,
+        id,
+        {
+          ...electionData,
+          date: electionData.date ? new Date(electionData.date).toISOString() : null
+        },
+        false // Şifreleme yok
+      );
+      return { success: true, message: 'Seçim güncellendi' };
+    } catch (error) {
+      console.error('Update election error:', error);
+      throw new Error('Seçim güncellenirken hata oluştu');
+    }
+  }
+
+  static async deleteElection(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.ELECTIONS, id);
+      return { success: true, message: 'Seçim silindi' };
+    } catch (error) {
+      console.error('Delete election error:', error);
+      throw new Error('Seçim silinirken hata oluştu');
     }
   }
 

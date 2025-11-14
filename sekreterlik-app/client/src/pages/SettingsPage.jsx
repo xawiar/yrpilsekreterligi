@@ -25,6 +25,7 @@ import PollsPage from './PollsPage';
 import MemberDashboardAnalyticsPage from './MemberDashboardAnalyticsPage';
 import AppBrandingSettings from '../components/AppBrandingSettings';
 import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
+import SeçimEkleSettings from '../components/SeçimEkleSettings';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -71,6 +72,7 @@ const SettingsPage = ({ tab }) => {
       'polls': grantedPermissions.includes('manage_polls'),
       'member-dashboard-analytics': grantedPermissions.includes('access_member_dashboard_analytics'),
       'app-branding': grantedPermissions.includes('manage_app_branding'),
+      'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
     };
 
     return permissionMap[tabName] || false;
@@ -209,6 +211,7 @@ const SettingsPage = ({ tab }) => {
                 {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
                 {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
                 {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
+                {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
               </>
             )}
           </div>

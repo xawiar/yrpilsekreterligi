@@ -1629,6 +1629,129 @@ class ApiService {
     return response.json();
   }
 
+  // Elections API
+  static async getElections() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getElections();
+    }
+
+    const response = await fetch(`${API_BASE_URL}/elections`);
+    return response.json();
+  }
+
+  static async createElection(electionData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createElection(electionData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/elections`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(electionData),
+    });
+    return response.json();
+  }
+
+  static async updateElection(id, electionData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updateElection(id, electionData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/elections/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(electionData),
+    });
+    return response.json();
+  }
+
+  static async deleteElection(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deleteElection(id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/elections/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  // Chief Observer Login API
+  static async loginChiefObserver(ballotNumber, tc) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.loginChiefObserver(ballotNumber, tc);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/login-chief-observer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ballot_number: ballotNumber, tc }),
+    });
+    return response.json();
+  }
+
+  // Election Results API
+  static async getElectionResults(electionId, ballotBoxId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getElectionResults(electionId, ballotBoxId);
+    }
+
+    const params = new URLSearchParams();
+    if (electionId) params.append('election_id', electionId);
+    if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
+    
+    const response = await fetch(`${API_BASE_URL}/election-results?${params}`);
+    return response.json();
+  }
+
+  static async getElectionResultById(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getElectionResultById(id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-results/${id}`);
+    return response.json();
+  }
+
+  static async createElectionResult(resultData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createElectionResult(resultData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-results`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(resultData),
+    });
+    return response.json();
+  }
+
+  static async updateElectionResult(id, resultData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updateElectionResult(id, resultData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-results/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(resultData),
+    });
+    return response.json();
+  }
+
+  static async deleteElectionResult(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deleteElectionResult(id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-results/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   // Neighborhood Representatives API
   static async getNeighborhoodRepresentatives() {
     if (USE_FIREBASE) {

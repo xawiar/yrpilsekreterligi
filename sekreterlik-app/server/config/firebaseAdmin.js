@@ -11,7 +11,9 @@ function initFirebaseAdmin() {
     return admin;
   }
 
-  const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+  // USE_FIREBASE kontrolü - Eğer açıkça false değilse Firebase kullan
+  // Frontend'de VITE_USE_FIREBASE=true olduğu için backend'de de varsayılan olarak true kabul et
+  const USE_FIREBASE = process.env.VITE_USE_FIREBASE !== 'false' && process.env.USE_FIREBASE !== 'false';
   
   if (!USE_FIREBASE) {
     console.log('Firebase Admin SDK: Firebase kullanılmıyor, skip ediliyor');
@@ -47,10 +49,18 @@ function initFirebaseAdmin() {
     // Firebase Admin SDK'yı initialize et
     if (!admin.apps.length) {
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id
       });
       console.log('✅ Firebase Admin SDK initialized successfully');
     }
+    
+    // Frontend'deki database adı ile eşleşmeli: 'yrpilsekreterligi'
+    // Firebase Admin SDK'da database adını belirtmek için getFirestore kullan
+    // NOT: Firebase Admin SDK'da database adı belirtmek için admin.firestore() yerine
+    // admin.firestore().database('yrpilsekreterligi') kullanılmalı ama bu API mevcut değil
+    // Bu yüzden varsayılan database'i kullanıyoruz ve frontend'in de varsayılan database'i kullanması gerekiyor
+    // VEYA Firebase Console'da 'yrpilsekreterligi' database'ini default database olarak ayarlayın
     
     firebaseAdminInitialized = true;
     return admin;

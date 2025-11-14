@@ -33,6 +33,9 @@ const GroupsPage = lazy(() => import('./pages/GroupsPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
+const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
+const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
+const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
 const CheckAdminPage = lazy(() => import('./pages/CheckAdminPage'));
@@ -302,6 +305,20 @@ function AppContent() {
             } 
           />
           
+          {/* Chief Observer Routes */}
+          <Route 
+            path="/chief-observer-login" 
+            element={
+              <PublicRoute>
+                <ChiefObserverLoginPage />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/chief-observer-dashboard" 
+            element={<ChiefObserverDashboardPage />} 
+          />
+          
           {/* Admin Routes */}
           <Route 
             path="/*" 
@@ -388,6 +405,7 @@ function AppContent() {
             <Route path="/election-preparation/representatives" element={<RepresentativesPage />} />
             <Route path="/election-preparation/neighborhoods" element={<NeighborhoodsPage />} />
             <Route path="/election-preparation/villages" element={<VillagesPage />} />
+            <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
             <Route path="/bulk-sms" element={<BulkSmsPage />} />
             <Route path="/election-preparation/groups" element={<GroupsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
