@@ -650,10 +650,19 @@ const TownPresidentDashboardPage = () => {
               const ballotNumber = String(selectedBallotBox.ballot_number);
               const tc = String(observerData.tc).trim();
               
-              // TC'yi kullanarak üye bul
+              // TC'yi kullanarak üye bul (TC şifrelenmiş olabilir)
               const members = await ApiService.getMembers();
+              const { decryptData } = await import('../utils/crypto');
               const member = members.find(m => {
-                const memberTc = String(m.tc || '').trim();
+                let memberTc = String(m.tc || '').trim();
+                // TC şifrelenmişse decrypt et
+                try {
+                  if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
+                    memberTc = decryptData(memberTc);
+                  }
+                } catch (e) {
+                  // Decrypt başarısız, direkt kullan
+                }
                 return memberTc === tc;
               });
 
@@ -661,10 +670,14 @@ const TownPresidentDashboardPage = () => {
                 // Üye bulundu, kullanıcı oluştur
                 // Kullanıcı adı: sandık numarası, Şifre: TC
                 try {
-                  await ApiService.createMemberUser(member.id, ballotNumber, tc);
-                  console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
+                  const result = await ApiService.createMemberUser(member.id, ballotNumber, tc);
+                  if (result && result.success) {
+                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
+                  } else {
+                    console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', result?.message || 'Bilinmeyen hata');
+                  }
                 } catch (userError) {
-                  // Kullanıcı zaten varsa veya başka bir hata varsa, sessizce devam et
+                  // Kullanıcı zaten varsa veya başka bir hata varsa
                   console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);
                 }
               } else {

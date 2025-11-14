@@ -444,6 +444,125 @@ class FirebaseApiService {
     }
   }
 
+  // Chief Observer Login
+  static async loginChiefObserver(ballotNumber, tc) {
+    try {
+      // Sandık numarasını username, TC'yi password olarak kullan
+      const username = String(ballotNumber).trim();
+      const password = String(tc).trim();
+
+      // member_users koleksiyonunda sandık numarası ile kullanıcı bul
+      const memberUsers = await FirebaseService.findByField(
+        this.COLLECTIONS.MEMBER_USERS,
+        'username',
+        username
+      );
+
+      if (!memberUsers || memberUsers.length === 0) {
+        throw new Error('Başmüşahit kullanıcısı bulunamadı. Lütfen sandık numarasını kontrol edin.');
+      }
+
+      const memberUser = memberUsers[0];
+      
+      // Şifre kontrolü - password alanı şifrelenmiş olabilir
+      let storedPassword = memberUser.password;
+      try {
+        // Şifrelenmişse decrypt et
+        if (storedPassword && storedPassword.startsWith('U2FsdGVkX1')) {
+          storedPassword = decryptData(storedPassword);
+        }
+      } catch (e) {
+        // Decrypt başarısız, direkt kullan
+      }
+
+      // Şifre eşleşmiyorsa hata
+      if (storedPassword !== password) {
+        throw new Error('Geçersiz TC kimlik numarası');
+      }
+
+      // Firebase Auth ile giriş yapmayı dene
+      const email = `${username}@ilsekreterlik.local`;
+      let userCredential = null;
+      let user = null;
+
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        user = userCredential.user;
+        console.log('Firebase Auth login successful for chief observer:', user.uid);
+      } catch (authError) {
+        console.log('Firebase Auth login failed for chief observer, checking Firestore:', authError.code);
+        
+        // Auth'da kullanıcı yoksa oluştur
+        if (authError.code === 'auth/user-not-found') {
+          try {
+            userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            user = userCredential.user;
+            // authUid'yi Firestore'a kaydet
+            await FirebaseService.update(
+              this.COLLECTIONS.MEMBER_USERS,
+              memberUser.id,
+              { authUid: user.uid },
+              false
+            );
+            console.log('Firebase Auth user created for chief observer:', user.uid);
+          } catch (createError) {
+            console.error('Failed to create Firebase Auth user:', createError);
+            throw new Error('Giriş yapılamadı');
+          }
+        } else {
+          throw new Error('Giriş yapılamadı: ' + authError.message);
+        }
+      }
+
+      // Başmüşahit bilgilerini al
+      const observers = await FirebaseService.findByField(
+        this.COLLECTIONS.BALLOT_BOX_OBSERVERS,
+        'ballot_box_id',
+        memberUser.ballot_box_id || null
+      );
+
+      const chiefObserver = observers.find(obs => {
+        let obsTc = obs.tc;
+        try {
+          if (obsTc && obsTc.startsWith('U2FsdGVkX1')) {
+            obsTc = decryptData(obsTc);
+          }
+        } catch (e) {
+          // Decrypt başarısız, direkt kullan
+        }
+        return (obs.is_chief_observer === true || obs.is_chief_observer === 1) &&
+               (obsTc === tc || obs.tc === tc);
+      });
+
+      if (!chiefObserver) {
+        throw new Error('Başmüşahit bulunamadı');
+      }
+
+      // Sandık bilgilerini al
+      const ballotBox = await FirebaseService.getById(
+        this.COLLECTIONS.BALLOT_BOXES,
+        chiefObserver.ballot_box_id
+      );
+
+      return {
+        success: true,
+        token: await user.getIdToken(),
+        user: {
+          uid: user.uid,
+          username: username,
+          name: chiefObserver.name || memberUser.name,
+          role: 'chief_observer',
+          ballotBoxId: chiefObserver.ballot_box_id,
+          ballotNumber: ballotBox?.ballot_number || username,
+          tc: chiefObserver.tc
+        }
+      };
+    } catch (error) {
+      console.error('Chief observer login error:', error);
+      throw error;
+    }
+  }
+
   static async logout() {
     try {
       await signOut(auth);

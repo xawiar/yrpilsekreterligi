@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { decryptData } from '../utils/crypto';
 import * as XLSX from 'xlsx';
 
 const ObserversPage = () => {
@@ -210,10 +211,18 @@ const ObserversPage = () => {
                 const ballotNumber = String(selectedBallotBox.ballot_number);
                 const tc = String(observerData.tc).trim();
                 
-                // TC'yi kullanarak üye bul
+                // TC'yi kullanarak üye bul (TC şifrelenmiş olabilir)
                 const members = await ApiService.getMembers();
                 const member = members.find(m => {
-                  const memberTc = String(m.tc || '').trim();
+                  let memberTc = String(m.tc || '').trim();
+                  // TC şifrelenmişse decrypt et
+                  try {
+                    if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
+                      memberTc = decryptData(memberTc);
+                    }
+                  } catch (e) {
+                    // Decrypt başarısız, direkt kullan
+                  }
                   return memberTc === tc;
                 });
 
@@ -221,14 +230,26 @@ const ObserversPage = () => {
                   // Üye bulundu, kullanıcı oluştur
                   // Kullanıcı adı: sandık numarası, Şifre: TC
                   try {
-                    await ApiService.createMemberUser(member.id, ballotNumber, tc);
-                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
+                    const result = await ApiService.createMemberUser(member.id, ballotNumber, tc);
+                    if (result && result.success) {
+                      console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
+                      setMessage(`Başmüşahit kullanıcısı oluşturuldu (Sandık: ${ballotNumber})`);
+                      setMessageType('success');
+                    } else {
+                      console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', result?.message || 'Bilinmeyen hata');
+                      setMessage(`Kullanıcı oluşturulamadı: ${result?.message || 'Bilinmeyen hata'}`);
+                      setMessageType('error');
+                    }
                   } catch (userError) {
-                    // Kullanıcı zaten varsa veya başka bir hata varsa, sessizce devam et
+                    // Kullanıcı zaten varsa veya başka bir hata varsa
                     console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);
+                    setMessage(`Kullanıcı oluşturulamadı: ${userError.message}`);
+                    setMessageType('error');
                   }
                 } else {
                   console.warn('⚠️ Başmüşahit için üye bulunamadı, kullanıcı oluşturulmadı. TC:', tc);
+                  setMessage(`Üye bulunamadı (TC: ${tc}). Kullanıcı oluşturulamadı.`);
+                  setMessageType('error');
                 }
               }
             } catch (userCreationError) {
