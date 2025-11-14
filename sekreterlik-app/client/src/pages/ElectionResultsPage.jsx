@@ -12,6 +12,7 @@ const ElectionResultsPage = () => {
   const [towns, setTowns] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
+  const [observers, setObservers] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Filters
