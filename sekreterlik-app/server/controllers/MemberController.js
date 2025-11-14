@@ -218,13 +218,73 @@ class MemberController {
       // Update or create member user credentials if TC or phone changed
       const oldTc = decryptField(oldMember.tc);
       const oldPhone = decryptField(oldMember.phone);
-      if (oldTc !== memberData.tc || oldPhone !== memberData.phone) {
+      const tcChanged = oldTc !== memberData.tc;
+      const phoneChanged = oldPhone !== memberData.phone;
+      
+      if (tcChanged || phoneChanged) {
         try {
           const memberUser = await MemberUser.getUserByMemberId(parseInt(id));
           if (memberUser) {
             // Update existing user
             await MemberUser.updateMemberUser(parseInt(id), memberData.tc, memberData.phone);
             console.log('Member user updated for member ID:', id);
+            
+            // Firebase kullanılıyorsa Firebase Auth'u da güncelle
+            const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+            if (USE_FIREBASE) {
+              try {
+                const https = require('https');
+                const http = require('http');
+                const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
+                const url = new URL(`${API_BASE_URL}/auth/update-firebase-auth-user`);
+                
+                const oldEmail = oldTc + '@ilsekreterlik.local';
+                const newEmail = memberData.tc + '@ilsekreterlik.local';
+                const newPassword = memberData.phone.replace(/\D/g, '');
+                
+                // Email ile kullanıcıyı bul (authUid SQLite'da saklanmıyor)
+                const requestData = JSON.stringify({
+                  email: newEmail,
+                  oldEmail: tcChanged ? oldEmail : newEmail, // TC değiştiyse eski email'i gönder
+                  password: phoneChanged ? newPassword : undefined
+                });
+                
+                const options = {
+                  hostname: url.hostname,
+                  port: url.port || (url.protocol === 'https:' ? 443 : 80),
+                  path: url.pathname,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(requestData)
+                  }
+                };
+                
+                const protocol = url.protocol === 'https:' ? https : http;
+                
+                const req = protocol.request(options, (res) => {
+                  let data = '';
+                  res.on('data', (chunk) => { data += chunk; });
+                  res.on('end', () => {
+                    if (res.statusCode === 200) {
+                      console.log(`✅ Firebase Auth updated for member ID ${id}`);
+                    } else {
+                      console.warn(`⚠️ Firebase Auth update failed for member ID ${id}:`, data);
+                    }
+                  });
+                });
+                
+                req.on('error', (error) => {
+                  console.warn(`⚠️ Firebase Auth update request error for member ID ${id}:`, error.message);
+                });
+                
+                req.write(requestData);
+                req.end();
+              } catch (firebaseAuthError) {
+                console.warn('⚠️ Firebase Auth update error (non-critical):', firebaseAuthError.message);
+                // Firebase Auth güncelleme hatası ana işlemi durdurmamalı
+              }
+            }
           } else {
             // Create new user if doesn't exist
             const username = memberData.tc;

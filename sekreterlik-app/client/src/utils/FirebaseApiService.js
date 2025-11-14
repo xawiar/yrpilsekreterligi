@@ -1570,30 +1570,41 @@ class FirebaseApiService {
             console.log(`✅ Member user updated automatically for member ID ${id} (TC or phone changed)`);
             console.log(`   Username: ${newUsername}, Password: ${newPassword.substring(0, 3)}***`);
             
-            // Firebase Auth şifresini güncelle (eğer authUid varsa ve şifre değiştiyse)
-            if (memberUser.authUid && phoneChanged) {
-              console.log(`🔄 Updating Firebase Auth password for member ID ${id}:`, {
+            // Firebase Auth'u güncelle (TC veya telefon değiştiyse)
+            if (memberUser.authUid && (tcChanged || phoneChanged)) {
+              console.log(`🔄 Updating Firebase Auth user for member ID ${id}:`, {
                 authUid: memberUser.authUid,
+                tcChanged,
+                phoneChanged,
+                oldTc: oldTc.substring(0, 3) + '***',
+                newTc: newTc.substring(0, 3) + '***',
                 oldPhone: oldPhone.substring(0, 3) + '***',
                 newPhone: newPhone.substring(0, 3) + '***',
+                newEmail: newTc + '@member.local',
                 newPassword: newPassword.substring(0, 3) + '***',
                 newPasswordLength: newPassword.length
               });
               try {
-                // Server-side endpoint'e istek gönder (Firebase Admin SDK ile şifre güncellemesi için)
+                // Server-side endpoint'e istek gönder (Firebase Admin SDK ile güncelleme için)
                 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
                   (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
                 
-                console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-password`);
+                // Email formatı: TC@ilsekreterlik.local
+                const oldEmail = oldTc + '@ilsekreterlik.local';
+                const newEmail = newTc + '@ilsekreterlik.local';
                 
-                const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
+                console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-user`);
+                
+                const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-user`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
                     authUid: memberUser.authUid,
-                    password: newPassword
+                    email: newEmail,
+                    oldEmail: tcChanged ? oldEmail : undefined,
+                    password: phoneChanged ? newPassword : undefined
                   })
                 });
                 
@@ -1601,10 +1612,10 @@ class FirebaseApiService {
                 
                 if (response.ok) {
                   const responseData = await response.json();
-                  console.log(`✅ Firebase Auth password updated for member ID ${id} (authUid: ${memberUser.authUid}):`, responseData);
+                  console.log(`✅ Firebase Auth user updated for member ID ${id} (authUid: ${memberUser.authUid}):`, responseData);
                 } else {
-                  const errorData = await response.json();
-                  console.error(`❌ Firebase Auth password update failed for member ID ${id}:`, {
+                  const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                  console.error(`❌ Firebase Auth user update failed for member ID ${id}:`, {
                     status: response.status,
                     statusText: response.statusText,
                     error: errorData
@@ -1612,17 +1623,17 @@ class FirebaseApiService {
                   // Hata olsa bile devam et (Firestore güncellemesi başarılı)
                 }
               } catch (firebaseError) {
-                console.error(`❌ Firebase Auth password update error for member ID ${id}:`, {
+                console.error(`❌ Firebase Auth user update error for member ID ${id}:`, {
                   error: firebaseError,
                   message: firebaseError.message,
                   stack: firebaseError.stack
                 });
                 // Hata olsa bile devam et (Firestore güncellemesi başarılı)
               }
-            } else if (tcChanged) {
-              console.log(`   ⚠️ TC changed - authUid cleared, user will need to login again with new username`);
-            } else if (memberUser.authUid && !phoneChanged) {
-              console.log(`   ℹ️ Phone not changed, skipping Firebase Auth update for member ID ${id}`);
+            } else if (tcChanged && !memberUser.authUid) {
+              console.log(`   ⚠️ TC changed but no authUid - authUid cleared, user will need to login again with new username`);
+            } else if (!tcChanged && !phoneChanged) {
+              console.log(`   ℹ️ TC and phone not changed, skipping Firebase Auth update for member ID ${id}`);
             }
           } else {
             // Member user yoksa oluştur
@@ -1652,6 +1663,32 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Update member error:', error);
       return { success: false, message: 'Üye güncellenirken hata oluştu' };
+    }
+  }
+
+  static async uploadMemberPhoto(memberId, file) {
+    try {
+      console.log('📤 Uploading member photo to Firebase Storage:', { memberId, fileName: file.name, size: file.size });
+      
+      // Firebase Storage'a yükle
+      const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+      const photoUrl = await FirebaseStorageService.uploadMemberPhoto(memberId, file);
+      
+      // Üyenin photo field'ını güncelle
+      await FirebaseService.update(this.COLLECTIONS.MEMBERS, String(memberId), {
+        photo: photoUrl
+      }, true); // Encrypt if needed
+      
+      console.log('✅ Member photo uploaded successfully:', { memberId, photoUrl });
+      
+      return {
+        success: true,
+        message: 'Fotoğraf başarıyla yüklendi',
+        photoUrl: photoUrl
+      };
+    } catch (error) {
+      console.error('Upload member photo error:', error);
+      throw new Error('Fotoğraf yüklenirken hata oluştu: ' + (error.message || error));
     }
   }
 
@@ -4564,22 +4601,18 @@ class FirebaseApiService {
       // memberId'yi string'e çevir
       const memberIdStr = String(memberId);
       
-      // Dosyayı base64'e çevir (Firebase Storage kullanmadan önce)
-      const reader = new FileReader();
-      const fileData = await new Promise((resolve, reject) => {
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // Firebase Storage'a yükle
+      const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+      const storageUrl = await FirebaseStorageService.uploadPersonalDocument(memberIdStr, documentName, file);
       
-      // Belge verilerini hazırla
+      // Belge verilerini hazırla (artık base64 yerine Storage URL'i saklıyoruz)
       const documentData = {
         member_id: memberIdStr,
         document_name: documentName.trim(),
         file_name: file.name,
         file_size: file.size,
         mime_type: file.type,
-        file_data: fileData, // Base64 encoded file data
+        storage_url: storageUrl, // Firebase Storage URL'i
         uploaded_at: new Date().toISOString()
       };
       
@@ -4597,7 +4630,8 @@ class FirebaseApiService {
           id: docId,
           document_name: documentName,
           file_size: file.size,
-          uploaded_at: documentData.uploaded_at
+          uploaded_at: documentData.uploaded_at,
+          storage_url: storageUrl
         }
       };
     } catch (error) {
@@ -4618,15 +4652,22 @@ class FirebaseApiService {
         throw new Error('Belge bulunamadı');
       }
       
-      // Base64'ten blob'a çevir
+      // Firebase Storage URL'i varsa onu kullan
+      if (document.storage_url) {
+        const response = await fetch(document.storage_url);
+        const blob = await response.blob();
+        return blob;
+      }
+      
+      // Eski base64 formatı için (geriye dönük uyumluluk)
       if (document.file_data) {
         // Base64 data URL'den blob'a çevir
         const response = await fetch(document.file_data);
         const blob = await response.blob();
         return blob;
-      } else {
-        throw new Error('Belge verisi bulunamadı');
       }
+      
+      throw new Error('Belge verisi bulunamadı');
     } catch (error) {
       console.error('Download personal document error:', error);
       throw new Error('Belge indirilirken hata oluştu: ' + (error.message || error));
@@ -4635,6 +4676,29 @@ class FirebaseApiService {
 
   static async deletePersonalDocument(documentId) {
     try {
+      // Önce belgeyi al (Storage URL'i için)
+      const document = await FirebaseService.getById(
+        this.COLLECTIONS.PERSONAL_DOCUMENTS,
+        documentId
+      );
+      
+      if (document && document.storage_url) {
+        // Firebase Storage'dan sil
+        try {
+          const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+          // Storage URL'den path'i çıkar
+          const url = new URL(document.storage_url);
+          const path = decodeURIComponent(url.pathname.split('/o/')[1]?.split('?')[0] || '');
+          if (path) {
+            await FirebaseStorageService.deleteFile(path);
+          }
+        } catch (storageError) {
+          console.warn('⚠️ Storage delete error (non-critical):', storageError);
+          // Storage silme hatası belge silme işlemini durdurmamalı
+        }
+      }
+      
+      // Firestore'dan sil
       await FirebaseService.delete(this.COLLECTIONS.PERSONAL_DOCUMENTS, documentId);
       return { success: true, message: 'Belge silindi' };
     } catch (error) {

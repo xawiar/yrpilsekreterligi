@@ -6,7 +6,7 @@
 import GroqService from './GroqService';
 
 class GeminiService {
-  static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+  static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
   
   /**
    * Gemini API ile chat completion
@@ -80,11 +80,12 @@ ${contextText}`;
       // Konuşma geçmişini ve kullanıcı mesajını birleştir
       const fullPrompt = `${systemPrompt}\n\nKullanıcı: ${userMessage}`;
       
-      // Gemini API çağrısı
-      const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
+      // Gemini API çağrısı - X-goog-api-key header kullan
+      const response = await fetch(this.API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-goog-api-key': apiKey
         },
         body: JSON.stringify({
           contents: [{

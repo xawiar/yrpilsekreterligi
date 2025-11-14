@@ -19,6 +19,7 @@ const ReportsPage = () => {
     endDate: ''
   });
   const [savingStars, setSavingStars] = useState({});
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [stats, setStats] = useState({
     // Genel İstatistikler
     totalMembers: 0,
@@ -1298,9 +1299,20 @@ const ReportsPage = () => {
 
         {/* Performans Puanları */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Üye Performans Puanları
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              Üye Performans Puanları
+            </h2>
+            <div className="w-64">
+              <input
+                type="text"
+                value={memberSearchTerm}
+                onChange={(e) => setMemberSearchTerm(e.target.value)}
+                placeholder="Üye ara (isim, görev, bölge)..."
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            </div>
+          </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -1324,14 +1336,31 @@ const ReportsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {stats.performanceScores.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                        Henüz performans puanı hesaplanamadı
-                      </td>
-                    </tr>
-                  ) : (
-                    stats.performanceScores.slice(0, 20).map((item, index) => (
+                  {(() => {
+                    // Üye arama filtresi
+                    const filteredScores = stats.performanceScores.filter(item => {
+                      if (!memberSearchTerm) return true;
+                      const searchLower = memberSearchTerm.toLowerCase();
+                      return (
+                        item.member.name?.toLowerCase().includes(searchLower) ||
+                        item.member.position?.toLowerCase().includes(searchLower) ||
+                        item.member.region?.toLowerCase().includes(searchLower)
+                      );
+                    });
+
+                    if (filteredScores.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            {stats.performanceScores.length === 0 
+                              ? 'Henüz performans puanı hesaplanamadı'
+                              : 'Arama kriterlerine uygun üye bulunamadı'}
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return filteredScores.map((item, index) => (
                       <tr key={item.member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                           <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
@@ -1440,8 +1469,8 @@ const ReportsPage = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>

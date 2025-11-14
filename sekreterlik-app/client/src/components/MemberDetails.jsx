@@ -390,22 +390,14 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     setIsUploading(true);
     
     try {
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('memberId', member.id);
-
-      // Upload photo
-      const response = await fetch('/api/members/upload-photo', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
+      // ApiService kullan (Firebase Storage veya backend'e göre otomatik seçer)
+      const result = await ApiService.uploadMemberPhoto(member.id, file);
+      
+      if (result.success) {
         setPhoto(result.photoUrl);
         alert('Fotoğraf başarıyla yüklendi');
       } else {
-        throw new Error('Fotoğraf yüklenirken hata oluştu');
+        throw new Error(result.message || 'Fotoğraf yüklenirken hata oluştu');
       }
     } catch (error) {
       console.error('Photo upload error:', error);

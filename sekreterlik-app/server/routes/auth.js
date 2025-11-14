@@ -830,4 +830,148 @@ router.post('/update-firebase-auth-password', async (req, res) => {
   }
 });
 
+// Update Firebase Auth email and password for a user (server-side, requires Firebase Admin SDK)
+router.post('/update-firebase-auth-user', async (req, res) => {
+  try {
+    let { authUid, email, password, oldEmail } = req.body;
+    
+    console.log('🔐 Firebase Auth user update request received:', {
+      authUid: authUid || 'null',
+      email: email || 'null',
+      oldEmail: oldEmail || 'null',
+      passwordLength: password?.length || 0,
+      passwordPreview: password ? password.substring(0, 3) + '***' : 'null'
+    });
+    
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+    
+    if (!firebaseAdmin) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
+      });
+    }
+
+    // Eğer authUid yoksa ama email varsa, email ile kullanıcıyı bul
+    if (!authUid && (oldEmail || email)) {
+      const searchEmail = oldEmail || email;
+      console.log('🔍 authUid not provided, trying to find user by email:', searchEmail);
+      try {
+        const userRecord = await firebaseAdmin.auth().getUserByEmail(searchEmail);
+        authUid = userRecord.uid;
+        console.log('✅ Found user by email, authUid:', authUid);
+      } catch (emailError) {
+        if (emailError.code === 'auth/user-not-found') {
+          console.log('ℹ️ User not found in Firebase Auth by email, creating new user:', email);
+          // Kullanıcı yoksa oluştur
+          if (email && password) {
+            try {
+              const normalizedPassword = password.toString().replace(/\D/g, '');
+              const finalPassword = normalizedPassword.length < 6 ? normalizedPassword.padStart(6, '0') : normalizedPassword;
+              
+              const newUser = await firebaseAdmin.auth().createUser({
+                email: email,
+                password: finalPassword,
+                emailVerified: false
+              });
+              authUid = newUser.uid;
+              console.log('✅ Created new Firebase Auth user, authUid:', authUid);
+              return res.status(200).json({
+                success: true,
+                message: 'Firebase Auth kullanıcısı oluşturuldu',
+                authUid: authUid
+              });
+            } catch (createError) {
+              console.error('❌ Error creating Firebase Auth user:', createError);
+              return res.status(500).json({
+                success: false,
+                message: `Firebase Auth kullanıcı oluşturma hatası: ${createError.message}`
+              });
+            }
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: 'Kullanıcı bulunamadı ve email/password eksik'
+            });
+          }
+        } else {
+          console.error('❌ Firebase Auth error:', emailError);
+          return res.status(500).json({
+            success: false,
+            message: `Firebase Auth hatası: ${emailError.message}`
+          });
+        }
+      }
+    }
+    
+    if (!authUid) {
+      console.error('❌ authUid is required');
+      return res.status(400).json({
+        success: false,
+        message: 'authUid (veya email) zorunludur'
+      });
+    }
+
+    // Güncelleme objesi oluştur
+    const updateData = {};
+    
+    // Email güncellemesi
+    if (email) {
+      updateData.email = email;
+      updateData.emailVerified = false; // Email değiştiği için verified'ı false yap
+    }
+    
+    // Password güncellemesi
+    if (password) {
+      const normalizedPassword = password.toString().replace(/\D/g, '');
+      const finalPassword = normalizedPassword.length < 6 ? normalizedPassword.padStart(6, '0') : normalizedPassword;
+      updateData.password = finalPassword;
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email veya password gerekli'
+      });
+    }
+
+    console.log('✅ Firebase Admin SDK initialized, updating user for authUid:', authUid, 'with data:', {
+      email: updateData.email ? updateData.email.substring(0, 3) + '***' : 'not updating',
+      password: updateData.password ? '***' : 'not updating'
+    });
+    
+    try {
+      await firebaseAdmin.auth().updateUser(authUid, updateData);
+      
+      console.log('✅ Firebase Auth user updated successfully for authUid:', authUid);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Firebase Auth kullanıcısı güncellendi',
+        authUid: authUid,
+        updatedFields: Object.keys(updateData)
+      });
+    } catch (firebaseError) {
+      console.error('❌ Firebase Auth user update error:', {
+        code: firebaseError.code,
+        message: firebaseError.message,
+        authUid,
+        updateData
+      });
+      return res.status(500).json({
+        success: false,
+        message: `Firebase Auth kullanıcı güncelleme hatası: ${firebaseError.message}`
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error updating Firebase Auth user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası: ' + error.message
+    });
+  }
+});
+
 module.exports = router;

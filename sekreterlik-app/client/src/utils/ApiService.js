@@ -683,9 +683,31 @@ class ApiService {
 
   static async uploadDocument(formData) {
     if (USE_FIREBASE) {
-      // Firebase Storage kullanılabilir ama şimdilik basit bir response döndür
-      // TODO: Firebase Storage ile document upload implementasyonu
-      return { success: false, message: 'Firebase Storage ile belge yükleme henüz implement edilmedi' };
+      // Firebase Storage ile belge yükle
+      const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+      const FirebaseApiService = (await import('./FirebaseApiService')).default;
+      
+      const file = formData.get('document');
+      const name = formData.get('name') || file.name;
+      
+      if (!file) {
+        throw new Error('Dosya bulunamadı');
+      }
+      
+      // Firebase Storage'a yükle
+      const storageUrl = await FirebaseStorageService.uploadArchiveDocument(name, file);
+      
+      // Firestore'a kaydet (archive collection'ı varsa)
+      // Şimdilik sadece Storage URL'i döndür
+      return {
+        id: Date.now().toString(),
+        name: name,
+        filename: file.name,
+        path: storageUrl,
+        mimetype: file.type,
+        size: file.size,
+        storage_url: storageUrl
+      };
     }
     try {
       const response = await fetch(`${API_BASE_URL}/archive/documents`, {
@@ -1077,6 +1099,32 @@ class ApiService {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Belge yüklenirken hata oluştu');
+    }
+
+    return response.json();
+  }
+
+  static async uploadMemberPhoto(memberId, file) {
+    // Firebase kullanılıyorsa FirebaseApiService'i kullan
+    if (USE_FIREBASE) {
+      return FirebaseApiService.uploadMemberPhoto(memberId, file);
+    }
+    
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('memberId', memberId);
+
+    const response = await fetch(`${API_BASE_URL}/members/upload-photo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Fotoğraf yüklenirken hata oluştu');
     }
 
     return response.json();

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { auth, db, storage } from '../config/firebase';
 import { createAdminUser, syncMemberUsersToFirebaseAuth } from '../utils/createFirebaseUsers';
 
 // Firebase config'i import et
@@ -113,24 +114,88 @@ const FirebaseTestPage = () => {
       }
       setResults(prev => [...prev.slice(0, -1), test2]);
 
-      // Test 3: Admin kullanıcısı oluştur
-      const test3 = { test: 'Admin Kullanıcısı Oluşturma', status: 'testing', message: '' };
+      // Test 3: Firebase Storage bağlantısı
+      const test3 = { test: 'Firebase Storage Bağlantısı', status: 'testing', message: '' };
       setResults(prev => [...prev, test3]);
+
+      try {
+        console.log('🔍 Firebase Storage test başlıyor...');
+        console.log('🔍 Storage instance:', storage ? 'Mevcut' : 'Yok');
+        console.log('🔍 Storage Bucket:', firebaseConfig.storageBucket);
+        
+        if (!storage) {
+          throw new Error('Firebase Storage instance bulunamadı - storage null veya undefined');
+        }
+        
+        // Test dosyası oluştur ve yükle
+        const testFileName = `test/connection_${Date.now()}.txt`;
+        const testFileRef = ref(storage, testFileName);
+        const testContent = new Blob(['Firebase Storage test - ' + new Date().toISOString()], { type: 'text/plain' });
+        
+        console.log('📤 Test dosyası yükleniyor...');
+        const snapshot = await uploadBytes(testFileRef, testContent, {
+          contentType: 'text/plain',
+          customMetadata: {
+            test: 'true',
+            projectId: firebaseConfig.projectId
+          }
+        });
+        console.log('✅ Test dosyası yüklendi');
+        
+        // Download URL'i al
+        console.log('🔗 Download URL alınıyor...');
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log('✅ Download URL alındı:', downloadURL);
+        
+        // Test dosyasını sil
+        console.log('🗑️ Test dosyası siliniyor...');
+        await deleteObject(testFileRef);
+        console.log('✅ Test dosyası silindi');
+        
+        test3.status = 'success';
+        test3.message = `✅ Firebase Storage bağlantısı başarılı (Bucket: ${firebaseConfig.storageBucket}) - Yazma, okuma ve silme test edildi`;
+      } catch (error) {
+        console.error('❌ Firebase Storage test hatası:', error);
+        console.error('❌ Hata kodu:', error.code);
+        console.error('❌ Hata mesajı:', error.message);
+        
+        let errorMessage = `❌ Firebase Storage bağlantı hatası: ${error.message}`;
+        if (error.code) {
+          errorMessage += ` (Kod: ${error.code})`;
+        }
+        
+        // Özel hata mesajları
+        if (error.code === 'storage/unauthorized') {
+          errorMessage += '\n💡 Çözüm: Firebase Storage güvenlik kurallarını kontrol edin.';
+        } else if (error.code === 'storage/quota-exceeded') {
+          errorMessage += '\n💡 Çözüm: Firebase Storage kotası dolmuş olabilir.';
+        } else if (error.code === 'storage/unauthenticated') {
+          errorMessage += '\n💡 Çözüm: Kullanıcı kimlik doğrulaması gerekli.';
+        }
+        
+        test3.status = 'error';
+        test3.message = errorMessage;
+      }
+      setResults(prev => [...prev.slice(0, -1), test3]);
+
+      // Test 4: Admin kullanıcısı oluştur
+      const test4 = { test: 'Admin Kullanıcısı Oluşturma', status: 'testing', message: '' };
+      setResults(prev => [...prev, test4]);
 
       try {
         const adminResult = await createAdminUser();
         if (adminResult.success) {
-          test3.status = 'success';
-          test3.message = `✅ Admin kullanıcısı oluşturuldu: ${adminResult.email}`;
+          test4.status = 'success';
+          test4.message = `✅ Admin kullanıcısı oluşturuldu: ${adminResult.email}`;
           setAdminResult(adminResult);
         } else {
           throw new Error(adminResult.message || 'Admin kullanıcısı oluşturulamadı');
         }
       } catch (error) {
-        test3.status = 'error';
-        test3.message = `❌ Admin kullanıcısı oluşturma hatası: ${error.message}`;
+        test4.status = 'error';
+        test4.message = `❌ Admin kullanıcısı oluşturma hatası: ${error.message}`;
       }
-      setResults(prev => [...prev.slice(0, -1), test3]);
+      setResults(prev => [...prev.slice(0, -1), test4]);
 
     } catch (error) {
       console.error('Firebase test hatası:', error);

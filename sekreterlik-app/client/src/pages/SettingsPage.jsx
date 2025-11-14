@@ -24,6 +24,7 @@ import SyncToFirebasePage from './SyncToFirebasePage';
 import PollsPage from './PollsPage';
 import MemberDashboardAnalyticsPage from './MemberDashboardAnalyticsPage';
 import AppBrandingSettings from '../components/AppBrandingSettings';
+import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -205,6 +206,7 @@ const SettingsPage = ({ tab }) => {
                 {activeTab === 'sms-config' && hasPermission('sms-config') && <SmsSettings />}
                 {activeTab === 'firebase-sync' && hasPermission('firebase-sync') && <SyncToFirebasePage />}
                 {activeTab === 'polls' && hasPermission('polls') && <PollsPage />}
+                {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
                 {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
                 {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
               </>
