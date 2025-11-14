@@ -57,7 +57,7 @@ const Chatbot = ({ isOpen, onClose }) => {
       setMessages([{
         id: Date.now(),
         role: 'assistant',
-        content: 'Merhaba! Ben Yeniden Refah Partisi Elazığ Merkez İlçe Sekreteri. Size nasıl yardımcı olabilirim? Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz.'
+        content: 'Merhaba başkanım! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim? Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz.'
       }]);
     }
   }, [isOpen, siteData]);
@@ -485,7 +485,7 @@ const Chatbot = ({ isOpen, onClose }) => {
     setMessages([{
       id: Date.now(),
       role: 'assistant',
-      content: 'Merhaba! Ben Yeniden Refah Partisi Elazığ Merkez İlçe Sekreteri. Size nasıl yardımcı olabilirim? Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz.'
+      content: 'Merhaba başkanım! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim? Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz.'
     }]);
   };
 
@@ -503,7 +503,7 @@ const Chatbot = ({ isOpen, onClose }) => {
               </svg>
             </div>
             <div>
-              <h2 className="text-white font-semibold text-lg">Yeniden Refah Partisi Elazığ Merkez İlçe Sekreteri</h2>
+              <h2 className="text-white font-semibold text-lg">Yeniden Refah Partisi Elazığ Sekreteri</h2>
               <p className="text-red-100 text-xs">Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz</p>
             </div>
           </div>
