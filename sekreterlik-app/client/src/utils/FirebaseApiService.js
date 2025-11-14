@@ -447,19 +447,29 @@ class FirebaseApiService {
   // Chief Observer Login
   static async loginChiefObserver(ballotNumber, tc) {
     try {
-      // Sandık numarasını username, TC'yi password olarak kullan
-      const username = String(ballotNumber).trim();
-      const password = String(tc).trim();
+      // Önce sandık numarası ile dene, sonra TC ile dene
+      const ballotNumberStr = String(ballotNumber).trim();
+      const tcStr = String(tc).trim();
+      const password = tcStr;
 
-      // member_users koleksiyonunda sandık numarası ile kullanıcı bul
-      const memberUsers = await FirebaseService.findByField(
+      // Önce sandık numarası ile kullanıcı bul
+      let memberUsers = await FirebaseService.findByField(
         this.COLLECTIONS.MEMBER_USERS,
         'username',
-        username
+        ballotNumberStr
       );
 
+      // Sandık numarası ile bulunamazsa TC ile dene
       if (!memberUsers || memberUsers.length === 0) {
-        throw new Error('Başmüşahit kullanıcısı bulunamadı. Lütfen sandık numarasını kontrol edin.');
+        memberUsers = await FirebaseService.findByField(
+          this.COLLECTIONS.MEMBER_USERS,
+          'username',
+          tcStr
+        );
+      }
+
+      if (!memberUsers || memberUsers.length === 0) {
+        throw new Error('Başmüşahit kullanıcısı bulunamadı. Lütfen sandık numarası veya TC kimlik numaranızı kontrol edin.');
       }
 
       const memberUser = memberUsers[0];
@@ -551,11 +561,11 @@ class FirebaseApiService {
         token: await user.getIdToken(),
         user: {
           uid: user.uid,
-          username: username,
+          username: memberUser.username, // Sandık numarası veya TC
           name: chiefObserver.name || memberUser.name,
           role: 'chief_observer',
           ballotBoxId: chiefObserver.ballot_box_id,
-          ballotNumber: ballotBox?.ballot_number || username,
+          ballotNumber: ballotBox?.ballot_number || memberUser.username,
           tc: chiefObserver.tc
         }
       };

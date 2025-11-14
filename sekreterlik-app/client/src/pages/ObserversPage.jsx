@@ -194,66 +194,126 @@ const ObserversPage = () => {
           await ApiService.updateBallotBoxObserver(editingObserver.id, observerData);
           setMessage('Müşahit başarıyla güncellendi');
           setMessageType('success');
+          
+          // Başmüşahit güncellenirken, sandık numarası eklendiyse kullanıcı adını güncelle
+          if (observerData.is_chief_observer) {
+            try {
+              const tc = String(observerData.tc).trim();
+              
+              // TC'yi kullanarak üye bul
+              const members = await ApiService.getMembers();
+              const member = members.find(m => {
+                let memberTc = String(m.tc || '').trim();
+                try {
+                  if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
+                    memberTc = decryptData(memberTc);
+                  }
+                } catch (e) {}
+                return memberTc === tc;
+              });
+
+              if (member && member.id) {
+                // Sandık numarasını kontrol et
+                const selectedBallotBox = observerData.ballot_box_id 
+                  ? ballotBoxes.find(bb => String(bb.id) === String(observerData.ballot_box_id))
+                  : null;
+                
+                if (selectedBallotBox && selectedBallotBox.ballot_number) {
+                  // Sandık numarası var - kullanıcı adını sandık numarasına güncelle
+                  const ballotNumber = String(selectedBallotBox.ballot_number);
+                  
+                  // Mevcut kullanıcıyı bul (TC ile)
+                  const memberUsers = await ApiService.getMemberUsers();
+                  const existingUser = memberUsers.find(u => 
+                    String(u.memberId) === String(member.id) && 
+                    (u.username === tc || u.username === ballotNumber)
+                  );
+                  
+                  if (existingUser) {
+                    // Kullanıcı adını sandık numarasına güncelle
+                    await ApiService.updateMemberUser(existingUser.id, ballotNumber, tc);
+                    console.log(`✅ Başmüşahit kullanıcı adı güncellendi: TC -> Sandık No: ${ballotNumber}`);
+                  } else {
+                    // Kullanıcı yoksa oluştur
+                    await ApiService.createMemberUser(member.id, ballotNumber, tc);
+                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}`);
+                  }
+                } else {
+                  // Sandık numarası yok - kullanıcı adı TC olsun
+                  const memberUsers = await ApiService.getMemberUsers();
+                  const existingUser = memberUsers.find(u => 
+                    String(u.memberId) === String(member.id)
+                  );
+                  
+                  if (!existingUser) {
+                    // Kullanıcı yoksa TC ile oluştur
+                    await ApiService.createMemberUser(member.id, tc, tc);
+                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: TC: ${tc}`);
+                  } else if (existingUser.username !== tc) {
+                    // Kullanıcı varsa ama kullanıcı adı TC değilse güncelle
+                    await ApiService.updateMemberUser(existingUser.id, tc, tc);
+                    console.log(`✅ Başmüşahit kullanıcı adı güncellendi: Sandık No -> TC: ${tc}`);
+                  }
+                }
+              }
+            } catch (userUpdateError) {
+              console.warn('⚠️ Başmüşahit kullanıcısı güncellenirken hata:', userUpdateError);
+            }
+          }
         } else {
           await ApiService.createBallotBoxObserver(observerData);
           setMessage('Müşahit başarıyla eklendi');
           setMessageType('success');
           
-          // Başmüşahit eklenirken, eğer sandık numarası varsa kullanıcı oluştur
-          if (observerData.is_chief_observer && observerData.ballot_box_id) {
+          // Başmüşahit eklenirken kullanıcı oluştur
+          if (observerData.is_chief_observer) {
             try {
-              // Sandık numarasını al
-              const selectedBallotBox = ballotBoxes.find(bb => 
-                String(bb.id) === String(observerData.ballot_box_id)
-              );
+              const tc = String(observerData.tc).trim();
               
-              if (selectedBallotBox && selectedBallotBox.ballot_number) {
-                const ballotNumber = String(selectedBallotBox.ballot_number);
-                const tc = String(observerData.tc).trim();
-                
-                // TC'yi kullanarak üye bul (TC şifrelenmiş olabilir)
-                const members = await ApiService.getMembers();
-                const member = members.find(m => {
-                  let memberTc = String(m.tc || '').trim();
-                  // TC şifrelenmişse decrypt et
-                  try {
-                    if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
-                      memberTc = decryptData(memberTc);
-                    }
-                  } catch (e) {
-                    // Decrypt başarısız, direkt kullan
+              // TC'yi kullanarak üye bul (TC şifrelenmiş olabilir)
+              const members = await ApiService.getMembers();
+              const member = members.find(m => {
+                let memberTc = String(m.tc || '').trim();
+                try {
+                  if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
+                    memberTc = decryptData(memberTc);
                   }
-                  return memberTc === tc;
-                });
+                } catch (e) {}
+                return memberTc === tc;
+              });
 
-                if (member && member.id) {
-                  // Üye bulundu, kullanıcı oluştur
-                  // Kullanıcı adı: sandık numarası, Şifre: TC
+              if (member && member.id) {
+                // Sandık numarasını kontrol et
+                const selectedBallotBox = observerData.ballot_box_id 
+                  ? ballotBoxes.find(bb => String(bb.id) === String(observerData.ballot_box_id))
+                  : null;
+                
+                if (selectedBallotBox && selectedBallotBox.ballot_number) {
+                  // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
+                  const ballotNumber = String(selectedBallotBox.ballot_number);
                   try {
                     const result = await ApiService.createMemberUser(member.id, ballotNumber, tc);
                     if (result && result.success) {
                       console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
-                      setMessage(`Başmüşahit kullanıcısı oluşturuldu (Sandık: ${ballotNumber})`);
-                      setMessageType('success');
-                    } else {
-                      console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', result?.message || 'Bilinmeyen hata');
-                      setMessage(`Kullanıcı oluşturulamadı: ${result?.message || 'Bilinmeyen hata'}`);
-                      setMessageType('error');
                     }
                   } catch (userError) {
-                    // Kullanıcı zaten varsa veya başka bir hata varsa
                     console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);
-                    setMessage(`Kullanıcı oluşturulamadı: ${userError.message}`);
-                    setMessageType('error');
                   }
                 } else {
-                  console.warn('⚠️ Başmüşahit için üye bulunamadı, kullanıcı oluşturulmadı. TC:', tc);
-                  setMessage(`Üye bulunamadı (TC: ${tc}). Kullanıcı oluşturulamadı.`);
-                  setMessageType('error');
+                  // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
+                  try {
+                    const result = await ApiService.createMemberUser(member.id, tc, tc);
+                    if (result && result.success) {
+                      console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: TC: ${tc}`);
+                    }
+                  } catch (userError) {
+                    console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);
+                  }
                 }
+              } else {
+                console.warn('⚠️ Başmüşahit için üye bulunamadı, kullanıcı oluşturulmadı. TC:', tc);
               }
             } catch (userCreationError) {
-              // Kullanıcı oluşturma hatası ana işlemi durdurmamalı
               console.warn('⚠️ Başmüşahit kullanıcısı oluşturulurken hata:', userCreationError);
             }
           }
