@@ -686,9 +686,11 @@ class ApiService {
       // Firebase Storage ile belge yükle
       const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
       const FirebaseApiService = (await import('./FirebaseApiService')).default;
+      const FirebaseService = (await import('./FirebaseService')).default;
       
       const file = formData.get('document');
       const name = formData.get('name') || file.name;
+      const description = formData.get('description') || '';
       
       if (!file) {
         throw new Error('Dosya bulunamadı');
@@ -697,16 +699,28 @@ class ApiService {
       // Firebase Storage'a yükle
       const storageUrl = await FirebaseStorageService.uploadArchiveDocument(name, file);
       
-      // Firestore'a kaydet (archive collection'ı varsa)
-      // Şimdilik sadece Storage URL'i döndür
-      return {
-        id: Date.now().toString(),
+      // Firestore'a kaydet
+      const documentData = {
         name: name,
+        description: description,
         filename: file.name,
         path: storageUrl,
         mimetype: file.type,
         size: file.size,
-        storage_url: storageUrl
+        storage_url: storageUrl,
+        uploaded_at: new Date().toISOString()
+      };
+      
+      const docId = await FirebaseService.create(
+        FirebaseApiService.COLLECTIONS.ARCHIVE,
+        null,
+        documentData,
+        false // Şifreleme yok
+      );
+      
+      return {
+        id: docId,
+        ...documentData
       };
     }
     try {

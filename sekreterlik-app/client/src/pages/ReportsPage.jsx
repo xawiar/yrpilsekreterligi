@@ -523,7 +523,7 @@ const ReportsPage = () => {
         .slice(0, 3);
 
       // Performans Puanları Hesaplama
-      const performanceScores = calculateAllMemberScores(
+      const performanceScores = await calculateAllMemberScores(
         members,
         filteredMeetings,
         filteredEvents,

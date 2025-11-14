@@ -73,7 +73,11 @@ const PerformanceScoreSettings = () => {
           updated_at: new Date().toISOString()
         }, false);
         
-        setMessage('Yıldız hesaplama ayarları başarıyla kaydedildi');
+        // Cache'i temizle ki yeni ayarlar kullanılsın
+        const { clearPerformanceScoreSettingsCache } = await import('../utils/performanceScore');
+        clearPerformanceScoreSettingsCache();
+        
+        setMessage('Yıldız hesaplama ayarları başarıyla kaydedildi. Üye puanları yeniden hesaplanacak.');
         setMessageType('success');
       } else {
         setMessage('Firebase kullanılmıyor. Ayarlar environment variable olarak ayarlanmalıdır.');

@@ -1602,9 +1602,9 @@ class FirebaseApiService {
                   },
                   body: JSON.stringify({
                     authUid: memberUser.authUid,
-                    email: newEmail,
+                    email: tcChanged ? newEmail : undefined, // TC değiştiyse email güncelle
                     oldEmail: tcChanged ? oldEmail : undefined,
-                    password: phoneChanged ? newPassword : undefined
+                    password: phoneChanged ? newPassword : undefined // Telefon değiştiyse password güncelle
                   })
                 });
                 

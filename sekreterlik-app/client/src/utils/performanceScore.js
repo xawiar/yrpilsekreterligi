@@ -1,14 +1,14 @@
 /**
  * Üye Performans Puanı Hesaplama Sistemi
  * 
- * Puan Kriterleri:
+ * Puan Kriterleri (varsayılan, Firebase'den yüklenebilir):
  * - Katıldığı toplantı başına: +10 puan
  * - Katıldığı etkinlik başına: +10 puan
  * - Mazeretsiz katılmadığı toplantı için: -5 puan
  * - Mazeretli katılmadığı toplantı için: 0 puan (ceza yok)
  * - Kaydettiği üye başına: +5 puan
  * 
- * Bonus Puanlar (Ay Sonu):
+ * Bonus Puanlar (Ay Sonu, varsayılan):
  * - O ay tüm toplantılara katılmışsa: +50 puan/ay
  * - O ay tüm etkinliklere katılmışsa: +50 puan/ay
  * 
@@ -23,20 +23,104 @@
  */
 
 /**
+ * Performans puanı ayarlarını Firebase'den yükle
+ * @returns {Promise<Object>} Performans puanı ayarları
+ */
+let cachedSettings = null;
+let settingsLoadPromise = null;
+
+export const loadPerformanceScoreSettings = async () => {
+  // Cache varsa direkt döndür
+  if (cachedSettings) {
+    return cachedSettings;
+  }
+  
+  // Zaten yükleniyorsa promise'i döndür
+  if (settingsLoadPromise) {
+    return settingsLoadPromise;
+  }
+  
+  // Yükleme promise'i oluştur
+  settingsLoadPromise = (async () => {
+    try {
+      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      
+      if (USE_FIREBASE) {
+        const FirebaseService = (await import('./FirebaseService')).default;
+        try {
+          const configDoc = await FirebaseService.getById('performance_score_config', 'main', false);
+          if (configDoc) {
+            cachedSettings = {
+              meetingAttendancePoints: configDoc.meetingAttendancePoints || 10,
+              eventAttendancePoints: configDoc.eventAttendancePoints || 10,
+              absencePenalty: configDoc.absencePenalty || -5,
+              memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
+              perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
+              perfectEventBonus: configDoc.perfectEventBonus || 50
+            };
+            return cachedSettings;
+          }
+        } catch (error) {
+          console.warn('Performance score config not found, using defaults:', error);
+        }
+      }
+      
+      // Varsayılan değerler
+      cachedSettings = {
+        meetingAttendancePoints: 10,
+        eventAttendancePoints: 10,
+        absencePenalty: -5,
+        memberRegistrationPoints: 5,
+        perfectMeetingBonus: 50,
+        perfectEventBonus: 50
+      };
+      return cachedSettings;
+    } catch (error) {
+      console.error('Error loading performance score settings:', error);
+      // Hata durumunda varsayılan değerler
+      cachedSettings = {
+        meetingAttendancePoints: 10,
+        eventAttendancePoints: 10,
+        absencePenalty: -5,
+        memberRegistrationPoints: 5,
+        perfectMeetingBonus: 50,
+        perfectEventBonus: 50
+      };
+      return cachedSettings;
+    } finally {
+      settingsLoadPromise = null;
+    }
+  })();
+  
+  return settingsLoadPromise;
+};
+
+/**
+ * Cache'i temizle (ayarlar güncellendiğinde çağrılmalı)
+ */
+export const clearPerformanceScoreSettingsCache = () => {
+  cachedSettings = null;
+  settingsLoadPromise = null;
+};
+
+/**
  * Üye performans puanını hesapla
  * @param {Object} member - Üye objesi
  * @param {Array} meetings - Tüm toplantılar
  * @param {Array} events - Tüm etkinlikler
  * @param {Array} memberRegistrations - Üye kayıtları (registrar bilgisi ile)
  * @param {Object} options - Hesaplama seçenekleri
- * @returns {Object} Performans puanı ve detayları
+ * @returns {Promise<Object>} Performans puanı ve detayları
  */
-export const calculatePerformanceScore = (member, meetings, events, memberRegistrations = [], options = {}) => {
+export const calculatePerformanceScore = async (member, meetings, events, memberRegistrations = [], options = {}) => {
   const {
     includeBonus = true,
     timeRange = 'all', // 'all', '3months', '6months'
     weightRecent = false // Son 3 ayın katılımları 1.5x
   } = options;
+  
+  // Performans puanı ayarlarını yükle
+  const settings = await loadPerformanceScoreSettings();
 
   const memberId = String(member.id);
   const now = new Date();
@@ -139,8 +223,8 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
         details.meetingAttendance++;
         recentAttendedCount++;
         
-        // Puan hesapla (ağırlıklandırma varsa)
-        const basePoints = 10;
+        // Puan hesapla (ayarlardan al, ağırlıklandırma varsa)
+        const basePoints = settings.meetingAttendancePoints;
         const points = weightRecent && isRecent(meeting.date) ? basePoints * 1.5 : basePoints;
         details.breakdown.meetingPoints += points;
         totalScore += points;
@@ -152,8 +236,8 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
           // Mazeretli katılmama: 0 puan (ceza yok)
         } else {
           details.meetingAbsence++;
-          // Mazeretsiz katılmama: -5 puan
-          const penalty = -5;
+          // Mazeretsiz katılmama: ayarlardan alınan ceza puanı
+          const penalty = settings.absencePenalty;
           details.breakdown.absencePenalty += penalty;
           totalScore += penalty;
         }
@@ -173,8 +257,8 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
     if (attendee && attendee.attended) {
       details.eventAttendance++;
       
-      // Puan hesapla (ağırlıklandırma varsa)
-      const basePoints = 10;
+      // Puan hesapla (ayarlardan al, ağırlıklandırma varsa)
+      const basePoints = settings.eventAttendancePoints;
       const points = weightRecent && isRecent(event.date) ? basePoints * 1.5 : basePoints;
       details.breakdown.eventPoints += points;
       totalScore += points;
@@ -188,7 +272,7 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
   });
 
   details.memberRegistrations = registrations.length;
-  const registrationPoints = registrations.length * 5;
+  const registrationPoints = registrations.length * settings.memberRegistrationPoints;
   details.breakdown.registrationPoints = registrationPoints;
   totalScore += registrationPoints;
 
@@ -306,9 +390,9 @@ export const calculatePerformanceScore = (member, meetings, events, memberRegist
       }
     });
 
-    // Bonus puanları hesapla
-    const meetingBonus = perfectMeetingMonths * 50;
-    const eventBonus = perfectEventMonths * 50;
+    // Bonus puanları hesapla (ayarlardan al)
+    const meetingBonus = perfectMeetingMonths * settings.perfectMeetingBonus;
+    const eventBonus = perfectEventMonths * settings.perfectEventBonus;
 
     if (meetingBonus > 0) {
       details.bonuses.perfectMeetingAttendance = meetingBonus;
@@ -432,7 +516,16 @@ const parseDate = (dateStr) => {
 /**
  * Maksimum puanı hesapla (tüm toplantılara katılım + tüm etkinliklere katılım + aylık 3 üye kaydı + bonus puanlar)
  */
-const calculateMaxScore = (meetings, events, firstMeetingDate) => {
+const calculateMaxScore = (meetings, events, firstMeetingDate, settings = null) => {
+  // Varsayılan ayarlar (eğer settings yoksa)
+  const defaultSettings = {
+    meetingAttendancePoints: 10,
+    eventAttendancePoints: 10,
+    memberRegistrationPoints: 5,
+    perfectMeetingBonus: 50,
+    perfectEventBonus: 50
+  };
+  const scoreSettings = settings || defaultSettings;
   if (!firstMeetingDate) return 1000; // Default max score if no meetings
   
   const now = new Date();
@@ -465,20 +558,20 @@ const calculateMaxScore = (meetings, events, firstMeetingDate) => {
   monthsSinceFirst = Math.max(1, monthsSinceFirst); // En az 1 ay
   
   // Toplantı puanları (ilk toplantı tarihinden sonraki toplantılar)
-  const meetingPoints = meetingsAfterFirst.length * 10;
+  const meetingPoints = meetingsAfterFirst.length * scoreSettings.meetingAttendancePoints;
   
   // Etkinlik puanları (ilk toplantı tarihinden sonraki etkinlikler)
-  const eventPoints = eventsAfterFirst.length * 10;
+  const eventPoints = eventsAfterFirst.length * scoreSettings.eventAttendancePoints;
   
-  // Üye kayıt puanları (aylık 3 üye * 5 puan = 15 puan/ay)
-  const registrationPoints = monthsSinceFirst * 15; // Aylık 3 üye * 5 puan
+  // Üye kayıt puanları (aylık 3 üye * memberRegistrationPoints puan)
+  const registrationPoints = monthsSinceFirst * 3 * scoreSettings.memberRegistrationPoints; // Aylık 3 üye
   
   // Bonus puanlar (her ay için mükemmel katılım)
-  // Her ay tüm toplantılara katılım bonusu: +50 puan/ay
-  const meetingBonus = monthsSinceFirst * 50;
+  // Her ay tüm toplantılara katılım bonusu (ayarlardan)
+  const meetingBonus = monthsSinceFirst * scoreSettings.perfectMeetingBonus;
   
-  // Her ay tüm etkinliklere katılım bonusu: +50 puan/ay
-  const eventBonus = monthsSinceFirst * 50;
+  // Her ay tüm etkinliklere katılım bonusu (ayarlardan)
+  const eventBonus = monthsSinceFirst * scoreSettings.perfectEventBonus;
   
   return meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus;
 };
@@ -553,16 +646,19 @@ const determineLevel = (score, maxScore, manualStars = null) => {
 /**
  * Tüm üyeler için performans puanlarını hesapla ve sırala
  */
-export const calculateAllMemberScores = (members, meetings, events, memberRegistrations, options = {}) => {
+export const calculateAllMemberScores = async (members, meetings, events, memberRegistrations, options = {}) => {
   // İlk toplantı tarihini bul
   const firstMeetingDate = findFirstMeetingDate(meetings);
   
-  // Maksimum puanı hesapla
-  const maxScore = calculateMaxScore(meetings, events, firstMeetingDate);
+  // Performans puanı ayarlarını yükle (max score hesaplaması için)
+  const settings = await loadPerformanceScoreSettings();
+  
+  // Maksimum puanı hesapla (ayarlardan bonus puanları kullanarak)
+  const maxScore = calculateMaxScore(meetings, events, firstMeetingDate, settings);
   
   // Her üye için puan hesapla ve seviye belirle
-  return members.map(member => {
-    const score = calculatePerformanceScore(member, meetings, events, memberRegistrations, options);
+  const scores = await Promise.all(members.map(async (member) => {
+    const score = await calculatePerformanceScore(member, meetings, events, memberRegistrations, options);
     // Manuel yıldızı member'dan al (manual_stars field'ı)
     const manualStars = member.manual_stars !== null && member.manual_stars !== undefined 
       ? parseInt(member.manual_stars) 
@@ -575,6 +671,8 @@ export const calculateAllMemberScores = (members, meetings, events, memberRegist
       ...levelInfo,
       maxScore
     };
-  }).sort((a, b) => b.totalScore - a.totalScore);
+  }));
+  
+  return scores.sort((a, b) => b.totalScore - a.totalScore);
 };
 
