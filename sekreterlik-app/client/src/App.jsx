@@ -36,6 +36,7 @@ const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashb
 const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
 const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
+const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
 const CheckAdminPage = lazy(() => import('./pages/CheckAdminPage'));
@@ -405,6 +406,7 @@ function AppContent() {
             <Route path="/election-preparation/representatives" element={<RepresentativesPage />} />
             <Route path="/election-preparation/neighborhoods" element={<NeighborhoodsPage />} />
             <Route path="/election-preparation/villages" element={<VillagesPage />} />
+            <Route path="/elections" element={<ElectionsListPage />} />
             <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
             <Route path="/bulk-sms" element={<BulkSmsPage />} />
             <Route path="/election-preparation/groups" element={<GroupsPage />} />
