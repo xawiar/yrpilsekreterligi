@@ -15,6 +15,9 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ManagementChartPage = lazy(() => import('./pages/ManagementChartPage'));
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
 const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
+const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
+const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
+const GenclikKollarıPage = lazy(() => import('./pages/GenclikKollarıPage'));
 const DistrictMembersPage = lazy(() => import('./pages/DistrictMembersPage'));
 const DistrictDetailsPage = lazy(() => import('./pages/DistrictDetailsPage'));
 const TownMembersPage = lazy(() => import('./pages/TownMembersPage'));
@@ -368,7 +371,11 @@ function AppContent() {
                       <div className="w-full max-w-7xl mx-auto">
                         <Routes>
                           <Route path="/members" element={<MembersPage />} />
-                          <Route path="/districts" element={<DistrictsPage />} />
+                          <Route path="/teşkilat" element={<TeşkilatPage />} />
+                          <Route path="/teşkilat/ilçeler" element={<DistrictsPage />} />
+                          <Route path="/teşkilat/kadın-kolları" element={<KadınKollarıPage />} />
+                          <Route path="/teşkilat/gençlik-kolları" element={<GenclikKollarıPage />} />
+                          <Route path="/districts" element={<Navigate to="/teşkilat/ilçeler" replace />} />
                           <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/districts/:id/members" element={<DistrictMembersPage />} />
             <Route path="/districts/:id/details" element={<DistrictDetailsPage />} />

@@ -6700,6 +6700,128 @@ class FirebaseApiService {
     };
     return mapping[locationType] || `${locationType}_id`;
   }
+
+  // Kadın Kolları Başkanlığı API
+  static async getWomenBranchPresidents() {
+    try {
+      const presidents = await FirebaseService.getAll(this.COLLECTIONS.WOMEN_BRANCH_PRESIDENTS);
+      return presidents || [];
+    } catch (error) {
+      console.error('Get women branch presidents error:', error);
+      return [];
+    }
+  }
+
+  static async setWomenBranchPresident(region, memberId) {
+    try {
+      // Önce bu bölgede başka bir başkan var mı kontrol et
+      const existing = await FirebaseService.getAll(this.COLLECTIONS.WOMEN_BRANCH_PRESIDENTS, {
+        where: [{ field: 'region', operator: '==', value: region }]
+      }, false);
+
+      // Varsa sil
+      if (existing.length > 0) {
+        for (const pres of existing) {
+          await FirebaseService.delete(this.COLLECTIONS.WOMEN_BRANCH_PRESIDENTS, pres.id);
+        }
+      }
+
+      // Yeni başkanı ekle
+      const docId = await FirebaseService.create(
+        this.COLLECTIONS.WOMEN_BRANCH_PRESIDENTS,
+        null,
+        {
+          region: region,
+          member_id: String(memberId),
+          created_at: new Date().toISOString()
+        },
+        false
+      );
+
+      return { success: true, id: docId };
+    } catch (error) {
+      console.error('Set women branch president error:', error);
+      throw error;
+    }
+  }
+
+  static async removeWomenBranchPresident(region) {
+    try {
+      const existing = await FirebaseService.getAll(this.COLLECTIONS.WOMEN_BRANCH_PRESIDENTS, {
+        where: [{ field: 'region', operator: '==', value: region }]
+      }, false);
+
+      for (const pres of existing) {
+        await FirebaseService.delete(this.COLLECTIONS.WOMEN_BRANCH_PRESIDENTS, pres.id);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Remove women branch president error:', error);
+      throw error;
+    }
+  }
+
+  // Gençlik Kolları Başkanlığı API
+  static async getYouthBranchPresidents() {
+    try {
+      const presidents = await FirebaseService.getAll(this.COLLECTIONS.YOUTH_BRANCH_PRESIDENTS);
+      return presidents || [];
+    } catch (error) {
+      console.error('Get youth branch presidents error:', error);
+      return [];
+    }
+  }
+
+  static async setYouthBranchPresident(region, memberId) {
+    try {
+      // Önce bu bölgede başka bir başkan var mı kontrol et
+      const existing = await FirebaseService.getAll(this.COLLECTIONS.YOUTH_BRANCH_PRESIDENTS, {
+        where: [{ field: 'region', operator: '==', value: region }]
+      }, false);
+
+      // Varsa sil
+      if (existing.length > 0) {
+        for (const pres of existing) {
+          await FirebaseService.delete(this.COLLECTIONS.YOUTH_BRANCH_PRESIDENTS, pres.id);
+        }
+      }
+
+      // Yeni başkanı ekle
+      const docId = await FirebaseService.create(
+        this.COLLECTIONS.YOUTH_BRANCH_PRESIDENTS,
+        null,
+        {
+          region: region,
+          member_id: String(memberId),
+          created_at: new Date().toISOString()
+        },
+        false
+      );
+
+      return { success: true, id: docId };
+    } catch (error) {
+      console.error('Set youth branch president error:', error);
+      throw error;
+    }
+  }
+
+  static async removeYouthBranchPresident(region) {
+    try {
+      const existing = await FirebaseService.getAll(this.COLLECTIONS.YOUTH_BRANCH_PRESIDENTS, {
+        where: [{ field: 'region', operator: '==', value: region }]
+      }, false);
+
+      for (const pres of existing) {
+        await FirebaseService.delete(this.COLLECTIONS.YOUTH_BRANCH_PRESIDENTS, pres.id);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Remove youth branch president error:', error);
+      throw error;
+    }
+  }
 }
 
 export default FirebaseApiService;

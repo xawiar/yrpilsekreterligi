@@ -3209,6 +3209,82 @@ class ApiService {
     return response;
   }
 
+  // Kadın Kolları Başkanlığı API
+  static async getWomenBranchPresidents() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getWomenBranchPresidents();
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/women-branch-presidents`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  static async setWomenBranchPresident(region, memberId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.setWomenBranchPresident(region, memberId);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/women-branch-presidents`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ region, member_id: memberId }),
+    });
+    return response;
+  }
+
+  static async removeWomenBranchPresident(region) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.removeWomenBranchPresident(region);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/women-branch-presidents/${encodeURIComponent(region)}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  // Gençlik Kolları Başkanlığı API
+  static async getYouthBranchPresidents() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getYouthBranchPresidents();
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/youth-branch-presidents`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
+  static async setYouthBranchPresident(region, memberId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.setYouthBranchPresident(region, memberId);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/youth-branch-presidents`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ region, member_id: memberId }),
+    });
+    return response;
+  }
+
+  static async removeYouthBranchPresident(region) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.removeYouthBranchPresident(region);
+    }
+
+    const response = await this.fetchJsonWithRetry(`${API_BASE_URL}/youth-branch-presidents/${encodeURIComponent(region)}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response;
+  }
+
 }
 
 export default ApiService;
