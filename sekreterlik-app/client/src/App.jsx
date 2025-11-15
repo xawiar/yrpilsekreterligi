@@ -203,7 +203,7 @@ const PublicRoute = ({ children }) => {
 };
 
 // Chief Observer için özel route guard
-// NOT: useLocation ve useMemo kullanarak sonsuz döngüyü önle
+// NOT: Bu route guard dashboard sayfasında çalışır, sadece authentication kontrolü yapar
 const ChiefObserverRoute = ({ children }) => {
   const { loading } = useAuth();
   const location = useLocation();
@@ -214,6 +214,7 @@ const ChiefObserverRoute = ({ children }) => {
   }
   
   // useMemo ile authentication kontrolü - sadece location değiştiğinde yeniden hesapla
+  // NOT: location.pathname dependency'si ile sadece route değiştiğinde kontrol et
   const isAuthenticated = React.useMemo(() => {
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -233,14 +234,11 @@ const ChiefObserverRoute = ({ children }) => {
     }
   }, [location.pathname]); // Sadece pathname değiştiğinde yeniden hesapla
   
-  // Eğer authenticated değilse ve login sayfasında değilsek yönlendir
+  // Eğer authenticated değilse login'e yönlendir
+  // NOT: Bu route guard dashboard sayfasında çalışır, pathname kontrolü gereksiz
   if (!isAuthenticated) {
-    // Zaten login sayfasındaysak yönlendirme yapma (sonsuz döngüyü önlemek için)
-    if (location.pathname !== '/chief-observer-login') {
-      return <Navigate to="/chief-observer-login" replace />;
-    }
-    // Zaten login sayfasındaysak, children'ı göster (PublicRoute zaten kontrol edecek)
-    return children;
+    // Sadece bir kez yönlendir - replace ile (geri butonu çalışmasın)
+    return <Navigate to="/chief-observer-login" replace />;
   }
   
   // Tüm kontroller geçti - dashboard'ı göster
