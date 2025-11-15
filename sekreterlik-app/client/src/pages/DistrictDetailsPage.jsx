@@ -8,6 +8,8 @@ const DistrictDetailsPage = () => {
   const [officials, setOfficials] = useState([]);
   const [deputyInspectors, setDeputyInspectors] = useState([]);
   const [towns, setTowns] = useState([]);
+  const [districtPresident, setDistrictPresident] = useState(null);
+  const [managementMembers, setManagementMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -21,25 +23,58 @@ const DistrictDetailsPage = () => {
     try {
       setLoading(true);
       
-      // Fetch district
-      const districts = await ApiService.getDistricts();
-      const districtData = districts.find(d => d.id === parseInt(id));
-      setDistrict(districtData);
+      // Fetch district using getDistrictById (handles string/number ID)
+      const districtResponse = await ApiService.getDistrictById(id);
+      if (districtResponse.success) {
+        setDistrict(districtResponse.district);
+      } else {
+        // Fallback: try to find from all districts
+        const districts = await ApiService.getDistricts();
+        const districtData = districts.find(d => String(d.id) === String(id));
+        setDistrict(districtData);
+      }
 
-      // Fetch officials
+      // Fetch officials - use string comparison for Firebase compatibility
       const officialsData = await ApiService.getDistrictOfficials();
-      const districtOfficials = officialsData.filter(official => official.district_id === parseInt(id));
+      const districtOfficials = officialsData.filter(official => String(official.district_id) === String(id));
       setOfficials(districtOfficials);
 
-      // Fetch deputy inspectors
+      // Fetch deputy inspectors - use string comparison
       const deputyInspectorsData = await ApiService.getAllDistrictDeputyInspectors();
-      const districtDeputyInspectors = deputyInspectorsData.filter(deputy => deputy.district_id === parseInt(id));
+      const districtDeputyInspectors = deputyInspectorsData.filter(deputy => String(deputy.district_id) === String(id));
       setDeputyInspectors(districtDeputyInspectors);
 
-      // Fetch towns for this district
+      // Fetch towns for this district - use string comparison
       const townsData = await ApiService.getTowns();
-      const districtTowns = townsData.filter(town => town.district_id === parseInt(id));
+      const districtTowns = townsData.filter(town => String(town.district_id) === String(id));
       setTowns(districtTowns);
+
+      // Fetch district president user
+      try {
+        const memberUsers = await ApiService.getMemberUsers();
+        const users = memberUsers.users || memberUsers || [];
+        const presidentUser = users.find(user => 
+          user.userType === 'district_president' && 
+          String(user.districtId || user.district_id) === String(id)
+        );
+        setDistrictPresident(presidentUser || null);
+      } catch (error) {
+        console.error('Error fetching district president:', error);
+      }
+
+      // Fetch district management members
+      try {
+        const managementResponse = await ApiService.getDistrictManagementMembers(id);
+        if (managementResponse.success) {
+          setManagementMembers(managementResponse.members || []);
+        } else {
+          // Fallback: try direct array
+          setManagementMembers(Array.isArray(managementResponse) ? managementResponse : []);
+        }
+      } catch (error) {
+        console.error('Error fetching management members:', error);
+        setManagementMembers([]);
+      }
 
     } catch (error) {
       console.error('Error fetching district details:', error);
@@ -89,37 +124,47 @@ const DistrictDetailsPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* İlçe Başkanı ve Müfettiş */}
+        {/* İlçe Başkanı */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">İlçe Yönetimi</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">İlçe Başkanı</h3>
           
-          {officials.length === 0 ? (
-            <p className="text-gray-500">Henüz yönetim atanmamış</p>
-          ) : (
-            <div className="space-y-4">
-              {officials.map((official) => (
-                <div key={official.id} className="space-y-3">
-                  {official.chairman_name && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900">İlçe Başkanı</h4>
-                      <div className="mt-2 space-y-1">
-                        <p className="text-sm text-gray-600"><strong>Ad:</strong> {official.chairman_name}</p>
-                        <p className="text-sm text-gray-600"><strong>Telefon:</strong> {official.chairman_phone}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {official.inspector_name && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900">İlçe Müfettişi</h4>
-                      <div className="mt-2 space-y-1">
-                        <p className="text-sm text-gray-600"><strong>Ad:</strong> {official.inspector_name}</p>
-                        <p className="text-sm text-gray-600"><strong>Telefon:</strong> {official.inspector_phone}</p>
-                      </div>
-                    </div>
+          {districtPresident ? (
+            <div className="border border-indigo-200 rounded-lg p-4 bg-indigo-50">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  {districtPresident.name ? districtPresident.name.charAt(0) : 'İ'}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{districtPresident.name || 'İlçe Başkanı'}</h4>
+                  {districtPresident.username && (
+                    <p className="text-sm text-gray-600">Kullanıcı Adı: {districtPresident.username}</p>
                   )}
                 </div>
-              ))}
+              </div>
+              {officials.length > 0 && officials[0].chairman_phone && (
+                <p className="text-sm text-gray-600"><strong>Telefon:</strong> {officials[0].chairman_phone}</p>
+              )}
+            </div>
+          ) : officials.length > 0 && officials[0].chairman_name ? (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900">İlçe Başkanı</h4>
+              <div className="mt-2 space-y-1">
+                <p className="text-sm text-gray-600"><strong>Ad:</strong> {officials[0].chairman_name}</p>
+                <p className="text-sm text-gray-600"><strong>Telefon:</strong> {officials[0].chairman_phone || '-'}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-500">Henüz ilçe başkanı atanmamış</p>
+          )}
+
+          {/* İlçe Müfettişi */}
+          {officials.length > 0 && officials[0].inspector_name && (
+            <div className="mt-4 border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900">İlçe Müfettişi</h4>
+              <div className="mt-2 space-y-1">
+                <p className="text-sm text-gray-600"><strong>Ad:</strong> {officials[0].inspector_name}</p>
+                <p className="text-sm text-gray-600"><strong>Telefon:</strong> {officials[0].inspector_phone || '-'}</p>
+              </div>
             </div>
           )}
         </div>
@@ -137,7 +182,7 @@ const DistrictDetailsPage = () => {
                   <h4 className="font-medium text-gray-900">Müfettiş Yardımcısı</h4>
                   <div className="mt-2 space-y-1">
                     <p className="text-sm text-gray-600"><strong>Ad:</strong> {deputy.member_name || deputy.name}</p>
-                    <p className="text-sm text-gray-600"><strong>Telefon:</strong> {deputy.member_phone || deputy.phone}</p>
+                    <p className="text-sm text-gray-600"><strong>Telefon:</strong> {deputy.member_phone || deputy.phone || '-'}</p>
                   </div>
                 </div>
               ))}
@@ -145,6 +190,50 @@ const DistrictDetailsPage = () => {
           )}
         </div>
       </div>
+
+      {/* İlçe Başkanı Yönetim Listesi */}
+      {districtPresident && (
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">İlçe Başkanı Yönetim Listesi</h3>
+          
+          {managementMembers.length === 0 ? (
+            <p className="text-gray-500">Henüz yönetim üyesi eklenmemiş</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İsim Soyisim</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Görev</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {managementMembers.map((member) => (
+                    <tr key={member.id}>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {member.name} {member.surname}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
+                        {member.tc}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {member.phone}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                          {member.position}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* İstatistikler */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
