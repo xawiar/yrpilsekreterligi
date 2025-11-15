@@ -229,6 +229,163 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Başmüşahitler için kullanıcı oluştur
+  const handleCreateObserverUsers = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      // Tüm başmüşahitleri al
+      const observers = await ApiService.getBallotBoxObservers();
+      const chiefObservers = observers.filter(obs => obs.is_chief_observer === true || obs.is_chief_observer === 1);
+      
+      if (chiefObservers.length === 0) {
+        setMessage('Başmüşahit bulunamadı');
+        setMessageType('error');
+        return;
+      }
+
+      // Mevcut kullanıcıları al
+      const existingUsers = await ApiService.getMemberUsers();
+      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      
+      // Sandık bilgilerini al
+      const ballotBoxes = await ApiService.getBallotBoxes();
+      
+      let createdCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const observer of chiefObservers) {
+        try {
+          // TC'yi decrypt et
+          let tc = observer.tc || '';
+          try {
+            if (tc && tc.startsWith('U2FsdGVkX1')) {
+              tc = decryptData(tc);
+            }
+          } catch (e) {
+            console.error('TC decrypt hatası:', e);
+          }
+
+          // Kullanıcı adı ve şifre belirle
+          let username, password;
+          if (observer.ballot_box_id) {
+            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(observer.ballot_box_id));
+            if (ballotBox && ballotBox.ballot_number) {
+              username = String(ballotBox.ballot_number);
+            } else {
+              username = tc;
+            }
+          } else {
+            username = tc;
+          }
+          password = tc;
+
+          // Kullanıcı zaten var mı kontrol et (username ile)
+          const existingUser = existingUsers.users?.find(u => u.username === username);
+          
+          if (!existingUser) {
+            // Yeni kullanıcı oluştur - userType='musahit', observerId ile
+            const email = `${username}@ilsekreterlik.local`;
+            let authUser = null;
+            try {
+              authUser = await createUserWithEmailAndPassword(auth, email, password);
+            } catch (authError) {
+              if (authError.code !== 'auth/email-already-in-use') {
+                throw authError;
+              }
+            }
+
+            const userData = {
+              username,
+              password,
+              userType: 'musahit',
+              observerId: observer.id,
+              isActive: true,
+              name: observer.name,
+              tc: observer.tc,
+              authUid: authUser?.user?.uid || null
+            };
+
+            // Firestore'a kaydet
+            await FirebaseService.create('member_users', null, userData, false);
+            createdCount++;
+          } else {
+            // Kullanıcı varsa güncelle (observerId ve userType ekle/güncelle)
+            const updateData = {
+              userType: 'musahit',
+              observerId: observer.id,
+              name: observer.name
+            };
+            
+            // Şifre güncellemesi gerekirse
+            if (existingUser.password !== password) {
+              updateData.password = password;
+            }
+
+            await FirebaseService.update('member_users', existingUser.id, updateData, false);
+            
+            // Firebase Auth'da da şifre güncelle (eğer authUid varsa)
+            if (existingUser.authUid && updateData.password) {
+              try {
+                const email = `${username}@ilsekreterlik.local`;
+                // Admin kullanıcısını koru
+                const currentUser = auth.currentUser;
+                const currentUserUid = currentUser ? currentUser.uid : null;
+                
+                // Kullanıcıyı sign-in et
+                await signInWithEmailAndPassword(auth, email, existingUser.password || password);
+                
+                // Şifreyi güncelle
+                await updatePassword(auth.currentUser, password);
+                
+                // Admin kullanıcısını geri yükle
+                if (currentUserUid && currentUserUid !== existingUser.authUid) {
+                  // Admin bilgilerini al ve tekrar sign-in et
+                  const adminDoc = await FirebaseService.getById('admin', 'main');
+                  if (adminDoc && adminDoc.email) {
+                    await signInWithEmailAndPassword(auth, adminDoc.email, adminDoc.password || 'admin123');
+                  }
+                }
+              } catch (authError) {
+                console.error('Firebase Auth şifre güncelleme hatası:', authError);
+              }
+            }
+            
+            updatedCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${observer.name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error('Başmüşahit kullanıcısı oluşturma hatası:', error);
+        }
+      }
+
+      // Sonuç mesajı
+      let message = `Müşahit şifreleri oluşturuldu!\n`;
+      message += `• Yeni oluşturulan: ${createdCount}\n`;
+      message += `• Güncellenen: ${updatedCount}\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount}\n`;
+        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error creating observer users:', error);
+      setMessage('Müşahit şifreleri oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleFixEncryptedPasswords = async () => {
     try {
       setIsUpdating(true);
