@@ -240,6 +240,40 @@ const MemberDashboardPage = () => {
       } catch (_) {
         setGrantedPermissions([]);
       }
+
+      // Check if member is a Women's Branch President
+      try {
+        const womenPresidents = await ApiService.getWomenBranchPresidents();
+        const isWomenPresident = womenPresidents.some(
+          p => String(p.member_id) === String(memberId) && p.region === memberResponse.region
+        );
+        setIsWomenBranchPresident(isWomenPresident);
+        
+        if (isWomenPresident) {
+          const womenManagement = await ApiService.getWomenBranchManagement(memberId);
+          setWomenBranchManagement(womenManagement || []);
+        }
+      } catch (error) {
+        console.error('Error checking women branch president:', error);
+        setIsWomenBranchPresident(false);
+      }
+
+      // Check if member is a Youth Branch President
+      try {
+        const youthPresidents = await ApiService.getYouthBranchPresidents();
+        const isYouthPresident = youthPresidents.some(
+          p => String(p.member_id) === String(memberId) && p.region === memberResponse.region
+        );
+        setIsYouthBranchPresident(isYouthPresident);
+        
+        if (isYouthPresident) {
+          const youthManagement = await ApiService.getYouthBranchManagement(memberId);
+          setYouthBranchManagement(youthManagement || []);
+        }
+      } catch (error) {
+        console.error('Error checking youth branch president:', error);
+        setIsYouthBranchPresident(false);
+      }
       
     } catch (error) {
       console.error('Error fetching member data:', error);
