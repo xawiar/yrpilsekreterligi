@@ -612,15 +612,19 @@ const MemberUsersSettings = () => {
     );
   }
 
+  // Kullanıcıları üye ve müşahit olarak ayır
+  const memberTypeUsers = memberUsers.filter(u => u.userType !== 'musahit');
+  const observerTypeUsers = memberUsers.filter(u => u.userType === 'musahit');
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Üye Kullanıcıları Yönetimi</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Kullanıcı Yönetimi</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Her üye için otomatik olarak oluşturulan kullanıcı hesaplarını yönetebilirsiniz.
+              Üye ve başmüşahit kullanıcılarını görüntüleyebilirsiniz.
             </p>
           </div>
           <div className="flex space-x-3">
@@ -647,7 +651,7 @@ const MemberUsersSettings = () => {
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200"
             >
-              {showCreateForm ? 'İptal' : 'Yeni Kullanıcı Oluştur'}
+              {showCreateForm ? 'İptal' : 'Yeni Üye Kullanıcısı Oluştur'}
             </button>
           </div>
         </div>
@@ -771,7 +775,14 @@ const MemberUsersSettings = () => {
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Üye Kullanıcıları Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+        <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+          <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          Üye Kullanıcıları ({memberTypeUsers.length})
+        </h4>
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -793,8 +804,8 @@ const MemberUsersSettings = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {(() => {
-                // Filter users based on search term
-                const filteredUsers = memberUsers.filter((user) => {
+                // Filter MEMBER users based on search term (exclude musahit)
+                const filteredUsers = memberTypeUsers.filter((user) => {
                   if (!searchTerm) return true;
                   
                   const searchLower = searchTerm.toLowerCase();
@@ -908,6 +919,97 @@ const MemberUsersSettings = () => {
                   </tr>
                   );
                 });
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Başmüşahit Kullanıcıları Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+        <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+          <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          Başmüşahit Kullanıcıları ({observerTypeUsers.length})
+        </h4>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Başmüşahit Bilgileri
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Kullanıcı Adı (Sandık No)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Şifre (TC)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Durum
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {(() => {
+                // Filter OBSERVER users based on search term
+                const filteredObservers = observerTypeUsers.filter((user) => {
+                  if (!searchTerm) return true;
+                  
+                  const searchLower = searchTerm.toLowerCase();
+                  const username = (user.username || '').toLowerCase();
+                  const password = (getDecryptedPassword(user) || '').toLowerCase();
+                  const name = (user.name || '').toLowerCase();
+                  
+                  return (
+                    name.includes(searchLower) ||
+                    username.includes(searchLower) ||
+                    password.includes(searchLower)
+                  );
+                });
+                
+                if (filteredObservers.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz başmüşahit kullanıcısı bulunmuyor'}
+                      </td>
+                    </tr>
+                  );
+                }
+                
+                return filteredObservers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name || 'Bilinmeyen'}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          <span className="inline-flex px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                            Başmüşahit
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{user.username}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                        {getDecryptedPassword(user) || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        user.is_active || user.isActive
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                      }`}>
+                        {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </td>
+                  </tr>
+                ));
               })()}
             </tbody>
           </table>
