@@ -215,7 +215,7 @@ const ChiefObserverRoute = ({ children }) => {
   // Eğer authenticated değilse login'e yönlendir
   // NOT: Sadece bir kez yönlendir - replace ile
   if (!authResult.current) {
-    return <Navigate to="/chief-observer-login" replace />;
+    return <Navigate to="/login?type=chief-observer" replace />;
   }
   
   // Tüm kontroller geçti - dashboard'ı göster
