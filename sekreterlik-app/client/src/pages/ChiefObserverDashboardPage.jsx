@@ -42,10 +42,10 @@ const ChiefObserverDashboardPage = () => {
 
         // Eğer authenticated değilse login'e yönlendir
         if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
+          setAuthChecked(true); // Auth kontrolü tamamlandı
           if (currentPath !== '/chief-observer-login') {
             navigate('/chief-observer-login', { replace: true });
           }
-          // State güncelleme yapma - yönlendirme yapıldı, component unmount olacak
           return;
         }
 
@@ -53,20 +53,20 @@ const ChiefObserverDashboardPage = () => {
         try {
           const userData = JSON.parse(savedUser);
           setUser(userData);
-          setAuthChecked(true); // Sadece user set edildiğinde authChecked'i true yap
+          setAuthChecked(true); // Auth kontrolü tamamlandı ve user set edildi
         } catch (e) {
           // JSON parse hatası - login'e yönlendir
+          setAuthChecked(true); // Auth kontrolü tamamlandı
           if (currentPath !== '/chief-observer-login') {
             navigate('/chief-observer-login', { replace: true });
           }
-          // State güncelleme yapma - yönlendirme yapıldı
         }
       } catch (err) {
         console.error('Error checking auth:', err);
+        setAuthChecked(true); // Auth kontrolü tamamlandı
         if (window.location.pathname !== '/chief-observer-login') {
           navigate('/chief-observer-login', { replace: true });
         }
-        // State güncelleme yapma - yönlendirme yapıldı
       }
     };
 
