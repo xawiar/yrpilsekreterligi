@@ -13,11 +13,16 @@ const ChiefObserverLoginPage = () => {
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const savedUser = localStorage.getItem('user');
     
-    if (userRole === 'chief_observer' && isLoggedIn) {
-      navigate('/chief-observer-dashboard', { replace: true });
+    // Sadece gerçekten giriş yapılmışsa ve dashboard'da değilsek yönlendir
+    if (userRole === 'chief_observer' && isLoggedIn && savedUser) {
+      // Eğer zaten dashboard'dayız, yönlendirme yapma
+      if (window.location.pathname !== '/chief-observer-dashboard') {
+        navigate('/chief-observer-dashboard', { replace: true });
+      }
     }
-  }, []); // Boş dependency array - sadece mount'ta çalışır
+  }, [navigate]); // navigate dependency'ye eklendi ama pathname kontrolü ile döngü önlendi
 
   const handleSubmit = async (e) => {
     e.preventDefault();

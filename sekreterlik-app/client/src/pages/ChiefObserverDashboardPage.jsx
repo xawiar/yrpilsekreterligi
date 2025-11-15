@@ -12,24 +12,33 @@ const ChiefObserverDashboardPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Kullanıcı bilgilerini kontrol et
+    // Kullanıcı bilgilerini kontrol et - sadece bir kez çalışsın
     const savedUser = localStorage.getItem('user');
     const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
-    if (!savedUser || userRole !== 'chief_observer') {
-      navigate('/chief-observer-login', { replace: true });
+    // Eğer kullanıcı bilgisi yoksa veya role yanlışsa login'e yönlendir
+    if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
+      // Sadece bir kez yönlendir - sonsuz döngüyü önlemek için
+      if (window.location.pathname !== '/chief-observer-login') {
+        navigate('/chief-observer-login', { replace: true });
+      }
       return;
     }
 
+    // Kullanıcı bilgisi varsa parse et ve state'e set et
     try {
       const userData = JSON.parse(savedUser);
       setUser(userData);
       fetchElections();
     } catch (error) {
       console.error('Error parsing user data:', error);
-      navigate('/chief-observer-login', { replace: true });
+      // Parse hatası varsa login'e yönlendir
+      if (window.location.pathname !== '/chief-observer-login') {
+        navigate('/chief-observer-login', { replace: true });
+      }
     }
-  }, []); // navigate bağımlılığı kaldırıldı - sonsuz döngüyü önlemek için
+  }, [navigate]); // navigate dependency'ye eklendi ama pathname kontrolü ile döngü önlendi
 
   const fetchElections = async () => {
     try {

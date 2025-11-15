@@ -298,7 +298,7 @@ function RouterContent() {
             } 
           />
           
-          {/* Chief Observer Routes */}
+          {/* Chief Observer Routes - Tamamen ayrı route'lar, admin route'larından bağımsız */}
           <Route 
             path="/chief-observer-login" 
             element={
@@ -309,7 +309,11 @@ function RouterContent() {
           />
           <Route 
             path="/chief-observer-dashboard" 
-            element={<ChiefObserverDashboardPage />} 
+            element={
+              <ChiefObserverRoute>
+                <ChiefObserverDashboardPage />
+              </ChiefObserverRoute>
+            } 
           />
           
           {/* Admin Routes */}
