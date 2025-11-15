@@ -982,7 +982,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {totalBallotBoxesCount}
+              {getTotalBallotBoxes}
             </div>
           </div>
           
