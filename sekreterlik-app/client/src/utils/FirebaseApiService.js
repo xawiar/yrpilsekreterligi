@@ -692,9 +692,11 @@ class FirebaseApiService {
 
   static async createMemberUser(memberId, username, password) {
     try {
+      console.error('[DEBUG] 🔵 createMemberUser çağrıldı:', { memberId, username, password: '***' });
       // Mevcut kullanıcıyı koru - sadece yeni kullanıcı oluştur
       const currentUser = auth.currentUser;
       const currentUserUid = currentUser ? currentUser.uid : null;
+      console.error('[DEBUG] 🔵 Mevcut kullanıcı:', { uid: currentUserUid });
       
       // Önce bu memberId için zaten kullanıcı var mı kontrol et
       const existingUsers = await FirebaseService.findByField(
@@ -702,9 +704,10 @@ class FirebaseApiService {
         'memberId',
         memberId
       );
+      console.error('[DEBUG] 🔵 Mevcut kullanıcılar:', existingUsers);
       
       if (existingUsers && existingUsers.length > 0) {
-        console.log('ℹ️ User already exists for member:', memberId);
+        console.error('[DEBUG] ℹ️ User already exists for member:', memberId, existingUsers[0]);
         return { success: true, id: existingUsers[0].id, message: 'Kullanıcı zaten mevcut' };
       }
       
