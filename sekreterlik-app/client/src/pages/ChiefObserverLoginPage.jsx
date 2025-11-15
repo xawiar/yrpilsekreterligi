@@ -67,29 +67,29 @@ const ChiefObserverLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Başmüşahit Girişi</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <h1 className="text-2xl font-bold text-gray-900">Başmüşahit Girişi</h1>
+          <p className="mt-2 text-sm text-gray-600">
             Sandık numaranız ve TC kimlik numaranız ile giriş yapın
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm">
+          <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-lg text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="ballotNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="ballotNumber" className="block text-sm font-medium text-gray-700 mb-2">
               Sandık Numarası
             </label>
             <input
@@ -97,14 +97,14 @@ const ChiefObserverLoginPage = () => {
               type="text"
               value={ballotNumber}
               onChange={(e) => setBallotNumber(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-900"
               placeholder="Örn: 1001"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="tc" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="tc" className="block text-sm font-medium text-gray-700 mb-2">
               TC Kimlik Numarası
             </label>
             <input
@@ -112,7 +112,7 @@ const ChiefObserverLoginPage = () => {
               type="text"
               value={tc}
               onChange={(e) => setTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-900"
               placeholder="11 haneli TC kimlik numaranız"
               maxLength={11}
               required
