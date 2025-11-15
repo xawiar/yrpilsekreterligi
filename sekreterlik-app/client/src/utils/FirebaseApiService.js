@@ -526,7 +526,6 @@ class FirebaseApiService {
 
       // Başmüşahit bilgilerini al
       // Kullanıcı adı sandık numarası ise sandık bul, TC ise direkt başmüşahit bul
-      const username = memberUser.username;
       let ballotBox = null;
       let chiefObserver = null;
 
