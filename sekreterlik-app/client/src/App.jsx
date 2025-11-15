@@ -33,8 +33,9 @@ const GroupsPage = lazy(() => import('./pages/GroupsPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
-const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
-const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
+// Başmüşahit login geçici olarak devre dışı - redirect döngüsü sorunu nedeniyle
+// const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
+// const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
 const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
 const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
@@ -306,15 +307,15 @@ function AppContent() {
             } 
           />
           
-          {/* Chief Observer Routes - PublicRoute kullanmıyoruz çünkü başmüşahit AuthContext'te değil */}
-          <Route 
+          {/* Chief Observer Routes - GEÇİCİ OLARAK DEVRE DIŞI - Redirect döngüsü sorunu nedeniyle */}
+          {/* <Route 
             path="/chief-observer-login" 
             element={<ChiefObserverLoginPage />} 
           />
           <Route 
             path="/chief-observer-dashboard" 
             element={<ChiefObserverDashboardPage />} 
-          />
+          /> */}
           
           {/* Admin Routes */}
           <Route 
