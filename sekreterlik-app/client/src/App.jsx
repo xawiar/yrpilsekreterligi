@@ -173,6 +173,15 @@ const PublicRoute = ({ children }) => {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
+  // Chief observer login sayfasını kontrol et
+  // Chief observer'lar AuthContext kullanmıyor, localStorage kontrolü yap
+  const userRole = localStorage.getItem('userRole');
+  const isChiefObserverLoggedIn = userRole === 'chief_observer' && localStorage.getItem('isLoggedIn') === 'true';
+  
+  if (isChiefObserverLoggedIn && window.location.pathname === '/chief-observer-login') {
+    return <Navigate to="/chief-observer-dashboard" replace />;
+  }
+  
   if (!isLoggedIn) return children;
   
   // If logged in, redirect to appropriate dashboard
