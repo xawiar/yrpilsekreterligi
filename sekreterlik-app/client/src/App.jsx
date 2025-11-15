@@ -165,13 +165,24 @@ const PublicRoute = ({ children }) => {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
-  // Chief observer kontrolü
-  const userRole = localStorage.getItem('userRole');
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  const savedUser = localStorage.getItem('user');
-  
-  if (userRole === 'chief_observer' && isLoggedIn && savedUser && window.location.pathname === '/chief-observer-login') {
-    return <Navigate to="/chief-observer-dashboard" replace />;
+  // Chief observer kontrolü - sadece login sayfası için
+  // Eğer zaten giriş yapılmışsa dashboard'a yönlendir
+  const currentPath = window.location.pathname;
+  if (currentPath === '/chief-observer-login') {
+    const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const savedUser = localStorage.getItem('user');
+    
+    // Tüm kontrolleri yap - sadece gerçekten giriş yapılmışsa yönlendir
+    if (userRole === 'chief_observer' && isLoggedIn && savedUser) {
+      try {
+        // savedUser'ın geçerli JSON olduğunu kontrol et
+        JSON.parse(savedUser);
+        return <Navigate to="/chief-observer-dashboard" replace />;
+      } catch (e) {
+        // JSON parse hatası varsa yönlendirme yapma - login sayfasını göster
+      }
+    }
   }
   
   // Login sayfasını göster - yönlendirme yapmadan
@@ -189,12 +200,31 @@ const ChiefObserverRoute = ({ children }) => {
   const userRole = localStorage.getItem('userRole');
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const savedUser = localStorage.getItem('user');
+  const currentPath = window.location.pathname;
   
   // Eğer chief observer değilse veya giriş yapılmamışsa login'e yönlendir
   if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
-    return <Navigate to="/chief-observer-login" replace />;
+    // Zaten login sayfasındaysak yönlendirme yapma (sonsuz döngüyü önlemek için)
+    if (currentPath !== '/chief-observer-login') {
+      return <Navigate to="/chief-observer-login" replace />;
+    }
+    // Zaten login sayfasındaysak, children'ı göster (PublicRoute zaten kontrol edecek)
+    return children;
   }
   
+  // Kullanıcı bilgisinin geçerli JSON olduğunu kontrol et
+  try {
+    JSON.parse(savedUser);
+  } catch (e) {
+    // JSON parse hatası varsa login'e yönlendir
+    if (currentPath !== '/chief-observer-login') {
+      return <Navigate to="/chief-observer-login" replace />;
+    }
+    // Zaten login sayfasındaysak, children'ı göster
+    return children;
+  }
+  
+  // Tüm kontroller geçti - dashboard'ı göster
   return children;
 };
 

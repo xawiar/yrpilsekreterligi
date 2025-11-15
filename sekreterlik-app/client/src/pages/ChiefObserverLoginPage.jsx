@@ -9,20 +9,22 @@ const ChiefObserverLoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Zaten giriş yapılmışsa dashboard'a yönlendir (tek seferlik)
+  // Zaten giriş yapılmışsa dashboard'a yönlendir (tek seferlik - sadece mount'ta)
+  // NOT: PublicRoute zaten bu kontrolü yapıyor, burada sadece ekstra güvenlik için
   useEffect(() => {
+    // Sadece bir kez çalışsın - dependency array boş
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const savedUser = localStorage.getItem('user');
+    const currentPath = window.location.pathname;
     
-    // Sadece gerçekten giriş yapılmışsa ve dashboard'da değilsek yönlendir
-    if (userRole === 'chief_observer' && isLoggedIn && savedUser) {
-      // Eğer zaten dashboard'dayız, yönlendirme yapma
-      if (window.location.pathname !== '/chief-observer-dashboard') {
-        navigate('/chief-observer-dashboard', { replace: true });
-      }
+    // Sadece gerçekten giriş yapılmışsa ve login sayfasındaysak yönlendir
+    if (userRole === 'chief_observer' && isLoggedIn && savedUser && currentPath === '/chief-observer-login') {
+      // PublicRoute zaten yönlendirme yapacak, burada sadece ekstra kontrol
+      // navigate çağrısını kaldırdık - PublicRoute'a bıraktık
     }
-  }, [navigate]); // navigate dependency'ye eklendi ama pathname kontrolü ile döngü önlendi
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Boş dependency array - sadece component mount olduğunda çalışır
 
   const handleSubmit = async (e) => {
     e.preventDefault();

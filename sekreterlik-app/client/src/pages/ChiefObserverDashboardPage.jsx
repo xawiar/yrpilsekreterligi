@@ -12,17 +12,16 @@ const ChiefObserverDashboardPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Kullanıcı bilgilerini kontrol et - sadece bir kez çalışsın
+    // Kullanıcı bilgilerini kontrol et - sadece bir kez çalışsın (mount'ta)
+    // NOT: ChiefObserverRoute zaten bu kontrolü yapıyor, burada sadece state'i set ediyoruz
     const savedUser = localStorage.getItem('user');
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const currentPath = window.location.pathname;
     
-    // Eğer kullanıcı bilgisi yoksa veya role yanlışsa login'e yönlendir
+    // Eğer kullanıcı bilgisi yoksa veya role yanlışsa - ChiefObserverRoute zaten yönlendirecek
     if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
-      // Sadece bir kez yönlendir - sonsuz döngüyü önlemek için
-      if (window.location.pathname !== '/chief-observer-login') {
-        navigate('/chief-observer-login', { replace: true });
-      }
+      // ChiefObserverRoute zaten login'e yönlendirecek, burada sadece return
       return;
     }
 
@@ -33,12 +32,11 @@ const ChiefObserverDashboardPage = () => {
       fetchElections();
     } catch (error) {
       console.error('Error parsing user data:', error);
-      // Parse hatası varsa login'e yönlendir
-      if (window.location.pathname !== '/chief-observer-login') {
-        navigate('/chief-observer-login', { replace: true });
-      }
+      // Parse hatası varsa - ChiefObserverRoute zaten yönlendirecek
+      // navigate çağrısını kaldırdık - ChiefObserverRoute'a bıraktık
     }
-  }, [navigate]); // navigate dependency'ye eklendi ama pathname kontrolü ile döngü önlendi
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Boş dependency array - sadece component mount olduğunda çalışır
 
   const fetchElections = async () => {
     try {
