@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import PersonalDocuments from './PersonalDocuments';
 import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
+import { calculatePerformanceScore, calculateMaxScore, findFirstMeetingDate } from '../utils/performanceScore';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
@@ -38,6 +39,77 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
   
   const [manualStars, setManualStars] = useState(member.manual_stars !== null && member.manual_stars !== undefined ? parseInt(member.manual_stars) : null);
   const [isSavingStars, setIsSavingStars] = useState(false);
+  const [performanceScore, setPerformanceScore] = useState(null);
+  const [maxScore, setMaxScore] = useState(null);
+  const [levelInfo, setLevelInfo] = useState(null);
+  const [loadingScore, setLoadingScore] = useState(true);
+  
+  // Calculate performance score
+  useEffect(() => {
+    const loadPerformanceScore = async () => {
+      if (!member || !member.id || !meetings || !events) {
+        setLoadingScore(false);
+        return;
+      }
+      
+      try {
+        setLoadingScore(true);
+        const score = await calculatePerformanceScore(member, meetings, events, memberRegistrations || []);
+        const firstMeetingDate = findFirstMeetingDate(meetings);
+        const settings = await import('../utils/performanceScore').then(m => m.loadPerformanceScoreSettings());
+        const max = calculateMaxScore(meetings, events, firstMeetingDate, settings);
+        
+        // Calculate level
+        const percentage = max > 0 ? (score.totalScore / max) * 100 : 0;
+        let performanceStars = 1;
+        let level = 'Pasif Üye';
+        let levelColor = '#808080';
+        
+        if (percentage >= 95) {
+          level = 'Platinyum';
+          levelColor = '#E5E4E2';
+          performanceStars = 5;
+        } else if (percentage >= 80) {
+          level = 'Gold';
+          levelColor = '#FFD700';
+          performanceStars = 4;
+        } else if (percentage >= 50) {
+          level = 'Gümüş';
+          levelColor = '#C0C0C0';
+          performanceStars = 3;
+        } else if (percentage >= 20) {
+          level = 'Bronz';
+          levelColor = '#CD7F32';
+          performanceStars = 2;
+        }
+        
+        // Calculate average stars with manual stars
+        let averageStars = performanceStars;
+        if (manualStars !== null && manualStars !== undefined) {
+          averageStars = Math.round((performanceStars + manualStars) / 2);
+          averageStars = Math.max(1, Math.min(5, averageStars));
+        }
+        
+        setPerformanceScore(score);
+        setMaxScore(max);
+        setLevelInfo({
+          level,
+          levelColor,
+          stars: averageStars,
+          performanceStars,
+          manualStars: manualStars !== null ? manualStars : null,
+          averageStars,
+          percentage: percentage.toFixed(1)
+        });
+      } catch (error) {
+        console.error('Error calculating performance score:', error);
+      } finally {
+        setLoadingScore(false);
+      }
+    };
+    
+    loadPerformanceScore();
+  }, [member, meetings, events, memberRegistrations, manualStars]);
   
   // Calculate meeting statistics for this member
   const stats = calculateMeetingStats ? calculateMeetingStats(member, meetings) : {
@@ -659,6 +731,76 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
           </dl>
         </div>
       </div>
+      
+      {/* Performance Score & Stars Section */}
+      {(performanceScore || levelInfo) && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 sm:p-5 border border-indigo-200 mb-4 sm:mb-6">
+          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Performans Puanı & Yıldız</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Toplam Puan</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-indigo-600">
+                {loadingScore ? '...' : (performanceScore?.totalScore || 0).toLocaleString('tr-TR')}
+              </div>
+              {maxScore && (
+                <div className="text-xs text-gray-400 mt-1">
+                  Maksimum: {maxScore.toLocaleString('tr-TR')}
+                </div>
+              )}
+            </div>
+            <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Seviye</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: levelInfo?.levelColor || '#808080' }}>
+                {loadingScore ? '...' : (levelInfo?.level || 'Pasif Üye')}
+              </div>
+              {levelInfo?.percentage && (
+                <div className="text-xs text-gray-400 mt-1">
+                  %{levelInfo.percentage}
+                </div>
+              )}
+            </div>
+            <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Yıldız</div>
+              <div className="flex items-center gap-1">
+                {loadingScore ? (
+                  <span className="text-lg sm:text-xl">...</span>
+                ) : (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <svg
+                      key={i}
+                      className={`w-5 h-5 sm:w-6 sm:h-6 ${i < (levelInfo?.stars || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))
+                )}
+              </div>
+              {levelInfo && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {levelInfo.performanceStars} performans
+                  {levelInfo.manualStars !== null && ` + ${levelInfo.manualStars} manuel`}
+                  {levelInfo.manualStars !== null && ` = ${levelInfo.averageStars} ortalama`}
+                </div>
+              )}
+            </div>
+            <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Puan Detayları</div>
+              {loadingScore ? (
+                <div className="text-sm">...</div>
+              ) : (
+                <div className="text-xs space-y-0.5">
+                  <div>Toplantı: +{performanceScore?.breakdown?.meetingPoints || 0}</div>
+                  <div>Etkinlik: +{performanceScore?.breakdown?.eventPoints || 0}</div>
+                  <div>Kayıt: +{performanceScore?.breakdown?.registrationPoints || 0}</div>
+                  <div className="text-green-600">Bonus: +{performanceScore?.breakdown?.bonusPoints || 0}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100">
         <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">İstatistikler</h3>
