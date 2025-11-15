@@ -37,7 +37,10 @@ const ElectionResultsPage = () => {
 
   const fetchData = async () => {
     try {
+      console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
       setLoading(true);
+      
+      console.log('📡 API çağrıları başlatılıyor...');
       const [
         electionsData,
         resultsData,
@@ -58,7 +61,20 @@ const ElectionResultsPage = () => {
         ApiService.getBallotBoxObservers()
       ]);
 
+      console.log('✅ API çağrıları tamamlandı:', {
+        electionsCount: electionsData?.length || 0,
+        resultsCount: resultsData?.length || 0,
+        ballotBoxesCount: ballotBoxesData?.length || 0,
+        districtsCount: districtsData?.length || 0,
+        townsCount: townsData?.length || 0,
+        neighborhoodsCount: neighborhoodsData?.length || 0,
+        villagesCount: villagesData?.length || 0,
+        observersCount: observersData?.length || 0
+      });
+
       const selectedElection = electionsData.find(e => String(e.id) === String(electionId));
+      console.log('🔍 Seçim bulundu:', selectedElection ? { id: selectedElection.id, name: selectedElection.name } : 'BULUNAMADI');
+      
       setElection(selectedElection);
       setResults(resultsData || []);
       setBallotBoxes(ballotBoxesData || []);
@@ -67,10 +83,18 @@ const ElectionResultsPage = () => {
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
       setObservers(observersData || []);
+      
+      console.log('✅ State güncellendi');
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
     } finally {
       setLoading(false);
+      console.log('🏁 Loading false yapıldı');
     }
   };
 
@@ -255,7 +279,15 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
+  console.log('🎨 ElectionResultsPage render:', {
+    loading,
+    election: election ? { id: election.id, name: election.name } : null,
+    resultsCount: results.length,
+    electionId
+  });
+
   if (loading) {
+    console.log('⏳ Loading state: true, spinner gösteriliyor');
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -264,10 +296,12 @@ const ElectionResultsPage = () => {
   }
 
   if (!election) {
+    console.log('⚠️ Election bulunamadı, hata mesajı gösteriliyor');
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Seçim bulunamadı</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Election ID: {electionId}</p>
         </div>
       </div>
     );
