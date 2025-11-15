@@ -199,11 +199,12 @@ const PublicRoute = ({ children }) => {
   return <Navigate to="/" replace />;
 };
 
-function AppContent() {
+// Router içinde kullanılacak component - useNavigate burada güvenli
+function RouterContent() {
+  const navigate = useNavigate();
+  const { isLoggedIn, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
-  const { isLoggedIn, user } = useAuth();
-
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
 
   // Mobile menu event listener
@@ -218,7 +219,6 @@ function AppContent() {
   }, []);
 
   // Quick action event listener
-  const navigate = useNavigate();
   React.useEffect(() => {
     const handleQuickAction = (e) => {
       const { action } = e.detail;
@@ -237,15 +237,9 @@ function AppContent() {
   }, [navigate]);
 
   return (
-    <Router
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
-      <div className="min-h-screen bg-neutral-50">
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
+    <div className="min-h-screen bg-neutral-50">
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
           <Route 
             path="/login" 
             element={
@@ -484,8 +478,8 @@ function AppContent() {
         {isLoggedIn && user?.role === 'admin' && (
           <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
         )}
-      </div>
-    </Router>
+      </Suspense>
+    </div>
   );
 }
 
@@ -493,7 +487,14 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <RouterContent />
+        </Router>
         <PWANotification />
         <AppInstallBanner />
         <OfflineStatus />
