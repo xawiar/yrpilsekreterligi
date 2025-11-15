@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
-import { storage } from '../config/firebase';
+import { storage, auth } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -102,6 +103,59 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
     try {
       setUploadingPhotos(prev => ({ ...prev, [type]: true }));
+      
+      // Firebase Auth state kontrolü - başmüşahit için
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        // Firebase Auth'da kullanıcı yoksa, localStorage'dan bilgileri al ve yeniden authenticate et
+        const savedUser = localStorage.getItem('user');
+        const userRole = localStorage.getItem('userRole');
+        
+        if (userRole === 'chief_observer' && savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            const username = userData.username || userData.ballotNumber;
+            const email = `${username}@ilsekreterlik.local`;
+            
+            // Başmüşahit için Firebase Auth'da giriş yap
+            // Şifreyi member_users'dan al
+            const memberUsersResponse = await ApiService.getMemberUsers();
+            const memberUsers = memberUsersResponse.users || memberUsersResponse || [];
+            const memberUser = memberUsers.find(u => 
+              u.userType === 'musahit' && (u.username === username || u.username === userData.ballotNumber)
+            );
+            
+            if (memberUser) {
+              // Şifreyi decrypt et gerekirse
+              let storedPassword = memberUser.password || '';
+              try {
+                if (storedPassword && storedPassword.startsWith('U2FsdGVkX1')) {
+                  const { decryptData } = await import('../utils/crypto');
+                  storedPassword = decryptData(storedPassword);
+                }
+              } catch (e) {
+                console.error('[DEBUG] Decrypt error:', e);
+                // Decrypt başarısız, direkt kullan (şifrelenmemiş olabilir)
+              }
+              
+              // Şifre yoksa TC'yi kullan
+              const password = storedPassword || userData.tc || username;
+              
+              // Firebase Auth ile giriş yap
+              await signInWithEmailAndPassword(auth, email, password);
+              console.log('[DEBUG] Firebase Auth re-authenticated for chief observer');
+            } else {
+              // Member user bulunamadı, TC'yi şifre olarak kullan
+              const password = userData.tc || username;
+              await signInWithEmailAndPassword(auth, email, password);
+              console.log('[DEBUG] Firebase Auth re-authenticated for chief observer (using TC as password)');
+            }
+          } catch (reauthError) {
+            console.error('[DEBUG] Re-authentication error:', reauthError);
+            // Re-auth başarısız olsa bile devam et - belki zaten authenticated
+          }
+        }
+      }
       
       // Firebase Storage'a yükle
       const timestamp = Date.now();
