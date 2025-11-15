@@ -635,7 +635,7 @@ const ElectionResultsPage = () => {
   const hasResults = filteredResults.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
