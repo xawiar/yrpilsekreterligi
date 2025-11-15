@@ -126,6 +126,17 @@ for (let i = 0; i < 1000; i++) {
 }
 console.log('Created election-results/[0-999]/index.html for common IDs');
 
+// For string-based election IDs, create a catch-all mechanism
+// Create a subdirectory that will be used as a fallback
+// This ensures any string ID will work via _redirects
+const catchAllSubDir = path.join(electionResultsDir, 'catch-all');
+if (!fs.existsSync(catchAllSubDir)) {
+  fs.mkdirSync(catchAllSubDir, { recursive: true });
+}
+const catchAllSubIndexPath = path.join(catchAllSubDir, 'index.html');
+fs.writeFileSync(catchAllSubIndexPath, indexHtml);
+console.log('Created election-results/catch-all/index.html for string IDs');
+
 // Also create a catch-all mechanism using a special directory
 // Some hosting providers support this pattern
 const catchAllDir = path.join(electionResultsDir, '_');

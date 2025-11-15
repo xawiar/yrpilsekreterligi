@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -128,7 +128,6 @@ const ElectionResultsPage = () => {
   const [villages, setVillages] = useState([]);
   const [observers, setObservers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   
   // Filters
   const [selectedDistrict, setSelectedDistrict] = useState('');
@@ -168,83 +167,27 @@ const ElectionResultsPage = () => {
     try {
       console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
       setLoading(true);
-      setError('');
       
       console.log('📡 API çağrıları başlatılıyor...');
-      
-      // Her API çağrısını ayrı ayrı try-catch ile sarmalayalım
-      let electionsData = [];
-      let resultsData = [];
-      let ballotBoxesData = [];
-      let districtsData = [];
-      let townsData = [];
-      let neighborhoodsData = [];
-      let villagesData = [];
-      let observersData = [];
-      
-      try {
-        electionsData = await ApiService.getElections();
-        console.log('✅ Elections loaded:', electionsData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading elections:', err);
-        electionsData = [];
-      }
-      
-      try {
-        resultsData = await ApiService.getElectionResults(electionId, null);
-        console.log('✅ Election results loaded:', resultsData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading election results:', err);
-        resultsData = [];
-      }
-      
-      try {
-        ballotBoxesData = await ApiService.getBallotBoxes();
-        console.log('✅ Ballot boxes loaded:', ballotBoxesData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading ballot boxes:', err);
-        ballotBoxesData = [];
-      }
-      
-      try {
-        districtsData = await ApiService.getDistricts();
-        console.log('✅ Districts loaded:', districtsData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading districts:', err);
-        districtsData = [];
-      }
-      
-      try {
-        townsData = await ApiService.getTowns();
-        console.log('✅ Towns loaded:', townsData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading towns:', err);
-        townsData = [];
-      }
-      
-      try {
-        neighborhoodsData = await ApiService.getNeighborhoods();
-        console.log('✅ Neighborhoods loaded:', neighborhoodsData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading neighborhoods:', err);
-        neighborhoodsData = [];
-      }
-      
-      try {
-        villagesData = await ApiService.getVillages();
-        console.log('✅ Villages loaded:', villagesData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading villages:', err);
-        villagesData = [];
-      }
-      
-      try {
-        observersData = await ApiService.getBallotBoxObservers();
-        console.log('✅ Observers loaded:', observersData?.length || 0);
-      } catch (err) {
-        console.error('❌ Error loading observers:', err);
-        observersData = [];
-      }
+      const [
+        electionsData,
+        resultsData,
+        ballotBoxesData,
+        districtsData,
+        townsData,
+        neighborhoodsData,
+        villagesData,
+        observersData
+      ] = await Promise.all([
+        ApiService.getElections(),
+        ApiService.getElectionResults(electionId, null),
+        ApiService.getBallotBoxes(),
+        ApiService.getDistricts(),
+        ApiService.getTowns(),
+        ApiService.getNeighborhoods(),
+        ApiService.getVillages(),
+        ApiService.getBallotBoxObservers()
+      ]);
 
       console.log('✅ API çağrıları tamamlandı:', {
         electionsCount: electionsData?.length || 0,
@@ -260,11 +203,7 @@ const ElectionResultsPage = () => {
       const selectedElection = electionsData.find(e => String(e.id) === String(electionId));
       console.log('🔍 Seçim bulundu:', selectedElection ? { id: selectedElection.id, name: selectedElection.name } : 'BULUNAMADI');
       
-      if (!selectedElection) {
-        setError(`Seçim bulunamadı (ID: ${electionId})`);
-      }
-      
-      setElection(selectedElection || null);
+      setElection(selectedElection);
       setResults(resultsData || []);
       setBallotBoxes(ballotBoxesData || []);
       setDistricts(districtsData || []);
@@ -281,7 +220,6 @@ const ElectionResultsPage = () => {
         stack: error.stack,
         name: error.name
       });
-      setError(`Veriler yüklenirken hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
       console.log('🏁 Loading false yapıldı');
@@ -410,23 +348,19 @@ const ElectionResultsPage = () => {
     return chiefObserver || null;
   };
 
-  // Calculate total ballot boxes for this election (filtered by location if filters are active)
-  const getTotalBallotBoxes = useMemo(() => {
-    let filtered = ballotBoxes;
-    
-    // Apply location filters if any are selected
-    if (selectedDistrict || selectedTown || selectedNeighborhood || selectedVillage) {
-      filtered = ballotBoxes.filter(bb => {
-        if (selectedDistrict && String(bb.district_id) !== String(selectedDistrict)) return false;
-        if (selectedTown && String(bb.town_id) !== String(selectedTown)) return false;
-        if (selectedNeighborhood && String(bb.neighborhood_id) !== String(selectedNeighborhood)) return false;
-        if (selectedVillage && String(bb.village_id) !== String(selectedVillage)) return false;
-        return true;
-      });
+  // Calculate total ballot boxes for this election
+  const getTotalBallotBoxes = () => {
+    if (!selectedDistrict && !selectedTown && !selectedNeighborhood && !selectedVillage) {
+      return ballotBoxes.length;
     }
-    
-    return filtered.length;
-  }, [ballotBoxes, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage]);
+    return ballotBoxes.filter(bb => {
+      if (selectedDistrict && String(bb.district_id) !== String(selectedDistrict)) return false;
+      if (selectedTown && String(bb.town_id) !== String(selectedTown)) return false;
+      if (selectedNeighborhood && String(bb.neighborhood_id) !== String(selectedNeighborhood)) return false;
+      if (selectedVillage && String(bb.village_id) !== String(selectedVillage)) return false;
+      return true;
+    }).length;
+  };
 
   // Calculate participation percentage
   const calculateParticipationPercentage = () => {
@@ -436,13 +370,13 @@ const ElectionResultsPage = () => {
     return ((totalUsedVotes / election.voter_count) * 100).toFixed(2);
   };
 
-  // Calculate opened ballot box percentage (memoized)
-  const calculateOpenedBallotBoxPercentage = useMemo(() => {
-    const total = getTotalBallotBoxes;
+  // Calculate opened ballot box percentage
+  const calculateOpenedBallotBoxPercentage = () => {
+    const total = getTotalBallotBoxes();
     if (total === 0) return '0.00';
     const opened = hasResults ? filteredResults.length : 0;
     return ((opened / total) * 100).toFixed(2);
-  }, [getTotalBallotBoxes, hasResults, filteredResults.length]);
+  };
 
   // Calculate aggregated results
   const calculateAggregatedResults = () => {
@@ -560,32 +494,48 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
-  // Memoize filtered results to prevent unnecessary recalculations
-  const filteredResults = useMemo(() => getFilteredResults(), [
-    results,
-    ballotBoxes,
-    districts,
-    towns,
-    neighborhoods,
-    villages,
-    selectedDistrict,
-    selectedTown,
-    selectedNeighborhood,
-    selectedVillage,
-    selectedBallotNumber,
-    searchQuery,
-    filterByObjection
-  ]);
+  // Calculate filtered results and aggregated results
+  const filteredResults = getFilteredResults();
+  const hasResults = filteredResults.length > 0;
+  const aggregatedResults = calculateAggregatedResults();
 
-  const hasResults = useMemo(() => filteredResults.length > 0, [filteredResults.length]);
+  // Count-up animation states
+  const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
+  const [openedBallotBoxesCount, setOpenedBallotBoxesCount] = useState(0);
+  const [totalValidVotesCount, setTotalValidVotesCount] = useState(0);
+  const [objectionCount, setObjectionCount] = useState(0);
 
-  // Memoize aggregated results
-  const aggregatedResults = useMemo(() => calculateAggregatedResults(), [filteredResults, election]);
+  // Animate counts - moved after filteredResults and aggregatedResults are calculated
+  useEffect(() => {
+    if (!election) return;
+    
+    const totalBallotBoxes = getTotalBallotBoxes();
+    const openedCount = hasResults ? filteredResults.length : 0;
+    const validVotes = hasResults ? aggregatedResults.total : 0;
+    const objectionCountValue = filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
 
-  // Calculate objection count (memoized)
-  const objectionCountValue = useMemo(() => {
-    return filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
-  }, [filteredResults]);
+    const animateValue = (start, end, setter, duration = 1000) => {
+      let startTime = null;
+      const animate = (currentTime) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        setter(Math.floor(start + (end - start) * easeOutQuart));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setter(end);
+        }
+      };
+      requestAnimationFrame(animate);
+    };
+
+    animateValue(0, totalBallotBoxes, setTotalBallotBoxesCount);
+    animateValue(0, openedCount, setOpenedBallotBoxesCount);
+    animateValue(0, validVotes, setTotalValidVotesCount);
+    animateValue(0, objectionCountValue, setObjectionCount);
+  }, [election, hasResults, filteredResults, aggregatedResults]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
@@ -684,44 +634,13 @@ const ElectionResultsPage = () => {
     );
   }
 
-  if (error) {
-    console.log('⚠️ Error state:', error);
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-red-900 dark:text-red-100 mb-2">Hata Oluştu</h2>
-            <p className="text-sm text-red-700 dark:text-red-300 mb-4">{error}</p>
-            <button
-              onClick={() => {
-                setError('');
-                fetchData();
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Tekrar Dene
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (!election) {
     console.log('⚠️ Election bulunamadı, hata mesajı gösteriliyor');
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100 mb-2">Seçim bulunamadı</h2>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">Election ID: {electionId}</p>
-            <button
-              onClick={() => fetchData()}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-            >
-              Tekrar Yükle
-            </button>
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Seçim bulunamadı</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Election ID: {electionId}</p>
         </div>
       </div>
     );
@@ -934,7 +853,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {getTotalBallotBoxes}
+              {totalBallotBoxesCount}
             </div>
           </div>
           
@@ -948,10 +867,10 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {hasResults ? filteredResults.length : 0}
+              {openedBallotBoxesCount}
             </div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
-              %{calculateOpenedBallotBoxPercentage}
+              %{calculateOpenedBallotBoxPercentage()}
             </div>
           </div>
           
@@ -965,7 +884,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
+              {totalValidVotesCount.toLocaleString('tr-TR')}
             </div>
           </div>
           
@@ -998,7 +917,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {objectionCountValue}
+              {objectionCount}
             </div>
           </div>
         </div>
