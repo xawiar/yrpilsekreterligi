@@ -167,27 +167,83 @@ const ElectionResultsPage = () => {
     try {
       console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
       setLoading(true);
+      setError('');
       
       console.log('📡 API çağrıları başlatılıyor...');
-      const [
-        electionsData,
-        resultsData,
-        ballotBoxesData,
-        districtsData,
-        townsData,
-        neighborhoodsData,
-        villagesData,
-        observersData
-      ] = await Promise.all([
-        ApiService.getElections(),
-        ApiService.getElectionResults(electionId, null),
-        ApiService.getBallotBoxes(),
-        ApiService.getDistricts(),
-        ApiService.getTowns(),
-        ApiService.getNeighborhoods(),
-        ApiService.getVillages(),
-        ApiService.getBallotBoxObservers()
-      ]);
+      
+      // Her API çağrısını ayrı ayrı try-catch ile sarmalayalım
+      let electionsData = [];
+      let resultsData = [];
+      let ballotBoxesData = [];
+      let districtsData = [];
+      let townsData = [];
+      let neighborhoodsData = [];
+      let villagesData = [];
+      let observersData = [];
+      
+      try {
+        electionsData = await ApiService.getElections();
+        console.log('✅ Elections loaded:', electionsData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading elections:', err);
+        electionsData = [];
+      }
+      
+      try {
+        resultsData = await ApiService.getElectionResults(electionId, null);
+        console.log('✅ Election results loaded:', resultsData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading election results:', err);
+        resultsData = [];
+      }
+      
+      try {
+        ballotBoxesData = await ApiService.getBallotBoxes();
+        console.log('✅ Ballot boxes loaded:', ballotBoxesData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading ballot boxes:', err);
+        ballotBoxesData = [];
+      }
+      
+      try {
+        districtsData = await ApiService.getDistricts();
+        console.log('✅ Districts loaded:', districtsData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading districts:', err);
+        districtsData = [];
+      }
+      
+      try {
+        townsData = await ApiService.getTowns();
+        console.log('✅ Towns loaded:', townsData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading towns:', err);
+        townsData = [];
+      }
+      
+      try {
+        neighborhoodsData = await ApiService.getNeighborhoods();
+        console.log('✅ Neighborhoods loaded:', neighborhoodsData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading neighborhoods:', err);
+        neighborhoodsData = [];
+      }
+      
+      try {
+        villagesData = await ApiService.getVillages();
+        console.log('✅ Villages loaded:', villagesData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading villages:', err);
+        villagesData = [];
+      }
+      
+      try {
+        observersData = await ApiService.getBallotBoxObservers();
+        console.log('✅ Observers loaded:', observersData?.length || 0);
+      } catch (err) {
+        console.error('❌ Error loading observers:', err);
+        observersData = [];
+      }
 
       console.log('✅ API çağrıları tamamlandı:', {
         electionsCount: electionsData?.length || 0,
@@ -203,7 +259,11 @@ const ElectionResultsPage = () => {
       const selectedElection = electionsData.find(e => String(e.id) === String(electionId));
       console.log('🔍 Seçim bulundu:', selectedElection ? { id: selectedElection.id, name: selectedElection.name } : 'BULUNAMADI');
       
-      setElection(selectedElection);
+      if (!selectedElection) {
+        setError(`Seçim bulunamadı (ID: ${electionId})`);
+      }
+      
+      setElection(selectedElection || null);
       setResults(resultsData || []);
       setBallotBoxes(ballotBoxesData || []);
       setDistricts(districtsData || []);
@@ -220,6 +280,7 @@ const ElectionResultsPage = () => {
         stack: error.stack,
         name: error.name
       });
+      setError(`Veriler yüklenirken hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
       console.log('🏁 Loading false yapıldı');
