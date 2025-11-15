@@ -1105,9 +1105,16 @@ const ElectionResultsPage = () => {
                     }}
                   >
                     <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Sandık No: {result.ballot_number}
-                      </h3>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold" style={{ color: cardStyle.color }}>
+                          Sandık No: {result.ballot_number}
+                        </h3>
+                        {winningParty && !hasObjection && (
+                          <div className="text-xs mt-1" style={{ color: cardStyle.color, opacity: 0.8 }}>
+                            En Çok Oy: {winningParty}
+                          </div>
+                        )}
+                      </div>
                       {hasObjection && (
                         <div className="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/40 rounded-full">
                           <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
