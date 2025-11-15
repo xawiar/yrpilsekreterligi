@@ -474,15 +474,22 @@ class FirebaseApiService {
       const memberUser = memberUsers[0];
       
       // Şifre kontrolü - password alanı şifrelenmiş olabilir
-      let storedPassword = memberUser.password;
+      let storedPassword = memberUser.password || '';
       try {
         // Şifrelenmişse decrypt et
         if (storedPassword && storedPassword.startsWith('U2FsdGVkX1')) {
           storedPassword = decryptData(storedPassword);
         }
       } catch (e) {
+        console.error('Şifre decrypt hatası:', e);
         // Decrypt başarısız, direkt kullan
       }
+
+      console.log('[DEBUG] Şifre kontrolü:', {
+        storedPassword: storedPassword.substring(0, 3) + '***',
+        password: password.substring(0, 3) + '***',
+        match: storedPassword === password
+      });
 
       // Şifre eşleşmiyorsa hata
       if (storedPassword !== password) {
@@ -502,34 +509,22 @@ class FirebaseApiService {
       } catch (authError) {
         console.log('Firebase Auth login failed for chief observer, checking Firestore:', authError.code);
         
-        // Auth'da kullanıcı yoksa veya şifre yanlışsa oluştur/güncelle
-        if (authError.code === 'auth/user-not-found' || 
-            authError.code === 'auth/invalid-credential' ||
-            authError.code === 'auth/wrong-password') {
+        // Auth'da kullanıcı yoksa oluştur
+        if (authError.code === 'auth/user-not-found') {
           try {
-            // Önce kullanıcıyı oluşturmayı dene
-            try {
-              userCredential = await createUserWithEmailAndPassword(auth, email, password);
-              user = userCredential.user;
-              // authUid'yi Firestore'a kaydet
-              await FirebaseService.update(
-                this.COLLECTIONS.MEMBER_USERS,
-                memberUser.id,
-                { authUid: user.uid },
-                false
-              );
-              console.log('Firebase Auth user created for chief observer:', user.uid);
-            } catch (createError) {
-              // Email already in use hatası alırsak, bu kullanıcı zaten var demektir
-              // Bu durumda giriş yapılamadı mesajı vermeliyiz
-              if (createError.code === 'auth/email-already-in-use') {
-                throw new Error('Bu kullanıcı için giriş yapılamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
-              }
-              throw createError;
-            }
-          } catch (error) {
-            console.error('Failed to create Firebase Auth user:', error);
-            throw new Error('Giriş yapılamadı: ' + error.message);
+            userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            user = userCredential.user;
+            // authUid'yi Firestore'a kaydet
+            await FirebaseService.update(
+              this.COLLECTIONS.MEMBER_USERS,
+              memberUser.id,
+              { authUid: user.uid },
+              false
+            );
+            console.log('Firebase Auth user created for chief observer:', user.uid);
+          } catch (createError) {
+            console.error('Failed to create Firebase Auth user:', createError);
+            throw new Error('Giriş yapılamadı');
           }
         } else {
           throw new Error('Giriş yapılamadı: ' + authError.message);

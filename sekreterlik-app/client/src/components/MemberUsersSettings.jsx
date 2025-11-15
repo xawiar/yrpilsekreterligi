@@ -317,15 +317,19 @@ const MemberUsersSettings = () => {
             const updateData = {
               userType: 'musahit',
               observerId: observer.id,
-              name: observer.name,
-              password: password // Şifreyi Firestore'da güncelle
+              name: observer.name
             };
+            
+            // Şifre güncellemesi gerekirse
+            if (existingUser.password !== password) {
+              updateData.password = password;
+            }
 
             await FirebaseService.update('member_users', existingUser.id, updateData, false);
             
-            // Not: Firebase Auth şifre güncellemesi kaldırıldı
-            // Şifre sadece Firestore'da saklanıyor
+            // Firebase Auth şifre güncellemesi kaldırıldı
             // Login sırasında Firebase Auth'da kullanıcı yoksa otomatik oluşturulacak
+            // Mevcut şifreyi güncellemek karmaşık ve hata veriyor
             
             updatedCount++;
           }
