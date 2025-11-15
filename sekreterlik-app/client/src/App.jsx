@@ -33,8 +33,6 @@ const GroupsPage = lazy(() => import('./pages/GroupsPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
-// Başmüşahit login geçici olarak devre dışı - redirect döngüsü sorunu nedeniyle
-// Sayfalar sadece /login'e redirect yapıyor
 const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
 const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
@@ -190,27 +188,6 @@ function AppContent() {
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
   const { isLoggedIn, user } = useAuth();
 
-  // Chief observer localStorage temizleme - Redirect döngüsü sorunu nedeniyle
-  React.useEffect(() => {
-    const userRole = localStorage.getItem('userRole');
-    if (userRole === 'chief_observer') {
-      // Chief observer role'ünü temizle
-      localStorage.removeItem('user');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('isLoggedIn');
-      console.log('Chief observer localStorage temizlendi - Redirect döngüsü önlendi');
-    }
-
-    // Service Worker'ı unregister et ve cache'i temizle
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(registration => {
-          registration.unregister();
-        });
-      });
-    }
-  }, []);
-
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
 
   // Mobile menu event listener
@@ -329,11 +306,14 @@ function AppContent() {
             } 
           />
           
-          {/* Chief Observer Routes - GEÇİCİ OLARAK DEVRE DIŞI - Redirect döngüsü sorunu nedeniyle */}
-          {/* Sayfalar sadece /login'e redirect yapıyor */}
+          {/* Chief Observer Routes */}
           <Route 
             path="/chief-observer-login" 
-            element={<ChiefObserverLoginPage />} 
+            element={
+              <PublicRoute>
+                <ChiefObserverLoginPage />
+              </PublicRoute>
+            } 
           />
           <Route 
             path="/chief-observer-dashboard" 

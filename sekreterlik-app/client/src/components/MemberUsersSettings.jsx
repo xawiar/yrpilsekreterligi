@@ -317,42 +317,15 @@ const MemberUsersSettings = () => {
             const updateData = {
               userType: 'musahit',
               observerId: observer.id,
-              name: observer.name
+              name: observer.name,
+              password: password // Şifreyi Firestore'da güncelle
             };
-            
-            // Şifre güncellemesi gerekirse
-            if (existingUser.password !== password) {
-              updateData.password = password;
-            }
 
             await FirebaseService.update('member_users', existingUser.id, updateData, false);
             
-            // Firebase Auth'da da şifre güncelle (eğer authUid varsa)
-            if (existingUser.authUid && updateData.password) {
-              try {
-                const email = `${username}@ilsekreterlik.local`;
-                // Admin kullanıcısını koru
-                const currentUser = auth.currentUser;
-                const currentUserUid = currentUser ? currentUser.uid : null;
-                
-                // Kullanıcıyı sign-in et
-                await signInWithEmailAndPassword(auth, email, existingUser.password || password);
-                
-                // Şifreyi güncelle
-                await updatePassword(auth.currentUser, password);
-                
-                // Admin kullanıcısını geri yükle
-                if (currentUserUid && currentUserUid !== existingUser.authUid) {
-                  // Admin bilgilerini al ve tekrar sign-in et
-                  const adminDoc = await FirebaseService.getById('admin', 'main');
-                  if (adminDoc && adminDoc.email) {
-                    await signInWithEmailAndPassword(auth, adminDoc.email, adminDoc.password || 'admin123');
-                  }
-                }
-              } catch (authError) {
-                console.error('Firebase Auth şifre güncelleme hatası:', authError);
-              }
-            }
+            // Not: Firebase Auth şifre güncellemesi kaldırıldı
+            // Şifre sadece Firestore'da saklanıyor
+            // Login sırasında Firebase Auth'da kullanıcı yoksa otomatik oluşturulacak
             
             updatedCount++;
           }

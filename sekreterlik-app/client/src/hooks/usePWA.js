@@ -22,25 +22,15 @@ export const usePWA = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Service Worker - Geçici olarak devre dışı - Redirect döngüsü sorunu nedeniyle
-    // Mevcut SW'yi unregister et ve cache'i temizle
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(registration => {
-          registration.unregister().then(() => {
-            console.log('Service Worker unregistered');
-          });
+    // Service Worker registration - only in production
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
         });
-      });
-      
-      // Tüm cache'leri temizle
-      caches.keys().then(names => {
-        names.forEach(name => {
-          caches.delete(name).then(() => {
-            console.log('Cache deleted:', name);
-          });
-        });
-      });
     }
 
     return () => {
