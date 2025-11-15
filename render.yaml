@@ -9,6 +9,9 @@ services:
       - path: /*
         name: X-Redirect
         value: /* -> /index.html 200
+      - path: /election-results/*
+        name: X-Redirect
+        value: /election-results/* -> /index.html 200
     envVars:
       - key: VITE_USE_FIREBASE
         value: true
