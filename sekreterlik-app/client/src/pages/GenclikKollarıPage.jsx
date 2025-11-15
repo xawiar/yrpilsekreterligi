@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import MemberDetails from '../components/MemberDetails';
+import BranchManagementSection from '../components/BranchManagementSection';
 
 const GenclikKollarıPage = () => {
   const [regions, setRegions] = useState([]);
@@ -191,6 +192,27 @@ const GenclikKollarıPage = () => {
               Başkanlığı Kaldır
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Yönetim Listesi */}
+      {selectedRegion && currentPresidentId && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Gençlik Kolları Yönetimi
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {selectedRegion} bölgesi gençlik kolları başkanının oluşturduğu yönetim listesi
+            </p>
+          </div>
+          <BranchManagementSection
+            branchType="youth"
+            memberRegion={selectedRegion}
+            memberId={currentPresidentId}
+            management={management}
+            setManagement={setManagement}
+          />
         </div>
       )}
 
