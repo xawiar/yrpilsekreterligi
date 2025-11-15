@@ -460,7 +460,6 @@ function RouterContent() {
             <Route path="/elections" element={<ElectionsListPage />} />
             <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
             <Route path="/bulk-sms" element={<BulkSmsPage />} />
-            <Route path="/election-preparation/groups" element={<GroupsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />
                           <Route path="/reports" element={<Navigate to="/" replace />} />
