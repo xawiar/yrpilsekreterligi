@@ -21,6 +21,7 @@ const ElectionResultsPage = () => {
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [selectedVillage, setSelectedVillage] = useState('');
   const [selectedBallotNumber, setSelectedBallotNumber] = useState('');
+  const [searchQuery, setSearchQuery] = useState(''); // Arama sorgusu
   
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
@@ -107,10 +108,81 @@ const ElectionResultsPage = () => {
     // We just need to apply location filters
   };
 
-  // Get filtered results based on location filters
+  // Get filtered results based on location filters and search query
   const getFilteredResults = () => {
     let filtered = results;
 
+    // Arama sorgusu ile filtrele
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const matchingBallotBoxIds = new Set();
+      
+      // İlçe, belde, mahalle, köy isimlerine göre arama
+      ballotBoxes.forEach(bb => {
+        let matches = false;
+        
+        // İlçe kontrolü
+        if (bb.district_id) {
+          const district = districts.find(d => String(d.id) === String(bb.district_id));
+          if (district && district.name.toLowerCase().includes(query)) {
+            matches = true;
+          }
+        }
+        
+        // Belde kontrolü
+        if (bb.town_id) {
+          const town = towns.find(t => String(t.id) === String(bb.town_id));
+          if (town && town.name.toLowerCase().includes(query)) {
+            matches = true;
+          }
+        }
+        
+        // Mahalle kontrolü
+        if (bb.neighborhood_id) {
+          const neighborhood = neighborhoods.find(n => String(n.id) === String(bb.neighborhood_id));
+          if (neighborhood && neighborhood.name.toLowerCase().includes(query)) {
+            matches = true;
+          }
+        }
+        
+        // Köy kontrolü
+        if (bb.village_id) {
+          const village = villages.find(v => String(v.id) === String(bb.village_id));
+          if (village && village.name.toLowerCase().includes(query)) {
+            matches = true;
+          }
+        }
+        
+        // Sandık numarası kontrolü
+        if (bb.ballot_box_number && bb.ballot_box_number.toString().toLowerCase().includes(query)) {
+          matches = true;
+        }
+        
+        if (matches) {
+          matchingBallotBoxIds.add(String(bb.id));
+        }
+      });
+      
+      // Sonuçlarda da sandık numarasına göre arama
+      filtered = filtered.filter(r => {
+        const ballotBoxId = String(r.ballot_box_id || r.ballotBoxId);
+        const ballotNumber = (r.ballot_number || r.ballotNumber || '').toString().toLowerCase();
+        
+        // Sandık numarası eşleşiyorsa
+        if (ballotNumber.includes(query)) {
+          return true;
+        }
+        
+        // Konum eşleşiyorsa
+        if (matchingBallotBoxIds.has(ballotBoxId)) {
+          return true;
+        }
+        
+        return false;
+      });
+    }
+
+    // Dropdown filtreleri
     if (selectedBallotNumber) {
       filtered = filtered.filter(r => 
         r.ballot_number && r.ballot_number.toString().includes(selectedBallotNumber)
