@@ -22,7 +22,7 @@ const ChiefObserverDashboardPage = () => {
   
   // Authentication kontrolü - sadece bir kez yap (useRef ile)
   const hasCheckedAuth = React.useRef(false);
-  const authCheckDone = React.useRef(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Authentication kontrolü - sadece mount'ta bir kez
   useEffect(() => {
@@ -43,7 +43,7 @@ const ChiefObserverDashboardPage = () => {
         // Eğer authenticated değilse login'e yönlendir
         if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
           if (currentPath !== '/chief-observer-login') {
-            authCheckDone.current = true;
+            setAuthChecked(true);
             navigate('/chief-observer-login', { replace: true });
           }
           return;
@@ -53,18 +53,18 @@ const ChiefObserverDashboardPage = () => {
         try {
           const userData = JSON.parse(savedUser);
           setUser(userData);
-          authCheckDone.current = true;
+          setAuthChecked(true);
         } catch (e) {
           // JSON parse hatası - login'e yönlendir
           if (currentPath !== '/chief-observer-login') {
-            authCheckDone.current = true;
+            setAuthChecked(true);
             navigate('/chief-observer-login', { replace: true });
           }
         }
       } catch (err) {
         console.error('Error checking auth:', err);
         if (window.location.pathname !== '/chief-observer-login') {
-          authCheckDone.current = true;
+          setAuthChecked(true);
           navigate('/chief-observer-login', { replace: true });
         }
       }
@@ -77,9 +77,9 @@ const ChiefObserverDashboardPage = () => {
   // Seçimleri yükle - sadece user yüklendikten sonra
   useEffect(() => {
     // Auth kontrolü tamamlanmamışsa bekle
-    if (!authCheckDone.current) return;
+    if (!authChecked) return;
     
-    // User yüklenmemişse bekle
+    // User yüklenmemişse bekle (yönlendirme yapıldı)
     if (!user) return;
 
     let isMounted = true;
@@ -128,7 +128,7 @@ const ChiefObserverDashboardPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [user]); // Sadece user değiştiğinde çalışır - authCheckDone ref olduğu için dependency'ye eklenmedi
+  }, [user, authChecked]); // User ve authChecked değiştiğinde çalışır
 
   // Event handlers - useCallback ile optimize edildi
   const handleElectionClick = useCallback((election) => {
@@ -182,7 +182,7 @@ const ChiefObserverDashboardPage = () => {
   }, []);
 
   // Auth kontrolü tamamlanmamışsa loading göster
-  if (!authCheckDone.current) {
+  if (!authChecked) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
