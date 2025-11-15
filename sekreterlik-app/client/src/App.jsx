@@ -156,16 +156,16 @@ const TownPresidentRoleRoute = ({ children }) => {
   return <Navigate to="/login" />;
 };
 
-// Public route component (redirects to appropriate dashboard if already logged in)
+// Public route component - Sadece giriş kontrolü yapar, yönlendirme yapmaz
 const PublicRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
+  const { loading } = useAuth();
   
-  // Loading durumunu kontrol et ama sadece ilk yüklemede
+  // Sadece loading kontrolü - yönlendirme LoginEnhanced'da yapılacak
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
-  // Chief observer login sayfasını kontrol et
+  // Chief observer kontrolü
   const userRole = localStorage.getItem('userRole');
   const isChiefObserverLoggedIn = userRole === 'chief_observer' && localStorage.getItem('isLoggedIn') === 'true';
   
@@ -173,18 +173,8 @@ const PublicRoute = ({ children }) => {
     return <Navigate to="/chief-observer-dashboard" replace />;
   }
   
-  // Giriş yapılmamışsa, login sayfasını göster
-  if (!isLoggedIn) return children;
-  
-  // Giriş yapılmışsa ama login sayfasındaysa, dashboard'a yönlendir
-  // Tek seferlik yönlendirme - children döndürmüyoruz
-  if (user?.role === 'admin') return <Navigate to="/" replace />;
-  if (user?.role === 'member') return <Navigate to="/member-dashboard" replace />;
-  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
-  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" replace />;
-  
-  // Varsayılan: ana sayfaya yönlendir
-  return <Navigate to="/" replace />;
+  // Login sayfasını göster - yönlendirme yapmadan
+  return children;
 };
 
 // Router içinde kullanılacak component - useNavigate burada güvenli
