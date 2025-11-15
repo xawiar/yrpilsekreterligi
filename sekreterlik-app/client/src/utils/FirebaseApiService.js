@@ -3271,6 +3271,31 @@ class FirebaseApiService {
     }
   }
 
+  static async getDistrictById(districtId) {
+    try {
+      // districtId boş veya geçersizse hata döndür
+      if (!districtId || districtId === '' || districtId === undefined || districtId === null) {
+        return { success: false, message: 'İlçe ID gerekli' };
+      }
+      
+      const district = await FirebaseService.getById(this.COLLECTIONS.DISTRICTS, districtId);
+      if (!district) {
+        return { success: false, message: 'İlçe bulunamadı' };
+      }
+      
+      return {
+        success: true,
+        district: {
+          ...district,
+          provinceName: district.province_name || district.provinceName || ''
+        }
+      };
+    } catch (error) {
+      console.error('Get district by id error:', error);
+      return { success: false, message: 'İlçe bilgileri alınamadı' };
+    }
+  }
+
   static async createDistrict(districtData) {
     try {
       const docId = await FirebaseService.create(this.COLLECTIONS.DISTRICTS, null, districtData);

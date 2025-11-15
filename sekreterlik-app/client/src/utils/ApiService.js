@@ -1193,6 +1193,18 @@ class ApiService {
     return response.json();
   }
 
+  static async getDistrictById(districtId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getDistrictById(districtId);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/districts/${districtId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  }
+
   static async createDistrict(districtData) {
     if (USE_FIREBASE) {
       return FirebaseApiService.createDistrict(districtData);
