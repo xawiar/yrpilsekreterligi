@@ -7287,7 +7287,6 @@ class FirebaseApiService {
       throw new Error('Yönetim üyesi silinirken hata oluştu');
     }
   }
-}
 
   // ==================== API KEY METHODS ====================
   
