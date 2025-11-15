@@ -1126,6 +1126,139 @@ ${contextText}`;
       }
     }
     
+    // SEÇİMLER
+    if (siteData.elections && siteData.elections.length > 0) {
+      context.push(`\n=== SEÇİMLER ===`);
+      context.push(`Toplam ${siteData.elections.length} seçim kayıtlı.`);
+      
+      siteData.elections.forEach(election => {
+        const info = [];
+        if (election.name) info.push(`Seçim: ${election.name}`);
+        if (election.date) {
+          const date = new Date(election.date);
+          info.push(`Tarih: ${date.toLocaleDateString('tr-TR')}`);
+        }
+        if (election.type) {
+          const typeLabels = {
+            'yerel': 'Yerel Seçim',
+            'genel': 'Genel Seçim',
+            'cb': 'Cumhurbaşkanlığı Seçimi'
+          };
+          info.push(`Tip: ${typeLabels[election.type] || election.type}`);
+        }
+        if (election.voter_count) info.push(`Seçmen Sayısı: ${election.voter_count.toLocaleString('tr-TR')}`);
+        if (election.parties && election.parties.length > 0) {
+          info.push(`Partiler: ${election.parties.join(', ')}`);
+        }
+        if (election.candidates && election.candidates.length > 0) {
+          info.push(`Adaylar: ${election.candidates.join(', ')}`);
+        }
+        context.push(info.join(' | '));
+      });
+    }
+    
+    // SEÇİM SONUÇLARI VE TUTANAKLAR
+    if (siteData.electionResults && siteData.electionResults.length > 0) {
+      context.push(`\n=== SEÇİM SONUÇLARI ===`);
+      context.push(`Toplam ${siteData.electionResults.length} seçim sonucu kayıtlı.`);
+      
+      // Seçim bazında grupla
+      const resultsByElection = {};
+      siteData.electionResults.forEach(result => {
+        const electionId = String(result.election_id || result.electionId);
+        if (!resultsByElection[electionId]) {
+          resultsByElection[electionId] = [];
+        }
+        resultsByElection[electionId].push(result);
+      });
+      
+      Object.entries(resultsByElection).forEach(([electionId, results]) => {
+        const election = siteData.elections?.find(e => String(e.id) === String(electionId));
+        if (election) {
+          context.push(`\n--- ${election.name} Sonuçları ---`);
+          context.push(`Toplam ${results.length} sandık sonucu girilmiş.`);
+          
+          results.forEach(result => {
+            const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(result.ballot_box_id || result.ballotBoxId));
+            const info = [];
+            if (result.ballot_number || result.ballotNumber) {
+              info.push(`Sandık No: ${result.ballot_number || result.ballotNumber}`);
+            }
+            if (ballotBox) {
+              const locationParts = [];
+              if (ballotBox.district_id) {
+                const district = siteData.districts?.find(d => String(d.id) === String(ballotBox.district_id));
+                if (district) locationParts.push(`İlçe: ${district.name}`);
+              }
+              if (ballotBox.town_id) {
+                const town = siteData.towns?.find(t => String(t.id) === String(ballotBox.town_id));
+                if (town) locationParts.push(`Belde: ${town.name}`);
+              }
+              if (ballotBox.neighborhood_id) {
+                const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+                if (neighborhood) locationParts.push(`Mahalle: ${neighborhood.name}`);
+              }
+              if (ballotBox.village_id) {
+                const village = siteData.villages?.find(v => String(v.id) === String(ballotBox.village_id));
+                if (village) locationParts.push(`Köy: ${village.name}`);
+              }
+              if (locationParts.length > 0) {
+                info.push(`Konum: ${locationParts.join(' - ')}`);
+              }
+            }
+            
+            // Başmüşahit bilgisi
+            const observer = siteData.observers?.find(o => 
+              String(o.ballot_box_id) === String(result.ballot_box_id || result.ballotBoxId) &&
+              (o.is_chief_observer === true || o.is_chief_observer === 1)
+            );
+            if (observer) {
+              if (observer.observer_name) info.push(`Başmüşahit: ${observer.observer_name}`);
+              if (observer.observer_phone) info.push(`Telefon: ${observer.observer_phone}`);
+            }
+            
+            // Oy sayıları
+            if (result.used_votes || result.usedVotes) {
+              info.push(`Kullanılan Oy: ${result.used_votes || result.usedVotes}`);
+            }
+            if (result.invalid_votes || result.invalidVotes) {
+              info.push(`Geçersiz Oy: ${result.invalid_votes || result.invalidVotes}`);
+            }
+            if (result.valid_votes || result.validVotes) {
+              info.push(`Geçerli Oy: ${result.valid_votes || result.validVotes}`);
+            }
+            
+            // Parti/Aday oyları
+            if (election.type === 'cb' && result.candidate_votes) {
+              const candidateVotes = Object.entries(result.candidate_votes)
+                .map(([candidate, votes]) => `${candidate}: ${votes} oy`)
+                .join(', ');
+              if (candidateVotes) info.push(`Aday Oyları: ${candidateVotes}`);
+            } else if ((election.type === 'yerel' || election.type === 'genel') && result.party_votes) {
+              const partyVotes = Object.entries(result.party_votes)
+                .map(([party, votes]) => `${party}: ${votes} oy`)
+                .join(', ');
+              if (partyVotes) info.push(`Parti Oyları: ${partyVotes}`);
+            }
+            
+            // Tutanak fotoğrafları
+            const hasSignedProtocol = !!(result.signed_protocol_photo || result.signedProtocolPhoto);
+            const hasObjectionProtocol = !!(result.objection_protocol_photo || result.objectionProtocolPhoto);
+            if (hasSignedProtocol || hasObjectionProtocol) {
+              const protocolInfo = [];
+              if (hasSignedProtocol) protocolInfo.push('Seçim Tutanağı Yüklü');
+              if (hasObjectionProtocol) protocolInfo.push('İtiraz Tutanağı Yüklü');
+              info.push(`Tutanaklar: ${protocolInfo.join(', ')}`);
+            }
+            
+            if (info.length > 0) {
+              context.push(info.join(' | '));
+            }
+          });
+        }
+      });
+    }
+    
     return context;
   }
 

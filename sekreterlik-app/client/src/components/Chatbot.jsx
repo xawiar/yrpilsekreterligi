@@ -163,7 +163,19 @@ const Chatbot = ({ isOpen, onClose }) => {
         // Arşivlenmiş üyeler, toplantılar, etkinlikler
         ApiService.getMembers(true).catch(() => []), // archived members
         ApiService.getMeetings(true).catch(() => []), // archived meetings
-        ApiService.getEvents(true).catch(() => []) // archived events
+        ApiService.getEvents(true).catch(() => []), // archived events
+        
+        // Seçim verileri
+        ApiService.getElections().catch(() => []),
+        // Tüm seçimler için sonuçları al
+        ApiService.getElections().then(elections => {
+          if (!elections || elections.length === 0) return [];
+          return Promise.all(
+            elections.map(election => 
+              ApiService.getElectionResults(election.id, null).catch(() => [])
+            )
+          ).then(results => results.flat());
+        }).catch(() => [])
       ]).then(([
         ballotBoxes,
         observers,
@@ -191,7 +203,9 @@ const Chatbot = ({ isOpen, onClose }) => {
         archiveDocuments,
         archivedMembers,
         archivedMeetings,
-        archivedEvents
+        archivedEvents,
+        elections,
+        electionResults
       ]) => {
         // Performans puanlarını hesapla (üye yıldızları için)
         // Async IIFE kullanarak await kullanabiliriz
@@ -245,6 +259,8 @@ const Chatbot = ({ isOpen, onClose }) => {
             archivedMembers,
             archivedMeetings,
             archivedEvents,
+            elections,
+            electionResults,
             performanceScores
           }));
         })();

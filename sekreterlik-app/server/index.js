@@ -94,6 +94,10 @@ const memberDashboardAnalyticsRouter = require('./routes/memberDashboardAnalytic
 console.log('Member dashboard analytics router imported');
 const notificationsRouter = require('./routes/notifications');
 console.log('Notifications router imported');
+const apiKeysRouter = require('./routes/apiKeys');
+console.log('API keys router imported');
+const publicApiRouter = require('./routes/publicApi');
+console.log('Public API router imported');
 const PollController = require('./controllers/PollController');
 
 // Import middleware
@@ -123,6 +127,7 @@ console.log('Starting server setup');
 // Initialize database models and MongoDB
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
 const Notification = require('./models/Notification');
+const ApiKey = require('./models/ApiKey');
 Promise.all([
   Admin.init(),
   MemberUser.init(),
@@ -130,6 +135,7 @@ Promise.all([
   PositionPermission.init(),
   MemberDashboardAnalytics.init(),
   Notification.init(),
+  ApiKey.initTable(),
   connectToMongoDB()
 ]).then(() => {
   console.log('All models and MongoDB initialized');
@@ -313,6 +319,8 @@ app.use('/api/financial', financialRouter);
 app.use('/api/push-subscriptions', pushSubscriptionsRouter);
 app.use('/api/member-dashboard-analytics', memberDashboardAnalyticsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/api-keys', apiKeysRouter);
+app.use('/api/public', publicApiRouter);
 
 console.log('API routes registered');
 
