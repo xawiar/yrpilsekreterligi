@@ -9,6 +9,7 @@ const MemberUsersSettings = () => {
   const [memberUsers, setMemberUsers] = useState([]);
   const [members, setMembers] = useState([]);
   const [towns, setTowns] = useState([]);
+  const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
@@ -33,6 +34,7 @@ const MemberUsersSettings = () => {
     fetchMemberUsers();
     fetchMembers();
     fetchTowns();
+    fetchDistricts();
   }, []);
 
   const fetchMemberUsers = async () => {
@@ -69,6 +71,15 @@ const MemberUsersSettings = () => {
       setTowns(response || []);
     } catch (error) {
       console.error('Error fetching towns:', error);
+    }
+  };
+
+  const fetchDistricts = async () => {
+    try {
+      const response = await ApiService.getDistricts();
+      setDistricts(response || []);
+    } catch (error) {
+      console.error('Error fetching districts:', error);
     }
   };
 
@@ -226,6 +237,264 @@ const MemberUsersSettings = () => {
         username: member.tc || '',
         password: member.phone ? member.phone.replace(/\D/g, '') : ''
       });
+    }
+  };
+
+  // İlçe başkanları için kullanıcı oluştur
+  const handleCreateDistrictPresidentUsers = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      // Tüm ilçe yöneticilerini al
+      const districtOfficials = await ApiService.getDistrictOfficials();
+      const districtPresidents = districtOfficials.filter(official => 
+        official.chairman_name && official.chairman_phone
+      );
+      
+      if (districtPresidents.length === 0) {
+        setMessage('İlçe başkanı bulunamadı (başkan adı ve telefonu olan ilçeler)');
+        setMessageType('error');
+        return;
+      }
+
+      // Mevcut kullanıcıları al
+      const existingUsers = await ApiService.getMemberUsers();
+      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      
+      let createdCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const official of districtPresidents) {
+        try {
+          // İlçe bilgisini al
+          const district = districts.find(d => String(d.id) === String(official.district_id));
+          if (!district) {
+            errors.push(`${official.chairman_name || 'Bilinmeyen'}: İlçe bulunamadı`);
+            errorCount++;
+            continue;
+          }
+
+          // Kullanıcı adı ve şifre belirle
+          const username = district.name.toLowerCase()
+            .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+            .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+            .replace(/ş/g, 's').replace(/Ş/g, 'S')
+            .replace(/ı/g, 'i').replace(/İ/g, 'I')
+            .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+            .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+            .replace(/[^a-z0-9]/g, '');
+          const password = (official.chairman_phone || '').replace(/\D/g, '');
+
+          if (!password || password.length < 6) {
+            errors.push(`${official.chairman_name}: Geçerli telefon numarası yok`);
+            errorCount++;
+            continue;
+          }
+
+          // Kullanıcı zaten var mı kontrol et
+          const existingUser = existingUsers.users?.find(u => 
+            u.username === username || 
+            (u.userType === 'district_president' && String(u.districtId) === String(official.district_id))
+          );
+          
+          if (!existingUser) {
+            // Yeni kullanıcı oluştur
+            const email = `${username}@ilsekreterlik.local`;
+            let authUser = null;
+            try {
+              authUser = await createUserWithEmailAndPassword(auth, email, password);
+            } catch (authError) {
+              if (authError.code !== 'auth/email-already-in-use') {
+                throw authError;
+              }
+            }
+
+            const userData = {
+              username,
+              password,
+              userType: 'district_president',
+              districtId: official.district_id,
+              isActive: true,
+              chairmanName: official.chairman_name,
+              authUid: authUser?.user?.uid || null
+            };
+
+            await FirebaseService.create('member_users', null, userData, false);
+            createdCount++;
+          } else {
+            // Kullanıcı varsa güncelle
+            const updateData = {
+              userType: 'district_president',
+              districtId: official.district_id,
+              chairmanName: official.chairman_name
+            };
+            
+            if (existingUser.password !== password) {
+              updateData.password = password;
+            }
+
+            await FirebaseService.update('member_users', existingUser.id, updateData, false);
+            updatedCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${official.chairman_name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error('İlçe başkanı kullanıcısı oluşturma hatası:', error);
+        }
+      }
+
+      // Sonuç mesajı
+      let message = `İlçe başkanı kullanıcıları oluşturuldu!\n`;
+      message += `• Yeni oluşturulan: ${createdCount}\n`;
+      message += `• Güncellenen: ${updatedCount}\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount}\n`;
+        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error creating district president users:', error);
+      setMessage('İlçe başkanı kullanıcıları oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Belde başkanları için kullanıcı oluştur
+  const handleCreateTownPresidentUsers = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      // Tüm belde yöneticilerini al
+      const townOfficials = await ApiService.getTownOfficials();
+      const townPresidents = townOfficials.filter(official => 
+        official.chairman_name && official.chairman_phone
+      );
+      
+      if (townPresidents.length === 0) {
+        setMessage('Belde başkanı bulunamadı (başkan adı ve telefonu olan beldeler)');
+        setMessageType('error');
+        return;
+      }
+
+      // Mevcut kullanıcıları al
+      const existingUsers = await ApiService.getMemberUsers();
+      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      
+      let createdCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const official of townPresidents) {
+        try {
+          // Belde bilgisini al
+          const town = towns.find(t => String(t.id) === String(official.town_id));
+          if (!town) {
+            errors.push(`${official.chairman_name || 'Bilinmeyen'}: Belde bulunamadı`);
+            errorCount++;
+            continue;
+          }
+
+          // Kullanıcı adı ve şifre belirle
+          const username = town.name.toLowerCase()
+            .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+            .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+            .replace(/ş/g, 's').replace(/Ş/g, 'S')
+            .replace(/ı/g, 'i').replace(/İ/g, 'I')
+            .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+            .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+            .replace(/[^a-z0-9]/g, '');
+          const password = (official.chairman_phone || '').replace(/\D/g, '');
+
+          if (!password || password.length < 6) {
+            errors.push(`${official.chairman_name}: Geçerli telefon numarası yok`);
+            errorCount++;
+            continue;
+          }
+
+          // Kullanıcı zaten var mı kontrol et
+          const existingUser = existingUsers.users?.find(u => 
+            u.username === username || 
+            (u.userType === 'town_president' && String(u.townId) === String(official.town_id))
+          );
+          
+          if (!existingUser) {
+            // Yeni kullanıcı oluştur
+            const email = `${username}@ilsekreterlik.local`;
+            let authUser = null;
+            try {
+              authUser = await createUserWithEmailAndPassword(auth, email, password);
+            } catch (authError) {
+              if (authError.code !== 'auth/email-already-in-use') {
+                throw authError;
+              }
+            }
+
+            const userData = {
+              username,
+              password,
+              userType: 'town_president',
+              townId: official.town_id,
+              isActive: true,
+              chairmanName: official.chairman_name,
+              authUid: authUser?.user?.uid || null
+            };
+
+            await FirebaseService.create('member_users', null, userData, false);
+            createdCount++;
+          } else {
+            // Kullanıcı varsa güncelle
+            const updateData = {
+              userType: 'town_president',
+              townId: official.town_id,
+              chairmanName: official.chairman_name
+            };
+            
+            if (existingUser.password !== password) {
+              updateData.password = password;
+            }
+
+            await FirebaseService.update('member_users', existingUser.id, updateData, false);
+            updatedCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${official.chairman_name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error('Belde başkanı kullanıcısı oluşturma hatası:', error);
+        }
+      }
+
+      // Sonuç mesajı
+      let message = `Belde başkanı kullanıcıları oluşturuldu!\n`;
+      message += `• Yeni oluşturulan: ${createdCount}\n`;
+      message += `• Güncellenen: ${updatedCount}\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount}\n`;
+        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error creating town president users:', error);
+      setMessage('Belde başkanı kullanıcıları oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -612,8 +881,12 @@ const MemberUsersSettings = () => {
     );
   }
 
-  // Kullanıcıları üye ve müşahit olarak ayır
-  const memberTypeUsers = memberUsers.filter(u => u.userType !== 'musahit');
+  // Kullanıcıları tipine göre ayır
+  const memberTypeUsers = memberUsers.filter(u => 
+    !u.userType || u.userType === 'member' || (u.userType !== 'musahit' && u.userType !== 'district_president' && u.userType !== 'town_president')
+  );
+  const districtPresidentUsers = memberUsers.filter(u => u.userType === 'district_president');
+  const townPresidentUsers = memberUsers.filter(u => u.userType === 'town_president');
   const observerTypeUsers = memberUsers.filter(u => u.userType === 'musahit');
 
   return (
@@ -627,7 +900,45 @@ const MemberUsersSettings = () => {
               Üye ve başmüşahit kullanıcılarını görüntüleyebilirsiniz.
             </p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleCreateDistrictPresidentUsers}
+              disabled={isUpdating}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+            >
+              {isUpdating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Oluşturuluyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  İlçe Başkanı Kullanıcısı Oluştur
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCreateTownPresidentUsers}
+              disabled={isUpdating}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+            >
+              {isUpdating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Oluşturuluyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Belde Başkanı Kullanıcısı Oluştur
+                </>
+              )}
+            </button>
             <button
               onClick={handleCreateObserverUsers}
               disabled={isUpdating}
@@ -774,6 +1085,171 @@ const MemberUsersSettings = () => {
           )}
         </div>
       </div>
+
+      {/* İlçe Başkanı Kullanıcıları Table */}
+      {districtPresidentUsers.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+          <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            İlçe Başkanı Kullanıcıları ({districtPresidentUsers.length})
+          </h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    İlçe ve Başkan Bilgileri
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Kullanıcı Adı
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Şifre
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Durum
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {districtPresidentUsers
+                  .filter((user) => {
+                    if (!searchTerm) return true;
+                    const searchLower = searchTerm.toLowerCase();
+                    const district = districts.find(d => String(d.id) === String(user.districtId));
+                    const displayName = district?.name || user.chairmanName || 'Bilinmeyen';
+                    const username = (user.username || '').toLowerCase();
+                    const password = (getDecryptedPassword(user) || '').toLowerCase();
+                    return displayName.toLowerCase().includes(searchLower) ||
+                      username.includes(searchLower) ||
+                      password.includes(searchLower);
+                  })
+                  .map((user) => {
+                    const district = districts.find(d => String(d.id) === String(user.districtId));
+                    const displayName = district?.name || user.chairmanName || 'Bilinmeyen İlçe';
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{user.chairmanName || 'İlçe Başkanı'}</div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              <span className="inline-flex px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                İlçe Başkanı
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-gray-100">{user.username}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                            {getDecryptedPassword(user) || '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.is_active || user.isActive
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                          }`}>
+                            {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Belde Başkanı Kullanıcıları Table */}
+      {townPresidentUsers.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+          <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+            <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Belde Başkanı Kullanıcıları ({townPresidentUsers.length})
+          </h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Belde ve Başkan Bilgileri
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Kullanıcı Adı
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Şifre
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Durum
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {townPresidentUsers
+                  .filter((user) => {
+                    if (!searchTerm) return true;
+                    const searchLower = searchTerm.toLowerCase();
+                    const town = towns.find(t => String(t.id) === String(user.townId));
+                    const displayName = town?.name || user.chairmanName || 'Bilinmeyen';
+                    const username = (user.username || '').toLowerCase();
+                    const password = (getDecryptedPassword(user) || '').toLowerCase();
+                    return displayName.toLowerCase().includes(searchLower) ||
+                      username.includes(searchLower) ||
+                      password.includes(searchLower);
+                  })
+                  .map((user) => {
+                    const town = towns.find(t => String(t.id) === String(user.townId));
+                    const displayName = town?.name || user.chairmanName || 'Bilinmeyen Belde';
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{user.chairmanName || 'Belde Başkanı'}</div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              <span className="inline-flex px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                Belde Başkanı
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-gray-100">{user.username}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                            {getDecryptedPassword(user) || '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.is_active || user.isActive
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                          }`}>
+                            {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Üye Kullanıcıları Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
