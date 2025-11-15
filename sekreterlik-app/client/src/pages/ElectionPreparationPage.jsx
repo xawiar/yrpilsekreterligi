@@ -181,15 +181,15 @@ const ElectionPreparationPage = () => {
         </div>
 
         {/* Content Area - Alt sayfalar burada render edilecek */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[500px]">
           <Routes>
-            <Route path="/" element={<Navigate to="/election-preparation/ballot-boxes" replace />} />
-            <Route path="/ballot-boxes/*" element={<BallotBoxesPage />} />
-            <Route path="/observers" element={<ObserversPage />} />
-            <Route path="/representatives" element={<RepresentativesPage />} />
-            <Route path="/neighborhoods" element={<NeighborhoodsPage />} />
-            <Route path="/villages" element={<VillagesPage />} />
-            <Route path="/groups" element={<GroupsPage />} />
+            <Route index element={<Navigate to="/election-preparation/ballot-boxes" replace />} />
+            <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
+            <Route path="observers" element={<ObserversPage />} />
+            <Route path="representatives" element={<RepresentativesPage />} />
+            <Route path="neighborhoods" element={<NeighborhoodsPage />} />
+            <Route path="villages" element={<VillagesPage />} />
+            <Route path="groups" element={<GroupsPage />} />
           </Routes>
         </div>
       </div>
