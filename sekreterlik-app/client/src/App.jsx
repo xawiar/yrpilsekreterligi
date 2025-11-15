@@ -199,12 +199,11 @@ const PublicRoute = ({ children }) => {
   return <Navigate to="/" replace />;
 };
 
-// Router içinde kullanılacak component - useNavigate burada güvenli
-function RouterContent() {
-  const navigate = useNavigate();
-  const { isLoggedIn, user } = useAuth();
+function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
+  const { isLoggedIn, user } = useAuth();
+
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
 
   // Mobile menu event listener
@@ -219,6 +218,7 @@ function RouterContent() {
   }, []);
 
   // Quick action event listener
+  const navigate = useNavigate();
   React.useEffect(() => {
     const handleQuickAction = (e) => {
       const { action } = e.detail;
@@ -239,7 +239,7 @@ function RouterContent() {
   return (
     <div className="min-h-screen bg-neutral-50">
       <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
+          <Routes>
           <Route 
             path="/login" 
             element={
@@ -479,22 +479,15 @@ function RouterContent() {
           <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
         )}
       </div>
-    );
+    </Router>
+  );
 }
 
-// Component wrapper
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-          <RouterContent />
-        </Router>
+        <AppContent />
         <PWANotification />
         <AppInstallBanner />
         <OfflineStatus />
