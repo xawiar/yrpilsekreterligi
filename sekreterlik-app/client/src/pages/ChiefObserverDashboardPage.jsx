@@ -308,11 +308,11 @@ const ChiefObserverDashboardPage = () => {
       </div>
 
       {/* Election Result Form Modal */}
-      {showResultForm && selectedElection && user && (
+      {showResultForm && selectedElection && user && user.ballotBoxId && (
         <ElectionResultForm
           election={selectedElection}
-          ballotBoxId={user.ballot_box_id}
-          ballotNumber={user.ballot_number}
+          ballotBoxId={user.ballotBoxId || user.ballot_box_id}
+          ballotNumber={user.ballotNumber || user.ballot_number}
           onClose={handleCloseForm}
           onSuccess={handleFormSuccess}
         />

@@ -92,6 +92,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
   const handlePhotoUpload = async (file, type) => {
     if (!file) return;
+    
+    // ballotBoxId kontrolü
+    if (!ballotBoxId) {
+      setMessage('Sandık bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+      setMessageType('error');
+      return;
+    }
 
     try {
       setUploadingPhotos(prev => ({ ...prev, [type]: true }));
@@ -113,7 +120,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       setMessageType('success');
     } catch (error) {
       console.error('Photo upload error:', error);
-      setMessage('Fotoğraf yüklenirken hata oluştu');
+      setMessage('Fotoğraf yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
       setMessageType('error');
     } finally {
       setUploadingPhotos(prev => ({ ...prev, [type]: false }));
@@ -134,6 +141,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     e.preventDefault();
     setSaving(true);
     setMessage('');
+
+    // ballotBoxId kontrolü
+    if (!ballotBoxId) {
+      setMessage('Sandık bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+      setMessageType('error');
+      setSaving(false);
+      return;
+    }
 
     // Validasyon: Geçerli oy = parti/aday oyları toplamı
     const calculatedValidVotes = calculateValidVotes();
@@ -159,13 +174,20 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }
 
     try {
+      // formData'da ballot_box_id'nin undefined olmadığından emin ol
+      const submitData = {
+        ...formData,
+        ballot_box_id: ballotBoxId, // ballotBoxId'yi garantile
+        ballot_number: ballotNumber || formData.ballot_number
+      };
+      
       if (existingResult) {
         // Güncelle
-        await ApiService.updateElectionResult(existingResult.id, formData);
+        await ApiService.updateElectionResult(existingResult.id, submitData);
         setMessage('Seçim sonucu başarıyla güncellendi');
       } else {
         // Yeni kayıt
-        await ApiService.createElectionResult(formData);
+        await ApiService.createElectionResult(submitData);
         setMessage('Seçim sonucu başarıyla kaydedildi');
       }
       
