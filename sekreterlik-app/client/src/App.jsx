@@ -157,7 +157,7 @@ const TownPresidentRoleRoute = ({ children }) => {
 };
 
 // Public route component - Sadece giriş kontrolü yapar, yönlendirme yapmaz
-// NOT: useLocation ve useMemo kullanarak sonsuz döngüyü önle
+// NOT: Basit ve güvenilir yaklaşım - useMemo kullanmıyoruz
 const PublicRoute = ({ children }) => {
   const { loading } = useAuth();
   const location = useLocation();
@@ -168,12 +168,8 @@ const PublicRoute = ({ children }) => {
   }
   
   // Chief observer kontrolü - sadece login sayfası için
-  // useMemo ile optimize et - sadece location değiştiğinde yeniden hesapla
-  const shouldRedirect = React.useMemo(() => {
-    if (location.pathname !== '/chief-observer-login') {
-      return false; // Login sayfasında değilsek yönlendirme yapma
-    }
-    
+  // NOT: Sadece login sayfasındaysak kontrol et
+  if (location.pathname === '/chief-observer-login') {
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const savedUser = localStorage.getItem('user');
@@ -183,19 +179,12 @@ const PublicRoute = ({ children }) => {
       try {
         // savedUser'ın geçerli JSON olduğunu kontrol et
         JSON.parse(savedUser);
-        return true; // Yönlendirme yapılabilir
+        // Yönlendirme yap - replace ile (geri butonu çalışmasın)
+        return <Navigate to="/chief-observer-dashboard" replace />;
       } catch (e) {
-        // JSON parse hatası varsa yönlendirme yapma
-        return false;
+        // JSON parse hatası varsa yönlendirme yapma - login sayfasını göster
       }
     }
-    
-    return false;
-  }, [location.pathname]); // Sadece pathname değiştiğinde yeniden hesapla
-  
-  // Eğer yönlendirme gerekiyorsa yap
-  if (shouldRedirect) {
-    return <Navigate to="/chief-observer-dashboard" replace />;
   }
   
   // Login sayfasını göster - yönlendirme yapmadan
@@ -204,40 +193,35 @@ const PublicRoute = ({ children }) => {
 
 // Chief Observer için özel route guard
 // NOT: Bu route guard dashboard sayfasında çalışır, sadece authentication kontrolü yapar
+// Basit ve güvenilir yaklaşım - useMemo kullanmıyoruz çünkü localStorage reactive değil
 const ChiefObserverRoute = ({ children }) => {
   const { loading } = useAuth();
-  const location = useLocation();
   
   // Loading state
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
-  // useMemo ile authentication kontrolü - sadece location değiştiğinde yeniden hesapla
-  // NOT: location.pathname dependency'si ile sadece route değiştiğinde kontrol et
-  const isAuthenticated = React.useMemo(() => {
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUser = localStorage.getItem('user');
-    
-    // Temel kontroller
-    if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
-      return false;
-    }
-    
-    // JSON parse kontrolü
+  // Authentication kontrolü - basit ve direkt
+  const userRole = localStorage.getItem('userRole');
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const savedUser = localStorage.getItem('user');
+  
+  // Temel kontroller
+  let isAuthenticated = false;
+  if (savedUser && userRole === 'chief_observer' && isLoggedIn) {
     try {
       JSON.parse(savedUser);
-      return true;
+      isAuthenticated = true;
     } catch (e) {
-      return false;
+      // JSON parse hatası - authenticated değil
+      isAuthenticated = false;
     }
-  }, [location.pathname]); // Sadece pathname değiştiğinde yeniden hesapla
+  }
   
   // Eğer authenticated değilse login'e yönlendir
-  // NOT: Bu route guard dashboard sayfasında çalışır, pathname kontrolü gereksiz
+  // NOT: Bu route guard dashboard sayfasında çalışır, sadece bir kez yönlendir
   if (!isAuthenticated) {
-    // Sadece bir kez yönlendir - replace ile (geri butonu çalışmasın)
     return <Navigate to="/chief-observer-login" replace />;
   }
   
