@@ -645,7 +645,7 @@ const ElectionResultsPage = () => {
                     </div>
 
                     {/* Parti/Aday Oyları */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
                       {election.type === 'cb' && election.candidates && (
                         <div className="space-y-2">
                           {election.candidates.map(candidate => {
@@ -681,6 +681,33 @@ const ElectionResultsPage = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Seçim Tutanak Fotoğrafları */}
+                    {(result.signed_protocol_photo || result.signedProtocolPhoto || result.objection_protocol_photo || result.objectionProtocolPhoto) && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Tutanaklar:</span>
+                          <div className="flex items-center space-x-2">
+                            {(result.signed_protocol_photo || result.signedProtocolPhoto) && (
+                              <div className="flex items-center space-x-1" title="Seçim Tutanağı Yüklendi">
+                                <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-xs text-gray-600 dark:text-gray-400">Seçim</span>
+                              </div>
+                            )}
+                            {(result.objection_protocol_photo || result.objectionProtocolPhoto) && (
+                              <div className="flex items-center space-x-1" title="İtiraz Tutanağı Yüklendi">
+                                <svg className="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span className="text-xs text-gray-600 dark:text-gray-400">İtiraz</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
