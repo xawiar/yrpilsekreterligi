@@ -710,12 +710,14 @@ class FirebaseApiService {
       
       // Firebase Auth'da kullanıcı oluştur
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
+      console.error('[DEBUG] 🔵 Firebase Auth email:', email);
       
       // Email zaten kullanılıyorsa hata fırlatma, sadece Firestore'a kaydet
       let authUser = null;
       try {
+        console.error('[DEBUG] 🔵 Firebase Auth kullanıcısı oluşturuluyor...');
         authUser = await createUserWithEmailAndPassword(auth, email, password);
-        console.log('✅ Firebase Auth user created:', authUser.user.uid);
+        console.error('[DEBUG] ✅ Firebase Auth user created:', authUser.user.uid);
         
         // Yeni kullanıcı oluşturulduktan sonra, mevcut kullanıcıyı geri yükle (eğer varsa)
         // createUserWithEmailAndPassword yeni kullanıcıyı otomatik olarak sign-in eder
@@ -737,23 +739,33 @@ class FirebaseApiService {
       }
 
       // Firestore'a kaydet
+      const userData = {
+        memberId,
+        username,
+        password: password, // Artık şifreleme yapılmıyor
+        userType: 'member',
+        isActive: true,
+        authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
+      };
+      console.error('[DEBUG] 🔵 Firestore\'a kaydediliyor:', { ...userData, password: '***' });
+      
       const docId = await FirebaseService.create(
         this.COLLECTIONS.MEMBER_USERS,
         null,
-        {
-          memberId,
-          username,
-          password: password, // Artık şifreleme yapılmıyor
-          userType: 'member',
-          isActive: true,
-          authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
-        },
+        userData,
         false // encrypt = false (artık şifreleme yapılmıyor)
       );
+      
+      console.error('[DEBUG] ✅ Firestore\'a kaydedildi, docId:', docId);
 
       return { success: true, id: docId, message: 'Kullanıcı oluşturuldu' };
     } catch (error) {
-      console.error('Create member user error:', error);
+      console.error('[DEBUG] ❌ Create member user error:', error);
+      console.error('[DEBUG] ❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       return { success: false, message: error.message || 'Kullanıcı oluşturulurken hata oluştu' };
     }
   }
@@ -4192,14 +4204,15 @@ class FirebaseApiService {
       
       // Başmüşahit eklenirken otomatik kullanıcı oluştur
       if (observerData.is_chief_observer) {
-        console.log('🔵 Başmüşahit ekleniyor, kullanıcı oluşturma başlatılıyor...');
+        // DEBUG: console.error kullanıyoruz çünkü production'da console.log kaldırılıyor
+        console.error('[DEBUG] 🔵 Başmüşahit ekleniyor, kullanıcı oluşturma başlatılıyor...');
         try {
           const tc = String(observerData.tc || '').trim();
-          console.log('🔵 Başmüşahit TC:', tc);
+          console.error('[DEBUG] 🔵 Başmüşahit TC:', tc);
           
           // TC ile üye bul (TC şifrelenmiş olabilir)
           const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
-          console.log('🔵 Toplam üye sayısı:', members.length);
+          console.error('[DEBUG] 🔵 Toplam üye sayısı:', members.length);
           
           const member = members.find(m => {
             let memberTc = String(m.tc || '').trim();
@@ -4208,80 +4221,89 @@ class FirebaseApiService {
                 memberTc = decryptData(memberTc);
               }
             } catch (e) {
-              console.warn('TC decrypt hatası:', e);
+              console.error('[DEBUG] ⚠️ TC decrypt hatası:', e);
             }
             const matches = memberTc === tc;
             if (matches) {
-              console.log('✅ Üye bulundu! Member ID:', m.id, 'TC:', memberTc);
+              console.error('[DEBUG] ✅ Üye bulundu! Member ID:', m.id, 'TC:', memberTc);
             }
             return matches;
           });
 
           if (member && member.id) {
-            console.log('✅ Üye bulundu, kullanıcı oluşturma devam ediyor...');
+            console.error('[DEBUG] ✅ Üye bulundu, kullanıcı oluşturma devam ediyor...', { memberId: member.id });
             // Sandık numarasını kontrol et
             let username, password;
             if (observerData.ballot_box_id) {
               const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, observerData.ballot_box_id);
+              console.error('[DEBUG] 🔵 Sandık bilgisi:', { ballotBoxId: observerData.ballot_box_id, ballotBox });
               if (ballotBox && ballotBox.ballot_number) {
                 // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
                 username = String(ballotBox.ballot_number);
                 password = tc;
+                console.error('[DEBUG] 🔵 Sandık numarası var, kullanıcı adı:', username);
               } else {
                 // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
                 username = tc;
                 password = tc;
+                console.error('[DEBUG] 🔵 Sandık numarası yok, kullanıcı adı TC olacak:', username);
               }
             } else {
               // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
               username = tc;
               password = tc;
+              console.error('[DEBUG] 🔵 ballot_box_id yok, kullanıcı adı TC olacak:', username);
             }
 
             // Kullanıcı zaten var mı kontrol et
-            console.log('🔵 Kullanıcı kontrolü yapılıyor...', { memberId: member.id });
+            console.error('[DEBUG] 🔵 Kullanıcı kontrolü yapılıyor...', { memberId: member.id, username });
             const existingUsers = await FirebaseService.findByField(
               this.COLLECTIONS.MEMBER_USERS,
               'memberId',
               member.id
             );
-            console.log('🔵 Mevcut kullanıcı kontrolü:', existingUsers?.length || 0, 'kullanıcı bulundu');
+            console.error('[DEBUG] 🔵 Mevcut kullanıcı kontrolü:', existingUsers?.length || 0, 'kullanıcı bulundu', existingUsers);
             
             if (!existingUsers || existingUsers.length === 0) {
               // Kullanıcı yoksa oluştur
-              console.log('🔵 Yeni kullanıcı oluşturuluyor...', { memberId: member.id, username, password: '***' });
+              console.error('[DEBUG] 🔵 Yeni kullanıcı oluşturuluyor...', { memberId: member.id, username, password: '***' });
               const result = await this.createMemberUser(member.id, username, password);
-              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`, result);
+              console.error(`[DEBUG] ✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`, result);
             } else {
               const existingUser = existingUsers[0];
-              console.log('🔵 Mevcut kullanıcı bulundu:', { id: existingUser.id, username: existingUser.username });
+              console.error('[DEBUG] 🔵 Mevcut kullanıcı bulundu:', { id: existingUser.id, username: existingUser.username });
               if (existingUser.username !== username) {
                 // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
-                console.log('🔵 Kullanıcı adı güncelleniyor...', { old: existingUser.username, new: username });
+                console.error('[DEBUG] 🔵 Kullanıcı adı güncelleniyor...', { old: existingUser.username, new: username });
                 await this.updateMemberUser(existingUser.id, username, password);
-                console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
+                console.error(`[DEBUG] ✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
               } else {
-                console.log('ℹ️ Kullanıcı adı aynı, güncelleme gerekmiyor');
+                console.error('[DEBUG] ℹ️ Kullanıcı adı aynı, güncelleme gerekmiyor');
               }
             }
           } else {
-            console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
-            console.warn('🔍 Üye arama detayları:', {
+            console.error(`[DEBUG] ⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+            console.error('[DEBUG] 🔍 Üye arama detayları:', {
               tc,
               membersCount: members.length,
-              sampleMemberTcs: members.slice(0, 3).map(m => {
+              sampleMemberTcs: members.slice(0, 5).map(m => {
                 let mtc = String(m.tc || '').trim();
                 try {
                   if (mtc.startsWith('U2FsdGVkX1')) {
                     mtc = decryptData(mtc);
                   }
                 } catch (e) {}
-                return mtc;
+                return { id: m.id, name: m.name, tc: mtc };
               })
             });
           }
         } catch (userError) {
-          console.error('❌ Başmüşahit kullanıcısı oluşturulurken hata:', userError);
+          console.error('[DEBUG] ❌ Başmüşahit kullanıcısı oluşturulurken hata:', userError);
+          console.error('[DEBUG] ❌ Hata detayları:', {
+            message: userError.message,
+            stack: userError.stack,
+            name: userError.name
+          });
           // Kullanıcı oluşturma hatası ana işlemi durdurmamalı
         }
       }
