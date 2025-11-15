@@ -156,38 +156,17 @@ const TownPresidentRoleRoute = ({ children }) => {
   return <Navigate to="/login" />;
 };
 
-// Public route component - Sadece giriş kontrolü yapar, yönlendirme yapmaz
-// NOT: Basit ve güvenilir yaklaşım - useMemo kullanmıyoruz
+// Public route component - Sadece loading kontrolü yapar
+// NOT: Yönlendirme yapmıyor - login sayfası kendi içinde kontrol edecek
 const PublicRoute = ({ children }) => {
   const { loading } = useAuth();
-  const location = useLocation();
   
-  // Sadece loading kontrolü - yönlendirme LoginEnhanced'da yapılacak
+  // Sadece loading kontrolü
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
-  // Chief observer kontrolü - sadece login sayfası için
-  // NOT: Sadece login sayfasındaysak kontrol et
-  if (location.pathname === '/chief-observer-login') {
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUser = localStorage.getItem('user');
-    
-    // Tüm kontrolleri yap - sadece gerçekten giriş yapılmışsa yönlendir
-    if (userRole === 'chief_observer' && isLoggedIn && savedUser) {
-      try {
-        // savedUser'ın geçerli JSON olduğunu kontrol et
-        JSON.parse(savedUser);
-        // Yönlendirme yap - replace ile (geri butonu çalışmasın)
-        return <Navigate to="/chief-observer-dashboard" replace />;
-      } catch (e) {
-        // JSON parse hatası varsa yönlendirme yapma - login sayfasını göster
-      }
-    }
-  }
-  
-  // Login sayfasını göster - yönlendirme yapmadan
+  // Children'ı göster - yönlendirme yapmadan
   return children;
 };
 

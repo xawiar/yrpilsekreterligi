@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 
@@ -10,9 +10,17 @@ const ChiefObserverLoginPage = () => {
   const navigate = useNavigate();
 
   // Zaten giriş yapılmışsa dashboard'a yönlendir (tek seferlik - sadece mount'ta)
-  // NOT: PublicRoute zaten bu kontrolü yapıyor, burada sadece ekstra güvenlik için
+  // NOT: useRef ile bir kez kontrol et - sonsuz döngüyü önle
+  const hasCheckedAuth = React.useRef(false);
+  
   useEffect(() => {
-    // Sadece bir kez çalışsın - dependency array boş
+    // Sadece bir kez çalışsın - hasCheckedAuth flag ile
+    if (hasCheckedAuth.current) {
+      return; // Zaten kontrol edildi
+    }
+    
+    hasCheckedAuth.current = true;
+    
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const savedUser = localStorage.getItem('user');
@@ -20,8 +28,14 @@ const ChiefObserverLoginPage = () => {
     
     // Sadece gerçekten giriş yapılmışsa ve login sayfasındaysak yönlendir
     if (userRole === 'chief_observer' && isLoggedIn && savedUser && currentPath === '/chief-observer-login') {
-      // PublicRoute zaten yönlendirme yapacak, burada sadece ekstra kontrol
-      // navigate çağrısını kaldırdık - PublicRoute'a bıraktık
+      try {
+        // savedUser'ın geçerli JSON olduğunu kontrol et
+        JSON.parse(savedUser);
+        // Yönlendirme yap - replace ile (geri butonu çalışmasın)
+        navigate('/chief-observer-dashboard', { replace: true });
+      } catch (e) {
+        // JSON parse hatası varsa yönlendirme yapma
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Boş dependency array - sadece component mount olduğunda çalışır
