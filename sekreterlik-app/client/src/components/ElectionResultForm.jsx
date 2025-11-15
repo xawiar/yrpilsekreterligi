@@ -26,6 +26,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     // Tutanak fotoğrafları
     signed_protocol_photo: null,
     objection_protocol_photo: null,
+    // İtiraz bilgileri
+    has_objection: false,
+    objection_reason: '',
     notes: ''
   });
 
@@ -55,6 +58,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           candidate_votes: result.candidate_votes || {},
           signed_protocol_photo: result.signed_protocol_photo || null,
           objection_protocol_photo: result.objection_protocol_photo || null,
+          has_objection: result.has_objection || false,
+          objection_reason: result.objection_reason || '',
           notes: result.notes || ''
         }));
       }
@@ -434,31 +439,71 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
           </div>
 
-          {/* İtiraz Tutanağı Fotoğrafı */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              İtiraz Tutanağı Fotoğrafı (Varsa)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) handlePhotoUpload(file, 'objection');
-              }}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
-              disabled={uploadingPhotos.objection}
-            />
-            {uploadingPhotos.objection && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Yükleniyor...</p>
-            )}
-            {formData.objection_protocol_photo && (
-              <div className="mt-2">
-                <img 
-                  src={formData.objection_protocol_photo} 
-                  alt="İtiraz Tutanağı" 
-                  className="max-w-xs rounded-lg border border-gray-300 dark:border-gray-600"
-                />
+          {/* İtiraz Bilgileri */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <input
+                type="checkbox"
+                id="has_objection"
+                checked={formData.has_objection}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    has_objection: e.target.checked,
+                    objection_reason: e.target.checked ? prev.objection_reason : ''
+                  }));
+                }}
+                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <label htmlFor="has_objection" className="text-lg font-semibold text-gray-900 dark:text-gray-100 cursor-pointer">
+                İtiraz Edildi
+              </label>
+            </div>
+            
+            {formData.has_objection && (
+              <div className="ml-8 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    İtiraz Sebebi *
+                  </label>
+                  <textarea
+                    name="objection_reason"
+                    value={formData.objection_reason}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                    placeholder="İtiraz sebebini detaylı olarak yazın..."
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    İtiraz Tutanağı Fotoğrafı
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) handlePhotoUpload(file, 'objection');
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                    disabled={uploadingPhotos.objection}
+                  />
+                  {uploadingPhotos.objection && (
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Yükleniyor...</p>
+                  )}
+                  {formData.objection_protocol_photo && (
+                    <div className="mt-2">
+                      <img 
+                        src={formData.objection_protocol_photo} 
+                        alt="İtiraz Tutanağı" 
+                        className="max-w-xs rounded-lg border border-gray-300 dark:border-gray-600"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

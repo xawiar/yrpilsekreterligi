@@ -24,6 +24,7 @@ const ElectionResultsPage = () => {
   const [selectedVillage, setSelectedVillage] = useState('');
   const [selectedBallotNumber, setSelectedBallotNumber] = useState('');
   const [searchQuery, setSearchQuery] = useState(''); // Arama sorgusu
+  const [filterByObjection, setFilterByObjection] = useState(''); // 'all', 'with', 'without'
   
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
@@ -199,6 +200,13 @@ const ElectionResultsPage = () => {
       );
     }
 
+    // İtiraz filtresi
+    if (filterByObjection === 'with') {
+      filtered = filtered.filter(r => r.has_objection === true || r.has_objection === 1);
+    } else if (filterByObjection === 'without') {
+      filtered = filtered.filter(r => !r.has_objection || r.has_objection === false || r.has_objection === 0);
+    }
+
     // Filter by location through ballot boxes
     if (selectedDistrict || selectedTown || selectedNeighborhood || selectedVillage) {
       const relevantBallotBoxIds = ballotBoxes
@@ -248,6 +256,14 @@ const ElectionResultsPage = () => {
     const filtered = getFilteredResults();
     const totalUsedVotes = filtered.reduce((sum, result) => sum + (parseInt(result.used_votes) || 0), 0);
     return ((totalUsedVotes / election.voter_count) * 100).toFixed(2);
+  };
+
+  // Calculate opened ballot box percentage
+  const calculateOpenedBallotBoxPercentage = () => {
+    const total = getTotalBallotBoxes();
+    if (total === 0) return '0.00';
+    const opened = hasResults ? filteredResults.length : 0;
+    return ((opened / total) * 100).toFixed(2);
   };
 
   // Calculate aggregated results
@@ -656,11 +672,26 @@ const ElectionResultsPage = () => {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                İtiraz Durumu
+              </label>
+              <select
+                value={filterByObjection}
+                onChange={(e) => setFilterByObjection(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+              >
+                <option value="">Tümü</option>
+                <option value="with">İtiraz Edilenler</option>
+                <option value="without">İtiraz Edilmeyenler</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Sandık</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
@@ -671,6 +702,9 @@ const ElectionResultsPage = () => {
             <div className="text-sm text-gray-600 dark:text-gray-400">Açılan Sandık</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
               {hasResults ? filteredResults.length : 0}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              %{calculateOpenedBallotBoxPercentage()}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
@@ -689,6 +723,12 @@ const ElectionResultsPage = () => {
                 Seçmen: {election.voter_count.toLocaleString('tr-TR')}
               </div>
             )}
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
+            <div className="text-sm text-gray-600 dark:text-gray-400">İtiraz Edilen Sandık</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
+              {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
+            </div>
           </div>
         </div>
 
@@ -917,13 +957,33 @@ const ElectionResultsPage = () => {
                   ? Object.values(result.candidate_votes || {}).reduce((sum, val) => sum + (val || 0), 0)
                   : Object.values(result.party_votes || {}).reduce((sum, val) => sum + (val || 0), 0);
 
+                const hasObjection = result.has_objection === true || result.has_objection === 1;
+
                 return (
-                  <div key={result.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="mb-3">
+                  <div key={result.id} className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                    hasObjection 
+                      ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20' 
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}>
+                    <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         Sandık No: {result.ballot_number}
                       </h3>
+                      {hasObjection && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/40 rounded-full">
+                          <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span className="text-sm font-semibold text-red-600 dark:text-red-400">İtiraz Edildi</span>
+                        </div>
+                      )}
                     </div>
+                    {hasObjection && result.objection_reason && (
+                      <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="text-xs font-medium text-red-700 dark:text-red-300 mb-1">İtiraz Sebebi:</div>
+                        <div className="text-sm text-red-600 dark:text-red-400">{result.objection_reason}</div>
+                      </div>
+                    )}
                     
                     {/* Konum Bilgileri */}
                     {locationParts.length > 0 && (
