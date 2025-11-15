@@ -211,22 +211,23 @@ function AppContent() {
   }, []);
 
   // Quick action event listener
+  const navigate = useNavigate();
   React.useEffect(() => {
     const handleQuickAction = (e) => {
       const { action } = e.detail;
       if (action === 'quick-meeting') {
         // Navigate to meetings page with create modal
-        window.location.href = '/meetings?create=true';
+        navigate('/meetings?create=true', { replace: false });
       } else if (action === 'quick-event') {
         // Navigate to events page with create modal
-        window.location.href = '/events?create=true';
+        navigate('/events?create=true', { replace: false });
       }
     };
     window.addEventListener('quickAction', handleQuickAction);
     return () => {
       window.removeEventListener('quickAction', handleQuickAction);
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <Router

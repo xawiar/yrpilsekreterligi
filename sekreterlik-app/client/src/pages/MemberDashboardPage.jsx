@@ -1219,8 +1219,8 @@ const MemberDashboardPage = () => {
                     </button>
                   )}
                   {grantedPermissions.includes('access_bulk_sms_page') && (
-                    <button 
-                      onClick={() => window.location.href = '/bulk-sms'} 
+                    <button
+                      onClick={() => navigate('/bulk-sms')} 
                       className="group p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 rounded-xl border border-pink-200 dark:border-pink-700 hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800 dark:hover:to-pink-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
