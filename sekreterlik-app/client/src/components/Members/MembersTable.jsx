@@ -250,10 +250,16 @@ const MembersTable = ({
                       <div className="flex items-center">
                         {member.photo ? (
                           <img
-                            src={normalizePhotoUrl(member.photo)}
+                            src={member.photo ? normalizePhotoUrl(member.photo) : null}
                             alt={member.name}
                             loading="lazy"
                             className="flex-shrink-0 h-8 w-8 rounded-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) {
+                                e.target.nextSibling.style.display = 'flex';
+                              }
+                            }}
                             onError={(e) => {
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'flex';
@@ -352,10 +358,16 @@ const MembersTable = ({
                 <div className="flex items-center">
                   {member.photo ? (
                     <img
-                      src={normalizePhotoUrl(member.photo)}
+                      src={member.photo ? normalizePhotoUrl(member.photo) : null}
                       alt={member.name}
                       loading="lazy"
                       className="flex-shrink-0 h-10 w-10 rounded-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                      }}
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
