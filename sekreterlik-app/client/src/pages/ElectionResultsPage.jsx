@@ -582,58 +582,10 @@ const ElectionResultsPage = () => {
   // Memoize aggregated results
   const aggregatedResults = useMemo(() => calculateAggregatedResults(), [filteredResults, election]);
 
-  // Count-up animation states
-  const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
-  const [openedBallotBoxesCount, setOpenedBallotBoxesCount] = useState(0);
-  const [totalValidVotesCount, setTotalValidVotesCount] = useState(0);
-  const [objectionCount, setObjectionCount] = useState(0);
-
   // Calculate objection count (memoized)
   const objectionCountValue = useMemo(() => {
     return filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
   }, [filteredResults]);
-
-  // Animate counts - only when values actually change
-  useEffect(() => {
-    if (!election) return;
-    
-    const totalBallotBoxes = getTotalBallotBoxes;
-    const openedCount = hasResults ? filteredResults.length : 0;
-    const validVotes = hasResults ? aggregatedResults.total : 0;
-
-    // Cancel any ongoing animations
-    let cancelled = false;
-
-    const animateValue = (start, end, setter, duration = 1000) => {
-      if (cancelled) return;
-      
-      let startTime = null;
-      const animate = (currentTime) => {
-        if (cancelled) return;
-        
-        if (!startTime) startTime = currentTime;
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-        setter(Math.floor(start + (end - start) * easeOutQuart));
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          setter(end);
-        }
-      };
-      requestAnimationFrame(animate);
-    };
-
-    animateValue(0, totalBallotBoxes, setTotalBallotBoxesCount);
-    animateValue(0, openedCount, setOpenedBallotBoxesCount);
-    animateValue(0, validVotes, setTotalValidVotesCount);
-    animateValue(0, objectionCountValue, setObjectionCount);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [election, getTotalBallotBoxes, hasResults, filteredResults.length, aggregatedResults.total, objectionCountValue]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
@@ -996,7 +948,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {openedBallotBoxesCount}
+              {hasResults ? filteredResults.length : 0}
             </div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
               %{calculateOpenedBallotBoxPercentage}
@@ -1013,7 +965,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {totalValidVotesCount.toLocaleString('tr-TR')}
+              {(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
             </div>
           </div>
           
