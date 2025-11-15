@@ -1693,16 +1693,29 @@ class ApiService {
 
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {
+    console.log('[ApiService.getElectionResults] Called:', { electionId, ballotBoxId, USE_FIREBASE });
+    
     if (USE_FIREBASE) {
-      return FirebaseApiService.getElectionResults(electionId, ballotBoxId);
+      console.log('[ApiService.getElectionResults] Using FirebaseApiService');
+      try {
+        const result = await FirebaseApiService.getElectionResults(electionId, ballotBoxId);
+        console.log('[ApiService.getElectionResults] FirebaseApiService result:', result?.length || 0, 'results');
+        return result;
+      } catch (error) {
+        console.error('[ApiService.getElectionResults] FirebaseApiService error:', error);
+        throw error;
+      }
     }
 
+    console.log('[ApiService.getElectionResults] Using backend API');
     const params = new URLSearchParams();
     if (electionId) params.append('election_id', electionId);
     if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
     
     const response = await fetch(`${API_BASE_URL}/election-results?${params}`);
-    return response.json();
+    const result = await response.json();
+    console.log('[ApiService.getElectionResults] Backend API result:', result?.length || 0, 'results');
+    return result;
   }
 
   static async getElectionResultById(id) {
