@@ -4239,26 +4239,46 @@ class FirebaseApiService {
             }
 
             // Kullanıcı zaten var mı kontrol et
+            console.log('🔵 Kullanıcı kontrolü yapılıyor...', { memberId: member.id });
             const existingUsers = await FirebaseService.findByField(
               this.COLLECTIONS.MEMBER_USERS,
               'memberId',
               member.id
             );
+            console.log('🔵 Mevcut kullanıcı kontrolü:', existingUsers?.length || 0, 'kullanıcı bulundu');
             
             if (!existingUsers || existingUsers.length === 0) {
               // Kullanıcı yoksa oluştur
-              await this.createMemberUser(member.id, username, password);
-              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`);
+              console.log('🔵 Yeni kullanıcı oluşturuluyor...', { memberId: member.id, username, password: '***' });
+              const result = await this.createMemberUser(member.id, username, password);
+              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`, result);
             } else {
               const existingUser = existingUsers[0];
+              console.log('🔵 Mevcut kullanıcı bulundu:', { id: existingUser.id, username: existingUser.username });
               if (existingUser.username !== username) {
                 // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
+                console.log('🔵 Kullanıcı adı güncelleniyor...', { old: existingUser.username, new: username });
                 await this.updateMemberUser(existingUser.id, username, password);
                 console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
+              } else {
+                console.log('ℹ️ Kullanıcı adı aynı, güncelleme gerekmiyor');
               }
             }
           } else {
             console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+            console.warn('🔍 Üye arama detayları:', {
+              tc,
+              membersCount: members.length,
+              sampleMemberTcs: members.slice(0, 3).map(m => {
+                let mtc = String(m.tc || '').trim();
+                try {
+                  if (mtc.startsWith('U2FsdGVkX1')) {
+                    mtc = decryptData(mtc);
+                  }
+                } catch (e) {}
+                return mtc;
+              })
+            });
           }
         } catch (userError) {
           console.error('❌ Başmüşahit kullanıcısı oluşturulurken hata:', userError);
