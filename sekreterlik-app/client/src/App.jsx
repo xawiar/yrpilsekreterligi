@@ -167,9 +167,8 @@ const TownPresidentRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   
-  // Only show loading if we're actually checking auth state
-  // Don't block login page if user is not logged in
-  if (loading && isLoggedIn) {
+  // SORUN #3 FIX: Loading durumunu düzgün kontrol et
+  if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
@@ -182,9 +181,17 @@ const PublicRoute = ({ children }) => {
     return <Navigate to="/chief-observer-dashboard" replace />;
   }
   
+  // SORUN #3 FIX: Eğer giriş yapılmamışsa children'ı göster (döngü yok)
   if (!isLoggedIn) return children;
   
-  // If logged in, redirect to appropriate dashboard
+  // SORUN #3 FIX: Giriş yapılmışsa, sadece LOGIN sayfasındaysak yönlendir
+  // Diğer sayfalarda yönlendirme yapma
+  const currentPath = window.location.pathname;
+  if (currentPath !== '/login') {
+    return children; // Döngüyü önlemek için children'ı döndür
+  }
+  
+  // Sadece /login sayfasındayken yönlendir
   if (user?.role === 'admin') return <Navigate to="/" replace />;
   if (user?.role === 'member') return <Navigate to="/member-dashboard" replace />;
   if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
