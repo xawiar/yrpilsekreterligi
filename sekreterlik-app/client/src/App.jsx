@@ -478,6 +478,7 @@ function AppContent() {
         {isLoggedIn && user?.role === 'admin' && (
           <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
         )}
+        </Suspense>
       </div>
     </Router>
   );
