@@ -38,7 +38,7 @@ const ElectionResultsPage = () => {
       // Filter results when filters change
       filterResults();
     }
-  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, results, ballotBoxes]);
+  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, results, ballotBoxes]);
 
   const fetchData = async () => {
     try {
