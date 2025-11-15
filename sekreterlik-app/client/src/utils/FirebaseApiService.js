@@ -502,22 +502,34 @@ class FirebaseApiService {
       } catch (authError) {
         console.log('Firebase Auth login failed for chief observer, checking Firestore:', authError.code);
         
-        // Auth'da kullanıcı yoksa oluştur
-        if (authError.code === 'auth/user-not-found') {
+        // Auth'da kullanıcı yoksa veya şifre yanlışsa oluştur/güncelle
+        if (authError.code === 'auth/user-not-found' || 
+            authError.code === 'auth/invalid-credential' ||
+            authError.code === 'auth/wrong-password') {
           try {
-            userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            user = userCredential.user;
-            // authUid'yi Firestore'a kaydet
-            await FirebaseService.update(
-              this.COLLECTIONS.MEMBER_USERS,
-              memberUser.id,
-              { authUid: user.uid },
-              false
-            );
-            console.log('Firebase Auth user created for chief observer:', user.uid);
-          } catch (createError) {
-            console.error('Failed to create Firebase Auth user:', createError);
-            throw new Error('Giriş yapılamadı');
+            // Önce kullanıcıyı oluşturmayı dene
+            try {
+              userCredential = await createUserWithEmailAndPassword(auth, email, password);
+              user = userCredential.user;
+              // authUid'yi Firestore'a kaydet
+              await FirebaseService.update(
+                this.COLLECTIONS.MEMBER_USERS,
+                memberUser.id,
+                { authUid: user.uid },
+                false
+              );
+              console.log('Firebase Auth user created for chief observer:', user.uid);
+            } catch (createError) {
+              // Email already in use hatası alırsak, bu kullanıcı zaten var demektir
+              // Bu durumda giriş yapılamadı mesajı vermeliyiz
+              if (createError.code === 'auth/email-already-in-use') {
+                throw new Error('Bu kullanıcı için giriş yapılamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
+              }
+              throw createError;
+            }
+          } catch (error) {
+            console.error('Failed to create Firebase Auth user:', error);
+            throw new Error('Giriş yapılamadı: ' + error.message);
           }
         } else {
           throw new Error('Giriş yapılamadı: ' + authError.message);
