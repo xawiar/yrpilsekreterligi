@@ -3,7 +3,7 @@ services:
     name: ilce-sekreterlik
     branch: main
     rootDir: "sekreterlik-app/client"
-    buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build
+    buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build && node scripts/fix-spa-routing.js
     staticPublishPath: "dist"
     headers:
       - path: /*

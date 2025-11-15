@@ -48,6 +48,10 @@ const routes = [
   'election-preparation/neighborhoods',
   'election-preparation/villages',
   'election-preparation/groups',
+  'elections',
+  'election-results',
+  'chief-observer-login',
+  'chief-observer-dashboard',
   'management-chart',
   'calendar',
   'bulk-sms'
