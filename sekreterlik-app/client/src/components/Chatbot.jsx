@@ -228,6 +228,19 @@ const Chatbot = ({ isOpen, onClose }) => {
             console.error('Error calculating performance scores:', error);
           }
 
+          // Debug: Seçim verilerini kontrol et
+          console.log('🔍 [CHATBOT DEBUG] Seçim verileri yüklendi:', {
+            electionsCount: elections?.length || 0,
+            electionResultsCount: electionResults?.length || 0,
+            elections: elections?.slice(0, 3).map(e => ({ id: e.id, name: e.name, type: e.type })),
+            sampleResults: electionResults?.slice(0, 2).map(r => ({ 
+              electionId: r.election_id || r.electionId, 
+              ballotNumber: r.ballot_number || r.ballotNumber,
+              hasSignedProtocol: !!(r.signed_protocol_photo || r.signedProtocolPhoto),
+              hasObjectionProtocol: !!(r.objection_protocol_photo || r.objectionProtocolPhoto)
+            }))
+          });
+
           // Update with ALL additional data
           setSiteData(prev => ({
             ...prev,
@@ -259,8 +272,8 @@ const Chatbot = ({ isOpen, onClose }) => {
             archivedMembers,
             archivedMeetings,
             archivedEvents,
-            elections,
-            electionResults,
+            elections: elections || [],
+            electionResults: electionResults || [],
             performanceScores
           }));
         })();
@@ -395,6 +408,24 @@ const Chatbot = ({ isOpen, onClose }) => {
 
         const siteContext = AIService.buildSiteContext(siteData);
         context.push(...siteContext);
+        
+        // Debug: Context'e eklenen seçim verilerini kontrol et
+        const electionContextLines = siteContext.filter(line => 
+          line.includes('SEÇİM') || line.includes('seçim') || line.includes('Seçim')
+        );
+        if (electionContextLines.length > 0) {
+          console.log('✅ [CHATBOT DEBUG] Seçim verileri context\'e eklendi:', {
+            electionContextLinesCount: electionContextLines.length,
+            sampleLines: electionContextLines.slice(0, 5)
+          });
+        } else {
+          console.warn('⚠️ [CHATBOT DEBUG] Seçim verileri context\'e eklenmemiş!', {
+            hasElections: !!(siteData.elections && siteData.elections.length > 0),
+            hasElectionResults: !!(siteData.electionResults && siteData.electionResults.length > 0),
+            electionsCount: siteData.elections?.length || 0,
+            electionResultsCount: siteData.electionResults?.length || 0
+          });
+        }
         
         // Check if user is asking about a specific member (with all site data for comprehensive info)
         const memberContext = AIService.buildMemberContext(

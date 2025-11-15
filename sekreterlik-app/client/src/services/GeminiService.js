@@ -73,7 +73,8 @@ class GeminiService {
 9. Sayısal sorular için (kaç üye var, kaç etkinlik yapıldı vb.) context'teki verileri kullanarak hesapla
 10. Site işlevleri hakkında sorular sorulduğunda (örnek: "sandık nasıl eklenir", "toplantı nasıl oluşturulur"), context'teki "SİTE İŞLEVLERİ VE KULLANIM KILAVUZU" bölümündeki bilgileri kullanarak adım adım açıkla
 11. Kullanıcılar site işlevlerini nasıl kullanacaklarını sorduğunda, hangi sayfaya gitmeleri gerektiğini, hangi butona tıklamaları gerektiğini ve hangi bilgileri girmeleri gerektiğini detaylıca anlat
-12. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri vb.)
+12. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri, SEÇİMLER, SEÇİM SONUÇLARI, BAŞMÜŞAHİTLER, SANDIK TUTANAKLARI vb.)
+13. Seçim sonuçları hakkında sorular sorulduğunda, context'teki "SEÇİMLER" ve "SEÇİM SONUÇLARI" bölümlerindeki bilgileri kullan. Her seçim için sandık bazında oy sayıları, başmüşahit bilgileri ve tutanak durumları context'te mevcuttur.
 
 CONTEXT BİLGİLERİ:
 ${contextText}`;

@@ -80,7 +80,8 @@ class GroqService {
 4. Bilgi yoksa "Bulamadım başkanım" de
 5. Türkçe, kısa ve öz cevap ver
 6. Sayısal sorular için context'teki verileri kullan
-7. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri vb.)
+7. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri, SEÇİMLER, SEÇİM SONUÇLARI, BAŞMÜŞAHİTLER, SANDIK TUTANAKLARI vb.)
+8. Seçim sonuçları hakkında sorular sorulduğunda, context'teki "SEÇİMLER" ve "SEÇİM SONUÇLARI" bölümlerindeki bilgileri kullan. Her seçim için sandık bazında oy sayıları, başmüşahit bilgileri ve tutanak durumları context'te mevcuttur.
 
 CONTEXT:
 ${contextText}`;
