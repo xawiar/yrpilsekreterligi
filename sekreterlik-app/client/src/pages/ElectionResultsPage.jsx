@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const ElectionResultsPage = () => {
   const { electionId } = useParams();
@@ -26,6 +28,14 @@ const ElectionResultsPage = () => {
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
   const [modalTitle, setModalTitle] = useState('');
+  
+  // Chart detail modal state
+  const [selectedChartData, setSelectedChartData] = useState(null);
+  const [showChartDetailModal, setShowChartDetailModal] = useState(false);
+  const [activeChartType, setActiveChartType] = useState('pie'); // 'pie' or 'bar'
+  
+  // Refs for export
+  const chartContainerRef = useRef(null);
 
   useEffect(() => {
     if (electionId) {
@@ -268,7 +278,7 @@ const ElectionResultsPage = () => {
         data: Object.keys(candidateTotals).map(candidate => ({
           name: candidate,
           value: candidateTotals[candidate],
-          percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100).toFixed(2) : 0
+          percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100) : 0
         })),
         total
       };
@@ -296,7 +306,7 @@ const ElectionResultsPage = () => {
         data: Object.keys(partyTotals).map(party => ({
           name: party,
           value: partyTotals[party],
-          percentage: total > 0 ? ((partyTotals[party] / total) * 100).toFixed(2) : 0
+          percentage: total > 0 ? ((partyTotals[party] / total) * 100) : 0
         })),
         total
       };
@@ -355,6 +365,33 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
+  // Count-up animation hook
+  const useCountUp = (end, duration = 2000) => {
+    const [count, setCount] = useState(0);
+    
+    useEffect(() => {
+      let startTime = null;
+      const startValue = 0;
+      
+      const animate = (currentTime) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        setCount(Math.floor(startValue + (end - startValue) * easeOutQuart));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setCount(end);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }, [end, duration]);
+    
+    return count;
+  };
+
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
     setModalPhoto(photoUrl);
@@ -370,6 +407,70 @@ const ElectionResultsPage = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Handle chart segment click
+  const handleChartClick = (data) => {
+    setSelectedChartData(data);
+    setShowChartDetailModal(true);
+  };
+
+  // Export as PNG
+  const handleExportPNG = async () => {
+    if (!chartContainerRef.current) return;
+    
+    try {
+      const canvas = await html2canvas(chartContainerRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const link = document.createElement('a');
+      link.download = `${election?.name || 'seçim-sonuclari'}_grafik.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('PNG export error:', error);
+      alert('PNG oluşturulurken bir hata oluştu');
+    }
+  };
+
+  // Export as PDF
+  const handleExportPDF = async () => {
+    if (!chartContainerRef.current) return;
+    
+    try {
+      const canvas = await html2canvas(chartContainerRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`${election?.name || 'seçim-sonuclari'}_grafik.pdf`);
+    } catch (error) {
+      console.error('PDF export error:', error);
+      alert('PDF oluşturulurken bir hata oluştu');
+    }
   };
 
   console.log('🎨 ElectionResultsPage render:', {
@@ -621,7 +722,7 @@ const ElectionResultsPage = () => {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percentage }) => `${name}\n%${percentage.toFixed(1)}`}
+                          label={({ name, percentage }) => `${name}\n%${typeof percentage === 'number' ? percentage.toFixed(1) : parseFloat(percentage || 0).toFixed(1)}`}
                           outerRadius={120}
                           innerRadius={40}
                           fill="#8884d8"
@@ -659,10 +760,15 @@ const ElectionResultsPage = () => {
                             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
                             padding: '12px'
                           }}
-                          formatter={(value, name, props) => [
-                            `${value.toLocaleString('tr-TR')} oy (%${props.payload.percentage.toFixed(1)})`,
-                            name
-                          ]}
+                          formatter={(value, name, props) => {
+                            const percentage = typeof props.payload.percentage === 'number' 
+                              ? props.payload.percentage 
+                              : parseFloat(props.payload.percentage || 0);
+                            return [
+                              `${value.toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
+                              name
+                            ];
+                          }}
                         />
                         <Legend 
                           wrapperStyle={{ paddingTop: '20px' }}
@@ -680,9 +786,13 @@ const ElectionResultsPage = () => {
                   {aggregatedResults.data
                     .sort((a, b) => b.value - a.value)
                     .map((item, index) => {
-                      const percentage = item.percentage;
-                      const maxPercentage = Math.max(...aggregatedResults.data.map(d => d.percentage));
-                      const barWidth = (percentage / maxPercentage) * 100;
+                      const percentage = typeof item.percentage === 'number' 
+                        ? item.percentage 
+                        : parseFloat(item.percentage || 0);
+                      const maxPercentage = Math.max(...aggregatedResults.data.map(d => 
+                        typeof d.percentage === 'number' ? d.percentage : parseFloat(d.percentage || 0)
+                      ));
+                      const barWidth = maxPercentage > 0 ? (percentage / maxPercentage) * 100 : 0;
                       
                       return (
                         <div 
