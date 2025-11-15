@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 
@@ -8,6 +8,16 @@ const ChiefObserverLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Zaten giriş yapılmışsa dashboard'a yönlendir (tek seferlik)
+  useEffect(() => {
+    const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    
+    if (userRole === 'chief_observer' && isLoggedIn) {
+      navigate('/chief-observer-dashboard', { replace: true });
+    }
+  }, []); // Boş dependency array - sadece mount'ta çalışır
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,8 +33,8 @@ const ChiefObserverLoginPage = () => {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userRole', 'chief_observer');
         
-        // Dashboard'a yönlendir
-        navigate('/chief-observer-dashboard');
+        // Dashboard'a yönlendir - replace ile
+        navigate('/chief-observer-dashboard', { replace: true });
       } else {
         setError(result.message || 'Giriş başarısız');
       }
