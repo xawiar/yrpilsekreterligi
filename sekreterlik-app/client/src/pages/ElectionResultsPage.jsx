@@ -443,7 +443,6 @@ const ElectionResultsPage = () => {
     return { type: 'unknown', data: [], total: 0 };
   };
 
-  const aggregatedResults = calculateAggregatedResults();
 
   // Get location name for a ballot box
   const getLocationName = (ballotBoxId) => {
@@ -493,6 +492,10 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
+  // Calculate filtered results and aggregated results
+  const filteredResults = getFilteredResults();
+  const hasResults = filteredResults.length > 0;
+
   // Count-up animation states
   const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
   const [openedBallotBoxesCount, setOpenedBallotBoxesCount] = useState(0);
@@ -529,7 +532,7 @@ const ElectionResultsPage = () => {
     animateValue(0, openedCount, setOpenedBallotBoxesCount);
     animateValue(0, validVotes, setTotalValidVotesCount);
     animateValue(0, objectionCountValue, setObjectionCount);
-  }, [election, hasResults, filteredResults.length, aggregatedResults.total]);
+  }, [election, hasResults, filteredResults, aggregatedResults]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
