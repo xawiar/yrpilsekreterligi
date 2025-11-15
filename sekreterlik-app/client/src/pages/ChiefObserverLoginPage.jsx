@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 
@@ -8,6 +8,17 @@ const ChiefObserverLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Eğer kullanıcı zaten giriş yaptıysa dashboard'a yönlendir
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    const userRole = localStorage.getItem('userRole');
+    
+    if (savedUser && userRole === 'chief_observer') {
+      navigate('/chief-observer-dashboard', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Sadece mount'ta çalış
 
   const handleSubmit = async (e) => {
     e.preventDefault();
