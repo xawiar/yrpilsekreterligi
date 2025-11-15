@@ -200,6 +200,15 @@ function AppContent() {
       localStorage.removeItem('isLoggedIn');
       console.log('Chief observer localStorage temizlendi - Redirect döngüsü önlendi');
     }
+
+    // Service Worker'ı unregister et ve cache'i temizle
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          registration.unregister();
+        });
+      });
+    }
   }, []);
 
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });

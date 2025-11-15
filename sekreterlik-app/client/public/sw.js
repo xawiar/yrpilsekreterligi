@@ -1,233 +1,53 @@
-const CACHE_NAME = 'sekreterlik-v6-clear-archived-396dfd0';
-// Vite geliştirme ortamında sabit bundle yolları yok; yalnızca güvenli, mevcut dosyaları önbelleğe al
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
-];
+// Service Worker tamamen devre dışı - Redirect döngüsü sorunu nedeniyle
+// Bu Service Worker kendini unregister eder ve cache'i temizler
 
-// Install event
+const CACHE_NAME = 'sekreterlik-disabled-' + Date.now();
+
+// Install event - kendini hemen unregister et
 self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    try {
-      // addAll bazı istekler başarısız olduğunda tümünü reddedebilir; tek tek ve hataları yutarak ekle
-      await Promise.all(urlsToCache.map(async (url) => {
-        try {
-          const resp = await fetch(url, { cache: 'no-store' });
-          if (resp && resp.ok) {
-            await cache.put(url, resp.clone());
-          }
-        } catch (_) {
-          // mevcut olmayan dosyaları atla
-        }
-      }));
-      console.log('Cache primed');
-    } catch (e) {
-      // hiçbir şey yapma – SW kurulumu yine de tamamlanacak
-      console.warn('Cache warmup error:', e);
-    }
-  })());
+  console.log('Service Worker installing - will self-destruct');
+  self.skipWaiting();
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  const url = event.request.url;
-  
-  // Skip localhost:5000 requests - backend API is not available in production
-  if (url.includes('localhost:5000') || url.includes('/api/health') || url.includes('/api/archive/documents') || url.includes('/api/district-officials') || url.includes('/api/visits/counts') || url.includes('/api/districts') || url.includes('/deputy-inspectors')) {
-    // Don't intercept these requests - let them fail silently
-    // Return a dummy response to prevent errors
-    event.respondWith(new Response('', { status: 200, statusText: 'OK' }));
-    return;
-  }
-  
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request).catch((error) => {
-          // Silently handle fetch errors (especially for localhost:5000)
-          console.warn('Fetch error (silently ignored):', error);
-          // Return a dummy response to prevent error
-          return new Response('', { status: 503, statusText: 'Service Unavailable' });
-        });
-      })
-  );
-});
-
-// Activate event
+// Activate event - tüm cache'leri temizle ve kendini unregister et
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating - clearing all caches');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+          console.log('Deleting cache:', cacheName);
+          return caches.delete(cacheName);
         })
       );
+    }).then(() => {
+      console.log('All caches deleted');
+      // Service Worker'ı unregister et
+      return self.registration.unregister();
+    }).then(() => {
+      console.log('Service Worker unregistered');
+      // Tüm client'ları yenile
+      return self.clients.matchAll();
+    }).then((clients) => {
+      clients.forEach(client => {
+        client.postMessage({ type: 'RELOAD' });
+      });
     })
   );
 });
 
-// Background sync
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'background-sync') {
-    event.waitUntil(doBackgroundSync());
-  }
-});
-
-// Push notification event
-self.addEventListener('push', (event) => {
-  console.log('Push event received:', event);
-  
-  let data = {};
-  if (event.data) {
-    data = event.data.json();
-  }
-  
-  // Get badge count from data
-  const badgeCount = data.data?.badgeCount || null;
-  
-  const options = {
-    body: data.body || 'Yeni bildirim',
-    icon: data.icon || '/icon-192x192.png',
-    badge: badgeCount !== null ? badgeCount.toString() : (data.badge || '/badge-72x72.png'),
-    data: {
-      ...(data.data || {}),
-      timestamp: data.timestamp || Date.now()
-    },
-    actions: data.actions || [
-      {
-        action: 'view',
-        title: 'Görüntüle'
-      },
-      {
-        action: 'close',
-        title: 'Kapat'
-      }
-    ],
-    requireInteraction: data.requireInteraction !== undefined ? data.requireInteraction : true,
-    silent: data.silent || false,
-    vibrate: data.vibrate || [200, 100, 200], // Vibrate pattern
-    sound: data.sound || undefined, // Sound (browser may ignore)
-    tag: data.tag || data.data?.type || 'general', // Tag for grouping
-    renotify: data.renotify !== undefined ? data.renotify : true,
-    timestamp: data.timestamp || Date.now()
-  };
-  
-  // Update badge count if available
-  if (badgeCount !== null && 'setAppBadge' in navigator) {
-    navigator.setAppBadge(badgeCount).catch(err => {
-      console.warn('Could not set app badge:', err);
-    });
-  }
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Bildirim', options)
+// Fetch event - hiçbir şey cache'leme, her zaman network'ten al
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return new Response('', { status: 503, statusText: 'Service Unavailable' });
+    })
   );
 });
 
-// Notification click event
-self.addEventListener('notificationclick', (event) => {
-  console.log('Notification click received:', event);
-  
-  event.notification.close();
-  
-  if (event.action === 'view') {
-    // Open the app
-    event.waitUntil(
-      clients.openWindow('/')
-    );
-  } else if (event.action === 'close') {
-    // Just close the notification
-    console.log('Notification closed');
-  } else {
-    // Default action - open the app
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+// Mesaj event - reload komutu
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
-
-// Background sync function
-async function doBackgroundSync() {
-  try {
-    console.log('Background sync started');
-    
-    // Get pending data from IndexedDB
-    const pendingData = await getPendingData();
-    
-    if (pendingData.length > 0) {
-      console.log('Syncing pending data:', pendingData);
-      
-      // Send pending data to server
-      for (const data of pendingData) {
-        try {
-          await fetch('/api/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-          });
-          
-          // Remove from pending data
-          await removePendingData(data.id);
-        } catch (error) {
-          console.error('Error syncing data:', error);
-        }
-      }
-    }
-    
-    console.log('Background sync completed');
-  } catch (error) {
-    console.error('Background sync error:', error);
-  }
-}
-
-// IndexedDB functions for background sync
-async function getPendingData() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('sekreterlik-sync', 1);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      const transaction = db.transaction(['pending'], 'readonly');
-      const store = transaction.objectStore('pending');
-      const getAllRequest = store.getAll();
-      
-      getAllRequest.onsuccess = () => resolve(getAllRequest.result);
-      getAllRequest.onerror = () => reject(getAllRequest.error);
-    };
-    
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains('pending')) {
-        db.createObjectStore('pending', { keyPath: 'id', autoIncrement: true });
-      }
-    };
-  });
-}
-
-async function removePendingData(id) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('sekreterlik-sync', 1);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      const transaction = db.transaction(['pending'], 'readwrite');
-      const store = transaction.objectStore('pending');
-      const deleteRequest = store.delete(id);
-      
-      deleteRequest.onsuccess = () => resolve();
-      deleteRequest.onerror = () => reject(deleteRequest.error);
-    };
-  });
-}
