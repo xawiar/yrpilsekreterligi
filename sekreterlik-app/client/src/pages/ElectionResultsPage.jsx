@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -371,12 +371,12 @@ const ElectionResultsPage = () => {
   };
 
   // Calculate opened ballot box percentage
-  const calculateOpenedBallotBoxPercentage = () => {
+  const calculateOpenedBallotBoxPercentage = useMemo(() => {
     const total = getTotalBallotBoxes();
     if (total === 0) return '0.00';
     const opened = hasResults ? filteredResults.length : 0;
     return ((opened / total) * 100).toFixed(2);
-  };
+  }, [hasResults, filteredResults.length, ballotBoxes, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage]);
 
   // Calculate aggregated results
   const calculateAggregatedResults = () => {
@@ -443,8 +443,6 @@ const ElectionResultsPage = () => {
     return { type: 'unknown', data: [], total: 0 };
   };
 
-  const aggregatedResults = calculateAggregatedResults();
-
   // Get location name for a ballot box
   const getLocationName = (ballotBoxId) => {
     const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
@@ -493,32 +491,26 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
-  // Count-up animation hook
-  const useCountUp = (end, duration = 2000) => {
-    const [count, setCount] = useState(0);
-    
-    useEffect(() => {
-      let startTime = null;
-      const startValue = 0;
-      
-      const animate = (currentTime) => {
-        if (!startTime) startTime = currentTime;
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-        setCount(Math.floor(startValue + (end - startValue) * easeOutQuart));
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          setCount(end);
-        }
-      };
-      
-      requestAnimationFrame(animate);
-    }, [end, duration]);
-    
-    return count;
-  };
+  // Memoize filtered results and aggregated results to prevent infinite loops
+  const filteredResults = useMemo(() => getFilteredResults(), [
+    results,
+    ballotBoxes,
+    districts,
+    towns,
+    neighborhoods,
+    villages,
+    selectedDistrict,
+    selectedTown,
+    selectedNeighborhood,
+    selectedVillage,
+    selectedBallotNumber,
+    searchQuery,
+    filterByObjection
+  ]);
+
+  const hasResults = useMemo(() => filteredResults.length > 0, [filteredResults.length]);
+
+  const aggregatedResults = useMemo(() => calculateAggregatedResults(), [filteredResults, election]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
@@ -629,10 +621,7 @@ const ElectionResultsPage = () => {
     );
   }
 
-  const filteredResults = getFilteredResults();
-  
-  // Sonuç yoksa bile sayfa görünsün - sıfır değerlerle
-  const hasResults = filteredResults.length > 0;
+  // filteredResults and hasResults are already calculated above with useMemo
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
@@ -841,7 +830,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {useCountUp(getTotalBallotBoxes())}
+              {getTotalBallotBoxes()}
             </div>
           </div>
           
@@ -855,10 +844,10 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {useCountUp(hasResults ? filteredResults.length : 0)}
+              {hasResults ? filteredResults.length : 0}
             </div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
-              %{calculateOpenedBallotBoxPercentage()}
+              %{calculateOpenedBallotBoxPercentage}
             </div>
           </div>
           
@@ -872,7 +861,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {useCountUp(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
+              {(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
             </div>
           </div>
           
@@ -905,7 +894,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {useCountUp(filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length)}
+              {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
             </div>
           </div>
         </div>
