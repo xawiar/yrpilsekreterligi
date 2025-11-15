@@ -26,6 +26,7 @@ import MemberDashboardAnalyticsPage from './MemberDashboardAnalyticsPage';
 import AppBrandingSettings from '../components/AppBrandingSettings';
 import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
 import SeçimEkleSettings from '../components/SeçimEkleSettings';
+import ApiKeySettings from '../components/ApiKeySettings';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -212,6 +213,7 @@ const SettingsPage = ({ tab }) => {
                 {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
                 {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
                 {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
+                {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
               </>
             )}
           </div>

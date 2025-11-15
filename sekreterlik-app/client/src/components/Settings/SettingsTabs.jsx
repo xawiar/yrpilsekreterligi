@@ -30,6 +30,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
       'app-branding': grantedPermissions.includes('manage_app_branding'),
       'performance-score': false, // Admin only
       'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
+      'api-keys': false, // Admin only
     };
 
     return permissionMap[tabName] || false;
@@ -429,6 +430,23 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           Seçim Ekle
+        </button>
+        )}
+        
+        {/* API Key Yönetimi - Admin only */}
+        {hasPermission('api-keys') && (
+        <button
+          onClick={() => setActiveTab('api-keys')}
+          className={`${
+            activeTab === 'api-keys'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+          } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          API Key Yönetimi
         </button>
         )}
         

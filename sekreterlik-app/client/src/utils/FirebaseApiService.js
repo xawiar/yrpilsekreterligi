@@ -27,6 +27,7 @@ class FirebaseApiService {
     EVENTS: 'events',
     TASKS: 'tasks',
     ADMIN: 'admin',
+    API_KEYS: 'api_keys',
     MEMBER_USERS: 'member_users',
     MEMBER_REGISTRATIONS: 'member_registrations',
     REGIONS: 'regions',
@@ -7284,6 +7285,122 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Delete youth branch management error:', error);
       throw new Error('Yönetim üyesi silinirken hata oluştu');
+    }
+  }
+}
+
+  // ==================== API KEY METHODS ====================
+  
+  /**
+   * Get all API keys
+   */
+  static async getApiKeys() {
+    try {
+      const keys = await FirebaseService.getAll(this.COLLECTIONS.API_KEYS, {}, false);
+      // Hash'leri gizle, sadece metadata göster
+      return keys.map(key => ({
+        id: key.id,
+        name: key.name,
+        permissions: key.permissions || ['read'],
+        createdAt: key.created_at || key.createdAt,
+        lastUsedAt: key.last_used_at || key.lastUsedAt,
+        isActive: key.is_active !== false
+      }));
+    } catch (error) {
+      console.error('Get API keys error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create new API key
+   */
+  static async createApiKey(name, permissions = ['read']) {
+    try {
+      // Generate secure API key
+      const crypto = await import('crypto-js');
+      const apiKey = crypto.lib.WordArray.random(32).toString();
+      const hashedKey = crypto.SHA256(apiKey).toString();
+      
+      const keyData = {
+        name: name.trim(),
+        api_key_hash: hashedKey,
+        permissions: Array.isArray(permissions) ? permissions : ['read'],
+        created_at: new Date().toISOString(),
+        is_active: true
+      };
+      
+      const docRef = await FirebaseService.create(this.COLLECTIONS.API_KEYS, null, keyData, false);
+      
+      return {
+        id: docRef.id || docRef,
+        name: keyData.name,
+        apiKey, // Plain key - only shown once
+        permissions: keyData.permissions,
+        createdAt: keyData.created_at,
+        isActive: true
+      };
+    } catch (error) {
+      console.error('Create API key error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deactivate API key
+   */
+  static async deactivateApiKey(id) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.API_KEYS, id, { is_active: false }, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Deactivate API key error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete API key
+   */
+  static async deleteApiKey(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.API_KEYS, id);
+      return { success: true };
+    } catch (error) {
+      console.error('Delete API key error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate API key (for public API)
+   */
+  static async validateApiKey(apiKey) {
+    try {
+      const crypto = await import('crypto-js');
+      const hashedKey = crypto.SHA256(apiKey).toString();
+      
+      const allKeys = await FirebaseService.getAll(this.COLLECTIONS.API_KEYS, {}, false);
+      const keyData = allKeys.find(k => k.api_key_hash === hashedKey);
+      
+      if (!keyData || keyData.is_active === false) {
+        return null;
+      }
+      
+      // Update last used timestamp
+      await FirebaseService.update(this.COLLECTIONS.API_KEYS, keyData.id, {
+        last_used_at: new Date().toISOString()
+      }, false);
+      
+      return {
+        id: keyData.id,
+        name: keyData.name,
+        permissions: keyData.permissions || ['read'],
+        isActive: keyData.is_active !== false
+      };
+    } catch (error) {
+      console.error('Validate API key error:', error);
+      return null;
     }
   }
 }
