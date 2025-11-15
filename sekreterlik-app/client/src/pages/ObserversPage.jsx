@@ -191,75 +191,10 @@ const ObserversPage = () => {
 
       try {
         if (editingObserver) {
+          // Başmüşahit güncellenirken kullanıcı otomatik olarak FirebaseApiService.updateBallotBoxObserver içinde güncelleniyor
           await ApiService.updateBallotBoxObserver(editingObserver.id, observerData);
           setMessage('Müşahit başarıyla güncellendi');
           setMessageType('success');
-          
-          // Başmüşahit güncellenirken, sandık numarası eklendiyse kullanıcı adını güncelle
-          if (observerData.is_chief_observer) {
-            try {
-              const tc = String(observerData.tc).trim();
-              
-              // TC'yi kullanarak üye bul
-              const members = await ApiService.getMembers();
-              const member = members.find(m => {
-                let memberTc = String(m.tc || '').trim();
-                try {
-                  if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
-                    memberTc = decryptData(memberTc);
-                  }
-                } catch (e) {}
-                return memberTc === tc;
-              });
-
-              if (member && member.id) {
-                // Sandık numarasını kontrol et
-                const selectedBallotBox = observerData.ballot_box_id 
-                  ? ballotBoxes.find(bb => String(bb.id) === String(observerData.ballot_box_id))
-                  : null;
-                
-                if (selectedBallotBox && selectedBallotBox.ballot_number) {
-                  // Sandık numarası var - kullanıcı adını sandık numarasına güncelle
-                  const ballotNumber = String(selectedBallotBox.ballot_number);
-                  
-                  // Mevcut kullanıcıyı bul (TC ile)
-                  const memberUsers = await ApiService.getMemberUsers();
-                  const existingUser = memberUsers.find(u => 
-                    String(u.memberId) === String(member.id) && 
-                    (u.username === tc || u.username === ballotNumber)
-                  );
-                  
-                  if (existingUser) {
-                    // Kullanıcı adını sandık numarasına güncelle
-                    await ApiService.updateMemberUser(existingUser.id, ballotNumber, tc);
-                    console.log(`✅ Başmüşahit kullanıcı adı güncellendi: TC -> Sandık No: ${ballotNumber}`);
-                  } else {
-                    // Kullanıcı yoksa oluştur
-                    await ApiService.createMemberUser(member.id, ballotNumber, tc);
-                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}`);
-                  }
-                } else {
-                  // Sandık numarası yok - kullanıcı adı TC olsun
-                  const memberUsers = await ApiService.getMemberUsers();
-                  const existingUser = memberUsers.find(u => 
-                    String(u.memberId) === String(member.id)
-                  );
-                  
-                  if (!existingUser) {
-                    // Kullanıcı yoksa TC ile oluştur
-                    await ApiService.createMemberUser(member.id, tc, tc);
-                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: TC: ${tc}`);
-                  } else if (existingUser.username !== tc) {
-                    // Kullanıcı varsa ama kullanıcı adı TC değilse güncelle
-                    await ApiService.updateMemberUser(existingUser.id, tc, tc);
-                    console.log(`✅ Başmüşahit kullanıcı adı güncellendi: Sandık No -> TC: ${tc}`);
-                  }
-                }
-              }
-            } catch (userUpdateError) {
-              console.warn('⚠️ Başmüşahit kullanıcısı güncellenirken hata:', userUpdateError);
-            }
-          }
         } else {
           // Başmüşahit eklenirken kullanıcı otomatik olarak FirebaseApiService.createBallotBoxObserver içinde oluşturuluyor
           await ApiService.createBallotBoxObserver(observerData);
