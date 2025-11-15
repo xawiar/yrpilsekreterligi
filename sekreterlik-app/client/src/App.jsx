@@ -167,13 +167,34 @@ const PublicRoute = ({ children }) => {
   
   // Chief observer kontrolü
   const userRole = localStorage.getItem('userRole');
-  const isChiefObserverLoggedIn = userRole === 'chief_observer' && localStorage.getItem('isLoggedIn') === 'true';
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const savedUser = localStorage.getItem('user');
   
-  if (isChiefObserverLoggedIn && window.location.pathname === '/chief-observer-login') {
+  if (userRole === 'chief_observer' && isLoggedIn && savedUser && window.location.pathname === '/chief-observer-login') {
     return <Navigate to="/chief-observer-dashboard" replace />;
   }
   
   // Login sayfasını göster - yönlendirme yapmadan
+  return children;
+};
+
+// Chief Observer için özel route guard
+const ChiefObserverRoute = ({ children }) => {
+  const { loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  }
+  
+  const userRole = localStorage.getItem('userRole');
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const savedUser = localStorage.getItem('user');
+  
+  // Eğer chief observer değilse veya giriş yapılmamışsa login'e yönlendir
+  if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
+    return <Navigate to="/chief-observer-login" replace />;
+  }
+  
   return children;
 };
 
