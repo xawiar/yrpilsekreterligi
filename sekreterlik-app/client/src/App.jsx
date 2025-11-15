@@ -171,36 +171,43 @@ const PublicRoute = ({ children }) => {
 };
 
 // Chief Observer için özel route guard
-// NOT: Bu route guard dashboard sayfasında çalışır, sadece authentication kontrolü yapar
-// Basit ve güvenilir yaklaşım - useMemo kullanmıyoruz çünkü localStorage reactive değil
+// NOT: useRef ile bir kez kontrol et - sonsuz döngüyü önle
 const ChiefObserverRoute = ({ children }) => {
   const { loading } = useAuth();
+  const hasCheckedAuth = React.useRef(false);
+  const authResult = React.useRef(null);
   
   // Loading state
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
-  // Authentication kontrolü - basit ve direkt
-  const userRole = localStorage.getItem('userRole');
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  const savedUser = localStorage.getItem('user');
-  
-  // Temel kontroller
-  let isAuthenticated = false;
-  if (savedUser && userRole === 'chief_observer' && isLoggedIn) {
-    try {
-      JSON.parse(savedUser);
-      isAuthenticated = true;
-    } catch (e) {
-      // JSON parse hatası - authenticated değil
-      isAuthenticated = false;
+  // Authentication kontrolü - sadece bir kez yap
+  if (!hasCheckedAuth.current) {
+    hasCheckedAuth.current = true;
+    
+    const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const savedUser = localStorage.getItem('user');
+    
+    // Temel kontroller
+    let isAuthenticated = false;
+    if (savedUser && userRole === 'chief_observer' && isLoggedIn) {
+      try {
+        JSON.parse(savedUser);
+        isAuthenticated = true;
+      } catch (e) {
+        // JSON parse hatası - authenticated değil
+        isAuthenticated = false;
+      }
     }
+    
+    authResult.current = isAuthenticated;
   }
   
   // Eğer authenticated değilse login'e yönlendir
-  // NOT: Bu route guard dashboard sayfasında çalışır, sadece bir kez yönlendir
-  if (!isAuthenticated) {
+  // NOT: Sadece bir kez yönlendir - replace ile
+  if (!authResult.current) {
     return <Navigate to="/chief-observer-login" replace />;
   }
   
