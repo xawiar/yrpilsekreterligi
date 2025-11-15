@@ -493,32 +493,43 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
-  // Count-up animation hook
-  const useCountUp = (end, duration = 2000) => {
-    const [count, setCount] = useState(0);
+  // Count-up animation states
+  const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
+  const [openedBallotBoxesCount, setOpenedBallotBoxesCount] = useState(0);
+  const [totalValidVotesCount, setTotalValidVotesCount] = useState(0);
+  const [objectionCount, setObjectionCount] = useState(0);
+
+  // Animate counts - moved after filteredResults and aggregatedResults are calculated
+  useEffect(() => {
+    if (!election) return;
     
-    useEffect(() => {
+    const totalBallotBoxes = getTotalBallotBoxes();
+    const openedCount = hasResults ? filteredResults.length : 0;
+    const validVotes = hasResults ? aggregatedResults.total : 0;
+    const objectionCountValue = filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
+
+    const animateValue = (start, end, setter, duration = 1000) => {
       let startTime = null;
-      const startValue = 0;
-      
       const animate = (currentTime) => {
         if (!startTime) startTime = currentTime;
         const progress = Math.min((currentTime - startTime) / duration, 1);
         const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-        setCount(Math.floor(startValue + (end - startValue) * easeOutQuart));
+        setter(Math.floor(start + (end - start) * easeOutQuart));
         
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
-          setCount(end);
+          setter(end);
         }
       };
-      
       requestAnimationFrame(animate);
-    }, [end, duration]);
-    
-    return count;
-  };
+    };
+
+    animateValue(0, totalBallotBoxes, setTotalBallotBoxesCount);
+    animateValue(0, openedCount, setOpenedBallotBoxesCount);
+    animateValue(0, validVotes, setTotalValidVotesCount);
+    animateValue(0, objectionCountValue, setObjectionCount);
+  }, [election, hasResults, filteredResults.length, aggregatedResults.total]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
@@ -628,11 +639,6 @@ const ElectionResultsPage = () => {
       </div>
     );
   }
-
-  const filteredResults = getFilteredResults();
-  
-  // Sonuç yoksa bile sayfa görünsün - sıfır değerlerle
-  const hasResults = filteredResults.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
@@ -841,7 +847,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {useCountUp(getTotalBallotBoxes())}
+              {totalBallotBoxesCount}
             </div>
           </div>
           
@@ -855,7 +861,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {useCountUp(hasResults ? filteredResults.length : 0)}
+              {openedBallotBoxesCount}
             </div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
               %{calculateOpenedBallotBoxPercentage()}
@@ -872,7 +878,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {useCountUp(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
+              {totalValidVotesCount.toLocaleString('tr-TR')}
             </div>
           </div>
           
@@ -905,7 +911,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {useCountUp(filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length)}
+              {objectionCount}
             </div>
           </div>
         </div>
