@@ -7198,6 +7198,94 @@ class FirebaseApiService {
       throw error;
     }
   }
+
+  // Women Branch Management CRUD
+  static async getWomenBranchManagement(memberId) {
+    try {
+      return await FirebaseService.findByField(
+        this.COLLECTIONS.WOMEN_BRANCH_MANAGEMENT,
+        'member_id',
+        String(memberId)
+      );
+    } catch (error) {
+      console.error('Get women branch management error:', error);
+      return [];
+    }
+  }
+
+  static async createWomenBranchManagement(data) {
+    try {
+      const docId = await FirebaseService.create(this.COLLECTIONS.WOMEN_BRANCH_MANAGEMENT, null, data);
+      return { success: true, id: docId, message: 'Yönetim üyesi eklendi' };
+    } catch (error) {
+      console.error('Create women branch management error:', error);
+      throw new Error('Yönetim üyesi eklenirken hata oluştu');
+    }
+  }
+
+  static async updateWomenBranchManagement(id, data) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.WOMEN_BRANCH_MANAGEMENT, id, data);
+      return { success: true, message: 'Yönetim üyesi güncellendi' };
+    } catch (error) {
+      console.error('Update women branch management error:', error);
+      throw new Error('Yönetim üyesi güncellenirken hata oluştu');
+    }
+  }
+
+  static async deleteWomenBranchManagement(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.WOMEN_BRANCH_MANAGEMENT, id);
+      return { success: true, message: 'Yönetim üyesi silindi' };
+    } catch (error) {
+      console.error('Delete women branch management error:', error);
+      throw new Error('Yönetim üyesi silinirken hata oluştu');
+    }
+  }
+
+  // Youth Branch Management CRUD
+  static async getYouthBranchManagement(memberId) {
+    try {
+      return await FirebaseService.findByField(
+        this.COLLECTIONS.YOUTH_BRANCH_MANAGEMENT,
+        'member_id',
+        String(memberId)
+      );
+    } catch (error) {
+      console.error('Get youth branch management error:', error);
+      return [];
+    }
+  }
+
+  static async createYouthBranchManagement(data) {
+    try {
+      const docId = await FirebaseService.create(this.COLLECTIONS.YOUTH_BRANCH_MANAGEMENT, null, data);
+      return { success: true, id: docId, message: 'Yönetim üyesi eklendi' };
+    } catch (error) {
+      console.error('Create youth branch management error:', error);
+      throw new Error('Yönetim üyesi eklenirken hata oluştu');
+    }
+  }
+
+  static async updateYouthBranchManagement(id, data) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.YOUTH_BRANCH_MANAGEMENT, id, data);
+      return { success: true, message: 'Yönetim üyesi güncellendi' };
+    } catch (error) {
+      console.error('Update youth branch management error:', error);
+      throw new Error('Yönetim üyesi güncellenirken hata oluştu');
+    }
+  }
+
+  static async deleteYouthBranchManagement(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.YOUTH_BRANCH_MANAGEMENT, id);
+      return { success: true, message: 'Yönetim üyesi silindi' };
+    } catch (error) {
+      console.error('Delete youth branch management error:', error);
+      throw new Error('Yönetim üyesi silinirken hata oluştu');
+    }
+  }
 }
 
 export default FirebaseApiService;
