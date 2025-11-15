@@ -3862,6 +3862,77 @@ class FirebaseApiService {
     }
   }
 
+  // Election Results API
+  static async getElectionResults(electionId, ballotBoxId) {
+    try {
+      const allResults = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS, {}, false);
+      
+      let filtered = allResults || [];
+      
+      // Filter by election ID
+      if (electionId) {
+        filtered = filtered.filter(result => 
+          String(result.election_id || result.electionId) === String(electionId)
+        );
+      }
+      
+      // Filter by ballot box ID
+      if (ballotBoxId) {
+        filtered = filtered.filter(result => 
+          String(result.ballot_box_id || result.ballotBoxId) === String(ballotBoxId)
+        );
+      }
+      
+      return filtered;
+    } catch (error) {
+      console.error('Get election results error:', error);
+      return [];
+    }
+  }
+
+  static async getElectionResultById(id) {
+    try {
+      return await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
+    } catch (error) {
+      console.error('Get election result by ID error:', error);
+      throw new Error('Seçim sonucu bulunamadı');
+    }
+  }
+
+  static async createElectionResult(resultData) {
+    try {
+      const docId = await FirebaseService.create(
+        this.COLLECTIONS.ELECTION_RESULTS,
+        null,
+        resultData
+      );
+      return { success: true, id: docId, message: 'Seçim sonucu oluşturuldu' };
+    } catch (error) {
+      console.error('Create election result error:', error);
+      throw new Error('Seçim sonucu oluşturulurken hata oluştu');
+    }
+  }
+
+  static async updateElectionResult(id, resultData) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, resultData);
+      return { success: true, message: 'Seçim sonucu güncellendi' };
+    } catch (error) {
+      console.error('Update election result error:', error);
+      throw new Error('Seçim sonucu güncellenirken hata oluştu');
+    }
+  }
+
+  static async deleteElectionResult(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.ELECTION_RESULTS, id);
+      return { success: true, message: 'Seçim sonucu silindi' };
+    } catch (error) {
+      console.error('Delete election result error:', error);
+      throw new Error('Seçim sonucu silinirken hata oluştu');
+    }
+  }
+
   // Neighborhood Representatives CRUD
   static async getNeighborhoodRepresentatives() {
     try {
