@@ -499,28 +499,6 @@ function App() {
         <PWANotification />
         <AppInstallBanner />
         <OfflineStatus />
-      </AuthProvider>
-    </ThemeProvider>
-  );
-}
-
-export default App;
-
-function App() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-          <RouterContent />
-        </Router>
-        <PWANotification />
-        <AppInstallBanner />
-        <OfflineStatus />
         {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
         {/* <PerformanceMonitor /> */}
       </AuthProvider>
