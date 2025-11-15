@@ -4192,22 +4192,33 @@ class FirebaseApiService {
       
       // Başmüşahit eklenirken otomatik kullanıcı oluştur
       if (observerData.is_chief_observer) {
+        console.log('🔵 Başmüşahit ekleniyor, kullanıcı oluşturma başlatılıyor...');
         try {
           const tc = String(observerData.tc || '').trim();
+          console.log('🔵 Başmüşahit TC:', tc);
           
           // TC ile üye bul (TC şifrelenmiş olabilir)
           const members = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+          console.log('🔵 Toplam üye sayısı:', members.length);
+          
           const member = members.find(m => {
             let memberTc = String(m.tc || '').trim();
             try {
               if (memberTc && memberTc.startsWith('U2FsdGVkX1')) {
                 memberTc = decryptData(memberTc);
               }
-            } catch (e) {}
-            return memberTc === tc;
+            } catch (e) {
+              console.warn('TC decrypt hatası:', e);
+            }
+            const matches = memberTc === tc;
+            if (matches) {
+              console.log('✅ Üye bulundu! Member ID:', m.id, 'TC:', memberTc);
+            }
+            return matches;
           });
 
           if (member && member.id) {
+            console.log('✅ Üye bulundu, kullanıcı oluşturma devam ediyor...');
             // Sandık numarasını kontrol et
             let username, password;
             if (observerData.ballot_box_id) {
