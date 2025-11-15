@@ -12,6 +12,7 @@ const KadınKollarıPage = () => {
   const [members, setMembers] = useState([]);
   const [filteredMembers, setFilteredMembers] = useState([]);
   const [presidents, setPresidents] = useState({}); // { region: memberId }
+  const [management, setManagement] = useState([]); // Seçili bölgenin yönetimi
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -31,10 +32,19 @@ const KadınKollarıPage = () => {
     if (selectedRegion && members.length > 0) {
       const filtered = members.filter(m => m.region === selectedRegion);
       setFilteredMembers(filtered);
+      
+      // Seçili bölgenin başkanı varsa, yönetimini yükle
+      const presidentId = presidents[selectedRegion];
+      if (presidentId) {
+        fetchManagement(presidentId);
+      } else {
+        setManagement([]);
+      }
     } else {
       setFilteredMembers([]);
+      setManagement([]);
     }
-  }, [selectedRegion, members]);
+  }, [selectedRegion, members, presidents]);
 
   const fetchRegions = async () => {
     try {
@@ -67,6 +77,16 @@ const KadınKollarıPage = () => {
       setPresidents(presidentsMap);
     } catch (error) {
       console.error('Error fetching presidents:', error);
+    }
+  };
+
+  const fetchManagement = async (presidentMemberId) => {
+    try {
+      const data = await ApiService.getWomenBranchManagement(presidentMemberId);
+      setManagement(data || []);
+    } catch (error) {
+      console.error('Error fetching management:', error);
+      setManagement([]);
     }
   };
 
