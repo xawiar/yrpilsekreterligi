@@ -77,6 +77,13 @@ const AdminRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   if (!isLoggedIn) return <Navigate to="/login" />;
+  
+  // Başmüşahit kullanıcısını kendi dashboard'ına yönlendir
+  const userRole = localStorage.getItem('userRole');
+  if (userRole === 'chief_observer') {
+    return <Navigate to="/chief-observer-dashboard" replace />;
+  }
+  
   if (user?.role !== 'admin') return <Navigate to="/member-dashboard" />;
   return children;
 };
