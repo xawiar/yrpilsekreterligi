@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import ElectionResultForm from '../components/ElectionResultForm';
@@ -10,14 +10,26 @@ const ChiefObserverDashboardPage = () => {
   const [selectedElection, setSelectedElection] = useState(null);
   const [showResultForm, setShowResultForm] = useState(false);
   const navigate = useNavigate();
+  const hasRedirected = useRef(false); // Redirect'in bir kez yapıldığını kontrol et
+  const isInitialized = useRef(false); // İlk kontrolün yapıldığını işaretle
 
   useEffect(() => {
+    // Eğer daha önce kontrol yapıldıysa tekrar yapma
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
     // Kullanıcı bilgilerini kontrol et
     const savedUser = localStorage.getItem('user');
     const userRole = localStorage.getItem('userRole');
     
     if (!savedUser || userRole !== 'chief_observer') {
-      navigate('/chief-observer-login', { replace: true });
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        // setTimeout ile geciktirerek döngüyü önle
+        setTimeout(() => {
+          navigate('/chief-observer-login', { replace: true });
+        }, 0);
+      }
       return;
     }
 
@@ -27,7 +39,12 @@ const ChiefObserverDashboardPage = () => {
       fetchElections();
     } catch (error) {
       console.error('Error parsing user data:', error);
-      navigate('/chief-observer-login', { replace: true });
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        setTimeout(() => {
+          navigate('/chief-observer-login', { replace: true });
+        }, 0);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // navigate dependency'si döngüye neden oluyor, sadece mount'ta çalış

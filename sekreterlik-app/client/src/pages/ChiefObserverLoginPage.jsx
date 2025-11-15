@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 
@@ -8,14 +8,22 @@ const ChiefObserverLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const hasRedirected = useRef(false); // Redirect'in bir kez yapıldığını kontrol et
 
   // Eğer kullanıcı zaten giriş yaptıysa dashboard'a yönlendir
   useEffect(() => {
+    // Eğer daha önce redirect yapıldıysa tekrar yapma
+    if (hasRedirected.current) return;
+    
     const savedUser = localStorage.getItem('user');
     const userRole = localStorage.getItem('userRole');
     
     if (savedUser && userRole === 'chief_observer') {
-      navigate('/chief-observer-dashboard', { replace: true });
+      hasRedirected.current = true;
+      // setTimeout ile geciktirerek döngüyü önle
+      setTimeout(() => {
+        navigate('/chief-observer-dashboard', { replace: true });
+      }, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Sadece mount'ta çalış
