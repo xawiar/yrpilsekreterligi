@@ -30,38 +30,40 @@ const RepresentativesPage = lazy(() => import('./pages/RepresentativesPage'));
 const NeighborhoodsPage = lazy(() => import('./pages/NeighborhoodsPage'));
 const VillagesPage = lazy(() => import('./pages/VillagesPage'));
 const GroupsPage = lazy(() => import('./pages/GroupsPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
+const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
 const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
-const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
-const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
-const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+
+// Debug pages
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
 const CheckAdminPage = lazy(() => import('./pages/CheckAdminPage'));
 const DebugFirebasePage = lazy(() => import('./pages/DebugFirebasePage'));
+const FirebaseTestPage = lazy(() => import('./pages/FirebaseTestPage'));
 const ClearAllDataPage = lazy(() => import('./pages/ClearAllDataPage'));
 const FirebaseAuthUsersPage = lazy(() => import('./pages/FirebaseAuthUsersPage'));
 const SyncToFirebasePage = lazy(() => import('./pages/SyncToFirebasePage'));
-const FirebaseTestPage = lazy(() => import('./pages/FirebaseTestPage'));
 const RemoveDuplicateMeetingsPage = lazy(() => import('./pages/RemoveDuplicateMeetingsPage'));
+
+// Components
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const Footer = lazy(() => import('./components/Footer'));
+const PWANotification = lazy(() => import('./components/PWANotification'));
+const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
+const OfflineStatus = lazy(() => import('./components/OfflineStatus'));
 const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
+const Chatbot = lazy(() => import('./components/Chatbot'));
 
-// Loading component
+// Loading spinner component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
   </div>
 );
-
-// Non-lazy components (small, frequently used)
-import Chatbot from './components/Chatbot';
-const PWANotification = lazy(() => import('./components/PWANotification'));
-const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
-const OfflineStatus = lazy(() => import('./components/OfflineStatus'));
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -75,72 +77,17 @@ const AdminRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role === 'admin') return children;
-  if (user?.role === 'member') return <Navigate to="/member-dashboard" />;
-  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" />;
-  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" />;
-  return <Navigate to="/login" />;
+  if (user?.role !== 'admin') return <Navigate to="/member-dashboard" />;
+  return children;
 };
 
-// Member only route component
+// Member route component (for members only)
 const MemberRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  
-  // Wait for auth state to load, but prioritize localStorage
-  if (loading) {
-    // Check if we have saved user in localStorage (for faster initial load)
-    const savedUser = localStorage.getItem('user');
-    const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
-    
-    if (savedUser && savedIsLoggedIn === 'true') {
-      // User is likely logged in, wait a bit more
-      return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-    }
-    
-    // No saved user, show loading
-    return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  }
-  
-  // If not logged in, check localStorage one more time
-  if (!isLoggedIn) {
-    const savedUser = localStorage.getItem('user');
-    const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
-    
-    if (savedUser && savedIsLoggedIn === 'true') {
-      // localStorage'da user var, kullanıcıyı yükle
-      try {
-        const userData = JSON.parse(savedUser);
-        // User data valid ise, allow access (AuthContext will update state)
-        if (userData && userData.role) {
-          // Don't redirect, let AuthContext handle it
-          return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-        }
-      } catch (e) {
-        // Invalid user data, redirect to login
-        return <Navigate to="/login" replace />;
-      }
-    }
-    
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (user?.role === 'admin') return children; // Admin can access everything
-  if (user?.role === 'member') return children;
-  if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
-  if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" replace />;
-  return <Navigate to="/login" replace />;
-};
-
-// STK Manager route component (for STK birim başk)
-const STKManagerRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role === 'admin') return children; // Admin can access everything
-  if (user?.role === 'member' && (user?.position === 'STK birim başk' || user?.position === 'Stk Birim Başk')) {
-    return children;
-  }
-  return <Navigate to="/member-dashboard" />;
+  if (user?.role !== 'member') return <Navigate to="/" />;
+  return children;
 };
 
 // District President route component
@@ -148,9 +95,8 @@ const DistrictPresidentRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role === 'admin') return children; // Admin can access everything
-  if (user?.role === 'district_president') return children;
-  return <Navigate to="/login" />;
+  if (user?.role !== 'district_president') return <Navigate to="/" />;
+  return children;
 };
 
 // Town President route component
@@ -158,7 +104,54 @@ const TownPresidentRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role === 'admin') return children; // Admin can access everything
+  if (user?.role !== 'town_president') return <Navigate to="/" />;
+  return children;
+};
+
+// STK Manager route component (for STK management permission)
+const STKManagerRoute = ({ children }) => {
+  const { isLoggedIn, user, loading } = useAuth();
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  // İleri seviye: İzin kontrolü yapılabilir (grantedPermissions)
+  // Şu an için admin, member veya district_president'a izin ver
+  if (user?.role === 'admin' || user?.role === 'member' || user?.role === 'district_president') {
+    return children;
+  }
+  return <Navigate to="/" />;
+};
+
+// Public Institution Manager route component
+const PublicInstitutionManagerRoute = ({ children }) => {
+  const { isLoggedIn, user, loading } = useAuth();
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  // İleri seviye: İzin kontrolü yapılabilir (grantedPermissions)
+  // Şu an için admin, member veya district_president'a izin ver
+  if (user?.role === 'admin' || user?.role === 'member' || user?.role === 'district_president') {
+    return children;
+  }
+  return <Navigate to="/" />;
+};
+
+// Mosque Manager route component
+const MosqueManagerRoute = ({ children }) => {
+  const { isLoggedIn, user, loading } = useAuth();
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  // İleri seviye: İzin kontrolü yapılabilir (grantedPermissions)
+  // Şu an için admin, member veya district_president'a izin ver
+  if (user?.role === 'admin' || user?.role === 'member' || user?.role === 'district_president') {
+    return children;
+  }
+  return <Navigate to="/" />;
+};
+
+// Town President role-based route
+const TownPresidentRoleRoute = ({ children }) => {
+  const { isLoggedIn, user, loading } = useAuth();
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  if (!isLoggedIn) return <Navigate to="/login" />;
   if (user?.role === 'town_president') return children;
   return <Navigate to="/login" />;
 };
@@ -199,12 +192,17 @@ const PublicRoute = ({ children }) => {
   return <Navigate to="/" replace />;
 };
 
-function AppContent() {
+// Router içinde kullanılacak component - useNavigate burada güvenli
+function RouterContent() {
+  const navigate = useNavigate();
+  const { isLoggedIn, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
-  const { isLoggedIn, user } = useAuth();
-
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
+
+  const handleQuickActionClose = () => {
+    setQuickActionModal({ open: false, type: null });
+  };
 
   // Mobile menu event listener
   React.useEffect(() => {
@@ -218,7 +216,6 @@ function AppContent() {
   }, []);
 
   // Quick action event listener
-  const navigate = useNavigate();
   React.useEffect(() => {
     const handleQuickAction = (e) => {
       const { action } = e.detail;
@@ -269,7 +266,6 @@ function AppContent() {
               />
             </>
           )}
-          {/* Admin-only routes (accessible in production for admins) */}
           <Route 
             path="/clear-all-data" 
             element={
@@ -286,6 +282,7 @@ function AppContent() {
               </AdminRoute>
             } 
           />
+          
           {/* Member Dashboard Route */}
           <Route 
             path="/member-dashboard" 
@@ -295,7 +292,6 @@ function AppContent() {
               </MemberRoute>
             } 
           />
-
           
           {/* District President Dashboard Route */}
           <Route 
@@ -456,17 +452,16 @@ function AppContent() {
                   </div>
                 </div>
               </AdminRoute>
-            } 
+            }
           />
-          </Routes>
-        </Suspense>
+        </Routes>
         
-        {/* Chatbot Floating Button - Only show for admin users */}
+        {/* Floating Chatbot Button - Only show for admin users */}
         {isLoggedIn && user?.role === 'admin' && (
           <button
-            onClick={() => setIsChatbotOpen(true)}
-            className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
-            title="İlçe Sekreterlik Asistanı"
+            onClick={() => setIsChatbotOpen(!isChatbotOpen)}
+            className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
+            aria-label="AI Chatbot'u Aç"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -478,17 +473,24 @@ function AppContent() {
         {isLoggedIn && user?.role === 'admin' && (
           <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
         )}
-        </Suspense>
-      </div>
-    </Router>
+      </Suspense>
+    </div>
   );
 }
 
+// Component wrapper
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <RouterContent />
+        </Router>
         <PWANotification />
         <AppInstallBanner />
         <OfflineStatus />
