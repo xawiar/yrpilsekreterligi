@@ -180,7 +180,15 @@ const PublicRoute = ({ children }) => {
   if (user?.role === 'member') return <Navigate to="/member-dashboard" replace />;
   if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
   if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" replace />;
+  if (user?.role === 'chief_observer') return <Navigate to="/chief-observer-dashboard" replace />;
   return <Navigate to="/" replace />;
+};
+
+// Chief Observer only route component
+const ChiefObserverRoute = ({ children }) => {
+  // Başmüşahit sayfaları useAuth kullanmıyor, sadece localStorage kontrolü yapıyor
+  // Bu yüzden useAuth'u kullanmadan direkt children'ı döndürüyoruz
+  return children;
 };
 
 function AppContent() {
@@ -309,15 +317,15 @@ function AppContent() {
           {/* Chief Observer Routes */}
           <Route 
             path="/chief-observer-login" 
-            element={
-              <PublicRoute>
-                <ChiefObserverLoginPage />
-              </PublicRoute>
-            } 
+            element={<ChiefObserverLoginPage />} 
           />
           <Route 
             path="/chief-observer-dashboard" 
-            element={<ChiefObserverDashboardPage />} 
+            element={
+              <ChiefObserverRoute>
+                <ChiefObserverDashboardPage />
+              </ChiefObserverRoute>
+            } 
           />
           
           {/* Admin Routes */}
