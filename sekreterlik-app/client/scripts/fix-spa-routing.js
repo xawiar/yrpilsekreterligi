@@ -113,9 +113,10 @@ console.log('Created election-results/index.html for dynamic routes');
 // Instead, we'll create a subdirectory that will catch all routes
 // For Render.com, we need to use _redirects file which is already handled above
 
-// Additionally, create a nested structure for common election IDs (0-99)
+// Additionally, create a nested structure for common election IDs (0-999)
 // This helps with some hosting providers that don't support wildcards
-for (let i = 0; i < 100; i++) {
+// Create directories for 0-9, 10-99, 100-999
+for (let i = 0; i < 1000; i++) {
   const idDir = path.join(electionResultsDir, String(i));
   if (!fs.existsSync(idDir)) {
     fs.mkdirSync(idDir, { recursive: true });
@@ -123,7 +124,7 @@ for (let i = 0; i < 100; i++) {
   const idIndexPath = path.join(idDir, 'index.html');
   fs.writeFileSync(idIndexPath, indexHtml);
 }
-console.log('Created election-results/[0-99]/index.html for common IDs');
+console.log('Created election-results/[0-999]/index.html for common IDs');
 
 // Also create a catch-all mechanism using a special directory
 // Some hosting providers support this pattern
