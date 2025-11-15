@@ -783,7 +783,7 @@ const MemberUsersSettings = () => {
           </svg>
           Üye Kullanıcıları ({memberTypeUsers.length})
         </h4>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="overflow-x-auto">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -924,7 +924,7 @@ const MemberUsersSettings = () => {
           </table>
         </div>
       </div>
-
+      
       {/* Başmüşahit Kullanıcıları Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
         <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
