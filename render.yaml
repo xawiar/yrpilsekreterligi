@@ -5,13 +5,10 @@ services:
     rootDir: "sekreterlik-app/client"
     buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build && node scripts/fix-spa-routing.js
     staticPublishPath: "dist"
-    routes:
-      - type: rewrite
-        source: /election-results/*
-        destination: /index.html
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0
     envVars:
       - key: VITE_USE_FIREBASE
         value: true
