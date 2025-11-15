@@ -167,10 +167,27 @@ const TownPresidentRoleRoute = ({ children }) => {
 // NOT: Yönlendirme yapmıyor - login sayfası kendi içinde kontrol edecek
 const PublicRoute = ({ children }) => {
   const { loading } = useAuth();
+  const location = useLocation();
   
   // Sadece loading kontrolü
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
+  }
+  
+  // Login sayfasındaysak ve zaten giriş yapılmışsa yönlendir
+  if (location.pathname === '/login') {
+    const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const savedUser = localStorage.getItem('user');
+    
+    if (userRole === 'chief_observer' && isLoggedIn && savedUser) {
+      try {
+        JSON.parse(savedUser);
+        return <Navigate to="/chief-observer-dashboard" replace />;
+      } catch (e) {
+        // JSON parse hatası - devam et
+      }
+    }
   }
   
   // Children'ı göster - yönlendirme yapmadan
