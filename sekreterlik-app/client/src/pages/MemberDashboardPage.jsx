@@ -740,7 +740,7 @@ const MemberDashboardPage = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 lg:pb-8">
         {/* View Navigation */}
         {currentView !== 'dashboard' && (
           <div className="mb-6">

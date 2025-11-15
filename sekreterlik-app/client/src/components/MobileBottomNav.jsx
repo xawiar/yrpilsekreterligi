@@ -1,8 +1,11 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const MobileBottomNav = ({ grantedPermissions = [], memberPosition = null }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -88,10 +91,44 @@ const MobileBottomNav = ({ grantedPermissions = [], memberPosition = null }) => 
     isMenu: true,
   });
 
+  // Add logout button (always show, last item)
+  navItems.push({
+    name: 'Çıkış',
+    href: '#logout',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+      </svg>
+    ),
+    isLogout: true,
+  });
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-area-inset-bottom shadow-lg">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-[100] safe-area-inset-bottom shadow-lg pb-safe">
+      <div className="flex items-center justify-around h-16 px-2 overflow-x-auto">
         {navItems.map((item) => {
+          if (item.isLogout) {
+            return (
+              <button
+                key={item.name}
+                onClick={handleLogout}
+                className="flex flex-col items-center justify-center min-w-[60px] min-h-[60px] rounded-xl transition-all duration-200 active:scale-95 text-red-600 dark:text-red-400"
+              >
+                <span className="mb-1">
+                  {item.icon}
+                </span>
+                <span className="text-xs font-medium">
+                  {item.name}
+                </span>
+              </button>
+            );
+          }
+
           if (item.isMenu) {
             return (
               <button
