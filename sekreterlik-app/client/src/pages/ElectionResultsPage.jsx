@@ -654,13 +654,19 @@ const ElectionResultsPage = () => {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Filtreler</h2>
+        {/* Filters - Modern Design */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8 mb-6 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Filtreler ve Arama</h2>
+          </div>
           
-          {/* Hızlı Arama Kutusu */}
+          {/* Hızlı Arama Kutusu - Modern */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               Hızlı Arama (İlçe, Belde, Mahalle, Köy, Sandık No)
             </label>
             <div className="relative">
@@ -669,10 +675,10 @@ const ElectionResultsPage = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Örn: Merkez, Sandık 5, Mahalle adı..."
-                className="w-full px-4 py-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-5 py-4 pl-12 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 text-lg"
               />
               <svg 
-                className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" 
+                className="absolute left-4 top-4.5 h-6 w-6 text-gray-400" 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
@@ -682,24 +688,30 @@ const ElectionResultsPage = () => {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="absolute right-4 top-4.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               )}
             </div>
             {searchQuery && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                "{searchQuery}" için {getFilteredResults().length} sonuç bulundu
-              </p>
+              <div className="mt-3 flex items-center gap-2 text-sm">
+                <div className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium">
+                  "{searchQuery}" için {getFilteredResults().length} sonuç bulundu
+                </div>
+              </div>
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
                 İlçe
               </label>
               <select
@@ -710,7 +722,7 @@ const ElectionResultsPage = () => {
                   setSelectedNeighborhood('');
                   setSelectedVillage('');
                 }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 font-medium"
               >
                 <option value="">Tüm İlçeler</option>
                 {districts.map(d => (
@@ -719,8 +731,11 @@ const ElectionResultsPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
                 Belde
               </label>
               <select
@@ -730,7 +745,7 @@ const ElectionResultsPage = () => {
                   setSelectedNeighborhood('');
                   setSelectedVillage('');
                 }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 font-medium disabled:opacity-50"
                 disabled={!selectedDistrict}
               >
                 <option value="">Tüm Beldeler</option>
@@ -740,14 +755,17 @@ const ElectionResultsPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
                 Mahalle
               </label>
               <select
                 value={selectedNeighborhood}
                 onChange={(e) => setSelectedNeighborhood(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 font-medium"
               >
                 <option value="">Tüm Mahalleler</option>
                 {filteredNeighborhoods().map(n => (
@@ -756,14 +774,17 @@ const ElectionResultsPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
                 Köy
               </label>
               <select
                 value={selectedVillage}
                 onChange={(e) => setSelectedVillage(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 font-medium"
               >
                 <option value="">Tüm Köyler</option>
                 {filteredVillages().map(v => (
@@ -772,8 +793,11 @@ const ElectionResultsPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
                 Sandık Numarası
               </label>
               <input
@@ -781,18 +805,21 @@ const ElectionResultsPage = () => {
                 value={selectedBallotNumber}
                 onChange={(e) => setSelectedBallotNumber(e.target.value)}
                 placeholder="Sandık no ara..."
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 font-medium"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-red-200 dark:border-red-900/50">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
                 İtiraz Durumu
               </label>
               <select
                 value={filterByObjection}
                 onChange={(e) => setFilterByObjection(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-4 py-3 border-2 border-red-300 dark:border-red-700 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-gray-100 transition-all duration-200 font-medium"
               >
                 <option value="">Tümü</option>
                 <option value="with">İtiraz Edilenler</option>
@@ -802,32 +829,63 @@ const ElectionResultsPage = () => {
           </div>
         </div>
 
-        {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Sandık</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              {getTotalBallotBoxes()}
+        {/* Summary Statistics - Modern Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Sandık</div>
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              {useCountUp(getTotalBallotBoxes())}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Açılan Sandık</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              {hasResults ? filteredResults.length : 0}
+          
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Açılan Sandık</div>
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              {useCountUp(hasResults ? filteredResults.length : 0)}
+            </div>
+            <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
               %{calculateOpenedBallotBoxPercentage()}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
+          
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              {useCountUp(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Katılım Yüzdesi</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
+          
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Katılım Yüzdesi</div>
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               %{hasResults ? calculateParticipationPercentage() : '0.00'}
             </div>
             {election?.voter_count && (
@@ -836,10 +894,18 @@ const ElectionResultsPage = () => {
               </div>
             )}
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">İtiraz Edilen Sandık</div>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
-              {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
+          
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl border border-red-200 dark:border-red-900/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">İtiraz Edilen</div>
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+              {useCountUp(filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length)}
             </div>
           </div>
         </div>
@@ -1025,11 +1091,21 @@ const ElectionResultsPage = () => {
           </div>
         )}
 
-        {/* Results Cards */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Sandık Bazında Detaylı Sonuçlar
-          </h2>
+        {/* Results Cards - Modern Design */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Sandık Bazında Detaylı Sonuçlar
+              </h2>
+            </div>
+            {filteredResults.length > 0 && (
+              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-semibold text-sm">
+                {filteredResults.length} Sandık
+              </div>
+            )}
+          </div>
           {filteredResults.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400 mb-4">
@@ -1040,8 +1116,8 @@ const ElectionResultsPage = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredResults.map((result) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredResults.map((result, index) => {
                 const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
                 const chiefObserver = getChiefObserver(result.ballot_box_id);
                 const locationParts = [];
@@ -1097,11 +1173,11 @@ const ElectionResultsPage = () => {
                 return (
                   <div 
                     key={result.id} 
-                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="border-2 rounded-2xl p-5 sm:p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                     style={{
                       borderColor: cardStyle.borderColor,
                       backgroundColor: cardStyle.backgroundColor,
-                      borderWidth: '2px'
+                      animation: `fadeInUp 0.5s ease-out ${index * 0.05}s both`
                     }}
                   >
                     <div className="mb-3 flex items-center justify-between">
@@ -1133,10 +1209,12 @@ const ElectionResultsPage = () => {
                     
                     {/* Konum Bilgileri */}
                     {locationParts.length > 0 && (
-                      <div className="mb-3 space-y-1">
+                      <div className="mb-4 space-y-2">
                         {locationParts.map((part, idx) => (
-                          <div key={idx} className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium">{part.type}:</span> {part.name}
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                            <span className="font-semibold text-gray-700 dark:text-gray-300">{part.type}:</span>
+                            <span className="text-gray-600 dark:text-gray-400">{part.name}</span>
                           </div>
                         ))}
                       </div>
@@ -1144,55 +1222,73 @@ const ElectionResultsPage = () => {
 
                     {/* Başmüşahit Bilgileri */}
                     {chiefObserver && (
-                      <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-                          Başmüşahit
+                      <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            Başmüşahit
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           {chiefObserver.name}
                         </div>
                         {chiefObserver.phone && (
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {chiefObserver.phone}
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            📞 {chiefObserver.phone}
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Oy Sayıları */}
-                    <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
+                    {/* Oy Sayıları - Modern Cards */}
+                    <div className="mb-4 grid grid-cols-3 gap-2">
+                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Kullanılan</div>
+                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                           {result.used_votes || 0}
                         </div>
                       </div>
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
+                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Geçersiz</div>
+                        <div className="text-lg font-bold text-red-600 dark:text-red-400">
                           {result.invalid_votes || 0}
                         </div>
                       </div>
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
+                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Geçerli</div>
+                        <div className="text-lg font-bold text-green-600 dark:text-green-400">
                           {result.valid_votes || 0}
                         </div>
                       </div>
                     </div>
 
-                    {/* Parti/Aday Oyları */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
+                    {/* Parti/Aday Oyları - Modern Design */}
+                    <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
+                        {election.type === 'cb' ? 'Aday Oyları' : 'Parti Oyları'}
+                      </div>
                       {election.type === 'cb' && election.candidates && (
                         <div className="space-y-2">
-                          {election.candidates.map(candidate => {
+                          {election.candidates.map((candidate, idx) => {
                             const votes = result.candidate_votes?.[candidate] || 0;
                             const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                            const isWinning = winningParty === candidate && !hasObjection;
                             return (
-                              <div key={candidate} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
+                              <div 
+                                key={candidate} 
+                                className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 ${
+                                  isWinning ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-700/50'
+                                }`}
+                              >
+                                <span className={`text-sm font-medium ${isWinning ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {candidate}
+                                </span>
                                 <div className="text-right">
-                                  <div className="font-semibold text-gray-900 dark:text-gray-100">{votes}</div>
+                                  <div className={`font-bold ${isWinning ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                                    {votes}
+                                  </div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
                                 </div>
                               </div>
@@ -1202,14 +1298,24 @@ const ElectionResultsPage = () => {
                       )}
                       {(election.type === 'yerel' || election.type === 'genel') && election.parties && (
                         <div className="space-y-2">
-                          {election.parties.map(party => {
+                          {election.parties.map((party, idx) => {
                             const votes = result.party_votes?.[party] || 0;
                             const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                            const isWinning = winningParty === party && !hasObjection;
                             return (
-                              <div key={party} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                              <div 
+                                key={party} 
+                                className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 ${
+                                  isWinning ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-700/50'
+                                }`}
+                              >
+                                <span className={`text-sm font-medium ${isWinning ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {party}
+                                </span>
                                 <div className="text-right">
-                                  <div className="font-semibold text-gray-900 dark:text-gray-100">{votes}</div>
+                                  <div className={`font-bold ${isWinning ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                                    {votes}
+                                  </div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
                                 </div>
                               </div>
@@ -1219,43 +1325,43 @@ const ElectionResultsPage = () => {
                       )}
                     </div>
 
-                    {/* Seçim Tutanak Fotoğrafları */}
+                    {/* Seçim Tutanak Fotoğrafları - Modern Buttons */}
                     {(result.signed_protocol_photo || result.signedProtocolPhoto || result.objection_protocol_photo || result.objectionProtocolPhoto) && (
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Tutanaklar:</span>
-                          <div className="flex items-center space-x-2">
-                            {(result.signed_protocol_photo || result.signedProtocolPhoto) && (
-                              <button
-                                onClick={() => handlePhotoClick(
-                                  result.signed_protocol_photo || result.signedProtocolPhoto,
-                                  `Seçim Tutanağı - Sandık ${result.ballot_number}`
-                                )}
-                                className="flex items-center space-x-1 hover:opacity-80 transition-opacity cursor-pointer"
-                                title="Seçim Tutanağını Görüntüle"
-                              >
-                                <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Seçim</span>
-                              </button>
-                            )}
-                            {(result.objection_protocol_photo || result.objectionProtocolPhoto) && (
-                              <button
-                                onClick={() => handlePhotoClick(
-                                  result.objection_protocol_photo || result.objectionProtocolPhoto,
-                                  `İtiraz Tutanağı - Sandık ${result.ballot_number}`
-                                )}
-                                className="flex items-center space-x-1 hover:opacity-80 transition-opacity cursor-pointer"
-                                title="İtiraz Tutanağını Görüntüle"
-                              >
-                                <svg className="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">İtiraz</span>
-                              </button>
-                            )}
-                          </div>
+                      <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-4">
+                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                          Tutanaklar
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {(result.signed_protocol_photo || result.signedProtocolPhoto) && (
+                            <button
+                              onClick={() => handlePhotoClick(
+                                result.signed_protocol_photo || result.signedProtocolPhoto,
+                                `Seçim Tutanağı - Sandık ${result.ballot_number}`
+                              )}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                              title="Seçim Tutanağını Görüntüle"
+                            >
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <span>Seçim Tutanağı</span>
+                            </button>
+                          )}
+                          {(result.objection_protocol_photo || result.objectionProtocolPhoto) && (
+                            <button
+                              onClick={() => handlePhotoClick(
+                                result.objection_protocol_photo || result.objectionProtocolPhoto,
+                                `İtiraz Tutanağı - Sandık ${result.ballot_number}`
+                              )}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                              title="İtiraz Tutanağını Görüntüle"
+                            >
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <span>İtiraz Tutanağı</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1267,33 +1373,36 @@ const ElectionResultsPage = () => {
         </div>
       </div>
 
-      {/* Photo Modal */}
+      {/* Photo Modal - Modern Design */}
       {modalPhoto && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
           onClick={() => setModalPhoto(null)}
         >
           <div 
-            className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto"
+            className="bg-white dark:bg-gray-800 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-5 flex items-center justify-between z-10">
+              <h3 className="text-xl font-bold flex items-center gap-3">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
                 {modalTitle}
               </h3>
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => handleDownload(modalPhoto, modalTitle.replace(/\s+/g, '_') + '.jpg')}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                  className="px-5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   <span>İndir</span>
                 </button>
                 <button
                   onClick={() => setModalPhoto(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  className="w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all duration-200 flex items-center justify-center hover:scale-110"
                 >
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
