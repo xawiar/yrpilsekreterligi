@@ -106,7 +106,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       
       // Firebase Auth state kontrolü - başmüşahit için
       const currentUser = auth.currentUser;
+      console.log('[DEBUG] Current Firebase Auth user:', currentUser ? currentUser.uid : 'null');
+      
       if (!currentUser) {
+        console.log('[DEBUG] No Firebase Auth user, attempting re-authentication...');
         // Firebase Auth'da kullanıcı yoksa, localStorage'dan bilgileri al ve yeniden authenticate et
         const savedUser = localStorage.getItem('user');
         const userRole = localStorage.getItem('userRole');
@@ -116,6 +119,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             const userData = JSON.parse(savedUser);
             const username = userData.username || userData.ballotNumber;
             const email = `${username}@ilsekreterlik.local`;
+            
+            console.log('[DEBUG] Re-authenticating chief observer:', { username, email });
             
             // Başmüşahit için Firebase Auth'da giriş yap
             // Şifreyi member_users'dan al
@@ -142,19 +147,30 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               const password = storedPassword || userData.tc || username;
               
               // Firebase Auth ile giriş yap
-              await signInWithEmailAndPassword(auth, email, password);
-              console.log('[DEBUG] Firebase Auth re-authenticated for chief observer');
+              const userCredential = await signInWithEmailAndPassword(auth, email, password);
+              console.log('[DEBUG] Firebase Auth re-authenticated successfully:', userCredential.user.uid);
             } else {
               // Member user bulunamadı, TC'yi şifre olarak kullan
               const password = userData.tc || username;
-              await signInWithEmailAndPassword(auth, email, password);
-              console.log('[DEBUG] Firebase Auth re-authenticated for chief observer (using TC as password)');
+              const userCredential = await signInWithEmailAndPassword(auth, email, password);
+              console.log('[DEBUG] Firebase Auth re-authenticated (using TC as password):', userCredential.user.uid);
             }
           } catch (reauthError) {
             console.error('[DEBUG] Re-authentication error:', reauthError);
-            // Re-auth başarısız olsa bile devam et - belki zaten authenticated
+            setMessage('Firebase kimlik doğrulama hatası. Lütfen tekrar giriş yapın.');
+            setMessageType('error');
+            setUploadingPhotos(prev => ({ ...prev, [type]: false }));
+            return;
           }
+        } else {
+          console.error('[DEBUG] No chief observer data in localStorage');
+          setMessage('Kullanıcı bilgileri bulunamadı. Lütfen tekrar giriş yapın.');
+          setMessageType('error');
+          setUploadingPhotos(prev => ({ ...prev, [type]: false }));
+          return;
         }
+      } else {
+        console.log('[DEBUG] Firebase Auth user already authenticated:', currentUser.uid);
       }
       
       // Firebase Storage'a yükle
