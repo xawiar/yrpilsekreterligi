@@ -160,13 +160,12 @@ const TownPresidentRoleRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { isLoggedIn, user, loading } = useAuth();
   
-  // SORUN #3 FIX: Loading durumunu düzgün kontrol et
+  // Loading durumunu kontrol et ama sadece ilk yüklemede
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
   }
   
   // Chief observer login sayfasını kontrol et
-  // Chief observer'lar AuthContext kullanmıyor, localStorage kontrolü yap
   const userRole = localStorage.getItem('userRole');
   const isChiefObserverLoggedIn = userRole === 'chief_observer' && localStorage.getItem('isLoggedIn') === 'true';
   
@@ -174,21 +173,17 @@ const PublicRoute = ({ children }) => {
     return <Navigate to="/chief-observer-dashboard" replace />;
   }
   
-  // SORUN #3 FIX: Eğer giriş yapılmamışsa children'ı göster (döngü yok)
+  // Giriş yapılmamışsa, login sayfasını göster
   if (!isLoggedIn) return children;
   
-  // SORUN #3 FIX: Giriş yapılmışsa, sadece LOGIN sayfasındaysak yönlendir
-  // Diğer sayfalarda yönlendirme yapma
-  const currentPath = window.location.pathname;
-  if (currentPath !== '/login') {
-    return children; // Döngüyü önlemek için children'ı döndür
-  }
-  
-  // Sadece /login sayfasındayken yönlendir
+  // Giriş yapılmışsa ama login sayfasındaysa, dashboard'a yönlendir
+  // Tek seferlik yönlendirme - children döndürmüyoruz
   if (user?.role === 'admin') return <Navigate to="/" replace />;
   if (user?.role === 'member') return <Navigate to="/member-dashboard" replace />;
   if (user?.role === 'district_president') return <Navigate to="/district-president-dashboard" replace />;
   if (user?.role === 'town_president') return <Navigate to="/town-president-dashboard" replace />;
+  
+  // Varsayılan: ana sayfaya yönlendir
   return <Navigate to="/" replace />;
 };
 
