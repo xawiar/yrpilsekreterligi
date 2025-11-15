@@ -6,9 +6,8 @@ import ElectionResultForm from '../components/ElectionResultForm';
 /**
  * Başmüşahit Dashboard Sayfası
  * 
- * NOT: Bu sayfa ChiefObserverRoute guard'ı ile korunuyor.
- * Route guard authentication kontrolü yapıyor, bu component sadece veriyi gösteriyor.
- * Sonsuz döngü önlemek için navigate kullanılmıyor - route guard'a bırakıldı.
+ * NOT: Authentication kontrolü bu sayfada yapılıyor - route guard kullanılmıyor.
+ * Sonsuz döngü önlemek için useRef ile bir kez kontrol ediliyor.
  */
 const ChiefObserverDashboardPage = () => {
   const navigate = useNavigate();
@@ -20,42 +19,68 @@ const ChiefObserverDashboardPage = () => {
   const [error, setError] = useState(null);
   const [selectedElection, setSelectedElection] = useState(null);
   const [showResultForm, setShowResultForm] = useState(false);
+  
+  // Authentication kontrolü - sadece bir kez yap (useRef ile)
+  const hasCheckedAuth = React.useRef(false);
+  const authCheckDone = React.useRef(false);
 
-  // Kullanıcı bilgilerini yükle - sadece mount'ta bir kez
+  // Authentication kontrolü - sadece mount'ta bir kez
   useEffect(() => {
-    let isMounted = true;
-
-    const loadUserData = () => {
+    // Sadece bir kez çalışsın
+    if (hasCheckedAuth.current) {
+      return;
+    }
+    
+    hasCheckedAuth.current = true;
+    
+    const checkAuth = () => {
       try {
         const savedUser = localStorage.getItem('user');
         const userRole = localStorage.getItem('userRole');
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        const currentPath = window.location.pathname;
 
-        // Route guard zaten kontrol etti, burada sadece parse et
-        if (savedUser && userRole === 'chief_observer' && isLoggedIn) {
+        // Eğer authenticated değilse login'e yönlendir
+        if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
+          if (currentPath !== '/chief-observer-login') {
+            authCheckDone.current = true;
+            navigate('/chief-observer-login', { replace: true });
+          }
+          return;
+        }
+
+        // JSON parse kontrolü
+        try {
           const userData = JSON.parse(savedUser);
-          if (isMounted) {
-            setUser(userData);
+          setUser(userData);
+          authCheckDone.current = true;
+        } catch (e) {
+          // JSON parse hatası - login'e yönlendir
+          if (currentPath !== '/chief-observer-login') {
+            authCheckDone.current = true;
+            navigate('/chief-observer-login', { replace: true });
           }
         }
       } catch (err) {
-        console.error('Error loading user data:', err);
-        if (isMounted) {
-          setError('Kullanıcı bilgileri yüklenemedi');
+        console.error('Error checking auth:', err);
+        if (window.location.pathname !== '/chief-observer-login') {
+          authCheckDone.current = true;
+          navigate('/chief-observer-login', { replace: true });
         }
       }
     };
 
-    loadUserData();
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Sadece mount'ta çalışır
 
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Sadece mount'ta çalışır - hiç dependency yok
-
-  // Seçimleri yükle - sadece user yüklendikten sonra
+  // Seçimleri yükle - sadece user yüklendikten ve auth kontrolü tamamlandıktan sonra
   useEffect(() => {
-    if (!user) return; // User yüklenene kadar bekle
+    // Auth kontrolü tamamlanmamışsa bekle
+    if (!authCheckDone.current) return;
+    
+    // User yüklenmemişse bekle
+    if (!user) return;
 
     let isMounted = true;
 
@@ -103,7 +128,7 @@ const ChiefObserverDashboardPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [user]); // Sadece user değiştiğinde çalışır
+  }, [user, authCheckDone.current]); // User ve auth check tamamlandığında çalışır
 
   // Event handlers - useCallback ile optimize edildi
   const handleElectionClick = useCallback((election) => {
@@ -156,36 +181,30 @@ const ChiefObserverDashboardPage = () => {
     }
   }, []);
 
-  // Loading state
-  if (loading && !user) {
+  // Auth kontrolü tamamlanmamışsa loading göster
+  if (!authCheckDone.current) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
+          <p className="text-gray-600 dark:text-gray-400">Kontrol ediliyor...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
-  if (error && !user) {
+  // User yoksa (yönlendirme yapıldı) hiçbir şey render etme
+  if (!user) {
+    return null; // Navigate zaten yönlendirdi
+  }
+
+  // Loading state
+  if (loading && elections.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-center">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Hata</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
-          >
-            Tekrar Giriş Yap
-          </button>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
         </div>
       </div>
     );

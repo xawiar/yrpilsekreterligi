@@ -347,11 +347,7 @@ function RouterContent() {
           />
           <Route 
             path="/chief-observer-dashboard" 
-            element={
-              <ChiefObserverRoute>
-                <ChiefObserverDashboardPage />
-              </ChiefObserverRoute>
-            } 
+            element={<ChiefObserverDashboardPage />} 
           />
           
           {/* Admin Routes */}
