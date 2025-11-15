@@ -10,6 +10,8 @@ const BallotBoxesPage = () => {
   const [towns, setTowns] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
+  const [elections, setElections] = useState([]);
+  const [electionResults, setElectionResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -37,13 +39,14 @@ const BallotBoxesPage = () => {
   const fetchBallotBoxes = async () => {
     try {
       setLoading(true);
-      const [ballotBoxesData, observersData, districtsData, townsData, neighborhoodsData, villagesData] = await Promise.all([
+      const [ballotBoxesData, observersData, districtsData, townsData, neighborhoodsData, villagesData, electionsData] = await Promise.all([
         ApiService.getBallotBoxes(),
         ApiService.getBallotBoxObservers(),
         ApiService.getDistricts(),
         ApiService.getTowns(),
         ApiService.getNeighborhoods(),
-        ApiService.getVillages()
+        ApiService.getVillages(),
+        ApiService.getElections()
       ]);
       setBallotBoxes(ballotBoxesData || []);
       setObservers(observersData || []);
@@ -51,6 +54,21 @@ const BallotBoxesPage = () => {
       setTowns(townsData || []);
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
+      setElections(electionsData || []);
+      
+      // Tüm seçim sonuçlarını al
+      if (electionsData && electionsData.length > 0) {
+        try {
+          const allResults = await Promise.all(
+            electionsData.map(election => ApiService.getElectionResults(election.id, null))
+          );
+          const flattenedResults = allResults.flat();
+          setElectionResults(flattenedResults || []);
+        } catch (error) {
+          console.error('Error fetching election results:', error);
+          setElectionResults([]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching ballot boxes:', error);
       setError('Sandıklar yüklenirken hata oluştu');
@@ -212,13 +230,28 @@ const BallotBoxesPage = () => {
       (observer.observer_district_id && observer.observer_district_id !== null && observer.observer_district_id !== '')
     );
     
+    // Seçim sonuçlarını kontrol et - bu sandık için yüklenen fotoğraflar
+    const ballotBoxResults = electionResults.filter(result => 
+      String(result.ballot_box_id || result.ballotBoxId) === String(ballotBoxId)
+    );
+    
+    // En az bir seçim sonucunda fotoğraf var mı kontrol et
+    const hasSignedProtocolPhoto = ballotBoxResults.some(result => 
+      result.signed_protocol_photo || result.signedProtocolPhoto
+    );
+    const hasObjectionProtocolPhoto = ballotBoxResults.some(result => 
+      result.objection_protocol_photo || result.objectionProtocolPhoto
+    );
+    
     return {
       hasChiefObserver: !!chiefObserver,
       hasObservers: regularObservers.length > 0,
       hasDistrict: hasBallotBoxDistrict || hasObserverDistrict,
       hasNeighborhoodOrVillage: hasBallotBoxNeighborhood || hasObserverNeighborhoodOrVillage,
       chiefObserverName: chiefObserver ? chiefObserver.name : null,
-      observersCount: regularObservers.length
+      observersCount: regularObservers.length,
+      hasSignedProtocolPhoto,
+      hasObjectionProtocolPhoto
     };
   };
 
@@ -732,6 +765,31 @@ const BallotBoxesPage = () => {
                                 <span className="font-medium">Müşahit:</span> {status.observersCount} kişi
                               </div>
                             )}
+                            
+                            {/* Seçim Tutanak Fotoğrafları */}
+                            {(status.hasSignedProtocolPhoto || status.hasObjectionProtocolPhoto) && (
+                              <div className="flex items-center space-x-3 pt-2 border-t border-gray-200">
+                                <span className="text-xs font-medium text-gray-500">Tutanaklar:</span>
+                                <div className="flex items-center space-x-2">
+                                  {status.hasSignedProtocolPhoto && (
+                                    <div className="flex items-center space-x-1" title="Seçim Tutanağı Yüklendi">
+                                      <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      <span className="text-xs text-gray-600">Seçim</span>
+                                    </div>
+                                  )}
+                                  {status.hasObjectionProtocolPhoto && (
+                                    <div className="flex items-center space-x-1" title="İtiraz Tutanağı Yüklendi">
+                                      <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                      </svg>
+                                      <span className="text-xs text-gray-600">İtiraz</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
                           <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
@@ -824,6 +882,31 @@ const BallotBoxesPage = () => {
                             {status.observersCount > 0 && (
                               <div className="mt-1 text-xs text-gray-500">
                                 Müşahit: {status.observersCount} kişi
+                              </div>
+                            )}
+                            
+                            {/* Seçim Tutanak Fotoğrafları */}
+                            {(status.hasSignedProtocolPhoto || status.hasObjectionProtocolPhoto) && (
+                              <div className="mt-2 flex items-center space-x-3">
+                                <span className="text-xs font-medium text-gray-500">Tutanaklar:</span>
+                                <div className="flex items-center space-x-2">
+                                  {status.hasSignedProtocolPhoto && (
+                                    <div className="flex items-center space-x-1" title="Seçim Tutanağı Yüklendi">
+                                      <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      <span className="text-xs text-gray-600">Seçim</span>
+                                    </div>
+                                  )}
+                                  {status.hasObjectionProtocolPhoto && (
+                                    <div className="flex items-center space-x-1" title="İtiraz Tutanağı Yüklendi">
+                                      <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                      </svg>
+                                      <span className="text-xs text-gray-600">İtiraz</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </td>
