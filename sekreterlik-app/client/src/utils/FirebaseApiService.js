@@ -452,19 +452,18 @@ class FirebaseApiService {
       const tcStr = String(tc).trim();
       const password = tcStr;
 
-      // Önce sandık numarası ile kullanıcı bul
-      let memberUsers = await FirebaseService.findByField(
-        this.COLLECTIONS.MEMBER_USERS,
-        'username',
-        ballotNumberStr
+      // Tüm kullanıcıları al ve userType='musahit' olanları filtrele
+      const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
+      
+      // Önce sandık numarası ile kullanıcı bul (userType='musahit' olmalı)
+      let memberUsers = allUsers.filter(u => 
+        u.userType === 'musahit' && u.username === ballotNumberStr
       );
 
       // Sandık numarası ile bulunamazsa TC ile dene
       if (!memberUsers || memberUsers.length === 0) {
-        memberUsers = await FirebaseService.findByField(
-          this.COLLECTIONS.MEMBER_USERS,
-          'username',
-          tcStr
+        memberUsers = allUsers.filter(u => 
+          u.userType === 'musahit' && u.username === tcStr
         );
       }
 
