@@ -113,18 +113,27 @@ console.log('Created election-results/index.html for dynamic routes');
 // Instead, we'll create a subdirectory that will catch all routes
 // For Render.com, we need to use _redirects file which is already handled above
 
-// Additionally, create a nested structure for common election IDs
+// Additionally, create a nested structure for common election IDs (0-99)
 // This helps with some hosting providers that don't support wildcards
-const commonIds = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-commonIds.forEach(id => {
-  const idDir = path.join(electionResultsDir, id);
+for (let i = 0; i < 100; i++) {
+  const idDir = path.join(electionResultsDir, String(i));
   if (!fs.existsSync(idDir)) {
     fs.mkdirSync(idDir, { recursive: true });
   }
   const idIndexPath = path.join(idDir, 'index.html');
   fs.writeFileSync(idIndexPath, indexHtml);
-  console.log(`Created election-results/${id}/index.html`);
-});
+}
+console.log('Created election-results/[0-99]/index.html for common IDs');
+
+// Also create a catch-all mechanism using a special directory
+// Some hosting providers support this pattern
+const catchAllDir = path.join(electionResultsDir, '_');
+if (!fs.existsSync(catchAllDir)) {
+  fs.mkdirSync(catchAllDir, { recursive: true });
+}
+const catchAllIndexPath = path.join(catchAllDir, 'index.html');
+fs.writeFileSync(catchAllIndexPath, indexHtml);
+console.log('Created election-results/_/index.html as fallback');
 
 console.log('SPA routing files created successfully');
 
