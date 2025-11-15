@@ -495,6 +495,7 @@ const ElectionResultsPage = () => {
   // Calculate filtered results and aggregated results
   const filteredResults = getFilteredResults();
   const hasResults = filteredResults.length > 0;
+  const aggregatedResults = calculateAggregatedResults();
 
   // Count-up animation states
   const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
