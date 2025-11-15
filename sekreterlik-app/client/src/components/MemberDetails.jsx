@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import PersonalDocuments from './PersonalDocuments';
 import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
-import { calculatePerformanceScore, calculateMaxScore } from '../utils/performanceScore';
+import { calculatePerformanceScore } from '../utils/performanceScore';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
@@ -73,8 +73,46 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
             return null;
           }
         })();
-        const settings = await import('../utils/performanceScore').then(m => m.loadPerformanceScoreSettings());
-        const max = calculateMaxScore(meetings, events, firstMeetingDate, settings);
+        // Ayarları yükle
+        const { loadPerformanceScoreSettings } = await import('../utils/performanceScore');
+        const settings = await loadPerformanceScoreSettings();
+        // Maksimum puanı lokal hesapla (performanceScore.js ile aynı mantık)
+        const calculateLocalMaxScore = () => {
+          const defaultSettings = {
+            meetingAttendancePoints: 10,
+            eventAttendancePoints: 10,
+            memberRegistrationPoints: 5,
+            perfectMeetingBonus: 50,
+            perfectEventBonus: 50
+          };
+          const scoreSettings = settings || defaultSettings;
+          if (!firstMeetingDate) return 1000;
+          const now = new Date();
+          const meetingsAfterFirst = (meetings || []).filter(meeting => {
+            const meetingDate = meeting?.date ? new Date(meeting.date) : null;
+            return meetingDate && !isNaN(meetingDate.getTime()) && meetingDate >= firstMeetingDate;
+          });
+          const eventsAfterFirst = (events || []).filter(event => {
+            const eventDate = event?.date ? new Date(event.date) : null;
+            return eventDate && !isNaN(eventDate.getTime()) && eventDate >= firstMeetingDate;
+          });
+          const startYear = firstMeetingDate.getFullYear();
+          const startMonth = firstMeetingDate.getMonth();
+          const endYear = now.getFullYear();
+          const endMonth = now.getMonth();
+          let monthsSinceFirst = (endYear - startYear) * 12 + (endMonth - startMonth);
+          if (now.getDate() >= firstMeetingDate.getDate()) {
+            monthsSinceFirst += 1;
+          }
+          monthsSinceFirst = Math.max(1, monthsSinceFirst);
+          const meetingPoints = meetingsAfterFirst.length * scoreSettings.meetingAttendancePoints;
+          const eventPoints = eventsAfterFirst.length * scoreSettings.eventAttendancePoints;
+          const registrationPoints = monthsSinceFirst * 3 * scoreSettings.memberRegistrationPoints;
+          const meetingBonus = monthsSinceFirst * scoreSettings.perfectMeetingBonus;
+          const eventBonus = monthsSinceFirst * scoreSettings.perfectEventBonus;
+          return meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus;
+        };
+        const max = calculateLocalMaxScore();
         
         // Calculate level
         const percentage = max > 0 ? (score.totalScore / max) * 100 : 0;
