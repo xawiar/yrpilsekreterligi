@@ -71,6 +71,8 @@ class FirebaseApiService {
     EVENT_VISITS: 'event_visits',
     WOMEN_BRANCH_PRESIDENTS: 'women_branch_presidents',
     YOUTH_BRANCH_PRESIDENTS: 'youth_branch_presidents',
+    WOMEN_BRANCH_MANAGEMENT: 'women_branch_management',
+    YOUTH_BRANCH_MANAGEMENT: 'youth_branch_management',
     ELECTIONS: 'elections',
     ELECTION_RESULTS: 'election_results'
   };

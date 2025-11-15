@@ -3421,6 +3421,91 @@ class ApiService {
     return response;
   }
 
+  // Women Branch Management API
+  static async getWomenBranchManagement(memberId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getWomenBranchManagement(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/women-branch-management/${memberId}`);
+    return response.json();
+  }
+
+  static async createWomenBranchManagement(data) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createWomenBranchManagement(data);
+    }
+    const response = await fetch(`${API_BASE_URL}/women-branch-management`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  }
+
+  static async updateWomenBranchManagement(id, data) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updateWomenBranchManagement(id, data);
+    }
+    const response = await fetch(`${API_BASE_URL}/women-branch-management/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  }
+
+  static async deleteWomenBranchManagement(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deleteWomenBranchManagement(id);
+    }
+    const response = await fetch(`${API_BASE_URL}/women-branch-management/${id}`, {
+      method: 'DELETE',
+    });
+    return response.json();
+  }
+
+  // Youth Branch Management API
+  static async getYouthBranchManagement(memberId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getYouthBranchManagement(memberId);
+    }
+    const response = await fetch(`${API_BASE_URL}/youth-branch-management/${memberId}`);
+    return response.json();
+  }
+
+  static async createYouthBranchManagement(data) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createYouthBranchManagement(data);
+    }
+    const response = await fetch(`${API_BASE_URL}/youth-branch-management`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  }
+
+  static async updateYouthBranchManagement(id, data) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updateYouthBranchManagement(id, data);
+    }
+    const response = await fetch(`${API_BASE_URL}/youth-branch-management/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  }
+
+  static async deleteYouthBranchManagement(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deleteYouthBranchManagement(id);
+    }
+    const response = await fetch(`${API_BASE_URL}/youth-branch-management/${id}`, {
+      method: 'DELETE',
+    });
+    return response.json();
+  }
 }
 
 export default ApiService;
