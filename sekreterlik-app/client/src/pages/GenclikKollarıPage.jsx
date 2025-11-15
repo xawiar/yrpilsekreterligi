@@ -5,7 +5,10 @@ import MemberDetails from '../components/MemberDetails';
 
 const GenclikKollarıPage = () => {
   const [regions, setRegions] = useState([]);
-  const [selectedRegion, setSelectedRegion] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    // Kayıtlı bölge seçimini yükle
+    return localStorage.getItem('youthBranchSelectedRegion') || '';
+  });
   const [members, setMembers] = useState([]);
   const [filteredMembers, setFilteredMembers] = useState([]);
   const [presidents, setPresidents] = useState({}); // { region: memberId }
@@ -20,6 +23,11 @@ const GenclikKollarıPage = () => {
   }, []);
 
   useEffect(() => {
+    // Bölge seçimini localStorage'a kaydet
+    if (selectedRegion) {
+      localStorage.setItem('youthBranchSelectedRegion', selectedRegion);
+    }
+    
     if (selectedRegion && members.length > 0) {
       const filtered = members.filter(m => m.region === selectedRegion);
       setFilteredMembers(filtered);
