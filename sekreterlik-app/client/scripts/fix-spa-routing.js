@@ -65,7 +65,11 @@ const routes = [
   'chief-observer-dashboard',
   'management-chart',
   'calendar',
-  'bulk-sms'
+  'bulk-sms',
+  'teşkilat',
+  'teşkilat/ilçeler',
+  'teşkilat/kadın-kolları',
+  'teşkilat/gençlik-kolları'
 ];
 
 if (!fs.existsSync(indexHtmlPath)) {
