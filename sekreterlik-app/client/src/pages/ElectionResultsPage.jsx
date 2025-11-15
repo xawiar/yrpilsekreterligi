@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -410,19 +410,23 @@ const ElectionResultsPage = () => {
     return chiefObserver || null;
   };
 
-  // Calculate total ballot boxes for this election
-  const getTotalBallotBoxes = () => {
-    if (!selectedDistrict && !selectedTown && !selectedNeighborhood && !selectedVillage) {
-      return ballotBoxes.length;
+  // Calculate total ballot boxes for this election (filtered by location if filters are active)
+  const getTotalBallotBoxes = useMemo(() => {
+    let filtered = ballotBoxes;
+    
+    // Apply location filters if any are selected
+    if (selectedDistrict || selectedTown || selectedNeighborhood || selectedVillage) {
+      filtered = ballotBoxes.filter(bb => {
+        if (selectedDistrict && String(bb.district_id) !== String(selectedDistrict)) return false;
+        if (selectedTown && String(bb.town_id) !== String(selectedTown)) return false;
+        if (selectedNeighborhood && String(bb.neighborhood_id) !== String(selectedNeighborhood)) return false;
+        if (selectedVillage && String(bb.village_id) !== String(selectedVillage)) return false;
+        return true;
+      });
     }
-    return ballotBoxes.filter(bb => {
-      if (selectedDistrict && String(bb.district_id) !== String(selectedDistrict)) return false;
-      if (selectedTown && String(bb.town_id) !== String(selectedTown)) return false;
-      if (selectedNeighborhood && String(bb.neighborhood_id) !== String(selectedNeighborhood)) return false;
-      if (selectedVillage && String(bb.village_id) !== String(selectedVillage)) return false;
-      return true;
-    }).length;
-  };
+    
+    return filtered.length;
+  }, [ballotBoxes, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage]);
 
   // Calculate participation percentage
   const calculateParticipationPercentage = () => {
@@ -432,13 +436,13 @@ const ElectionResultsPage = () => {
     return ((totalUsedVotes / election.voter_count) * 100).toFixed(2);
   };
 
-  // Calculate opened ballot box percentage
-  const calculateOpenedBallotBoxPercentage = () => {
-    const total = getTotalBallotBoxes();
+  // Calculate opened ballot box percentage (memoized)
+  const calculateOpenedBallotBoxPercentage = useMemo(() => {
+    const total = getTotalBallotBoxes;
     if (total === 0) return '0.00';
     const opened = hasResults ? filteredResults.length : 0;
     return ((opened / total) * 100).toFixed(2);
-  };
+  }, [getTotalBallotBoxes, hasResults, filteredResults.length]);
 
   // Calculate aggregated results
   const calculateAggregatedResults = () => {
@@ -556,10 +560,27 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
-  // Calculate filtered results and aggregated results
-  const filteredResults = getFilteredResults();
-  const hasResults = filteredResults.length > 0;
-  const aggregatedResults = calculateAggregatedResults();
+  // Memoize filtered results to prevent unnecessary recalculations
+  const filteredResults = useMemo(() => getFilteredResults(), [
+    results,
+    ballotBoxes,
+    districts,
+    towns,
+    neighborhoods,
+    villages,
+    selectedDistrict,
+    selectedTown,
+    selectedNeighborhood,
+    selectedVillage,
+    selectedBallotNumber,
+    searchQuery,
+    filterByObjection
+  ]);
+
+  const hasResults = useMemo(() => filteredResults.length > 0, [filteredResults.length]);
+
+  // Memoize aggregated results
+  const aggregatedResults = useMemo(() => calculateAggregatedResults(), [filteredResults, election]);
 
   // Count-up animation states
   const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
@@ -567,18 +588,29 @@ const ElectionResultsPage = () => {
   const [totalValidVotesCount, setTotalValidVotesCount] = useState(0);
   const [objectionCount, setObjectionCount] = useState(0);
 
-  // Animate counts - moved after filteredResults and aggregatedResults are calculated
+  // Calculate objection count (memoized)
+  const objectionCountValue = useMemo(() => {
+    return filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
+  }, [filteredResults]);
+
+  // Animate counts - only when values actually change
   useEffect(() => {
     if (!election) return;
     
-    const totalBallotBoxes = getTotalBallotBoxes();
+    const totalBallotBoxes = getTotalBallotBoxes;
     const openedCount = hasResults ? filteredResults.length : 0;
     const validVotes = hasResults ? aggregatedResults.total : 0;
-    const objectionCountValue = filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
+
+    // Cancel any ongoing animations
+    let cancelled = false;
 
     const animateValue = (start, end, setter, duration = 1000) => {
+      if (cancelled) return;
+      
       let startTime = null;
       const animate = (currentTime) => {
+        if (cancelled) return;
+        
         if (!startTime) startTime = currentTime;
         const progress = Math.min((currentTime - startTime) / duration, 1);
         const easeOutQuart = 1 - Math.pow(1 - progress, 4);
@@ -597,7 +629,11 @@ const ElectionResultsPage = () => {
     animateValue(0, openedCount, setOpenedBallotBoxesCount);
     animateValue(0, validVotes, setTotalValidVotesCount);
     animateValue(0, objectionCountValue, setObjectionCount);
-  }, [election, hasResults, filteredResults, aggregatedResults]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [election, getTotalBallotBoxes, hasResults, filteredResults.length, aggregatedResults.total, objectionCountValue]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
@@ -963,7 +999,7 @@ const ElectionResultsPage = () => {
               {openedBallotBoxesCount}
             </div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
-              %{calculateOpenedBallotBoxPercentage()}
+              %{calculateOpenedBallotBoxPercentage}
             </div>
           </div>
           
