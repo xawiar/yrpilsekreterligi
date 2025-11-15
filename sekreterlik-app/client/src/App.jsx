@@ -189,6 +189,18 @@ function AppContent() {
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
   const { isLoggedIn, user } = useAuth();
 
+  // Chief observer localStorage temizleme - Redirect döngüsü sorunu nedeniyle
+  React.useEffect(() => {
+    const userRole = localStorage.getItem('userRole');
+    if (userRole === 'chief_observer') {
+      // Chief observer role'ünü temizle
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('isLoggedIn');
+      console.log('Chief observer localStorage temizlendi - Redirect döngüsü önlendi');
+    }
+  }, []);
+
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
 
   // Mobile menu event listener
