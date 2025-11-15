@@ -161,8 +161,10 @@ if (sentryDsn) {
   })
 }
 
+// StrictMode geçici olarak devre dışı - Redirect döngüsü sorunu nedeniyle
+// StrictMode development'ta useEffect'leri 2 kez çalıştırıyor
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  // </React.StrictMode>,
 )
