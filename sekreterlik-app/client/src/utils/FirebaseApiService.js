@@ -490,6 +490,7 @@ class FirebaseApiService {
       }
 
       // Firebase Auth ile giriş yapmayı dene
+      const username = memberUser.username;
       const email = `${username}@ilsekreterlik.local`;
       let userCredential = null;
       let user = null;
