@@ -288,8 +288,8 @@ const ElectionResultsPage = () => {
       
       // Sonuçlarda da sandık numarasına göre arama
       filtered = filtered.filter(r => {
-        const ballotBoxId = String(r.ballot_box_id || r.ballotBoxId);
-        const ballotNumber = (r.ballot_number || r.ballotNumber || '').toString().toLowerCase();
+        const ballotBoxId = String(r.ballot_box_id || r.ballotBoxId || '');
+        const ballotNumber = (r.ballot_number || r.ballotNumber || r.ballot_box_number || '').toString().toLowerCase();
         
         // Sandık numarası eşleşiyorsa
         if (ballotNumber.includes(query)) {
@@ -297,7 +297,7 @@ const ElectionResultsPage = () => {
         }
         
         // Konum eşleşiyorsa
-        if (matchingBallotBoxIds.has(ballotBoxId)) {
+        if (ballotBoxId && matchingBallotBoxIds.has(ballotBoxId)) {
           return true;
         }
         
@@ -307,9 +307,10 @@ const ElectionResultsPage = () => {
 
     // Dropdown filtreleri
     if (selectedBallotNumber) {
-      filtered = filtered.filter(r => 
-        r.ballot_number && r.ballot_number.toString().includes(selectedBallotNumber)
-      );
+      filtered = filtered.filter(r => {
+        const ballotNumber = (r.ballot_number || r.ballotNumber || r.ballot_box_number || '').toString();
+        return ballotNumber.includes(selectedBallotNumber);
+      });
     }
 
     // İtiraz filtresi
@@ -331,9 +332,10 @@ const ElectionResultsPage = () => {
         })
         .map(bb => String(bb.id));
 
-      filtered = filtered.filter(r => 
-        relevantBallotBoxIds.includes(String(r.ballot_box_id))
-      );
+      filtered = filtered.filter(r => {
+        const ballotBoxId = String(r.ballot_box_id || r.ballotBoxId || '');
+        return ballotBoxId && relevantBallotBoxIds.includes(ballotBoxId);
+      });
     }
 
     return filtered;
@@ -341,10 +343,13 @@ const ElectionResultsPage = () => {
 
   // Get chief observer for a ballot box
   const getChiefObserver = (ballotBoxId) => {
-    const chiefObserver = observers.find(obs => 
-      String(obs.ballot_box_id) === String(ballotBoxId) && 
-      (obs.is_chief_observer === true || obs.is_chief_observer === 1)
-    );
+    if (!ballotBoxId) return null;
+    const ballotBoxIdStr = String(ballotBoxId);
+    const chiefObserver = observers.find(obs => {
+      const obsBallotBoxId = String(obs.ballot_box_id || obs.ballotBoxId || '');
+      return obsBallotBoxId === ballotBoxIdStr && 
+        (obs.is_chief_observer === true || obs.is_chief_observer === 1);
+    });
     return chiefObserver || null;
   };
 
@@ -448,7 +453,9 @@ const ElectionResultsPage = () => {
 
   // Get location name for a ballot box
   const getLocationName = (ballotBoxId) => {
-    const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
+    if (!ballotBoxId) return 'Bilinmeyen';
+    const ballotBoxIdStr = String(ballotBoxId);
+    const ballotBox = ballotBoxes.find(bb => String(bb.id) === ballotBoxIdStr);
     if (!ballotBox) return 'Bilinmeyen';
 
     const parts = [];
@@ -539,7 +546,14 @@ const ElectionResultsPage = () => {
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
-    setModalPhoto(photoUrl);
+    // Firebase Storage URL'leri zaten tam URL olarak geliyor, normalize etmeye gerek yok
+    // Ancak eğer relative path ise normalize et
+    let normalizedUrl = photoUrl;
+    if (photoUrl && !photoUrl.startsWith('http') && !photoUrl.startsWith('https')) {
+      // Relative path ise Firebase Storage base URL'ini ekle
+      normalizedUrl = photoUrl;
+    }
+    setModalPhoto(normalizedUrl);
     setModalTitle(title);
   };
 
@@ -1130,8 +1144,9 @@ const ElectionResultsPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {filteredResults.map((result, index) => {
-                const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-                const chiefObserver = getChiefObserver(result.ballot_box_id);
+                const resultBallotBoxId = String(result.ballot_box_id || result.ballotBoxId || '');
+                const ballotBox = ballotBoxes.find(bb => String(bb.id) === resultBallotBoxId);
+                const chiefObserver = getChiefObserver(resultBallotBoxId);
                 const locationParts = [];
                 
                 if (ballotBox) {
@@ -1154,8 +1169,8 @@ const ElectionResultsPage = () => {
                 }
 
                 const totalValidVotes = election.type === 'cb' 
-                  ? Object.values(result.candidate_votes || {}).reduce((sum, val) => sum + (val || 0), 0)
-                  : Object.values(result.party_votes || {}).reduce((sum, val) => sum + (val || 0), 0);
+                  ? Object.values(result.candidate_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)
+                  : Object.values(result.party_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
 
                 const hasObjection = result.has_objection === true || result.has_objection === 1;
                 
@@ -1195,7 +1210,7 @@ const ElectionResultsPage = () => {
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="text-base font-semibold" style={{ color: cardStyle.color }}>
-                          Sandık No: {result.ballot_number}
+                          Sandık No: {result.ballot_number || result.ballotNumber || result.ballot_box_number || 'N/A'}
                         </h3>
                         {winningParty && !hasObjection && (
                           <div className="text-xs mt-1" style={{ color: cardStyle.color, opacity: 0.8 }}>
@@ -1348,7 +1363,7 @@ const ElectionResultsPage = () => {
                             <button
                               onClick={() => handlePhotoClick(
                                 result.signed_protocol_photo || result.signedProtocolPhoto,
-                                `Seçim Tutanağı - Sandık ${result.ballot_number}`
+                                `Seçim Tutanağı - Sandık ${result.ballot_number || result.ballotNumber || result.ballot_box_number || 'N/A'}`
                               )}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                               title="Seçim Tutanağını Görüntüle"
@@ -1363,7 +1378,7 @@ const ElectionResultsPage = () => {
                             <button
                               onClick={() => handlePhotoClick(
                                 result.objection_protocol_photo || result.objectionProtocolPhoto,
-                                `İtiraz Tutanağı - Sandık ${result.ballot_number}`
+                                `İtiraz Tutanağı - Sandık ${result.ballot_number || result.ballotNumber || result.ballot_box_number || 'N/A'}`
                               )}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                               title="İtiraz Tutanağını Görüntüle"
