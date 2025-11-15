@@ -43,6 +43,10 @@ const MemberDashboardPage = () => {
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
+  const [isWomenBranchPresident, setIsWomenBranchPresident] = useState(false);
+  const [isYouthBranchPresident, setIsYouthBranchPresident] = useState(false);
+  const [womenBranchManagement, setWomenBranchManagement] = useState([]);
+  const [youthBranchManagement, setYouthBranchManagement] = useState([]);
   
   // Analytics tracking
   const sessionIdRef = useRef(null);
@@ -1303,6 +1307,44 @@ const MemberDashboardPage = () => {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Kadın Kolları Yönetim - Sadece kadın kolları başkanı görsün */}
+          {isWomenBranchPresident && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Kadın Kolları Yönetimim ({member.region})
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Kadın kolları yönetim ekibinizi ekleyin ve yönetin
+              </p>
+              {/* Yönetim formu buraya eklenecek */}
+              <div className="text-center py-8 text-gray-500">
+                Yönetim ekleme özelliği yakında eklenecek...
+              </div>
+            </div>
+          )}
+
+          {/* Gençlik Kolları Yönetim - Sadece gençlik kolları başkanı görsün */}
+          {isYouthBranchPresident && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Gençlik Kolları Yönetimim ({member.region})
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Gençlik kolları yönetim ekibinizi ekleyin ve yönetin
+              </p>
+              {/* Yönetim formu buraya eklenecek */}
+              <div className="text-center py-8 text-gray-500">
+                Yönetim ekleme özelliği yakında eklenecek...
               </div>
             </div>
           )}
