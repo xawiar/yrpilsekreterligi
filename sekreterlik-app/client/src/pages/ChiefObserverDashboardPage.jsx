@@ -74,7 +74,7 @@ const ChiefObserverDashboardPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Sadece mount'ta çalışır
 
-  // Seçimleri yükle - sadece user yüklendikten ve auth kontrolü tamamlandıktan sonra
+  // Seçimleri yükle - sadece user yüklendikten sonra
   useEffect(() => {
     // Auth kontrolü tamamlanmamışsa bekle
     if (!authCheckDone.current) return;
@@ -128,7 +128,7 @@ const ChiefObserverDashboardPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [user, authCheckDone.current]); // User ve auth check tamamlandığında çalışır
+  }, [user]); // Sadece user değiştiğinde çalışır - authCheckDone ref olduğu için dependency'ye eklenmedi
 
   // Event handlers - useCallback ile optimize edildi
   const handleElectionClick = useCallback((election) => {
