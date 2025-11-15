@@ -57,15 +57,16 @@ const ChiefObserverDashboardPage = () => {
         } catch (e) {
           // JSON parse hatası - login'e yönlendir
           setAuthChecked(true); // Auth kontrolü tamamlandı
-          if (currentPath !== '/chief-observer-login') {
-            navigate('/chief-observer-login', { replace: true });
+          if (currentPath !== '/login' && currentPath !== '/chief-observer-login') {
+            navigate('/login?type=chief-observer', { replace: true });
           }
         }
       } catch (err) {
         console.error('Error checking auth:', err);
         setAuthChecked(true); // Auth kontrolü tamamlandı
-        if (window.location.pathname !== '/chief-observer-login') {
-          navigate('/chief-observer-login', { replace: true });
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/chief-observer-login') {
+          navigate('/login?type=chief-observer', { replace: true });
         }
       }
     };
@@ -154,7 +155,7 @@ const ChiefObserverDashboardPage = () => {
     localStorage.removeItem('userRole');
     
     // Login sayfasına yönlendir - replace ile (geri butonu çalışmasın)
-    navigate('/chief-observer-login', { replace: true });
+    navigate('/login?type=chief-observer', { replace: true });
   }, [navigate]);
 
   // Seçim tipi etiketi - useMemo ile optimize edildi
