@@ -306,14 +306,10 @@ function AppContent() {
             } 
           />
           
-          {/* Chief Observer Routes */}
+          {/* Chief Observer Routes - PublicRoute kullanmıyoruz çünkü başmüşahit AuthContext'te değil */}
           <Route 
             path="/chief-observer-login" 
-            element={
-              <PublicRoute>
-                <ChiefObserverLoginPage />
-              </PublicRoute>
-            } 
+            element={<ChiefObserverLoginPage />} 
           />
           <Route 
             path="/chief-observer-dashboard" 

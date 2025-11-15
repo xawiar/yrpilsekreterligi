@@ -17,7 +17,7 @@ const ChiefObserverDashboardPage = () => {
     const userRole = localStorage.getItem('userRole');
     
     if (!savedUser || userRole !== 'chief_observer') {
-      navigate('/chief-observer-login');
+      navigate('/chief-observer-login', { replace: true });
       return;
     }
 
@@ -27,9 +27,10 @@ const ChiefObserverDashboardPage = () => {
       fetchElections();
     } catch (error) {
       console.error('Error parsing user data:', error);
-      navigate('/chief-observer-login');
+      navigate('/chief-observer-login', { replace: true });
     }
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // navigate dependency'si döngüye neden oluyor, sadece mount'ta çalış
 
   const fetchElections = async () => {
     try {
