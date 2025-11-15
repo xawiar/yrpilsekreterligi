@@ -998,7 +998,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {objectionCount}
+              {objectionCountValue}
             </div>
           </div>
         </div>
