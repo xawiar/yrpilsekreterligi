@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import PersonalDocuments from './PersonalDocuments';
 import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
-import { calculatePerformanceScore, calculateMaxScore, findFirstMeetingDate } from '../utils/performanceScore';
+import { calculatePerformanceScore, calculateMaxScore } from '../utils/performanceScore';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
@@ -55,7 +55,24 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       try {
         setLoadingScore(true);
         const score = await calculatePerformanceScore(member, meetings, events, memberRegistrations || []);
-        const firstMeetingDate = findFirstMeetingDate(meetings);
+        // İlk toplantı tarihini lokal olarak hesapla
+        const firstMeetingDate = (() => {
+          try {
+            const dates = (meetings || [])
+              .map(m => {
+                try {
+                  return m?.date ? new Date(m.date) : null;
+                } catch {
+                  return null;
+                }
+              })
+              .filter(d => d && !isNaN(d.getTime()))
+              .sort((a, b) => a - b);
+            return dates.length > 0 ? dates[0] : null;
+          } catch {
+            return null;
+          }
+        })();
         const settings = await import('../utils/performanceScore').then(m => m.loadPerformanceScoreSettings());
         const max = calculateMaxScore(meetings, events, firstMeetingDate, settings);
         
