@@ -455,13 +455,8 @@ function RouterContent() {
             <Route path="/districts/:id/details" element={<DistrictDetailsPage />} />
             <Route path="/towns/:id/members" element={<TownMembersPage />} />
             <Route path="/towns/:id/details" element={<TownDetailsPage />} />
-            <Route path="/election-preparation" element={<ElectionPreparationPage />} />
-            <Route path="/election-preparation/ballot-boxes" element={<BallotBoxesPage />} />
+            <Route path="/election-preparation/*" element={<ElectionPreparationPage />} />
             <Route path="/election-preparation/ballot-boxes/:id/details" element={<BallotBoxDetailsPage />} />
-            <Route path="/election-preparation/observers" element={<ObserversPage />} />
-            <Route path="/election-preparation/representatives" element={<RepresentativesPage />} />
-            <Route path="/election-preparation/neighborhoods" element={<NeighborhoodsPage />} />
-            <Route path="/election-preparation/villages" element={<VillagesPage />} />
             <Route path="/elections" element={<ElectionsListPage />} />
             <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
             <Route path="/bulk-sms" element={<BulkSmsPage />} />

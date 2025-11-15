@@ -591,52 +591,140 @@ const ElectionResultsPage = () => {
           </div>
         </div>
 
-        {/* Chart */}
+        {/* Chart - Modern 3D Animasyonlu */}
         {election && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Genel Sonuçlar - Pasta Grafiği
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6 transform transition-all duration-300 hover:shadow-2xl">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Genel Sonuçlar - İnteraktif Grafik
             </h2>
             {aggregatedResults.data.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={aggregatedResults.data}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percentage }) => `${name}: %${percentage}`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {aggregatedResults.data.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* 3D Animasyonlu Pasta Grafiği */}
+                <div className="relative transform transition-transform duration-300 hover:scale-105">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl blur-xl"></div>
+                  <div className="relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+                    <ResponsiveContainer width="100%" height={350}>
+                      <PieChart>
+                        <defs>
+                          {aggregatedResults.data.map((entry, index) => (
+                            <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
+                              <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.7} />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        <Pie
+                          data={aggregatedResults.data}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percentage }) => `${name}\n%${percentage.toFixed(1)}`}
+                          outerRadius={120}
+                          innerRadius={40}
+                          fill="#8884d8"
+                          dataKey="value"
+                          animationBegin={0}
+                          animationDuration={1000}
+                          animationEasing="ease-out"
+                          paddingAngle={2}
+                        >
+                          {aggregatedResults.data.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={`url(#gradient-${index})`}
+                              style={{
+                                filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
+                                transition: 'all 0.3s ease',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.filter = 'drop-shadow(0 8px 12px rgba(0, 0, 0, 0.2)) brightness(1.1)';
+                                e.target.style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.filter = 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))';
+                                e.target.style.transform = 'scale(1)';
+                              }}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                            padding: '12px'
+                          }}
+                          formatter={(value, name, props) => [
+                            `${value.toLocaleString('tr-TR')} oy (%${props.payload.percentage.toFixed(1)})`,
+                            name
+                          ]}
+                        />
+                        <Legend 
+                          wrapperStyle={{ paddingTop: '20px' }}
+                          iconType="circle"
+                          formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {aggregatedResults.data.map((item, index) => (
-                    <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="flex items-center gap-3">
+                
+                {/* İnteraktif Liste */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Detaylı Sonuçlar</h3>
+                  {aggregatedResults.data
+                    .sort((a, b) => b.value - a.value)
+                    .map((item, index) => {
+                      const percentage = item.percentage;
+                      const maxPercentage = Math.max(...aggregatedResults.data.map(d => d.percentage));
+                      const barWidth = (percentage / maxPercentage) * 100;
+                      
+                      return (
                         <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        ></div>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{item.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">{item.value.toLocaleString('tr-TR')}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">%{item.percentage}</div>
-                      </div>
-                    </div>
-                  ))}
+                          key={item.name} 
+                          className="group relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-indigo-300 dark:hover:border-indigo-600"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="w-5 h-5 rounded-full shadow-md transition-transform duration-300 group-hover:scale-125" 
+                                style={{ 
+                                  backgroundColor: COLORS[index % COLORS.length],
+                                  boxShadow: `0 0 10px ${COLORS[index % COLORS.length]}40`
+                                }}
+                              ></div>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                                {item.value.toLocaleString('tr-TR')}
+                              </div>
+                              <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                                %{percentage.toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Animasyonlu Progress Bar */}
+                          <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
+                              style={{
+                                width: `${barWidth}%`,
+                                background: `linear-gradient(90deg, ${COLORS[index % COLORS.length]}, ${COLORS[index % COLORS.length]}dd)`,
+                                boxShadow: `0 0 10px ${COLORS[index % COLORS.length]}60`
+                              }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             ) : (
