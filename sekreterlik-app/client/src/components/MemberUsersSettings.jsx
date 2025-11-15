@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import FirebaseService from '../services/FirebaseService';
 
@@ -490,6 +490,25 @@ const MemberUsersSettings = () => {
             </p>
           </div>
           <div className="flex space-x-3">
+            <button
+              onClick={handleCreateObserverUsers}
+              disabled={isUpdating}
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+            >
+              {isUpdating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Oluşturuluyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Müşahit Şifresi Oluştur
+                </>
+              )}
+            </button>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200"
