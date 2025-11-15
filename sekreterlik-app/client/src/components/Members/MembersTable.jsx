@@ -39,23 +39,26 @@ const MembersTable = ({
       <div key={member.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center">
-            {member.photo ? (
-              <img
-                src={normalizePhotoUrl(member.photo)}
-                alt={member.name}
-                loading="lazy"
-                className="flex-shrink-0 h-12 w-12 rounded-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) {
-                    e.target.nextSibling.style.display = 'flex';
-                  }
-                }}
-              />
-            ) : null}
-            <div className={`flex-shrink-0 h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center ${member.photo ? 'hidden' : ''}`}>
+            {(() => {
+              const normalizedPhoto = member.photo ? normalizePhotoUrl(member.photo) : null;
+              return normalizedPhoto ? (
+                <img
+                  src={normalizedPhoto}
+                  alt={member.name}
+                  loading="lazy"
+                  className="flex-shrink-0 h-12 w-12 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) {
+                      e.target.nextSibling.style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null;
+            })()}
+            <div className={`flex-shrink-0 h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center ${member.photo && normalizePhotoUrl(member.photo) ? 'hidden' : ''}`}>
               <span className="text-indigo-800 dark:text-indigo-300 text-sm font-medium">
-                {member.name.charAt(0)}
+                {member.name ? member.name.charAt(0) : '?'}
               </span>
             </div>
             <div className="ml-3">

@@ -3,10 +3,18 @@
  * and handles relative paths
  */
 
+// Firebase kullanımı kontrolü
+const VITE_USE_FIREBASE_ENV = import.meta.env.VITE_USE_FIREBASE;
+const USE_FIREBASE = 
+  VITE_USE_FIREBASE_ENV === 'true' || 
+  VITE_USE_FIREBASE_ENV === true ||
+  String(VITE_USE_FIREBASE_ENV).toLowerCase() === 'true' ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('render.com') && VITE_USE_FIREBASE_ENV !== undefined);
+
 /**
  * Normalizes photo URL to use correct base URL
  * @param {string} photoUrl - Photo URL from database
- * @returns {string} Normalized photo URL
+ * @returns {string|null} Normalized photo URL or null if invalid
  */
 export function normalizePhotoUrl(photoUrl) {
   if (!photoUrl) {
@@ -33,15 +41,31 @@ export function normalizePhotoUrl(photoUrl) {
     return `${baseUrl}${normalizedPath}`;
   }
 
-  // If it's a relative path (starts with /uploads/), prepend base URL (eski local disk dosyaları için)
-  if (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/')) {
+  // If Firebase is used and photo is in /uploads/photos/ (old local disk path), return null
+  // These files don't exist in Firebase Storage, so we should not try to load them
+  if (USE_FIREBASE && (photoUrl.startsWith('/uploads/photos/') || photoUrl.startsWith('uploads/photos/'))) {
+    // Try to extract member ID from filename and check Firebase Storage
+    // Format: member-{id}-{timestamp}-{filename}
+    const match = photoUrl.match(/member-(\d+)-/);
+    if (match) {
+      const memberId = match[1];
+      // Return null to trigger fallback avatar
+      // The component will handle this with onError handler
+      return null;
+    }
+    // If we can't extract member ID, return null
+    return null;
+  }
+
+  // If it's a relative path (starts with /uploads/), prepend base URL (only if NOT using Firebase)
+  if (!USE_FIREBASE && (photoUrl.startsWith('/uploads/') || photoUrl.startsWith('uploads/'))) {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://yrpilsekreterligi.onrender.com';
     const normalizedPath = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
     return `${baseUrl}${normalizedPath}`;
   }
 
-  // If it's a relative path (starts with /), prepend base URL
-  if (photoUrl.startsWith('/')) {
+  // If it's a relative path (starts with /), prepend base URL (only if NOT using Firebase)
+  if (!USE_FIREBASE && photoUrl.startsWith('/')) {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://yrpilsekreterligi.onrender.com';
     return `${baseUrl}${photoUrl}`;
   }
