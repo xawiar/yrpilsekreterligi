@@ -95,5 +95,27 @@ routes.forEach(route => {
   console.log(`Created ${route}/index.html`);
 });
 
+// For dynamic routes like /election-results/:electionId, create a catch-all
+// Create election-results directory with index.html for base route
+const electionResultsDir = path.join(distDir, 'election-results');
+if (!fs.existsSync(electionResultsDir)) {
+  fs.mkdirSync(electionResultsDir, { recursive: true });
+}
+// Also create a catch-all subdirectory structure
+// This ensures /election-results/ANY_ID works
+const electionResultsIndexPath = path.join(electionResultsDir, 'index.html');
+fs.writeFileSync(electionResultsIndexPath, indexHtml);
+console.log('Created election-results/index.html for dynamic routes');
+
+// Create a catch-all directory for any dynamic route under election-results
+// This is a workaround for Render.com static hosting
+const catchAllDir = path.join(electionResultsDir, '*');
+if (!fs.existsSync(catchAllDir)) {
+  fs.mkdirSync(catchAllDir, { recursive: true });
+}
+const catchAllIndexPath = path.join(catchAllDir, 'index.html');
+fs.writeFileSync(catchAllIndexPath, indexHtml);
+console.log('Created election-results/*/index.html for dynamic routes');
+
 console.log('SPA routing files created successfully');
 
