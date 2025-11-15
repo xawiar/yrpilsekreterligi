@@ -308,14 +308,15 @@ function AppContent() {
           />
           
           {/* Chief Observer Routes - GEÇİCİ OLARAK DEVRE DIŞI - Redirect döngüsü sorunu nedeniyle */}
-          {/* <Route 
+          {/* Route'lar tamamen kaldırıldı - localStorage temizleme için redirect eklendi */}
+          <Route 
             path="/chief-observer-login" 
-            element={<ChiefObserverLoginPage />} 
+            element={<Navigate to="/login" replace />} 
           />
           <Route 
             path="/chief-observer-dashboard" 
-            element={<ChiefObserverDashboardPage />} 
-          /> */}
+            element={<Navigate to="/login" replace />} 
+          />
           
           {/* Admin Routes */}
           <Route 
