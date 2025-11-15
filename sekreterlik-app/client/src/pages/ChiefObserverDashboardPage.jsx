@@ -43,8 +43,8 @@ const ChiefObserverDashboardPage = () => {
         // Eğer authenticated değilse login'e yönlendir
         if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
           setAuthChecked(true); // Auth kontrolü tamamlandı
-          if (currentPath !== '/chief-observer-login') {
-            navigate('/chief-observer-login', { replace: true });
+          if (currentPath !== '/login' && currentPath !== '/chief-observer-login') {
+            navigate('/login?type=chief-observer', { replace: true });
           }
           return;
         }

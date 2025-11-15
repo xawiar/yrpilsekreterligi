@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import ApiService from '../../utils/ApiService';
 import LoginHeader from './LoginHeader';
 import LoginForm from './LoginForm';
 import LoginFooter from './LoginFooter';
@@ -8,6 +9,10 @@ import LoadingSpinner from './LoadingSpinner';
 import { motion } from 'framer-motion';
 
 const LoginEnhanced = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('admin-member'); // 'admin-member' veya 'chief-observer'
+  
+  // Admin/Üye form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,6 +21,22 @@ const LoginEnhanced = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  
+  // Başmüşahit form state
+  const [ballotNumber, setBallotNumber] = useState('');
+  const [tc, setTc] = useState('');
+  const [chiefObserverLoading, setChiefObserverLoading] = useState(false);
+  const [chiefObserverError, setChiefObserverError] = useState('');
+
+  // URL'den type parametresini al ve sekmeyi ayarla
+  useEffect(() => {
+    const type = searchParams.get('type');
+    if (type === 'chief-observer') {
+      setActiveTab('chief-observer');
+    } else {
+      setActiveTab('admin-member');
+    }
+  }, [searchParams]);
 
   // Load saved credentials on mount
   useEffect(() => {
@@ -29,15 +50,17 @@ const LoginEnhanced = () => {
       setRememberMe(true);
     }
     
-    // Auto-focus username field on mount
-    const usernameInput = document.getElementById('username');
-    if (usernameInput) {
-      usernameInput.focus();
+    // Auto-focus username field on mount (sadece admin-member sekmesinde)
+    if (activeTab === 'admin-member') {
+      const usernameInput = document.getElementById('username');
+      if (usernameInput) {
+        usernameInput.focus();
+      }
     }
-  }, []);
+  }, [activeTab]);
 
-  // Handle form submission with enhanced validation and UX
-  const handleSubmit = async (e) => {
+  // Handle Admin/Üye form submission
+  const handleAdminMemberSubmit = async (e) => {
     e.preventDefault();
     
     // Clear previous errors
@@ -46,13 +69,13 @@ const LoginEnhanced = () => {
     // Validate inputs
     if (!username.trim()) {
       setError('Kullanıcı adı alanı boş bırakılamaz');
-      document.getElementById('username').focus();
+      document.getElementById('username')?.focus();
       return;
     }
     
     if (!password) {
       setError('Şifre alanı boş bırakılamaz');
-      document.getElementById('password').focus();
+      document.getElementById('password')?.focus();
       return;
     }
     
@@ -75,12 +98,11 @@ const LoginEnhanced = () => {
           localStorage.removeItem('rememberMe');
         }
         
-        // Show success animation, then let PublicRoute handle navigation
+        // Show success animation
         setShowSuccess(true);
         
-        // Wait a moment to show success animation, then navigate will be handled by PublicRoute
+        // Wait a moment to show success animation, then navigate
         setTimeout(() => {
-          // Get user role from localStorage to navigate to correct dashboard
           const savedUser = localStorage.getItem('user');
           if (savedUser) {
             try {
@@ -113,6 +135,33 @@ const LoginEnhanced = () => {
     }
   };
 
+  // Handle Başmüşahit form submission
+  const handleChiefObserverSubmit = async (e) => {
+    e.preventDefault();
+    setChiefObserverError('');
+    setChiefObserverLoading(true);
+
+    try {
+      const result = await ApiService.loginChiefObserver(ballotNumber.trim(), tc.trim());
+      
+      if (result.success) {
+        // Kullanıcı bilgilerini localStorage'a kaydet
+        localStorage.setItem('user', JSON.stringify(result.user));
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userRole', 'chief_observer');
+        
+        // Dashboard'a yönlendir
+        navigate('/chief-observer-dashboard', { replace: true });
+      } else {
+        setChiefObserverError(result.message || 'Giriş başarısız');
+      }
+    } catch (err) {
+      setChiefObserverError(err.message || 'Giriş sırasında bir hata oluştu');
+    } finally {
+      setChiefObserverLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
       <motion.div 
@@ -134,7 +183,43 @@ const LoginEnhanced = () => {
             <div className="absolute -bottom-12 -left-20 w-40 h-40 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
             <div className="absolute top-10 left-20 w-40 h-40 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
             
-            {showSuccess ? (
+            {/* Tab Navigation */}
+            <div className="mb-6 flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('admin-member');
+                  setSearchParams({});
+                  setError('');
+                  setChiefObserverError('');
+                }}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'admin-member'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Admin / Üye
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('chief-observer');
+                  setSearchParams({ type: 'chief-observer' });
+                  setError('');
+                  setChiefObserverError('');
+                }}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'chief-observer'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Başmüşahit
+              </button>
+            </div>
+            
+            {showSuccess && activeTab === 'admin-member' ? (
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -148,7 +233,7 @@ const LoginEnhanced = () => {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Giriş Başarılı!</h3>
                 <p className="text-gray-600">Yönlendiriliyorsunuz...</p>
               </motion.div>
-            ) : (
+            ) : activeTab === 'admin-member' ? (
               <>
                 <LoginForm 
                   username={username}
@@ -157,13 +242,97 @@ const LoginEnhanced = () => {
                   setPassword={setPassword}
                   error={error}
                   isLoading={isLoading}
-                  handleSubmit={handleSubmit}
+                  handleSubmit={handleAdminMemberSubmit}
                   rememberMe={rememberMe}
                   setRememberMe={setRememberMe}
                 />
                 
                 <LoginFooter />
               </>
+            ) : (
+              /* Başmüşahit Form */
+              <form onSubmit={handleChiefObserverSubmit} className="space-y-6">
+                {chiefObserverError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-red-800">
+                          {chiefObserverError}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <label htmlFor="ballotNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                    Sandık Numarası
+                  </label>
+                  <div className="mt-1 relative rounded-xl shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <input
+                      id="ballotNumber"
+                      type="text"
+                      value={ballotNumber}
+                      onChange={(e) => setBallotNumber(e.target.value)}
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                      placeholder="Örn: 1001"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="tc" className="block text-sm font-medium text-gray-700 mb-1">
+                    TC Kimlik Numarası
+                  </label>
+                  <div className="mt-1 relative rounded-xl shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                      </svg>
+                    </div>
+                    <input
+                      id="tc"
+                      type="text"
+                      value={tc}
+                      onChange={(e) => setTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                      placeholder="11 haneli TC kimlik numaranız"
+                      maxLength={11}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={chiefObserverLoading}
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {chiefObserverLoading ? (
+                      <div className="flex items-center">
+                        <LoadingSpinner />
+                        <span className="ml-2">Giriş yapılıyor...</span>
+                      </div>
+                    ) : (
+                      "Giriş Yap"
+                    )}
+                  </motion.button>
+                </div>
+              </form>
             )}
           </motion.div>
       </motion.div>

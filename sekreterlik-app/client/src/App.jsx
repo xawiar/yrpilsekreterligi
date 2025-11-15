@@ -343,18 +343,20 @@ function RouterContent() {
             } 
           />
           
-          {/* Chief Observer Routes - Tamamen ayrı route'lar, admin route'larından bağımsız */}
+          {/* Chief Observer Routes */}
+          <Route 
+            path="/chief-observer-dashboard" 
+            element={<ChiefObserverDashboardPage />} 
+          />
+          
+          {/* Chief Observer Login - Artık /login?type=chief-observer olarak yönlendirilecek */}
           <Route 
             path="/chief-observer-login" 
             element={
               <PublicRoute>
-                <ChiefObserverLoginPage />
+                <Navigate to="/login?type=chief-observer" replace />
               </PublicRoute>
             } 
-          />
-          <Route 
-            path="/chief-observer-dashboard" 
-            element={<ChiefObserverDashboardPage />} 
           />
           
           {/* Admin Routes */}
