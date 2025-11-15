@@ -248,27 +248,26 @@ const MembersTable = ({
                   <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
                     <td className="px-3 py-3">
                       <div className="flex items-center">
-                        {member.photo ? (
-                          <img
-                            src={member.photo ? normalizePhotoUrl(member.photo) : null}
-                            alt={member.name}
-                            loading="lazy"
-                            className="flex-shrink-0 h-8 w-8 rounded-full object-cover"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              if (e.target.nextSibling) {
-                                e.target.nextSibling.style.display = 'flex';
-                              }
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div className={`flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center ${member.photo ? 'hidden' : ''}`}>
+                        {(() => {
+                          const normalizedPhoto = member.photo ? normalizePhotoUrl(member.photo) : null;
+                          return normalizedPhoto ? (
+                            <img
+                              src={normalizedPhoto}
+                              alt={member.name}
+                              loading="lazy"
+                              className="flex-shrink-0 h-8 w-8 rounded-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.nextSibling) {
+                                  e.target.nextSibling.style.display = 'flex';
+                                }
+                              }}
+                            />
+                          ) : null;
+                        })()}
+                        <div className={`flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center ${member.photo && normalizePhotoUrl(member.photo) ? 'hidden' : ''}`}>
                           <span className="text-indigo-800 dark:text-indigo-300 text-xs font-medium">
-                            {member.name.charAt(0)}
+                            {member.name ? member.name.charAt(0) : '?'}
                           </span>
                         </div>
                         <div className="ml-2">
@@ -356,27 +355,26 @@ const MembersTable = ({
             <div key={member.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
-                  {member.photo ? (
-                    <img
-                      src={member.photo ? normalizePhotoUrl(member.photo) : null}
-                      alt={member.name}
-                      loading="lazy"
-                      className="flex-shrink-0 h-10 w-10 rounded-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        if (e.target.nextSibling) {
-                          e.target.nextSibling.style.display = 'flex';
-                        }
-                      }}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div className={`flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center ${member.photo ? 'hidden' : ''}`}>
+                  {(() => {
+                    const normalizedPhoto = member.photo ? normalizePhotoUrl(member.photo) : null;
+                    return normalizedPhoto ? (
+                      <img
+                        src={normalizedPhoto}
+                        alt={member.name}
+                        loading="lazy"
+                        className="flex-shrink-0 h-10 w-10 rounded-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          if (e.target.nextSibling) {
+                            e.target.nextSibling.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null;
+                  })()}
+                  <div className={`flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center ${member.photo && normalizePhotoUrl(member.photo) ? 'hidden' : ''}`}>
                     <span className="text-indigo-800 dark:text-indigo-300 text-sm font-medium">
-                      {member.name.charAt(0)}
+                      {member.name ? member.name.charAt(0) : '?'}
                     </span>
                   </div>
                   <div className="ml-3">
