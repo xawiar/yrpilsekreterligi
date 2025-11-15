@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -371,12 +371,12 @@ const ElectionResultsPage = () => {
   };
 
   // Calculate opened ballot box percentage
-  const calculateOpenedBallotBoxPercentage = useMemo(() => {
+  const calculateOpenedBallotBoxPercentage = () => {
     const total = getTotalBallotBoxes();
     if (total === 0) return '0.00';
     const opened = hasResults ? filteredResults.length : 0;
     return ((opened / total) * 100).toFixed(2);
-  }, [hasResults, filteredResults.length, ballotBoxes, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage]);
+  };
 
   // Calculate aggregated results
   const calculateAggregatedResults = () => {
@@ -393,7 +393,8 @@ const ElectionResultsPage = () => {
         if (result.candidate_votes) {
           Object.keys(result.candidate_votes).forEach(candidate => {
             if (candidateTotals.hasOwnProperty(candidate)) {
-              candidateTotals[candidate] += result.candidate_votes[candidate] || 0;
+              const voteValue = result.candidate_votes[candidate];
+              candidateTotals[candidate] += parseInt(voteValue) || 0;
             }
           });
         }
@@ -421,7 +422,8 @@ const ElectionResultsPage = () => {
         if (result.party_votes) {
           Object.keys(result.party_votes).forEach(party => {
             if (partyTotals.hasOwnProperty(party)) {
-              partyTotals[party] += result.party_votes[party] || 0;
+              const voteValue = result.party_votes[party];
+              partyTotals[party] += parseInt(voteValue) || 0;
             }
           });
         }
@@ -442,6 +444,7 @@ const ElectionResultsPage = () => {
 
     return { type: 'unknown', data: [], total: 0 };
   };
+
 
   // Get location name for a ballot box
   const getLocationName = (ballotBoxId) => {
@@ -491,26 +494,48 @@ const ElectionResultsPage = () => {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
-  // Memoize filtered results and aggregated results to prevent infinite loops
-  const filteredResults = useMemo(() => getFilteredResults(), [
-    results,
-    ballotBoxes,
-    districts,
-    towns,
-    neighborhoods,
-    villages,
-    selectedDistrict,
-    selectedTown,
-    selectedNeighborhood,
-    selectedVillage,
-    selectedBallotNumber,
-    searchQuery,
-    filterByObjection
-  ]);
+  // Calculate filtered results and aggregated results
+  const filteredResults = getFilteredResults();
+  const hasResults = filteredResults.length > 0;
+  const aggregatedResults = calculateAggregatedResults();
 
-  const hasResults = useMemo(() => filteredResults.length > 0, [filteredResults.length]);
+  // Count-up animation states
+  const [totalBallotBoxesCount, setTotalBallotBoxesCount] = useState(0);
+  const [openedBallotBoxesCount, setOpenedBallotBoxesCount] = useState(0);
+  const [totalValidVotesCount, setTotalValidVotesCount] = useState(0);
+  const [objectionCount, setObjectionCount] = useState(0);
 
-  const aggregatedResults = useMemo(() => calculateAggregatedResults(), [filteredResults, election]);
+  // Animate counts - moved after filteredResults and aggregatedResults are calculated
+  useEffect(() => {
+    if (!election) return;
+    
+    const totalBallotBoxes = getTotalBallotBoxes();
+    const openedCount = hasResults ? filteredResults.length : 0;
+    const validVotes = hasResults ? aggregatedResults.total : 0;
+    const objectionCountValue = filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length;
+
+    const animateValue = (start, end, setter, duration = 1000) => {
+      let startTime = null;
+      const animate = (currentTime) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        setter(Math.floor(start + (end - start) * easeOutQuart));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setter(end);
+        }
+      };
+      requestAnimationFrame(animate);
+    };
+
+    animateValue(0, totalBallotBoxes, setTotalBallotBoxesCount);
+    animateValue(0, openedCount, setOpenedBallotBoxesCount);
+    animateValue(0, validVotes, setTotalValidVotesCount);
+    animateValue(0, objectionCountValue, setObjectionCount);
+  }, [election, hasResults, filteredResults, aggregatedResults]);
 
   // Handle photo click
   const handlePhotoClick = (photoUrl, title) => {
@@ -620,8 +645,6 @@ const ElectionResultsPage = () => {
       </div>
     );
   }
-
-  // filteredResults and hasResults are already calculated above with useMemo
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
@@ -830,7 +853,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {getTotalBallotBoxes()}
+              {totalBallotBoxesCount}
             </div>
           </div>
           
@@ -844,10 +867,10 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {hasResults ? filteredResults.length : 0}
+              {openedBallotBoxesCount}
             </div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
-              %{calculateOpenedBallotBoxPercentage}
+              %{calculateOpenedBallotBoxPercentage()}
             </div>
           </div>
           
@@ -861,7 +884,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {(hasResults ? aggregatedResults.total : 0).toLocaleString('tr-TR')}
+              {totalValidVotesCount.toLocaleString('tr-TR')}
             </div>
           </div>
           
@@ -894,7 +917,7 @@ const ElectionResultsPage = () => {
               </div>
             </div>
             <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
+              {objectionCount}
             </div>
           </div>
         </div>
@@ -1105,7 +1128,7 @@ const ElectionResultsPage = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {filteredResults.map((result, index) => {
                 const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
                 const chiefObserver = getChiefObserver(result.ballot_box_id);
@@ -1162,16 +1185,16 @@ const ElectionResultsPage = () => {
                 return (
                   <div 
                     key={result.id} 
-                    className="border-2 rounded-2xl p-5 sm:p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                    className="border-2 rounded-xl p-3 sm:p-4 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.01]"
                     style={{
                       borderColor: cardStyle.borderColor,
                       backgroundColor: cardStyle.backgroundColor,
                       animation: `fadeInUp 0.5s ease-out ${index * 0.05}s both`
                     }}
                   >
-                    <div className="mb-3 flex items-center justify-between">
+                    <div className="mb-2 flex items-center justify-between">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold" style={{ color: cardStyle.color }}>
+                        <h3 className="text-base font-semibold" style={{ color: cardStyle.color }}>
                           Sandık No: {result.ballot_number}
                         </h3>
                         {winningParty && !hasObjection && (
@@ -1198,11 +1221,11 @@ const ElectionResultsPage = () => {
                     
                     {/* Konum Bilgileri */}
                     {locationParts.length > 0 && (
-                      <div className="mb-4 space-y-2">
+                      <div className="mb-2 space-y-1">
                         {locationParts.map((part, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm">
-                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                            <span className="font-semibold text-gray-700 dark:text-gray-300">{part.type}:</span>
+                          <div key={idx} className="flex items-center gap-1.5 text-xs">
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{part.type}:</span>
                             <span className="text-gray-600 dark:text-gray-400">{part.name}</span>
                           </div>
                         ))}
@@ -1211,71 +1234,71 @@ const ElectionResultsPage = () => {
 
                     {/* Başmüşahit Bilgileri */}
                     {chiefObserver && (
-                      <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center gap-2 mb-2">
-                          <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="mb-2 p-2 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                             Başmüşahit
                           </div>
                         </div>
-                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
                           {chiefObserver.name}
                         </div>
                         {chiefObserver.phone && (
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                             📞 {chiefObserver.phone}
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Oy Sayıları - Modern Cards */}
-                    <div className="mb-4 grid grid-cols-3 gap-2">
-                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-600">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Kullanılan</div>
-                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    {/* Oy Sayıları - Compact Cards */}
+                    <div className="mb-2 grid grid-cols-3 gap-1.5">
+                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-2 text-center border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Kullanılan</div>
+                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
                           {result.used_votes || 0}
                         </div>
                       </div>
-                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-600">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Geçersiz</div>
-                        <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-2 text-center border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Geçersiz</div>
+                        <div className="text-sm font-bold text-red-600 dark:text-red-400">
                           {result.invalid_votes || 0}
                         </div>
                       </div>
-                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-600">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Geçerli</div>
-                        <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                      <div className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-2 text-center border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Geçerli</div>
+                        <div className="text-sm font-bold text-green-600 dark:text-green-400">
                           {result.valid_votes || 0}
                         </div>
                       </div>
                     </div>
 
-                    {/* Parti/Aday Oyları - Modern Design */}
-                    <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-4 mb-4">
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
+                    {/* Parti/Aday Oyları - Compact Design */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mb-2">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                         {election.type === 'cb' ? 'Aday Oyları' : 'Parti Oyları'}
                       </div>
                       {election.type === 'cb' && election.candidates && (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {election.candidates.map((candidate, idx) => {
-                            const votes = result.candidate_votes?.[candidate] || 0;
-                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                            const votes = parseInt(result.candidate_votes?.[candidate] || 0);
+                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(1) : 0;
                             const isWinning = winningParty === candidate && !hasObjection;
                             return (
                               <div 
                                 key={candidate} 
-                                className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 ${
+                                className={`flex justify-between items-center p-1.5 rounded-md transition-all duration-200 ${
                                   isWinning ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-700/50'
                                 }`}
                               >
-                                <span className={`text-sm font-medium ${isWinning ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                <span className={`text-xs font-medium truncate ${isWinning ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
                                   {candidate}
                                 </span>
-                                <div className="text-right">
-                                  <div className={`font-bold ${isWinning ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                                <div className="text-right ml-2 flex-shrink-0">
+                                  <div className={`text-xs font-bold ${isWinning ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
                                     {votes}
                                   </div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
@@ -1286,23 +1309,23 @@ const ElectionResultsPage = () => {
                         </div>
                       )}
                       {(election.type === 'yerel' || election.type === 'genel') && election.parties && (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {election.parties.map((party, idx) => {
-                            const votes = result.party_votes?.[party] || 0;
-                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                            const votes = parseInt(result.party_votes?.[party] || 0);
+                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(1) : 0;
                             const isWinning = winningParty === party && !hasObjection;
                             return (
                               <div 
                                 key={party} 
-                                className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 ${
+                                className={`flex justify-between items-center p-1.5 rounded-md transition-all duration-200 ${
                                   isWinning ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-700/50'
                                 }`}
                               >
-                                <span className={`text-sm font-medium ${isWinning ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                <span className={`text-xs font-medium truncate ${isWinning ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
                                   {party}
                                 </span>
-                                <div className="text-right">
-                                  <div className={`font-bold ${isWinning ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                                <div className="text-right ml-2 flex-shrink-0">
+                                  <div className={`text-xs font-bold ${isWinning ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
                                     {votes}
                                   </div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
