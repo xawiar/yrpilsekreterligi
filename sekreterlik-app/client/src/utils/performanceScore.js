@@ -56,7 +56,10 @@ export const loadPerformanceScoreSettings = async () => {
               absencePenalty: configDoc.absencePenalty || -5,
               memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
               perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
-              perfectEventBonus: configDoc.perfectEventBonus || 50
+              perfectEventBonus: configDoc.perfectEventBonus || 50,
+              maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations || null,
+              useAttendanceWeightForRegistrations: configDoc.useAttendanceWeightForRegistrations || false,
+              minAttendanceRateForFullRegistrationPoints: configDoc.minAttendanceRateForFullRegistrationPoints || 0
             };
             return cachedSettings;
           }
