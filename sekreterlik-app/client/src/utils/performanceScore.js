@@ -271,8 +271,15 @@ export const calculatePerformanceScore = async (member, meetings, events, member
     return regMemberId === memberId;
   });
 
-  details.memberRegistrations = registrations.length;
-  const registrationPoints = registrations.length * settings.memberRegistrationPoints;
+  // Toplam kayıt sayısını hesapla (her kayıt objesindeki count değerini topla)
+  const totalRegistrationCount = registrations.reduce((sum, reg) => {
+    // count field'ı varsa onu kullan, yoksa 1 say
+    const count = reg.count !== undefined && reg.count !== null ? parseInt(reg.count) : 1;
+    return sum + count;
+  }, 0);
+
+  details.memberRegistrations = totalRegistrationCount;
+  const registrationPoints = totalRegistrationCount * settings.memberRegistrationPoints;
   details.breakdown.registrationPoints = registrationPoints;
   totalScore += registrationPoints;
 
