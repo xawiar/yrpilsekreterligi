@@ -112,7 +112,8 @@ const PerformanceScoreSettings = () => {
         
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Üye performans puanı hesaplamasında kullanılacak puan değerlerini buradan ayarlayabilirsiniz.
-          Bu değerler maksimum puan hesaplamasında da kullanılacaktır.
+          Bu değerler hem maksimum puan hesaplamasında hem de üyelerin gerçek puan hesaplamasında kullanılacaktır.
+          Örneğin, "Toplantı Katılım Puanı" için 10 yazarsanız, her toplantıya katılan üye 10 puan alacaktır.
         </p>
         
         {message && (
