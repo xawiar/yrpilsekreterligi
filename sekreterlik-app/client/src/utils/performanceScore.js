@@ -72,7 +72,10 @@ export const loadPerformanceScoreSettings = async () => {
         absencePenalty: -5,
         memberRegistrationPoints: 5,
         perfectMeetingBonus: 50,
-        perfectEventBonus: 50
+        perfectEventBonus: 50,
+        maxMonthlyRegistrations: null,
+        useAttendanceWeightForRegistrations: false,
+        minAttendanceRateForFullRegistrationPoints: 0
       };
       return cachedSettings;
     } catch (error) {
@@ -84,7 +87,10 @@ export const loadPerformanceScoreSettings = async () => {
         absencePenalty: -5,
         memberRegistrationPoints: 5,
         perfectMeetingBonus: 50,
-        perfectEventBonus: 50
+        perfectEventBonus: 50,
+        maxMonthlyRegistrations: null,
+        useAttendanceWeightForRegistrations: false,
+        minAttendanceRateForFullRegistrationPoints: 0
       };
       return cachedSettings;
     } finally {
@@ -272,14 +278,82 @@ export const calculatePerformanceScore = async (member, meetings, events, member
   });
 
   // Toplam kayıt sayısını hesapla (her kayıt objesindeki count değerini topla)
-  const totalRegistrationCount = registrations.reduce((sum, reg) => {
+  let totalRegistrationCount = registrations.reduce((sum, reg) => {
     // count field'ı varsa onu kullan, yoksa 1 say
     const count = reg.count !== undefined && reg.count !== null ? parseInt(reg.count) : 1;
     return sum + count;
   }, 0);
 
+  // Aylık maksimum üye kayıt limiti uygula (eğer ayar varsa)
+  const maxMonthlyRegistrations = settings.maxMonthlyRegistrations || null;
+  if (maxMonthlyRegistrations && maxMonthlyRegistrations > 0) {
+    // Kayıtları aylara göre grupla ve her ay için limit uygula
+    const monthlyRegistrations = {};
+    
+    registrations.forEach(reg => {
+      try {
+        let regDate;
+        if (reg.date) {
+          if (typeof reg.date === 'string') {
+            if (reg.date.includes('T')) {
+              regDate = new Date(reg.date);
+            } else if (reg.date.includes('.')) {
+              const [day, month, year] = reg.date.split('.');
+              regDate = new Date(year, month - 1, day);
+            } else {
+              regDate = new Date(reg.date);
+            }
+          } else {
+            regDate = new Date(reg.date);
+          }
+        } else if (reg.createdAt) {
+          regDate = new Date(reg.createdAt);
+        } else {
+          return; // Tarih yoksa atla
+        }
+        
+        if (regDate && !isNaN(regDate.getTime())) {
+          const monthKey = `${regDate.getFullYear()}-${String(regDate.getMonth() + 1).padStart(2, '0')}`;
+          if (!monthlyRegistrations[monthKey]) {
+            monthlyRegistrations[monthKey] = 0;
+          }
+          const count = reg.count !== undefined && reg.count !== null ? parseInt(reg.count) : 1;
+          monthlyRegistrations[monthKey] += count;
+        }
+      } catch (e) {
+        // Tarih parse hatası varsa atla
+      }
+    });
+    
+    // Her ay için limit uygula
+    let limitedTotalCount = 0;
+    Object.keys(monthlyRegistrations).forEach(monthKey => {
+      const monthlyCount = monthlyRegistrations[monthKey];
+      limitedTotalCount += Math.min(monthlyCount, maxMonthlyRegistrations);
+    });
+    
+    totalRegistrationCount = limitedTotalCount;
+  }
+
+  // Toplantı katılım oranına göre ağırlıklandırma (eğer ayar aktifse)
+  let registrationWeight = 1.0; // Varsayılan ağırlık: %100
+  if (settings.useAttendanceWeightForRegistrations && recentMeetingCount > 0) {
+    // Toplantı katılım oranını hesapla
+    const attendanceRate = recentAttendedCount / recentMeetingCount;
+    
+    // Minimum katılım oranı şartı (eğer ayar varsa)
+    const minAttendanceRate = settings.minAttendanceRateForFullRegistrationPoints || 0;
+    
+    if (attendanceRate < minAttendanceRate) {
+      // Minimum orana ulaşmamışsa, katılım oranına göre ağırlıklandır
+      registrationWeight = Math.max(0.1, attendanceRate); // En az %10 puan ver
+    }
+    // Minimum orana ulaşmışsa tam puan (weight = 1.0)
+  }
+
   details.memberRegistrations = totalRegistrationCount;
-  const registrationPoints = totalRegistrationCount * settings.memberRegistrationPoints;
+  const baseRegistrationPoints = totalRegistrationCount * settings.memberRegistrationPoints;
+  const registrationPoints = Math.round(baseRegistrationPoints * registrationWeight);
   details.breakdown.registrationPoints = registrationPoints;
   totalScore += registrationPoints;
 

@@ -14,7 +14,10 @@ const PerformanceScoreSettings = () => {
     absencePenalty: -5,
     memberRegistrationPoints: 5,
     perfectMeetingBonus: 50,
-    perfectEventBonus: 50
+    perfectEventBonus: 50,
+    maxMonthlyRegistrations: null,
+    useAttendanceWeightForRegistrations: false,
+    minAttendanceRateForFullRegistrationPoints: 0
   });
 
   useEffect(() => {
@@ -36,7 +39,10 @@ const PerformanceScoreSettings = () => {
               absencePenalty: configDoc.absencePenalty || -5,
               memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
               perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
-              perfectEventBonus: configDoc.perfectEventBonus || 50
+              perfectEventBonus: configDoc.perfectEventBonus || 50,
+              maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations || null,
+              useAttendanceWeightForRegistrations: configDoc.useAttendanceWeightForRegistrations || false,
+              minAttendanceRateForFullRegistrationPoints: configDoc.minAttendanceRateForFullRegistrationPoints || 0
             });
           }
         } catch (error) {
@@ -53,10 +59,10 @@ const PerformanceScoreSettings = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setSettings(prev => ({
       ...prev,
-      [name]: parseInt(value) || 0
+      [name]: type === 'checkbox' ? checked : (name === 'maxMonthlyRegistrations' && value === '') ? null : parseInt(value) || 0
     }));
   };
 
@@ -194,6 +200,63 @@ const PerformanceScoreSettings = () => {
               Kaydettiği her üye için verilecek puan
             </p>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Aylık Maksimum Üye Kayıt Limiti
+            </label>
+            <input
+              type="number"
+              name="maxMonthlyRegistrations"
+              value={settings.maxMonthlyRegistrations || ''}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              placeholder="Boş bırakılırsa limit yok"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Bir ay içinde maksimum kaç üye kaydı için puan verileceği (ör: 15). Boş bırakılırsa sınırsız.
+            </p>
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+              <input
+                type="checkbox"
+                id="useAttendanceWeightForRegistrations"
+                name="useAttendanceWeightForRegistrations"
+                checked={settings.useAttendanceWeightForRegistrations}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="useAttendanceWeightForRegistrations" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Toplantı Katılımına Göre Üye Kayıt Puanını Ağırlıklandır
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-7">
+              Aktif edilirse, toplantı katılım oranı düşük olan üyelerin üye kayıt puanı azalır
+            </p>
+          </div>
+
+          {settings.useAttendanceWeightForRegistrations && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tam Puan İçin Minimum Katılım Oranı (%)
+              </label>
+              <input
+                type="number"
+                name="minAttendanceRateForFullRegistrationPoints"
+                value={settings.minAttendanceRateForFullRegistrationPoints}
+                onChange={handleInputChange}
+                min="0"
+                max="100"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                placeholder="0"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Bu oranın altında katılım gösteren üyelerin üye kayıt puanı katılım oranına göre azalır (ör: %50)
+              </p>
+            </div>
+          )}
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
