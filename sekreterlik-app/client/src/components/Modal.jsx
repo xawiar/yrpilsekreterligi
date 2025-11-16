@@ -72,7 +72,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
             </svg>
           </button>
         </div>
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 pb-24 sm:pb-6">
           {children}
         </div>
       </div>

@@ -905,17 +905,17 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-6 pb-4 sm:pb-0 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 mt-4 sm:mt-0">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200"
         >
           İptal
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors duration-200"
+          className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors duration-200"
         >
           Etkinlik Güncelle
         </button>

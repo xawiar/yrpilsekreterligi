@@ -124,7 +124,7 @@ const SettingsPage = ({ tab }) => {
   }, [isSTKManagement, isPublicInstitutionManagement, loadingPermissions, hasPermission]);
 
   return (
-    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       {/* Header Section */}
       {isSTKManagement && !loadingPermissions && hasPermission('stks') ? (
         <div className="mb-8">

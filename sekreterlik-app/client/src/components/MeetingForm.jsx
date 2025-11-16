@@ -351,17 +351,17 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
           )}
         </div>
         
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 pb-4 sm:pb-0 sticky bottom-0 bg-white dark:bg-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700 mt-4 sm:mt-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="w-full sm:w-auto px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors duration-200"
           >
             İptal
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700"
+            className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-indigo-700 transition-colors duration-200"
           >
             {meeting ? 'Toplantıyı Güncelle' : 'Toplantıyı Kaydet'}
           </button>

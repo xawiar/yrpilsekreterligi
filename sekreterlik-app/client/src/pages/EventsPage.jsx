@@ -234,7 +234,7 @@ const EventsPage = () => {
   }
 
   return (
-    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
+    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       {/* Header Section */}
       <EventsHeader 
         onCreateEvent={handleCreateEvent}
