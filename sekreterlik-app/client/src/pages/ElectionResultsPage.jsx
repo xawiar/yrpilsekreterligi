@@ -1110,6 +1110,7 @@ const ElectionResultsPage = () => {
                 Hiç tutanak fotoğrafı yüklenmemiş sandıkları göster
               </p>
             </div>
+          </div>
             </div>
           )}
         </div>
