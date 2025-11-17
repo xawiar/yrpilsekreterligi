@@ -134,11 +134,14 @@ const ElectionsListPage = () => {
                     <div className="mt-3">
                       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Partiler:</div>
                       <div className="flex flex-wrap gap-1">
-                        {election.parties.slice(0, 3).map((party, idx) => (
-                          <span key={idx} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
-                            {party}
-                          </span>
-                        ))}
+                        {election.parties.slice(0, 3).map((party, idx) => {
+                          const partyName = typeof party === 'string' ? party : (party.name || party);
+                          return (
+                            <span key={idx} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                              {partyName}
+                            </span>
+                          );
+                        })}
                         {election.parties.length > 3 && (
                           <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
                             +{election.parties.length - 3}
