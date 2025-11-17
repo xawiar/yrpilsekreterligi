@@ -1265,6 +1265,46 @@ const SeçimEkleSettings = () => {
                   </div>
                 )}
               </div>
+
+              {/* Belediye Meclisi Toplam Üye Sayısı ve Nüfus (D'Hondt için) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Belediye Meclisi Toplam Üye Sayısı (D'Hondt Hesaplaması için) *
+                  </label>
+                  <input
+                    type="number"
+                    name="municipal_council_total_seats"
+                    value={formData.municipal_council_total_seats}
+                    onChange={handleInputChange}
+                    min="1"
+                    placeholder="Örn: 25"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Belediye meclisindeki toplam üye sayısı. D'Hondt hesaplaması için gereklidir.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Belediye Nüfusu (Kontenjan Hesaplaması için) *
+                  </label>
+                  <input
+                    type="number"
+                    name="population"
+                    value={formData.population}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="Örn: 120000"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Belediye nüfusu. Kontenjan sayısını belirlemek için gereklidir (10.000 altı: 1, 10.000-100.000: 2, 100.000 üstü: 3).
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
