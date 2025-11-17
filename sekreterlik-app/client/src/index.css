@@ -79,6 +79,11 @@
   }
 }
 
+/* Global iOS zoom prevention - Input fields must be at least 16px (all screen sizes) */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
 @layer base {
   body {
     @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200;
