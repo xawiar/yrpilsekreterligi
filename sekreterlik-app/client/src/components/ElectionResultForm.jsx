@@ -342,13 +342,20 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     // Validasyon: Seçim türüne göre
     if (election.type === 'genel') {
       // Genel seçim: CB ve MV oyları ayrı ayrı kontrol edilir
+      // Her seçmen hem CB hem MV için oy kullanır, bu yüzden her ikisi de geçerli oy sayısına eşit olmalı
       const cbTotal = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       const mvTotal = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       const enteredValidVotes = parseInt(formData.valid_votes) || 0;
       
-      // CB ve MV oyları toplamı geçerli oy sayısının 2 katı olmalı (her seçmen 2 oy kullanıyor)
-      if ((cbTotal + mvTotal) !== (enteredValidVotes * 2)) {
-        setMessage(`CB oyları (${cbTotal}) + MV oyları (${mvTotal}) = ${cbTotal + mvTotal}, ancak geçerli oy sayısı (${enteredValidVotes}) x 2 = ${enteredValidVotes * 2} olmalı`);
+      if (cbTotal !== enteredValidVotes) {
+        setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+      
+      if (mvTotal !== enteredValidVotes) {
+        setMessage(`Milletvekili oyları toplamı (${mvTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
         setMessageType('error');
         setSaving(false);
         return;
