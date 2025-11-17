@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Ba
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
-import { calculateDHondt, calculateDHondtDetailed, calculateMunicipalCouncilSeats } from '../utils/dhondt';
+import { calculateDHondt, calculateDHondtDetailed, calculateMunicipalCouncilSeats, calculateProvincialAssemblySeats } from '../utils/dhondt';
 
 // Parti renkleri - Türkiye'deki yaygın partiler
 const PARTY_COLORS = {
@@ -2032,6 +2032,80 @@ const ElectionResultsPage = () => {
                   <p className="mb-1"><strong>Toplam:</strong> {municipalCouncilResults.totalSeats} üye</p>
                   <p className="mb-1"><strong>Kontenjan:</strong> {municipalCouncilResults.quotaSeats} üye</p>
                   <p><strong>D'Hondt:</strong> {municipalCouncilResults.dhondtSeats} üye</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt */}
+        {provincialAssemblyResults && election?.type === 'yerel' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              </svg>
+              İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt Sistemi
+              <span className="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400">
+                Toplam: {provincialAssemblyResults.totalSeats} Üye
+              </span>
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* İlçe Bazlı Sonuçlar */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">İlçe Bazlı Dağılım</h3>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {Object.entries(provincialAssemblyResults.districtResults).map(([districtName, districtData]) => (
+                    <div key={districtName} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">
+                        {districtName} ({districtData.seats} üye)
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        {Object.entries(districtData.distribution)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([party, seats]) => (
+                            <div key={party} className="flex justify-between items-center">
+                              <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                              <span className="font-semibold text-blue-600 dark:text-blue-400">{seats} üye</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Toplam Dağılım */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Toplam Meclis Dağılımı</h3>
+                <div className="space-y-2">
+                  {provincialAssemblyResults.chartData.map((item, index) => (
+                    <div 
+                      key={item.party}
+                      className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          ></div>
+                          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-base text-blue-600 dark:text-blue-400">
+                            {item.seats} Üye
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Özet Bilgi */}
+                <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400">
+                  <p><strong>Toplam Üye:</strong> {provincialAssemblyResults.totalSeats} üye</p>
+                  <p><strong>İlçe Sayısı:</strong> {Object.keys(provincialAssemblyResults.districtResults).length} ilçe</p>
                 </div>
               </div>
             </div>
