@@ -508,15 +508,50 @@ const MemberUsersSettings = () => {
       const observers = await ApiService.getBallotBoxObservers();
       const chiefObservers = observers.filter(obs => obs.is_chief_observer === true || obs.is_chief_observer === 1);
       
+      // Mevcut kullanıcıları al
+      const existingUsers = await ApiService.getMemberUsers();
+      const musahitUsers = (existingUsers.users || []).filter(u => u.userType === 'musahit' && u.observerId);
+      
+      // Mevcut başmüşahitlerin observerId'lerini bir Set'e koy
+      const currentObserverIds = new Set(chiefObservers.map(obs => String(obs.id)));
+      
+      // Silinen başmüşahitlerin kullanıcılarını bul ve sil
+      let deletedCount = 0;
+      const deletedErrors = [];
+      
+      for (const musahitUser of musahitUsers) {
+        const observerId = String(musahitUser.observerId);
+        // Eğer bu observerId mevcut başmüşahitlerde yoksa, kullanıcıyı sil
+        if (!currentObserverIds.has(observerId)) {
+          try {
+            await ApiService.deleteMemberUser(musahitUser.id);
+            deletedCount++;
+            console.log(`✅ Silinen başmüşahit kullanıcısı silindi: ${musahitUser.username} (observerId: ${observerId})`);
+          } catch (deleteError) {
+            deletedErrors.push(`${musahitUser.username || 'Bilinmeyen'}: ${deleteError.message || 'Silme hatası'}`);
+            console.error('Başmüşahit kullanıcısı silme hatası:', deleteError);
+          }
+        }
+      }
+      
       if (chiefObservers.length === 0) {
-        setMessage('Başmüşahit bulunamadı');
-        setMessageType('error');
+        let message = deletedCount > 0 
+          ? `Silinen başmüşahit kullanıcıları temizlendi!\n• Silinen: ${deletedCount}\n`
+          : 'Başmüşahit bulunamadı';
+        if (deletedErrors.length > 0) {
+          message += `\nSilme hataları:\n${deletedErrors.slice(0, 5).join('\n')}`;
+          setMessageType('warning');
+        } else {
+          setMessageType(deletedCount > 0 ? 'success' : 'error');
+        }
+        setMessage(message);
+        await fetchMemberUsers();
         return;
       }
 
-      // Mevcut kullanıcıları al
-      const existingUsers = await ApiService.getMemberUsers();
-      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      // Mevcut kullanıcıları tekrar al (silme işleminden sonra)
+      const updatedUsers = await ApiService.getMemberUsers();
+      const existingUsernames = new Set(updatedUsers.users?.map(u => u.username) || []);
       
       // Sandık bilgilerini al
       const ballotBoxes = await ApiService.getBallotBoxes();
@@ -611,11 +646,18 @@ const MemberUsersSettings = () => {
 
       // Sonuç mesajı
       let message = `Müşahit şifreleri oluşturuldu!\n`;
+      if (deletedCount > 0) {
+        message += `• Silinen: ${deletedCount}\n`;
+      }
       message += `• Yeni oluşturulan: ${createdCount}\n`;
       message += `• Güncellenen: ${updatedCount}\n`;
-      if (errorCount > 0) {
-        message += `• Hata: ${errorCount}\n`;
-        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+      
+      const allErrors = [...deletedErrors, ...errors];
+      if (errorCount > 0 || deletedErrors.length > 0) {
+        message += `• Hata: ${errorCount + deletedErrors.length}\n`;
+        if (allErrors.length > 0) {
+          message += `\nHatalar:\n${allErrors.slice(0, 5).join('\n')}`;
+        }
         setMessageType('warning');
       } else {
         setMessageType('success');
