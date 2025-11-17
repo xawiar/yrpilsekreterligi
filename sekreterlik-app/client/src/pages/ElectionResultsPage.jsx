@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Ba
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
-import { calculateDHondt, calculateDHondtDetailed } from '../utils/dhondt';
+import { calculateDHondt, calculateDHondtDetailed, calculateMunicipalCouncilSeats } from '../utils/dhondt';
 
 // Parti renkleri - Türkiye'deki yaygın partiler
 const PARTY_COLORS = {
@@ -1761,6 +1761,124 @@ const ElectionResultsPage = () => {
                         </div>
                       </div>
                     ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt */}
+        {municipalCouncilResults && election?.type === 'yerel' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt Sistemi
+              <span className="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400">
+                Toplam: {municipalCouncilResults.totalSeats} Üye
+              </span>
+            </h2>
+            
+            {/* Kontenjan Bilgisi */}
+            {municipalCouncilResults.quotaSeats > 0 && (
+              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold text-amber-800 dark:text-amber-300">Kontenjan Üyeleri</span>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <strong>{municipalCouncilResults.quotaParty}</strong> partisi en çok oy aldığı için <strong>{municipalCouncilResults.quotaSeats}</strong> kontenjan üyesi kazandı.
+                  <br />
+                  <span className="text-xs">({municipalCouncilResults.quotaPartyVotes.toLocaleString('tr-TR')} oy ile)</span>
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Distribution Chart */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Meclis Üyesi Dağılımı</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={municipalCouncilResults.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="party" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip 
+                      formatter={(value, name, props) => {
+                        if (name === 'Kontenjan') {
+                          return [`${value} üye (Kontenjan)`, 'Kontenjan'];
+                        } else if (name === 'D\'Hondt') {
+                          return [`${value} üye (D'Hondt)`, 'D\'Hondt'];
+                        }
+                        return [`${value} üye`, 'Toplam'];
+                      }}
+                    />
+                    <Bar dataKey="seats" fill="#6366f1" radius={[8, 8, 0, 0]}>
+                      {municipalCouncilResults.chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Distribution List */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazında Dağılım</h3>
+                <div className="space-y-2">
+                  {municipalCouncilResults.chartData
+                    .sort((a, b) => b.seats - a.seats)
+                    .map((item, index) => (
+                      <div 
+                        key={item.party}
+                        className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            ></div>
+                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-base text-indigo-600 dark:text-indigo-400">
+                              {item.seats} Üye
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {item.votes.toLocaleString('tr-TR')} oy
+                            </div>
+                          </div>
+                        </div>
+                        {/* Kontenjan ve D'Hondt Detayı */}
+                        <div className="flex gap-2 text-xs">
+                          {item.quotaSeats > 0 && (
+                            <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded">
+                              {item.quotaSeats} Kontenjan
+                            </span>
+                          )}
+                          {item.dhondtSeats > 0 && (
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
+                              {item.dhondtSeats} D'Hondt
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                {/* Özet Bilgi */}
+                <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400">
+                  <p className="mb-1"><strong>Toplam:</strong> {municipalCouncilResults.totalSeats} üye</p>
+                  <p className="mb-1"><strong>Kontenjan:</strong> {municipalCouncilResults.quotaSeats} üye</p>
+                  <p><strong>D'Hondt:</strong> {municipalCouncilResults.dhondtSeats} üye</p>
                 </div>
               </div>
             </div>
