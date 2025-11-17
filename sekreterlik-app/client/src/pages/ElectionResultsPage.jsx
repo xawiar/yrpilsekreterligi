@@ -1490,9 +1490,10 @@ const ElectionResultsPage = () => {
                                 const percentage = typeof props.payload.percentage === 'number' 
                                   ? props.payload.percentage 
                                   : parseFloat(props.payload.percentage || 0);
+                                const displayName = typeof name === 'string' ? name : (name?.name || String(name) || 'Bilinmeyen');
                                 return [
                                   `${value.toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
-                                  name
+                                  displayName
                                 ];
                               }}
                             />
