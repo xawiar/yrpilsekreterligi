@@ -4179,7 +4179,30 @@ class FirebaseApiService {
   // Ballot Boxes CRUD
   static async getBallotBoxes() {
     try {
-      return await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOXES);
+      const ballotBoxes = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOXES);
+      const regions = await FirebaseService.getAll(this.COLLECTIONS.REGIONS);
+      const districts = await FirebaseService.getAll(this.COLLECTIONS.DISTRICTS);
+      const towns = await FirebaseService.getAll(this.COLLECTIONS.TOWNS);
+      const neighborhoods = await FirebaseService.getAll(this.COLLECTIONS.NEIGHBORHOODS);
+      const villages = await FirebaseService.getAll(this.COLLECTIONS.VILLAGES);
+      
+      // Populate region_name, district_name, town_name, neighborhood_name, village_name
+      return ballotBoxes.map(ballotBox => {
+        const region = ballotBox.region_id ? regions.find(r => String(r.id) === String(ballotBox.region_id)) : null;
+        const district = ballotBox.district_id ? districts.find(d => String(d.id) === String(ballotBox.district_id)) : null;
+        const town = ballotBox.town_id ? towns.find(t => String(t.id) === String(ballotBox.town_id)) : null;
+        const neighborhood = ballotBox.neighborhood_id ? neighborhoods.find(n => String(n.id) === String(ballotBox.neighborhood_id)) : null;
+        const village = ballotBox.village_id ? villages.find(v => String(v.id) === String(ballotBox.village_id)) : null;
+        
+        return {
+          ...ballotBox,
+          region_name: region?.name || null,
+          district_name: district?.name || null,
+          town_name: town?.name || null,
+          neighborhood_name: neighborhood?.name || null,
+          village_name: village?.name || null
+        };
+      });
     } catch (error) {
       console.error('Get ballot boxes error:', error);
       return [];
@@ -4188,7 +4211,30 @@ class FirebaseApiService {
 
   static async getBallotBoxById(id) {
     try {
-      return await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, id);
+      const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, id);
+      if (!ballotBox) return null;
+      
+      const regions = await FirebaseService.getAll(this.COLLECTIONS.REGIONS);
+      const districts = await FirebaseService.getAll(this.COLLECTIONS.DISTRICTS);
+      const towns = await FirebaseService.getAll(this.COLLECTIONS.TOWNS);
+      const neighborhoods = await FirebaseService.getAll(this.COLLECTIONS.NEIGHBORHOODS);
+      const villages = await FirebaseService.getAll(this.COLLECTIONS.VILLAGES);
+      
+      // Populate region_name, district_name, town_name, neighborhood_name, village_name
+      const region = ballotBox.region_id ? regions.find(r => String(r.id) === String(ballotBox.region_id)) : null;
+      const district = ballotBox.district_id ? districts.find(d => String(d.id) === String(ballotBox.district_id)) : null;
+      const town = ballotBox.town_id ? towns.find(t => String(t.id) === String(ballotBox.town_id)) : null;
+      const neighborhood = ballotBox.neighborhood_id ? neighborhoods.find(n => String(n.id) === String(ballotBox.neighborhood_id)) : null;
+      const village = ballotBox.village_id ? villages.find(v => String(v.id) === String(ballotBox.village_id)) : null;
+      
+      return {
+        ...ballotBox,
+        region_name: region?.name || null,
+        district_name: district?.name || null,
+        town_name: town?.name || null,
+        neighborhood_name: neighborhood?.name || null,
+        village_name: village?.name || null
+      };
     } catch (error) {
       console.error('Get ballot box by id error:', error);
       return null;
@@ -4228,7 +4274,35 @@ class FirebaseApiService {
   // Ballot Box Observers CRUD
   static async getBallotBoxObservers() {
     try {
-      return await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOX_OBSERVERS);
+      const observers = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOX_OBSERVERS);
+      const regions = await FirebaseService.getAll(this.COLLECTIONS.REGIONS);
+      const districts = await FirebaseService.getAll(this.COLLECTIONS.DISTRICTS);
+      const towns = await FirebaseService.getAll(this.COLLECTIONS.TOWNS);
+      const neighborhoods = await FirebaseService.getAll(this.COLLECTIONS.NEIGHBORHOODS);
+      const villages = await FirebaseService.getAll(this.COLLECTIONS.VILLAGES);
+      
+      // Populate region_name, district_name, town_name, neighborhood_name, village_name
+      return observers.map(observer => {
+        const region = observer.region_id ? regions.find(r => String(r.id) === String(observer.region_id)) : null;
+        const district = observer.district_id ? districts.find(d => String(d.id) === String(observer.district_id)) : null;
+        const town = observer.town_id ? towns.find(t => String(t.id) === String(observer.town_id)) : null;
+        const neighborhood = observer.neighborhood_id ? neighborhoods.find(n => String(n.id) === String(observer.neighborhood_id)) : null;
+        const village = observer.village_id ? villages.find(v => String(v.id) === String(observer.village_id)) : null;
+        
+        return {
+          ...observer,
+          region_name: region?.name || null,
+          district_name: district?.name || null,
+          town_name: town?.name || null,
+          neighborhood_name: neighborhood?.name || null,
+          village_name: village?.name || null,
+          observer_region_id: observer.region_id,
+          observer_district_id: observer.district_id,
+          observer_town_id: observer.town_id,
+          observer_neighborhood_id: observer.neighborhood_id,
+          observer_village_id: observer.village_id
+        };
+      });
     } catch (error) {
       console.error('Get ballot box observers error:', error);
       return [];

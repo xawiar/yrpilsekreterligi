@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 const BallotBoxesPage = () => {
   const [ballotBoxes, setBallotBoxes] = useState([]);
   const [observers, setObservers] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -19,6 +20,7 @@ const BallotBoxesPage = () => {
   const [formData, setFormData] = useState({
     ballot_number: '',
     institution_name: '',
+    region_id: '',
     district_id: '',
     town_id: '',
     neighborhood_id: '',
@@ -39,9 +41,10 @@ const BallotBoxesPage = () => {
   const fetchBallotBoxes = async () => {
     try {
       setLoading(true);
-      const [ballotBoxesData, observersData, districtsData, townsData, neighborhoodsData, villagesData, electionsData] = await Promise.all([
+      const [ballotBoxesData, observersData, regionsData, districtsData, townsData, neighborhoodsData, villagesData, electionsData] = await Promise.all([
         ApiService.getBallotBoxes(),
         ApiService.getBallotBoxObservers(),
+        ApiService.getRegions(),
         ApiService.getDistricts(),
         ApiService.getTowns(),
         ApiService.getNeighborhoods(),
@@ -50,6 +53,7 @@ const BallotBoxesPage = () => {
       ]);
       setBallotBoxes(ballotBoxesData || []);
       setObservers(observersData || []);
+      setRegions(regionsData || []);
       setDistricts(districtsData || []);
       setTowns(townsData || []);
       setNeighborhoods(neighborhoodsData || []);
@@ -129,6 +133,7 @@ const BallotBoxesPage = () => {
       const payload = {
         ballot_number: formData.ballot_number,
         institution_name: formData.institution_name,
+        region_id: formData.region_id || null,
         district_id: formData.district_id || null,
         town_id: formData.town_id || null,
         neighborhood_id: formData.neighborhood_id || null,
@@ -140,9 +145,12 @@ const BallotBoxesPage = () => {
         await ApiService.createBallotBox(payload);
       }
 
+      // Reset form but keep region_id from localStorage
+      const savedRegionId = localStorage.getItem('admin_region_id') || '';
       setFormData({
         ballot_number: '',
         institution_name: '',
+        region_id: savedRegionId,
         district_id: '',
         town_id: '',
         neighborhood_id: '',
@@ -161,9 +169,14 @@ const BallotBoxesPage = () => {
 
   const handleEdit = (ballotBox) => {
     setEditingBallotBox(ballotBox);
+    // Get region_id from ballotBox or from localStorage
+    const regionId = ballotBox.region_id 
+      ? String(ballotBox.region_id) 
+      : (localStorage.getItem('admin_region_id') || '');
     setFormData({
       ballot_number: ballotBox.ballot_number,
       institution_name: ballotBox.institution_name,
+      region_id: regionId,
       district_id: ballotBox.district_id ? String(ballotBox.district_id) : '',
       town_id: ballotBox.town_id ? String(ballotBox.town_id) : '',
       neighborhood_id: ballotBox.neighborhood_id ? String(ballotBox.neighborhood_id) : '',
@@ -188,9 +201,12 @@ const BallotBoxesPage = () => {
   };
 
   const handleCancel = () => {
+    // Reset form but keep region_id from localStorage
+    const savedRegionId = localStorage.getItem('admin_region_id') || '';
     setFormData({
       ballot_number: '',
       institution_name: '',
+      region_id: savedRegionId,
       district_id: '',
       town_id: '',
       neighborhood_id: '',
@@ -207,32 +223,75 @@ const BallotBoxesPage = () => {
   };
 
   // Konum bilgilerini okunabilir formatta döndürür
+  // Önce sandığın kendi bilgilerine bakar, yoksa başmüşahit bilgilerine bakar
   const getLocationDisplay = (ballotBox) => {
     if (!ballotBox) return null;
     
     const parts = [];
     
-    // İlçe bilgisi (en üst seviye)
-    if (ballotBox.district_name) {
-      parts.push(ballotBox.district_name);
+    // Önce sandığın kendi bilgilerine bak
+    let regionName = ballotBox.region_name;
+    let districtName = ballotBox.district_name;
+    let townName = ballotBox.town_name;
+    let neighborhoodName = ballotBox.neighborhood_name;
+    let villageName = ballotBox.village_name;
+    
+    // Eğer sandıkta konum bilgisi yoksa, başmüşahit bilgilerine bak
+    if (!districtName && !neighborhoodName && !villageName) {
+      const ballotBoxObservers = getBallotBoxObservers(ballotBox.id);
+      const chiefObserver = ballotBoxObservers.find(observer => 
+        observer.is_chief_observer === true || observer.is_chief_observer === 1
+      );
+      
+      if (chiefObserver) {
+        // Başmüşahit bilgilerini kullan
+        if (!regionName) {
+          regionName = chiefObserver.region_name || 
+            (chiefObserver.region_id || chiefObserver.observer_region_id ? regions.find(r => String(r.id) === String(chiefObserver.region_id || chiefObserver.observer_region_id))?.name : null);
+        }
+        if (!districtName) {
+          districtName = chiefObserver.district_name || 
+            (chiefObserver.observer_district_id ? districts.find(d => String(d.id) === String(chiefObserver.observer_district_id))?.name : null);
+        }
+        if (!townName) {
+          townName = chiefObserver.town_name || 
+            (chiefObserver.observer_town_id ? towns.find(t => String(t.id) === String(chiefObserver.observer_town_id))?.name : null);
+        }
+        if (!neighborhoodName && !villageName) {
+          neighborhoodName = chiefObserver.neighborhood_name || 
+            (chiefObserver.observer_neighborhood_id ? neighborhoods.find(n => String(n.id) === String(chiefObserver.observer_neighborhood_id))?.name : null);
+          villageName = chiefObserver.village_name || 
+            (chiefObserver.observer_village_id ? villages.find(v => String(v.id) === String(chiefObserver.observer_village_id))?.name : null);
+        }
+      }
+    }
+    
+    // İl bilgisi
+    if (regionName) {
+      parts.push(regionName);
+    }
+    
+    // İlçe bilgisi
+    if (districtName) {
+      parts.push(districtName);
     }
     
     // Belde bilgisi varsa
-    if (ballotBox.town_name) {
-      parts.push(ballotBox.town_name + ' Beldesi');
+    if (townName) {
+      parts.push(townName + ' Beldesi');
     }
     
     // Mahalle veya Köy bilgisi (en alt seviye)
-    if (ballotBox.neighborhood_name) {
-      parts.push(ballotBox.neighborhood_name + ' Mahallesi');
-    } else if (ballotBox.village_name) {
-      parts.push(ballotBox.village_name + ' Köyü');
+    if (neighborhoodName) {
+      parts.push(neighborhoodName + ' Mahallesi');
+    } else if (villageName) {
+      parts.push(villageName + ' Köyü');
     }
     
     // Eğer hiçbir bilgi yoksa null döndür
     if (parts.length === 0) return null;
     
-    // Hiyerarşik sırada birleştir (İlçe > Belde > Mahalle/Köy)
+    // Hiyerarşik sırada birleştir (İl > İlçe > Belde > Mahalle/Köy)
     return parts.join(' > ');
   };
 
@@ -428,7 +487,15 @@ const BallotBoxesPage = () => {
                 Excel'e Aktar
               </button>
               <button
-                onClick={() => setShowAddForm(true)}
+                onClick={() => {
+                  // Load region_id from localStorage when opening form
+                  const savedRegionId = localStorage.getItem('admin_region_id') || '';
+                  setFormData(prev => ({
+                    ...prev,
+                    region_id: savedRegionId
+                  }));
+                  setShowAddForm(true);
+                }}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
               >
                 Yeni Sandık Ekle
@@ -669,6 +736,20 @@ const BallotBoxesPage = () => {
                   </div>
                   {/* Optional location fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">İl (opsiyonel)</label>
+                      <select
+                        name="region_id"
+                        value={formData.region_id}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="">İl seçin</option>
+                        {regions.map(region => (
+                          <option key={region.id} value={region.id}>{region.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">İlçe (opsiyonel)</label>
                       <select

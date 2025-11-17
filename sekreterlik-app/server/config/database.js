@@ -574,6 +574,45 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_member_users_username ON member_users(username)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_member_users_is_active ON member_users(is_active)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_ballot_boxes_assign ON ballot_boxes(district_id, town_id, neighborhood_id, village_id)`);
+  
+  // Add region_id column to ballot_boxes table if it doesn't exist
+  db.run(`ALTER TABLE ballot_boxes ADD COLUMN region_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding region_id column to ballot_boxes:', err);
+    }
+  });
+  
+  // Add region_id column to ballot_box_observers table if it doesn't exist
+  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN region_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding region_id column to ballot_box_observers:', err);
+    }
+  });
+  
+  // Add district_id, town_id, neighborhood_id, village_id columns to ballot_box_observers if they don't exist
+  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN district_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding district_id column to ballot_box_observers:', err);
+    }
+  });
+  
+  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN town_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding town_id column to ballot_box_observers:', err);
+    }
+  });
+  
+  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN neighborhood_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding neighborhood_id column to ballot_box_observers:', err);
+    }
+  });
+  
+  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN village_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding village_id column to ballot_box_observers:', err);
+    }
+  });
 });
 
 // In-memory collections for faster access

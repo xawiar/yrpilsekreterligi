@@ -10,16 +10,19 @@ class BallotBoxObserverController {
         SELECT bbo.*, 
                bb.ballot_number,
                bb.institution_name,
+               r.name as region_name,
                d.name as district_name,
                t.name as town_name,
                n.name as neighborhood_name,
                v.name as village_name,
+               bbo.region_id as observer_region_id,
                bbo.district_id as observer_district_id,
                bbo.town_id as observer_town_id,
                bbo.neighborhood_id as observer_neighborhood_id,
                bbo.village_id as observer_village_id
         FROM ballot_box_observers bbo
         LEFT JOIN ballot_boxes bb ON bbo.ballot_box_id = bb.id
+        LEFT JOIN regions r ON bbo.region_id = r.id
         LEFT JOIN districts d ON bbo.district_id = d.id
         LEFT JOIN towns t ON bbo.town_id = t.id
         LEFT JOIN neighborhoods n ON bbo.neighborhood_id = n.id
@@ -85,7 +88,7 @@ class BallotBoxObserverController {
 
   static async create(req, res) {
     try {
-      const { ballot_box_id, tc, name, phone, is_chief_observer, district_id, town_id, neighborhood_id, village_id } = req.body;
+      const { ballot_box_id, tc, name, phone, is_chief_observer, region_id, district_id, town_id, neighborhood_id, village_id } = req.body;
 
       // Validation
       const errors = [];
@@ -116,10 +119,10 @@ class BallotBoxObserverController {
       }
 
       const sql = `INSERT INTO ballot_box_observers 
-                   (ballot_box_id, tc, name, phone, is_chief_observer, district_id, town_id, neighborhood_id, village_id) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                   (ballot_box_id, tc, name, phone, is_chief_observer, region_id, district_id, town_id, neighborhood_id, village_id) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       
-      const result = await db.run(sql, [ballot_box_id, tc, name, phone, is_chief_observer ? 1 : 0, district_id, town_id, neighborhood_id, village_id]);
+      const result = await db.run(sql, [ballot_box_id, tc, name, phone, is_chief_observer ? 1 : 0, region_id || null, district_id || null, town_id || null, neighborhood_id || null, village_id || null]);
       
       // Update in-memory collection
       const newObserver = {
@@ -196,7 +199,7 @@ class BallotBoxObserverController {
   static async update(req, res) {
     try {
       const { id } = req.params;
-      const { ballot_box_id, tc, name, phone, is_chief_observer, district_id, town_id, neighborhood_id, village_id } = req.body;
+      const { ballot_box_id, tc, name, phone, is_chief_observer, region_id, district_id, town_id, neighborhood_id, village_id } = req.body;
 
       // Validation
       const errors = [];
@@ -236,10 +239,10 @@ class BallotBoxObserverController {
       }
 
       const sql = `UPDATE ballot_box_observers 
-                   SET ballot_box_id = ?, tc = ?, name = ?, phone = ?, is_chief_observer = ?, district_id = ?, town_id = ?, neighborhood_id = ?, village_id = ?, updated_at = CURRENT_TIMESTAMP
+                   SET ballot_box_id = ?, tc = ?, name = ?, phone = ?, is_chief_observer = ?, region_id = ?, district_id = ?, town_id = ?, neighborhood_id = ?, village_id = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?`;
       
-      await db.run(sql, [finalBallotBoxId, tc, name, phone, is_chief_observer ? 1 : 0, district_id, town_id, neighborhood_id, village_id, id]);
+      await db.run(sql, [finalBallotBoxId, tc, name, phone, is_chief_observer ? 1 : 0, region_id || null, district_id || null, town_id || null, neighborhood_id || null, village_id || null, id]);
       
       // Update in-memory collection
       const observerIndex = collections.ballot_box_observers.findIndex(obs => obs.id === parseInt(id));
@@ -251,10 +254,11 @@ class BallotBoxObserverController {
           name,
           phone,
           is_chief_observer: is_chief_observer ? 1 : 0,
-          district_id,
-          town_id,
-          neighborhood_id,
-          village_id,
+          region_id: region_id || null,
+          district_id: district_id || null,
+          town_id: town_id || null,
+          neighborhood_id: neighborhood_id || null,
+          village_id: village_id || null,
           updated_at: new Date().toISOString()
         };
       }
