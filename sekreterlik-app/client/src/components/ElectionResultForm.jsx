@@ -489,8 +489,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         </div>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto bg-gray-50 relative">
+          <form id="election-result-form" onSubmit={handleSubmit} className="p-6 space-y-6 pb-24">
             {/* Message Alert */}
             {message && (
               <div className={`p-3 rounded border-l-4 ${
@@ -1072,31 +1072,34 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               />
             </div>
 
-            {/* Buttons */}
-            <div className="bg-white border-t border-gray-300 px-6 py-4 flex flex-col sm:flex-row gap-3 justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded border border-gray-300 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium rounded transition-colors flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    <span>Kaydediliyor...</span>
-                  </>
-                ) : (
-                  <span>{existingResult ? 'Güncelle' : 'Kaydet'}</span>
-                )}
-              </button>
-            </div>
           </form>
+          
+          {/* Sticky Buttons */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-300 px-6 py-4 flex flex-col sm:flex-row gap-3 justify-end shadow-lg z-10">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded border border-gray-300 transition-colors"
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              form="election-result-form"
+              disabled={saving}
+              onClick={handleSubmit}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium rounded transition-colors flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span>Kaydediliyor...</span>
+                </>
+              ) : (
+                <span>{existingResult ? 'Güncelle' : 'Kaydet'}</span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

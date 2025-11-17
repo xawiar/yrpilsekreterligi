@@ -33,6 +33,7 @@ const GroupsPage = lazy(() => import('./pages/GroupsPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
 const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
+const ElectionResultEditPage = lazy(() => import('./pages/ElectionResultEditPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
@@ -459,6 +460,7 @@ function RouterContent() {
             <Route path="/election-preparation/ballot-boxes/:id/details" element={<BallotBoxDetailsPage />} />
             <Route path="/elections" element={<ElectionsListPage />} />
             <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
+            <Route path="/election-results/:electionId/edit/:resultId" element={<ElectionResultEditPage />} />
             <Route path="/bulk-sms" element={<BulkSmsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />

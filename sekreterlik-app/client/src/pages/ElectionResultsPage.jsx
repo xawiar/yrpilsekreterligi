@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
@@ -119,6 +119,7 @@ const getWinningParty = (result, election) => {
 
 const ElectionResultsPage = () => {
   const { electionId } = useParams();
+  const navigate = useNavigate();
   const [election, setElection] = useState(null);
   const [results, setResults] = useState([]);
   const [ballotBoxes, setBallotBoxes] = useState([]);
@@ -137,6 +138,7 @@ const ElectionResultsPage = () => {
   const [selectedBallotNumber, setSelectedBallotNumber] = useState('');
   const [searchQuery, setSearchQuery] = useState(''); // Arama sorgusu
   const [filterByObjection, setFilterByObjection] = useState(''); // 'all', 'with', 'without'
+  const [filterByProtocolOnly, setFilterByProtocolOnly] = useState(false); // Sadece tutanak olanlar
   
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
@@ -161,7 +163,7 @@ const ElectionResultsPage = () => {
       // Filter results when filters change
       filterResults();
     }
-  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, results, ballotBoxes]);
+  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, results, ballotBoxes]);
 
   const fetchData = async () => {
     try {
@@ -317,6 +319,17 @@ const ElectionResultsPage = () => {
       filtered = filtered.filter(r => r.has_objection === true || r.has_objection === 1);
     } else if (filterByObjection === 'without') {
       filtered = filtered.filter(r => !r.has_objection || r.has_objection === false || r.has_objection === 0);
+    }
+
+    // Sadece tutanak olanlar filtresi (protocol photo var ama veri yok)
+    if (filterByProtocolOnly) {
+      filtered = filtered.filter(r => {
+        const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
+        const hasData = !!(r.used_votes || r.valid_votes || r.invalid_votes || 
+          (r.candidate_votes && Object.keys(r.candidate_votes).length > 0) ||
+          (r.party_votes && Object.keys(r.party_votes).length > 0));
+        return hasProtocol && !hasData;
+      });
     }
 
     // Filter by location through ballot boxes
@@ -800,6 +813,23 @@ const ElectionResultsPage = () => {
                 <option value="without">İtiraz Edilmeyenler</option>
               </select>
             </div>
+
+            <div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterByProtocolOnly}
+                  onChange={(e) => setFilterByProtocolOnly(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Sadece Tutanak Olanlar (Veri Yok)
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                Sadece tutanak fotoğrafı yüklenmiş ama veri girilmemiş sandıkları göster
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1101,7 +1131,8 @@ const ElectionResultsPage = () => {
                 return (
                   <div 
                     key={result.id} 
-                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/election-results/${electionId}/edit/${result.id}`)}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                     style={{
                       borderColor: cardStyle.borderColor,
                       backgroundColor: cardStyle.backgroundColor,
