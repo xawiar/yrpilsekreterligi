@@ -1063,7 +1063,25 @@ const ElectionResultsPage = () => {
     }
   }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes]);
 
-  // D'Hondt calculation for MV election
+  // Helper function to calculate winning candidates based on party seats and candidate order
+  const calculateWinningCandidates = (partySeats, partyCandidates) => {
+    if (!partyCandidates || !Array.isArray(partyCandidates) || partyCandidates.length === 0) {
+      return [];
+    }
+    
+    const seats = parseInt(partySeats) || 0;
+    if (seats <= 0) return [];
+    
+    // Adayları sırasına göre al (1. sıra, 2. sıra, 3. sıra...)
+    // Kazanılan sandalye sayısı kadar adayı seç
+    return partyCandidates.slice(0, seats).map((candidate, index) => ({
+      name: candidate,
+      order: index + 1, // 1. sıra, 2. sıra, 3. sıra...
+      won: true
+    }));
+  };
+
+  // D'Hondt calculation for MV election with winning candidates
   const dhondtResults = useMemo(() => {
     if (election?.type !== 'genel' || !aggregatedResults.categories) return null;
     
@@ -1078,10 +1096,31 @@ const ElectionResultsPage = () => {
       partyVotes[item.name] = item.value;
     });
     
-    return calculateDHondtDetailed(partyVotes, totalSeats);
+    const dhondtData = calculateDHondtDetailed(partyVotes, totalSeats);
+    
+    // Her parti için kazanan adayları hesapla
+    const winningCandidates = {};
+    Object.entries(dhondtData.distribution).forEach(([partyName, seats]) => {
+      // Bu parti için aday listesini bul
+      const party = election.parties?.find(p => {
+        const pName = typeof p === 'string' ? p : (p?.name || String(p));
+        return pName === partyName;
+      });
+      
+      if (party && typeof party === 'object' && party.mv_candidates) {
+        winningCandidates[partyName] = calculateWinningCandidates(seats, party.mv_candidates);
+      } else {
+        winningCandidates[partyName] = [];
+      }
+    });
+    
+    return {
+      ...dhondtData,
+      winningCandidates
+    };
   }, [election, aggregatedResults]);
 
-  // Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt
+  // Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt with winning candidates
   const municipalCouncilResults = useMemo(() => {
     if (election?.type !== 'yerel' || !aggregatedResults.categories) return null;
     
@@ -1099,7 +1138,28 @@ const ElectionResultsPage = () => {
       partyVotes[item.name] = item.value;
     });
     
-    return calculateMunicipalCouncilSeats(partyVotes, totalSeats, population);
+    const councilData = calculateMunicipalCouncilSeats(partyVotes, totalSeats, population);
+    
+    // Her parti için kazanan adayları hesapla
+    const winningCandidates = {};
+    Object.entries(councilData.distribution).forEach(([partyName, seats]) => {
+      // Bu parti için aday listesini bul
+      const party = election.municipal_council_parties?.find(p => {
+        const pName = typeof p === 'string' ? p : (p?.name || String(p));
+        return pName === partyName;
+      });
+      
+      if (party && typeof party === 'object' && party.candidates) {
+        winningCandidates[partyName] = calculateWinningCandidates(seats, party.candidates);
+      } else {
+        winningCandidates[partyName] = [];
+      }
+    });
+    
+    return {
+      ...councilData,
+      winningCandidates
+    };
   }, [election, aggregatedResults]);
 
 
@@ -1133,7 +1193,7 @@ const ElectionResultsPage = () => {
 
   const filteredResults = getFilteredResults();
   
-  // İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt (filteredResults tanımlandıktan sonra)
+  // İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt with winning candidates (filteredResults tanımlandıktan sonra)
   const provincialAssemblyResults = useMemo(() => {
     if (election?.type !== 'yerel' || !filteredResults || filteredResults.length === 0) return null;
     
@@ -1141,7 +1201,49 @@ const ElectionResultsPage = () => {
     const districtSeats = election.provincial_assembly_district_seats || {};
     if (Object.keys(districtSeats).length === 0) return null;
     
-    return calculateProvincialAssemblySeats(filteredResults, districtSeats);
+    const assemblyData = calculateProvincialAssemblySeats(filteredResults, districtSeats);
+    
+    // Her ilçe için kazanan adayları hesapla
+    const districtWinningCandidates = {};
+    Object.entries(assemblyData.districtResults).forEach(([districtName, districtData]) => {
+      districtWinningCandidates[districtName] = {};
+      
+      Object.entries(districtData.distribution).forEach(([partyName, seats]) => {
+        // Bu parti için aday listesini bul
+        const party = election.provincial_assembly_parties?.find(p => {
+          const pName = typeof p === 'string' ? p : (p?.name || String(p));
+          return pName === partyName;
+        });
+        
+        if (party && typeof party === 'object' && party.candidates) {
+          districtWinningCandidates[districtName][partyName] = calculateWinningCandidates(seats, party.candidates);
+        } else {
+          districtWinningCandidates[districtName][partyName] = [];
+        }
+      });
+    });
+    
+    // Toplam dağılım için de kazanan adayları hesapla
+    const totalWinningCandidates = {};
+    Object.entries(assemblyData.totalDistribution).forEach(([partyName, seats]) => {
+      // Bu parti için aday listesini bul
+      const party = election.provincial_assembly_parties?.find(p => {
+        const pName = typeof p === 'string' ? p : (p?.name || String(p));
+        return pName === partyName;
+      });
+      
+      if (party && typeof party === 'object' && party.candidates) {
+        totalWinningCandidates[partyName] = calculateWinningCandidates(seats, party.candidates);
+      } else {
+        totalWinningCandidates[partyName] = [];
+      }
+    });
+    
+    return {
+      ...assemblyData,
+      districtWinningCandidates,
+      totalWinningCandidates
+    };
   }, [election, filteredResults]);
   
   // Pagination
@@ -1850,34 +1952,56 @@ const ElectionResultsPage = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              {/* Distribution List */}
+              {/* Distribution List with Winning Candidates */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazında Dağılım</h3>
-                <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazında Dağılım ve Kazanan Adaylar</h3>
+                <div className="space-y-3">
                   {dhondtResults.chartData
                     .sort((a, b) => b.seats - a.seats)
-                    .map((item, index) => (
-                      <div 
-                        key={item.party}
-                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                          ></div>
-                          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-base text-indigo-600 dark:text-indigo-400">
-                            {item.seats} MV
+                    .map((item, index) => {
+                      const winningCandidates = dhondtResults.winningCandidates?.[item.party] || [];
+                      return (
+                        <div 
+                          key={item.party}
+                          className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              ></div>
+                              <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-base text-indigo-600 dark:text-indigo-400">
+                                {item.seats} MV
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {item.votes.toLocaleString('tr-TR')} oy
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {item.votes.toLocaleString('tr-TR')} oy
-                          </div>
+                          {/* Kazanan Adaylar */}
+                          {winningCandidates.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
+                              <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">✅ Kazanan Adaylar (Sıralamaya Göre):</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {winningCandidates.map((candidate, idx) => (
+                                  <span 
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
+                                  >
+                                    <span className="font-medium">#{candidate.order}</span>
+                                    <span>{candidate.name}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             </div>
@@ -2025,15 +2149,37 @@ const ElectionResultsPage = () => {
                       <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">
                         {districtName} ({districtData.seats} üye)
                       </div>
-                      <div className="space-y-1 text-xs">
+                      <div className="space-y-2 text-xs">
                         {Object.entries(districtData.distribution)
                           .sort((a, b) => b[1] - a[1])
-                          .map(([party, seats]) => (
-                            <div key={party} className="flex justify-between items-center">
-                              <span className="text-gray-700 dark:text-gray-300">{party}</span>
-                              <span className="font-semibold text-blue-600 dark:text-blue-400">{seats} üye</span>
-                            </div>
-                          ))}
+                          .map(([party, seats]) => {
+                            const winningCandidates = provincialAssemblyResults.districtWinningCandidates?.[districtName]?.[party] || [];
+                            return (
+                              <div key={party} className="pb-2 border-b border-gray-300 dark:border-gray-600 last:border-0">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
+                                  <span className="font-semibold text-blue-600 dark:text-blue-400">{seats} üye</span>
+                                </div>
+                                {/* Kazanan Adaylar */}
+                                {winningCandidates.length > 0 && (
+                                  <div className="mt-1 pl-2">
+                                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">✅ Kazananlar:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {winningCandidates.map((candidate, idx) => (
+                                        <span 
+                                          key={idx}
+                                          className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
+                                        >
+                                          <span className="font-medium">#{candidate.order}</span>
+                                          <span>{candidate.name}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
                   ))}
@@ -2042,29 +2188,49 @@ const ElectionResultsPage = () => {
               
               {/* Toplam Dağılım */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Toplam Meclis Dağılımı</h3>
-                <div className="space-y-2">
-                  {provincialAssemblyResults.chartData.map((item, index) => (
-                    <div 
-                      key={item.party}
-                      className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                          ></div>
-                          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-base text-blue-600 dark:text-blue-400">
-                            {item.seats} Üye
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Toplam Meclis Dağılımı ve Kazanan Adaylar</h3>
+                <div className="space-y-3">
+                  {provincialAssemblyResults.chartData.map((item, index) => {
+                    const winningCandidates = provincialAssemblyResults.totalWinningCandidates?.[item.party] || [];
+                    return (
+                      <div 
+                        key={item.party}
+                        className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            ></div>
+                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-base text-blue-600 dark:text-blue-400">
+                              {item.seats} Üye
+                            </div>
                           </div>
                         </div>
+                        {/* Kazanan Adaylar */}
+                        {winningCandidates.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
+                            <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">✅ Kazanan Adaylar (Sıralamaya Göre):</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {winningCandidates.map((candidate, idx) => (
+                                <span 
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
+                                >
+                                  <span className="font-medium">#{candidate.order}</span>
+                                  <span>{candidate.name}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {/* Özet Bilgi */}
                 <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400">
