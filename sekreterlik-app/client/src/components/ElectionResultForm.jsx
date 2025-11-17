@@ -501,9 +501,38 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           </div>
         </div>
 
+        {/* Save Button at Top - Large and Prominent */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors"
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              form="election-result-form"
+              disabled={saving}
+              onClick={handleSubmit}
+              className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold text-lg rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg"
+            >
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <span>Kaydediliyor...</span>
+                </>
+              ) : (
+                <span>{existingResult ? 'Güncelle' : 'Kaydet'}</span>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Scrollable Form Content */}
         <div className="flex-1 overflow-y-auto bg-gray-50 relative" style={{ maxHeight: 'calc(95vh - 200px)' }}>
-          <form id="election-result-form" onSubmit={handleSubmit} className="p-6 space-y-6 pb-32">
+          <form id="election-result-form" onSubmit={handleSubmit} className="p-6 space-y-6 pb-6">
             {/* Message Alert */}
             {message && (
               <div className={`p-3 rounded border-l-4 ${
@@ -724,8 +753,20 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
             {election.type === 'yerel' && (
               <div className="space-y-5">
+                {/* Debug: Show if no local election data */}
+                {(!election.mayor_parties || !Array.isArray(election.mayor_parties) || election.mayor_parties.length === 0) &&
+                 (!election.mayor_candidates || !Array.isArray(election.mayor_candidates) || election.mayor_candidates.length === 0) &&
+                 (!election.provincial_assembly_parties || !Array.isArray(election.provincial_assembly_parties) || election.provincial_assembly_parties.length === 0) &&
+                 (!election.municipal_council_parties || !Array.isArray(election.municipal_council_parties) || election.municipal_council_parties.length === 0) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ Yerel seçim için aday/parti bilgisi bulunamadı. Lütfen seçim ayarlarını kontrol edin.
+                    </p>
+                  </div>
+                )}
+
                 {/* Belediye Başkanı Parti Oyları */}
-                {election.mayor_parties && election.mayor_parties.length > 0 && (
+                {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       Belediye Başkanı Parti Oyları
@@ -752,7 +793,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 )}
 
                 {/* Bağımsız Belediye Başkanı Adayları */}
-                {election.mayor_candidates && election.mayor_candidates.length > 0 && (
+                {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       Bağımsız Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
@@ -779,7 +820,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 )}
 
                 {/* İl Genel Meclisi Üyesi Oyları (Parti Bazlı) */}
-                {election.provincial_assembly_parties && election.provincial_assembly_parties.length > 0 && (
+                {election.provincial_assembly_parties && Array.isArray(election.provincial_assembly_parties) && election.provincial_assembly_parties.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       İl Genel Meclisi Parti Oyları
@@ -806,7 +847,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 )}
 
                 {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) */}
-                {election.municipal_council_parties && election.municipal_council_parties.length > 0 && (
+                {election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       Belediye Meclis Parti Oyları
@@ -1086,33 +1127,6 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             </div>
 
           </form>
-        </div>
-        
-        {/* Fixed Buttons at Bottom */}
-        <div className="bg-white border-t border-gray-300 px-6 py-4 flex flex-col sm:flex-row gap-3 justify-end shadow-lg">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded border border-gray-300 transition-colors"
-          >
-            İptal
-          </button>
-          <button
-            type="submit"
-            form="election-result-form"
-            disabled={saving}
-            onClick={handleSubmit}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium rounded transition-colors flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                <span>Kaydediliyor...</span>
-              </>
-            ) : (
-              <span>{existingResult ? 'Güncelle' : 'Kaydet'}</span>
-            )}
-          </button>
         </div>
       </div>
 
