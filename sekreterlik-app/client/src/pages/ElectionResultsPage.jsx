@@ -1545,6 +1545,197 @@ const ElectionResultsPage = () => {
           </div>
         )}
 
+        {/* Strong/Weak Ballot Boxes Analysis */}
+        {hasResults && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Güçlü / Zayıf Sandık Analizi
+            </h2>
+            {(() => {
+              const strongWeakBoxes = calculateStrongWeakBallotBoxes();
+              const strongBoxes = strongWeakBoxes.filter(b => b.type === 'strong').slice(0, 10);
+              const weakBoxes = strongWeakBoxes.filter(b => b.type === 'weak').slice(0, 10);
+              const criticalBoxes = strongWeakBoxes.filter(b => b.type === 'critical').slice(0, 10);
+              
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+                    <h3 className="text-lg font-semibold text-green-800 dark:text-green-300 mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      En Güçlü Sandıklar (Top 10)
+                    </h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {strongBoxes.length > 0 ? (
+                        strongBoxes.map((box, index) => (
+                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-300 dark:border-green-700">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">Sandık #{box.ballotBoxNumber}</span>
+                              <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                +%{box.differencePercent.toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">{box.location}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              Kazanan: <span className="font-medium">{box.winnerName}</span> ({box.winningVotes} oy)
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz veri yok</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-800">
+                    <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300 mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Kritik Sandıklar (±%10 Fark)
+                    </h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {criticalBoxes.length > 0 ? (
+                        criticalBoxes.map((box, index) => (
+                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-yellow-300 dark:border-yellow-700">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">Sandık #{box.ballotBoxNumber}</span>
+                              <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                                %{Math.abs(box.differencePercent).toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">{box.location}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              Fark: {box.difference} oy
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz veri yok</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+                    <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                      </svg>
+                      Zayıf Sandıklar (Top 10)
+                    </h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {weakBoxes.length > 0 ? (
+                        weakBoxes.map((box, index) => (
+                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-300 dark:border-red-700">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">Sandık #{box.ballotBoxNumber}</span>
+                              <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                %{box.differencePercent.toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">{box.location}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              Kazanan: <span className="font-medium">{box.winnerName}</span> ({box.winningVotes} oy)
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz veri yok</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Location-Based Analysis */}
+        {hasResults && (() => {
+          const locationAnalysis = calculateLocationBasedAnalysis();
+          if (locationAnalysis.length === 0) return null;
+          
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Mahalle / İlçe Bazlı Analiz
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Konum</th>
+                      <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Tür</th>
+                      <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Sandık Sayısı</th>
+                      <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Oy Kullanan</th>
+                      <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Geçerli Oy</th>
+                      <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Geçersiz Oy</th>
+                      {election?.type === 'genel' && (
+                        <>
+                          <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">CB Kazanan</th>
+                          <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">MV Kazanan</th>
+                        </>
+                      )}
+                      {election?.type === 'yerel' && (
+                        <th className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Başkan Kazanan</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {locationAnalysis.map((location, index) => {
+                      let cbWinner = null;
+                      let mvWinner = null;
+                      let mayorWinner = null;
+                      
+                      if (election?.type === 'genel') {
+                        const cbVotes = location.categoryVotes['CB'] || {};
+                        const cbEntries = Object.entries(cbVotes).sort((a, b) => b[1] - a[1]);
+                        cbWinner = cbEntries.length > 0 ? cbEntries[0][0] : null;
+                        
+                        const mvVotes = location.categoryVotes['MV'] || {};
+                        const mvEntries = Object.entries(mvVotes).sort((a, b) => b[1] - a[1]);
+                        mvWinner = mvEntries.length > 0 ? mvEntries[0][0] : null;
+                      } else if (election?.type === 'yerel') {
+                        const mayorVotes = location.categoryVotes['Belediye Başkanı'] || {};
+                        const mayorEntries = Object.entries(mayorVotes).sort((a, b) => b[1] - a[1]);
+                        mayorWinner = mayorEntries.length > 0 ? mayorEntries[0][0] : null;
+                      }
+                      
+                      return (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{location.name}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{location.type}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{location.ballotBoxCount}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{location.usedVotes.toLocaleString('tr-TR')}</td>
+                          <td className="px-4 py-3 text-green-600 dark:text-green-400 font-medium">{location.validVotes.toLocaleString('tr-TR')}</td>
+                          <td className="px-4 py-3 text-red-600 dark:text-red-400">{location.invalidVotes.toLocaleString('tr-TR')}</td>
+                          {election?.type === 'genel' && (
+                            <>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{cbWinner || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{mvWinner || '-'}</td>
+                            </>
+                          )}
+                          {election?.type === 'yerel' && (
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{mayorWinner || '-'}</td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Results Cards */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
