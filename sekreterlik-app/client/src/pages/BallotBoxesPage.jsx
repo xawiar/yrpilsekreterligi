@@ -6,7 +6,6 @@ import * as XLSX from 'xlsx';
 const BallotBoxesPage = () => {
   const [ballotBoxes, setBallotBoxes] = useState([]);
   const [observers, setObservers] = useState([]);
-  const [regions, setRegions] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -20,7 +19,7 @@ const BallotBoxesPage = () => {
   const [formData, setFormData] = useState({
     ballot_number: '',
     institution_name: '',
-    region_id: '',
+    region_name: '',
     district_id: '',
     town_id: '',
     neighborhood_id: '',
@@ -41,10 +40,9 @@ const BallotBoxesPage = () => {
   const fetchBallotBoxes = async () => {
     try {
       setLoading(true);
-      const [ballotBoxesData, observersData, regionsData, districtsData, townsData, neighborhoodsData, villagesData, electionsData] = await Promise.all([
+      const [ballotBoxesData, observersData, districtsData, townsData, neighborhoodsData, villagesData, electionsData] = await Promise.all([
         ApiService.getBallotBoxes(),
         ApiService.getBallotBoxObservers(),
-        ApiService.getRegions(),
         ApiService.getDistricts(),
         ApiService.getTowns(),
         ApiService.getNeighborhoods(),
@@ -53,7 +51,6 @@ const BallotBoxesPage = () => {
       ]);
       setBallotBoxes(ballotBoxesData || []);
       setObservers(observersData || []);
-      setRegions(regionsData || []);
       setDistricts(districtsData || []);
       setTowns(townsData || []);
       setNeighborhoods(neighborhoodsData || []);
@@ -133,7 +130,7 @@ const BallotBoxesPage = () => {
       const payload = {
         ballot_number: formData.ballot_number,
         institution_name: formData.institution_name,
-        region_id: formData.region_id || null,
+        region_name: formData.region_name || null,
         district_id: formData.district_id || null,
         town_id: formData.town_id || null,
         neighborhood_id: formData.neighborhood_id || null,
@@ -145,12 +142,12 @@ const BallotBoxesPage = () => {
         await ApiService.createBallotBox(payload);
       }
 
-      // Reset form but keep region_id from localStorage
-      const savedRegionId = localStorage.getItem('admin_region_id') || '';
+      // Reset form but keep region_name from localStorage
+      const savedRegionName = localStorage.getItem('admin_region_name') || '';
       setFormData({
         ballot_number: '',
         institution_name: '',
-        region_id: savedRegionId,
+        region_name: savedRegionName,
         district_id: '',
         town_id: '',
         neighborhood_id: '',
@@ -169,14 +166,12 @@ const BallotBoxesPage = () => {
 
   const handleEdit = (ballotBox) => {
     setEditingBallotBox(ballotBox);
-    // Get region_id from ballotBox or from localStorage
-    const regionId = ballotBox.region_id 
-      ? String(ballotBox.region_id) 
-      : (localStorage.getItem('admin_region_id') || '');
+    // Get region_name from ballotBox or from localStorage
+    const regionName = ballotBox.region_name || localStorage.getItem('admin_region_name') || '';
     setFormData({
       ballot_number: ballotBox.ballot_number,
       institution_name: ballotBox.institution_name,
-      region_id: regionId,
+      region_name: regionName,
       district_id: ballotBox.district_id ? String(ballotBox.district_id) : '',
       town_id: ballotBox.town_id ? String(ballotBox.town_id) : '',
       neighborhood_id: ballotBox.neighborhood_id ? String(ballotBox.neighborhood_id) : '',
@@ -201,12 +196,12 @@ const BallotBoxesPage = () => {
   };
 
   const handleCancel = () => {
-    // Reset form but keep region_id from localStorage
-    const savedRegionId = localStorage.getItem('admin_region_id') || '';
+    // Reset form but keep region_name from localStorage
+    const savedRegionName = localStorage.getItem('admin_region_name') || '';
     setFormData({
       ballot_number: '',
       institution_name: '',
-      region_id: savedRegionId,
+      region_name: savedRegionName,
       district_id: '',
       town_id: '',
       neighborhood_id: '',
@@ -246,8 +241,7 @@ const BallotBoxesPage = () => {
       if (chiefObserver) {
         // Başmüşahit bilgilerini kullan
         if (!regionName) {
-          regionName = chiefObserver.region_name || 
-            (chiefObserver.region_id || chiefObserver.observer_region_id ? regions.find(r => String(r.id) === String(chiefObserver.region_id || chiefObserver.observer_region_id))?.name : null);
+          regionName = chiefObserver.region_name || null;
         }
         if (!districtName) {
           districtName = chiefObserver.district_name || 
@@ -488,11 +482,11 @@ const BallotBoxesPage = () => {
               </button>
               <button
                 onClick={() => {
-                  // Load region_id from localStorage when opening form
-                  const savedRegionId = localStorage.getItem('admin_region_id') || '';
+                  // Load region_name from localStorage when opening form
+                  const savedRegionName = localStorage.getItem('admin_region_name') || '';
                   setFormData(prev => ({
                     ...prev,
-                    region_id: savedRegionId
+                    region_name: savedRegionName
                   }));
                   setShowAddForm(true);
                 }}
@@ -738,17 +732,14 @@ const BallotBoxesPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">İl (opsiyonel)</label>
-                      <select
-                        name="region_id"
-                        value={formData.region_id}
+                      <input
+                        type="text"
+                        name="region_name"
+                        value={formData.region_name}
                         onChange={handleInputChange}
+                        placeholder="Örn: Elazığ"
                         className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="">İl seçin</option>
-                        {regions.map(region => (
-                          <option key={region.id} value={region.id}>{region.name}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">İlçe (opsiyonel)</label>

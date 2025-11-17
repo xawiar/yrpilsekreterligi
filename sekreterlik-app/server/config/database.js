@@ -575,17 +575,17 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_member_users_is_active ON member_users(is_active)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_ballot_boxes_assign ON ballot_boxes(district_id, town_id, neighborhood_id, village_id)`);
   
-  // Add region_id column to ballot_boxes table if it doesn't exist
-  db.run(`ALTER TABLE ballot_boxes ADD COLUMN region_id INTEGER`, (err) => {
+  // Add region_name column to ballot_boxes table if it doesn't exist
+  db.run(`ALTER TABLE ballot_boxes ADD COLUMN region_name TEXT`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding region_id column to ballot_boxes:', err);
+      console.error('Error adding region_name column to ballot_boxes:', err);
     }
   });
   
-  // Add region_id column to ballot_box_observers table if it doesn't exist
-  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN region_id INTEGER`, (err) => {
+  // Add region_name column to ballot_box_observers table if it doesn't exist
+  db.run(`ALTER TABLE ballot_box_observers ADD COLUMN region_name TEXT`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding region_id column to ballot_box_observers:', err);
+      console.error('Error adding region_name column to ballot_box_observers:', err);
     }
   });
   

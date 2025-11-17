@@ -13,8 +13,7 @@ const AdminSettings = () => {
     confirmPassword: '',
     currentPassword: ''
   });
-  const [regions, setRegions] = useState([]);
-  const [selectedRegionId, setSelectedRegionId] = useState('');
+  const [selectedRegionName, setSelectedRegionName] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [loading, setLoading] = useState(false);
@@ -24,31 +23,21 @@ const AdminSettings = () => {
   // Load admin info on component mount
   useEffect(() => {
     fetchAdminInfo();
-    fetchRegions();
-    // Load saved region from localStorage
-    const savedRegionId = localStorage.getItem('admin_region_id');
-    if (savedRegionId) {
-      setSelectedRegionId(savedRegionId);
+    // Load saved region name from localStorage
+    const savedRegionName = localStorage.getItem('admin_region_name');
+    if (savedRegionName) {
+      setSelectedRegionName(savedRegionName);
     }
   }, []);
 
-  const fetchRegions = async () => {
-    try {
-      const regionsData = await ApiService.getRegions();
-      setRegions(regionsData || []);
-    } catch (error) {
-      console.error('Error fetching regions:', error);
-    }
-  };
-
   const handleRegionChange = (e) => {
-    const regionId = e.target.value;
-    setSelectedRegionId(regionId);
+    const regionName = e.target.value;
+    setSelectedRegionName(regionName);
     // Save to localStorage
-    if (regionId) {
-      localStorage.setItem('admin_region_id', regionId);
+    if (regionName) {
+      localStorage.setItem('admin_region_name', regionName);
     } else {
-      localStorage.removeItem('admin_region_id');
+      localStorage.removeItem('admin_region_name');
     }
   };
 
@@ -219,24 +208,19 @@ const AdminSettings = () => {
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">İl Bilgisi</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Programı hangi ilde kullanıyorsanız o ili seçin. Bu bilgi sandık ve başmüşahit ekleme formlarında kullanılacaktır.
+          Programı hangi ilde kullanıyorsanız o ilin adını yazın. Bu bilgi sandık ve başmüşahit ekleme formlarında kullanılacaktır.
         </p>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            İl *
+            İl Adı *
           </label>
-          <select
-            value={selectedRegionId}
+          <input
+            type="text"
+            value={selectedRegionName}
             onChange={handleRegionChange}
+            placeholder="Örn: Elazığ"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
-          >
-            <option value="">İl seçin</option>
-            {regions.map(region => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       </div>
 

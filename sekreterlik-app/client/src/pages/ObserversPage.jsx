@@ -7,7 +7,6 @@ import * as XLSX from 'xlsx';
 const ObserversPage = () => {
   const [observers, setObservers] = useState([]);
   const [ballotBoxes, setBallotBoxes] = useState([]);
-  const [regions, setRegions] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -23,7 +22,7 @@ const ObserversPage = () => {
     name: '',
     phone: '',
     ballot_box_id: '',
-    region_id: '',
+    region_name: '',
     district_id: '',
     town_id: '',
     neighborhood_id: '',
@@ -46,10 +45,9 @@ const ObserversPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [observersData, ballotBoxesData, regionsData, districtsData, townsData, neighborhoodsData, villagesData] = await Promise.all([
+      const [observersData, ballotBoxesData, districtsData, townsData, neighborhoodsData, villagesData] = await Promise.all([
         ApiService.getBallotBoxObservers(),
         ApiService.getBallotBoxes(),
-        ApiService.getRegions(),
         ApiService.getDistricts(),
         ApiService.getTowns(),
         ApiService.getNeighborhoods(),
@@ -57,7 +55,6 @@ const ObserversPage = () => {
       ]);
       setObservers(observersData || []);
       setBallotBoxes(ballotBoxesData || []);
-      setRegions(regionsData || []);
       setDistricts(districtsData || []);
       setTowns(townsData || []);
       setNeighborhoods(neighborhoodsData || []);
@@ -177,7 +174,7 @@ const ObserversPage = () => {
         phone: String(formData.phone || '').trim(),
         // Firebase'de ID'ler string, backend'de integer olarak saklanıyor
         ballot_box_id: ballotBoxId,
-        region_id: formData.region_id ? (USE_FIREBASE ? String(formData.region_id) : parseInt(formData.region_id)) : null,
+        region_name: formData.region_name || null,
         district_id: formData.district_id ? (USE_FIREBASE ? String(formData.district_id) : parseInt(formData.district_id)) : null,
         town_id: formData.town_id ? (USE_FIREBASE ? String(formData.town_id) : parseInt(formData.town_id)) : null,
         neighborhood_id: formData.neighborhood_id ? (USE_FIREBASE ? String(formData.neighborhood_id) : parseInt(formData.neighborhood_id)) : null,
@@ -211,14 +208,14 @@ const ObserversPage = () => {
         throw apiError; // Re-throw to be caught by outer catch block
       }
 
-      // Reset form but keep region_id from localStorage and is_chief_observer as true
-      const savedRegionId = localStorage.getItem('admin_region_id') || '';
+      // Reset form but keep region_name from localStorage and is_chief_observer as true
+      const savedRegionName = localStorage.getItem('admin_region_name') || '';
       setFormData({
         tc: '',
         name: '',
         phone: '',
         ballot_box_id: '',
-        region_id: savedRegionId,
+        region_name: savedRegionName,
         district_id: '',
         town_id: '',
         neighborhood_id: '',
@@ -263,10 +260,8 @@ const ObserversPage = () => {
       village_id: observer.village_id
     });
     
-    // Get region_id from observer or from localStorage
-    const regionId = observer.region_id 
-      ? String(observer.region_id) 
-      : (localStorage.getItem('admin_region_id') || '');
+    // Get region_name from observer or from localStorage
+    const regionName = observer.region_name || localStorage.getItem('admin_region_name') || '';
     
     setFormData({
       tc: observer.tc,
@@ -274,7 +269,7 @@ const ObserversPage = () => {
       phone: observer.phone,
       // ID'leri string'e çevir (form select'ler string değer bekliyor)
       ballot_box_id: observer.ballot_box_id ? String(observer.ballot_box_id) : '',
-      region_id: regionId,
+      region_name: regionName,
       district_id: observer.district_id ? String(observer.district_id) : '',
       town_id: observer.town_id ? String(observer.town_id) : '',
       neighborhood_id: observer.neighborhood_id ? String(observer.neighborhood_id) : '',
@@ -300,14 +295,14 @@ const ObserversPage = () => {
   };
 
   const handleCancel = () => {
-    // Reset form but keep region_id from localStorage and is_chief_observer as true
-    const savedRegionId = localStorage.getItem('admin_region_id') || '';
+    // Reset form but keep region_name from localStorage and is_chief_observer as true
+    const savedRegionName = localStorage.getItem('admin_region_name') || '';
     setFormData({
       tc: '',
       name: '',
       phone: '',
       ballot_box_id: '',
-      region_id: savedRegionId,
+      region_name: savedRegionName,
       district_id: '',
       town_id: '',
       neighborhood_id: '',
@@ -508,11 +503,11 @@ const ObserversPage = () => {
               </button>
               <button
                 onClick={() => {
-                  // Load region_id from localStorage when opening form
-                  const savedRegionId = localStorage.getItem('admin_region_id') || '';
+                  // Load region_name from localStorage when opening form
+                  const savedRegionName = localStorage.getItem('admin_region_name') || '';
                   setFormData(prev => ({
                     ...prev,
-                    region_id: savedRegionId,
+                    region_name: savedRegionName,
                     is_chief_observer: true
                   }));
                   setShowAddForm(true);
@@ -856,19 +851,14 @@ const ObserversPage = () => {
                       <label className="block text-sm font-medium text-gray-700">
                         İl
                       </label>
-                      <select
-                        name="region_id"
-                        value={formData.region_id}
+                      <input
+                        type="text"
+                        name="region_name"
+                        value={formData.region_name}
                         onChange={handleInputChange}
+                        placeholder="Örn: Elazığ"
                         className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="">İl seçin (opsiyonel)</option>
-                        {regions.map(region => (
-                          <option key={region.id} value={region.id}>
-                            {region.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">

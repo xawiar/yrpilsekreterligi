@@ -10,13 +10,11 @@ class BallotBoxController {
 
       const baseSql = `
         SELECT bb.*, 
-               r.name as region_name,
                d.name as district_name,
                t.name as town_name,
                n.name as neighborhood_name,
                v.name as village_name
         FROM ballot_boxes bb
-        LEFT JOIN regions r ON bb.region_id = r.id
         LEFT JOIN districts d ON bb.district_id = d.id
         LEFT JOIN towns t ON bb.town_id = t.id
         LEFT JOIN neighborhoods n ON bb.neighborhood_id = n.id
@@ -43,13 +41,11 @@ class BallotBoxController {
       const { id } = req.params;
       const ballotBox = await db.get(`
         SELECT bb.*, 
-               r.name as region_name,
                d.name as district_name,
                t.name as town_name,
                n.name as neighborhood_name,
                v.name as village_name
         FROM ballot_boxes bb
-        LEFT JOIN regions r ON bb.region_id = r.id
         LEFT JOIN districts d ON bb.district_id = d.id
         LEFT JOIN towns t ON bb.town_id = t.id
         LEFT JOIN neighborhoods n ON bb.neighborhood_id = n.id
@@ -114,7 +110,7 @@ class BallotBoxController {
 
   static async create(req, res) {
     try {
-      const { ballot_number, institution_name, region_id, neighborhood_id, village_id, district_id, town_id } = req.body;
+      const { ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id } = req.body;
 
       // Validation
       const errors = [];
@@ -132,17 +128,17 @@ class BallotBoxController {
       }
 
       const sql = `INSERT INTO ballot_boxes 
-                   (ballot_number, institution_name, region_id, neighborhood_id, village_id, district_id, town_id) 
+                   (ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id) 
                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
       
-      const result = await db.run(sql, [ballot_number, institution_name, region_id || null, neighborhood_id || null, village_id || null, district_id || null, town_id || null]);
+      const result = await db.run(sql, [ballot_number, institution_name, region_name || null, neighborhood_id || null, village_id || null, district_id || null, town_id || null]);
       
       // Update in-memory collection
       const newBallotBox = {
         id: result.lastID,
         ballot_number,
         institution_name,
-        region_id: region_id || null,
+        region_name: region_name || null,
         neighborhood_id: neighborhood_id || null,
         village_id: village_id || null,
         district_id: district_id || null,
@@ -163,7 +159,7 @@ class BallotBoxController {
   static async update(req, res) {
     try {
       const { id } = req.params;
-      const { ballot_number, institution_name, region_id, neighborhood_id, village_id, district_id, town_id } = req.body;
+      const { ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id } = req.body;
 
       // Validation
       const errors = [];
@@ -185,10 +181,10 @@ class BallotBoxController {
       }
 
       const sql = `UPDATE ballot_boxes 
-                   SET ballot_number = ?, institution_name = ?, region_id = ?, neighborhood_id = ?, village_id = ?, district_id = ?, town_id = ?, updated_at = CURRENT_TIMESTAMP
+                   SET ballot_number = ?, institution_name = ?, region_name = ?, neighborhood_id = ?, village_id = ?, district_id = ?, town_id = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?`;
       
-      await db.run(sql, [ballot_number, institution_name, region_id || null, neighborhood_id, village_id, district_id, town_id, id]);
+      await db.run(sql, [ballot_number, institution_name, region_name || null, neighborhood_id, village_id, district_id, town_id, id]);
       
       // Update in-memory collection
       const ballotBoxIndex = collections.ballot_boxes.findIndex(bb => bb.id === parseInt(id));
@@ -197,7 +193,7 @@ class BallotBoxController {
           ...collections.ballot_boxes[ballotBoxIndex],
           ballot_number,
           institution_name,
-          region_id: region_id || null,
+          region_name: region_name || null,
           neighborhood_id,
           village_id,
           district_id,
