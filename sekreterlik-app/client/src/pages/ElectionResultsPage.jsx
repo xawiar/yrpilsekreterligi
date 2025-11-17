@@ -463,10 +463,27 @@ const ElectionResultsPage = () => {
 
   // Calculate participation percentage
   const calculateParticipationPercentage = () => {
-    if (!election?.voter_count || election.voter_count === 0) return 0;
     const filtered = getFilteredResults();
+    if (filtered.length === 0) return '0.00';
+    
+    // Toplam seçmen sayısını ballot box'lardan hesapla
+    const totalVoters = filtered.reduce((sum, result) => {
+      // Önce result'tan total_voters'a bak
+      if (result.total_voters) {
+        return sum + (parseInt(result.total_voters) || 0);
+      }
+      // Sonra ballot box'tan voter_count'a bak
+      const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+      if (ballotBox && ballotBox.voter_count) {
+        return sum + (parseInt(ballotBox.voter_count) || 0);
+      }
+      return sum;
+    }, 0);
+    
+    if (totalVoters === 0) return '0.00';
+    
     const totalUsedVotes = filtered.reduce((sum, result) => sum + (parseInt(result.used_votes) || 0), 0);
-    return ((totalUsedVotes / election.voter_count) * 100).toFixed(2);
+    return ((totalUsedVotes / totalVoters) * 100).toFixed(2);
   };
 
   // Calculate opened ballot box percentage
@@ -1420,15 +1437,22 @@ const ElectionResultsPage = () => {
                               ))}
                             </defs>
                             <Pie
-                              data={category.data}
+                              data={category.data.map(item => ({
+                                ...item,
+                                name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen')
+                              }))}
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, percentage }) => `${name}\n%${typeof percentage === 'number' ? percentage.toFixed(1) : parseFloat(percentage || 0).toFixed(1)}`}
+                              label={({ name, percentage }) => {
+                                const displayName = typeof name === 'string' ? name : (name?.name || String(name) || 'Bilinmeyen');
+                                return `${displayName}\n%${typeof percentage === 'number' ? percentage.toFixed(1) : parseFloat(percentage || 0).toFixed(1)}`;
+                              }}
                               outerRadius={120}
                               innerRadius={40}
                               fill="#8884d8"
                               dataKey="value"
+                              nameKey="name"
                               animationBegin={0}
                               animationDuration={1000}
                               animationEasing="ease-out"
@@ -1475,7 +1499,10 @@ const ElectionResultsPage = () => {
                             <Legend 
                               wrapperStyle={{ paddingTop: '20px' }}
                               iconType="circle"
-                              formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+                              formatter={(value) => {
+                                const displayValue = typeof value === 'string' ? value : (value?.name || String(value) || 'Bilinmeyen');
+                                return <span className="text-sm font-medium">{displayValue}</span>;
+                              }}
                             />
                           </PieChart>
                         </ResponsiveContainer>
@@ -1488,6 +1515,7 @@ const ElectionResultsPage = () => {
                       {category.data
                         .sort((a, b) => b.value - a.value)
                         .map((item, index) => {
+                          const itemName = typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen');
                           const percentage = typeof item.percentage === 'number' 
                             ? item.percentage 
                             : parseFloat(item.percentage || 0);
@@ -1498,7 +1526,7 @@ const ElectionResultsPage = () => {
                           
                           return (
                             <div 
-                              key={item.name} 
+                              key={itemName} 
                               className="group relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-indigo-300 dark:hover:border-indigo-600"
                             >
                               <div className="flex items-center justify-between mb-2">
@@ -1510,7 +1538,7 @@ const ElectionResultsPage = () => {
                                       boxShadow: `0 0 10px ${COLORS[index % COLORS.length]}40`
                                     }}
                                   ></div>
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</span>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{itemName}</span>
                                 </div>
                                 <div className="text-right">
                                   <div className="font-bold text-lg text-gray-900 dark:text-gray-100">
