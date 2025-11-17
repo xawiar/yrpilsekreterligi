@@ -1510,6 +1510,95 @@ const ElectionResultsPage = () => {
                       </div>
                     </div>
                     
+                    {/* Kazanan Aday/Parti Bilgisi */}
+                    {(() => {
+                      const winner = getWinningCandidateForCategory(category);
+                      if (!winner) return null;
+                      const winnerName = typeof winner.name === 'string' ? winner.name : (winner.name?.name || String(winner.name) || 'Bilinmeyen');
+                      const winnerPercentage = typeof winner.percentage === 'number' ? winner.percentage : parseFloat(winner.percentage || 0);
+                      
+                      return (
+                        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl border-2 border-indigo-200 dark:border-indigo-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">🏆 Kazanan</div>
+                              <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{winnerName}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {winner.value.toLocaleString('tr-TR')} oy (%{winnerPercentage.toFixed(2)})
+                              </div>
+                            </div>
+                            <div className="text-4xl">🏆</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Horizontal Bar Chart */}
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Oy Dağılımı - Yatay Grafik</h3>
+                      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+                        <ResponsiveContainer width="100%" height={Math.max(300, category.data.length * 50)}>
+                          <BarChart
+                            data={category.data
+                              .sort((a, b) => b.value - a.value)
+                              .map(item => ({
+                                ...item,
+                                name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen')
+                              }))}
+                            layout="vertical"
+                            margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              type="number" 
+                              stroke="#6b7280"
+                              tick={{ fill: '#6b7280', fontSize: 12 }}
+                            />
+                            <YAxis 
+                              dataKey="name" 
+                              type="category" 
+                              width={90}
+                              stroke="#6b7280"
+                              tick={{ fill: '#6b7280', fontSize: 11 }}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                                padding: '12px'
+                              }}
+                              formatter={(value, name, props) => {
+                                const percentage = typeof props.payload.percentage === 'number' 
+                                  ? props.payload.percentage 
+                                  : parseFloat(props.payload.percentage || 0);
+                                const displayName = typeof props.payload.name === 'string' 
+                                  ? props.payload.name 
+                                  : (props.payload.name?.name || String(props.payload.name) || 'Bilinmeyen');
+                                return [
+                                  `${value.toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
+                                  displayName
+                                ];
+                              }}
+                            />
+                            <Bar 
+                              dataKey="value" 
+                              radius={[0, 8, 8, 0]}
+                              fill="#6366f1"
+                            >
+                              {category.data.map((entry, index) => (
+                                <Cell 
+                                  key={`bar-cell-${categoryIndex}-${index}`}
+                                  fill={COLORS[index % COLORS.length]}
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
                     {/* İnteraktif Liste */}
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Detaylı Sonuçlar</h3>
