@@ -914,7 +914,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             placeholder="0"
                           />
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
