@@ -1358,7 +1358,7 @@ const ElectionResultsPage = () => {
                       Toplam: {category.total.toLocaleString('tr-TR')} oy
                     </span>
                   </h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* 3D Animasyonlu Pasta Grafiği */}
                     <div className="relative transform transition-transform duration-300 hover:scale-105">
                       <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl blur-xl"></div>
@@ -1385,8 +1385,8 @@ const ElectionResultsPage = () => {
                                 const displayName = typeof name === 'string' ? name : (name?.name || String(name) || 'Bilinmeyen');
                                 return `${displayName}\n%${typeof percentage === 'number' ? percentage.toFixed(1) : parseFloat(percentage || 0).toFixed(1)}`;
                               }}
-                              outerRadius={120}
-                              innerRadius={40}
+                              outerRadius={80}
+                              innerRadius={30}
                               fill="#8884d8"
                               dataKey="value"
                               nameKey="name"
