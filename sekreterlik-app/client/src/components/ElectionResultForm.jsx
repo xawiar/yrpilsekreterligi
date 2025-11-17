@@ -810,22 +810,25 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       Belediye Başkanı Parti Oyları
                     </h2>
                     <div className="space-y-2">
-                      {election.mayor_parties.map((party) => (
-                        <div key={party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                      {election.mayor_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
                           <label className="flex-1 text-sm font-medium text-gray-900">
-                            {party}
+                            {partyName}
                           </label>
                           <input
                             type="number"
                             min="0"
-                            value={formData.mayor_votes[party] || ''}
-                            onChange={(e) => handleMayorVoteChange(party, e.target.value)}
+                            value={formData.mayor_votes[partyName] || ''}
+                            onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -864,22 +867,25 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       İl Genel Meclisi Parti Oyları
                     </h2>
                     <div className="space-y-2">
-                      {election.provincial_assembly_parties.map((party) => (
-                        <div key={party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                      {election.provincial_assembly_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
                           <label className="flex-1 text-sm font-medium text-gray-900">
-                            {party}
+                            {partyName}
                           </label>
                           <input
                             type="number"
                             min="0"
-                            value={formData.provincial_assembly_votes[party] || ''}
-                            onChange={(e) => handleProvincialAssemblyVoteChange(party, e.target.value)}
+                            value={formData.provincial_assembly_votes[partyName] || ''}
+                            onChange={(e) => handleProvincialAssemblyVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -891,16 +897,18 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       Belediye Meclis Parti Oyları
                     </h2>
                     <div className="space-y-2">
-                      {election.municipal_council_parties.map((party) => (
-                        <div key={party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                      {election.municipal_council_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
                           <label className="flex-1 text-sm font-medium text-gray-900">
-                            {party}
+                            {partyName}
                           </label>
                           <input
                             type="number"
                             min="0"
-                            value={formData.municipal_council_votes[party] || ''}
-                            onChange={(e) => handleMunicipalCouncilVoteChange(party, e.target.value)}
+                            value={formData.municipal_council_votes[partyName] || ''}
+                            onChange={(e) => handleMunicipalCouncilVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
