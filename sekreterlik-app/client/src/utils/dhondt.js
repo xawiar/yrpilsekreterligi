@@ -247,3 +247,89 @@ export const calculateMunicipalCouncilSeats = (partyVotes, totalSeats, populatio
   };
 };
 
+/**
+ * İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt Sistemi
+ * 
+ * Türkiye'de il genel meclisi üyeleri şu şekilde seçilir:
+ * 1. Her ilçe ayrı bir seçim çevresidir
+ * 2. Her ilçede ayrı D'Hondt uygulanır
+ * 3. İlçeye nüfusa göre farklı sayıda üye tahsis edilir
+ * 4. Tüm ilçelerden gelen üyeler birleşir → İl Genel Meclisi oluşur
+ * 
+ * @param {Array} results - Seçim sonuçları array'i (her biri bir sandık)
+ * @param {Object} districtSeats - İlçe isimleri ve üye sayıları: { 'İlçe Adı': üyeSayısı }
+ * @returns {Object} - Detaylı sonuç: { districtResults, totalDistribution, chartData }
+ */
+export const calculateProvincialAssemblySeats = (results, districtSeats) => {
+  if (!results || !Array.isArray(results) || results.length === 0) {
+    return {
+      districtResults: {},
+      totalDistribution: {},
+      chartData: [],
+      totalSeats: 0
+    };
+  }
+
+  if (!districtSeats || typeof districtSeats !== 'object') {
+    return {
+      districtResults: {},
+      totalDistribution: {},
+      chartData: [],
+      totalSeats: 0
+    };
+  }
+
+  const districtResults = {};
+  const totalDistribution = {};
+
+  // Her ilçe için ayrı D'Hondt hesaplaması
+  Object.entries(districtSeats).forEach(([districtName, seats]) => {
+    const seatsCount = parseInt(seats) || 0;
+    if (seatsCount <= 0) return;
+
+    // Bu ilçedeki sandıklardan parti oylarını topla
+    const districtPartyVotes = {};
+    results.forEach(result => {
+      // İlçe eşleşmesi kontrolü
+      if (result.district_name === districtName && result.provincial_assembly_votes) {
+        Object.entries(result.provincial_assembly_votes).forEach(([party, votes]) => {
+          districtPartyVotes[party] = (districtPartyVotes[party] || 0) + (parseInt(votes) || 0);
+        });
+      }
+    });
+
+    // Bu ilçe için D'Hondt hesaplaması
+    if (Object.keys(districtPartyVotes).length > 0) {
+      const dhondtResult = calculateDHondt(districtPartyVotes, seatsCount);
+      districtResults[districtName] = {
+        seats: seatsCount,
+        partyVotes: districtPartyVotes,
+        distribution: dhondtResult
+      };
+
+      // Toplam dağılıma ekle
+      Object.entries(dhondtResult).forEach(([party, seats]) => {
+        totalDistribution[party] = (totalDistribution[party] || 0) + seats;
+      });
+    }
+  });
+
+  // Chart data için
+  const chartData = Object.entries(totalDistribution)
+    .map(([party, seats]) => ({
+      party,
+      seats,
+      votes: 0 // Toplam oy hesaplanabilir ama şu an gerekli değil
+    }))
+    .sort((a, b) => b.seats - a.seats);
+
+  const totalSeats = Object.values(districtSeats).reduce((sum, seats) => sum + (parseInt(seats) || 0), 0);
+
+  return {
+    districtResults,
+    totalDistribution,
+    chartData,
+    totalSeats
+  };
+};
+

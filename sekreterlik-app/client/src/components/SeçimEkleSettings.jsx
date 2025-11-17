@@ -24,6 +24,7 @@ const SeçimEkleSettings = () => {
     mayor_parties: [], // Belediye Başkanı partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
     mayor_candidates: [], // Bağımsız Belediye Başkanı adayları
     provincial_assembly_parties: [], // İl Genel Meclisi partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
+    provincial_assembly_district_seats: {}, // İl Genel Meclisi için ilçe bazlı üye sayıları: { 'İlçe Adı': üyeSayısı }
     municipal_council_parties: [], // Belediye Meclis partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
     municipal_council_total_seats: '', // Belediye Meclisi toplam üye sayısı (D'Hondt için)
     population: '', // Belediye nüfusu (Kontenjan sayısını belirlemek için)
@@ -44,6 +45,8 @@ const SeçimEkleSettings = () => {
   const [provincialAssemblyCandidateInputs, setProvincialAssemblyCandidateInputs] = useState({}); // Her il genel meclisi partisi için ayrı aday input
   const [municipalCouncilPartyInput, setMunicipalCouncilPartyInput] = useState('');
   const [municipalCouncilCandidateInputs, setMunicipalCouncilCandidateInputs] = useState({}); // Her belediye meclisi partisi için ayrı aday input
+  const [districtInput, setDistrictInput] = useState(''); // İl Genel Meclisi için ilçe adı
+  const [districtSeatsInput, setDistrictSeatsInput] = useState(''); // İl Genel Meclisi için ilçe üye sayısı
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
 
@@ -467,6 +470,7 @@ const SeçimEkleSettings = () => {
       mayor_parties: [],
       mayor_candidates: [],
       provincial_assembly_parties: [],
+      provincial_assembly_district_seats: {},
       municipal_council_parties: [],
       municipal_council_total_seats: '',
       population: ''
@@ -512,6 +516,7 @@ const SeçimEkleSettings = () => {
       mayor_parties: (election.mayor_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
       mayor_candidates: election.mayor_candidates || [],
       provincial_assembly_parties: (election.provincial_assembly_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
+      provincial_assembly_district_seats: election.provincial_assembly_district_seats || {},
       municipal_council_parties: (election.municipal_council_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
       municipal_council_total_seats: election.municipal_council_total_seats || '',
       population: election.population || ''
