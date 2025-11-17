@@ -214,6 +214,10 @@ const ElectionResultsPage = () => {
   const [filterByNoProtocol, setFilterByNoProtocol] = useState(false); // Hiç tutanak yüklenmemiş
   const [showFilters, setShowFilters] = useState(false); // Filtreler accordion açık/kapalı
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
   const [modalTitle, setModalTitle] = useState('');
@@ -1693,6 +1697,75 @@ const ElectionResultsPage = () => {
           </div>
         )}
 
+        {/* D'Hondt Calculation Visualization - Milletvekili Dağılımı */}
+        {dhondtResults && election?.type === 'genel' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              D'Hondt Sistemi - Milletvekili Dağılımı
+              <span className="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400">
+                Toplam: {dhondtResults.totalSeats} Milletvekili
+              </span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Distribution Chart */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Milletvekili Dağılımı</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={dhondtResults.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="party" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="seats" fill="#6366f1" radius={[8, 8, 0, 0]}>
+                      {dhondtResults.chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Distribution List */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazında Dağılım</h3>
+                <div className="space-y-2">
+                  {dhondtResults.chartData
+                    .sort((a, b) => b.seats - a.seats)
+                    .map((item, index) => (
+                      <div 
+                        key={item.party}
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          ></div>
+                          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-base text-indigo-600 dark:text-indigo-400">
+                            {item.seats} MV
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {item.votes.toLocaleString('tr-TR')} oy
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Location-Based Analysis */}
         {hasResults && (() => {
@@ -1791,8 +1864,9 @@ const ElectionResultsPage = () => {
               </p>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredResults.map((result) => {
+              {paginatedResults.map((result) => {
                 const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
                 const chiefObserver = getChiefObserver(result.ballot_box_id);
                 const locationParts = [];
@@ -2197,6 +2271,76 @@ const ElectionResultsPage = () => {
                 );
               })}
             </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Sayfa başına:
+                  </span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-gray-100"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {startIndex + 1}-{Math.min(endIndex, filteredResults.length)} / {filteredResults.length}
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Önceki
+                    </button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Sonraki
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

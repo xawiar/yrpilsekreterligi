@@ -2,6 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy loading - Code splitting için
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -526,23 +528,27 @@ function RouterContent() {
 // Component wrapper
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-          <RouterContent />
-        </Router>
-        <PWANotification />
-        <AppInstallBanner />
-        <OfflineStatus />
-        {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
-        {/* <PerformanceMonitor /> */}
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <Router
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <RouterContent />
+            </Router>
+            <PWANotification />
+            <AppInstallBanner />
+            <OfflineStatus />
+            {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
+            {/* <PerformanceMonitor /> */}
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
