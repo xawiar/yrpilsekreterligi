@@ -210,6 +210,7 @@ const ElectionResultsPage = () => {
   const [filterByObjection, setFilterByObjection] = useState(''); // 'all', 'with', 'without'
   const [filterByProtocolOnly, setFilterByProtocolOnly] = useState(false); // Sadece tutanak olanlar
   const [filterByNoProtocol, setFilterByNoProtocol] = useState(false); // Hiç tutanak yüklenmemiş
+  const [showFilters, setShowFilters] = useState(false); // Filtreler accordion açık/kapalı
   
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
@@ -915,12 +916,27 @@ const ElectionResultsPage = () => {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Filtreler</h2>
+        {/* Filters - Accordion */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm mb-6 overflow-hidden">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Filtreler</h2>
+            <svg
+              className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
           
-          {/* Hızlı Arama Kutusu */}
-          <div className="mb-6">
+          {showFilters && (
+            <div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-700">
+              {/* Hızlı Arama Kutusu */}
+              <div className="mb-6 pt-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Hızlı Arama (İlçe, Belde, Mahalle, Köy, Sandık No)
             </label>
@@ -1094,7 +1110,8 @@ const ElectionResultsPage = () => {
                 Hiç tutanak fotoğrafı yüklenmemiş sandıkları göster
               </p>
             </div>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Summary Statistics */}
@@ -1660,7 +1677,7 @@ const ElectionResultsPage = () => {
                                 {parseInt(result.referendum_votes?.['Evet']) || 0}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Evet']) || 0) / totalValidVotes) * 100).toFixed(2) : 0)}
+                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Evet']) || 0) / totalValidVotes) * 100).toFixed(2) : '0.00'}
                               </div>
                             </div>
                           </div>
@@ -1671,7 +1688,7 @@ const ElectionResultsPage = () => {
                                 {parseInt(result.referendum_votes?.['Hayır']) || 0}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Hayır']) || 0) / totalValidVotes) * 100).toFixed(2) : 0)}
+                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Hayır']) || 0) / totalValidVotes) * 100).toFixed(2) : '0.00'}
                               </div>
                             </div>
                           </div>
