@@ -1118,7 +1118,7 @@ const ElectionResultsPage = () => {
       ...dhondtData,
       winningCandidates
     };
-  }, [election, aggregatedResults]);
+  }, [election, aggregatedResults, calculateWinningCandidates]);
 
   // Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt with winning candidates
   const municipalCouncilResults = useMemo(() => {
@@ -1160,8 +1160,7 @@ const ElectionResultsPage = () => {
       ...councilData,
       winningCandidates
     };
-  }, [election, aggregatedResults]);
-
+  }, [election, aggregatedResults, calculateWinningCandidates]);
 
   console.log('🎨 ElectionResultsPage render:', {
     loading,
@@ -1244,7 +1243,7 @@ const ElectionResultsPage = () => {
       districtWinningCandidates,
       totalWinningCandidates
     };
-  }, [election, filteredResults]);
+  }, [election, filteredResults, calculateWinningCandidates]);
   
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
