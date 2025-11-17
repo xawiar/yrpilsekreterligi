@@ -206,6 +206,36 @@ const BallotBoxesPage = () => {
     return observers.filter(observer => String(observer.ballot_box_id) === String(ballotBoxId));
   };
 
+  // Konum bilgilerini okunabilir formatta döndürür
+  const getLocationDisplay = (ballotBox) => {
+    if (!ballotBox) return null;
+    
+    const parts = [];
+    
+    // İlçe bilgisi (en üst seviye)
+    if (ballotBox.district_name) {
+      parts.push(ballotBox.district_name);
+    }
+    
+    // Belde bilgisi varsa
+    if (ballotBox.town_name) {
+      parts.push(ballotBox.town_name + ' Beldesi');
+    }
+    
+    // Mahalle veya Köy bilgisi (en alt seviye)
+    if (ballotBox.neighborhood_name) {
+      parts.push(ballotBox.neighborhood_name + ' Mahallesi');
+    } else if (ballotBox.village_name) {
+      parts.push(ballotBox.village_name + ' Köyü');
+    }
+    
+    // Eğer hiçbir bilgi yoksa null döndür
+    if (parts.length === 0) return null;
+    
+    // Hiyerarşik sırada birleştir (İlçe > Belde > Mahalle/Köy)
+    return parts.join(' > ');
+  };
+
   const getBallotBoxStatus = (ballotBoxId) => {
     const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
     const ballotBoxObservers = getBallotBoxObservers(ballotBoxId);
@@ -739,26 +769,11 @@ const BallotBoxesPage = () => {
                           </div>
                           
                           {/* Konum Bilgileri */}
-                          {(ballotBox.district_name || ballotBox.town_name || ballotBox.neighborhood_name || ballotBox.village_name || status.chiefObserverName) && (
+                          {(getLocationDisplay(ballotBox) || status.chiefObserverName) && (
                             <div className="space-y-1.5 border-t border-gray-200 pt-3">
-                              {ballotBox.district_name && (
+                              {getLocationDisplay(ballotBox) && (
                                 <div className="text-sm text-gray-600">
-                                  <span className="font-medium">İlçe:</span> {ballotBox.district_name}
-                                </div>
-                              )}
-                              {ballotBox.town_name && (
-                                <div className="text-sm text-gray-600">
-                                  <span className="font-medium">Belde:</span> {ballotBox.town_name}
-                                </div>
-                              )}
-                              {ballotBox.neighborhood_name && (
-                                <div className="text-sm text-gray-600">
-                                  <span className="font-medium">Mahalle:</span> {ballotBox.neighborhood_name}
-                                </div>
-                              )}
-                              {ballotBox.village_name && (
-                                <div className="text-sm text-gray-600">
-                                  <span className="font-medium">Köy:</span> {ballotBox.village_name}
+                                  <span className="font-medium">Konum:</span> {getLocationDisplay(ballotBox)}
                                 </div>
                               )}
                               {status.chiefObserverName && (
@@ -886,24 +901,9 @@ const BallotBoxesPage = () => {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900">
                             <div className="space-y-1">
-                              {ballotBox.district_name && (
+                              {getLocationDisplay(ballotBox) && (
                                 <div className="text-xs">
-                                  <span className="font-medium">İlçe:</span> {ballotBox.district_name}
-                                </div>
-                              )}
-                              {ballotBox.town_name && (
-                                <div className="text-xs">
-                                  <span className="font-medium">Belde:</span> {ballotBox.town_name}
-                                </div>
-                              )}
-                              {ballotBox.neighborhood_name && (
-                                <div className="text-xs">
-                                  <span className="font-medium">Mahalle:</span> {ballotBox.neighborhood_name}
-                                </div>
-                              )}
-                              {ballotBox.village_name && (
-                                <div className="text-xs">
-                                  <span className="font-medium">Köy:</span> {ballotBox.village_name}
+                                  <span className="font-medium">Konum:</span> {getLocationDisplay(ballotBox)}
                                 </div>
                               )}
                               {status.chiefObserverName && (
@@ -911,7 +911,7 @@ const BallotBoxesPage = () => {
                                   <span className="font-medium">Başmüşahit:</span> {status.chiefObserverName}
                                 </div>
                               )}
-                              {!ballotBox.district_name && !ballotBox.town_name && !ballotBox.neighborhood_name && !ballotBox.village_name && !status.chiefObserverName && (
+                              {!getLocationDisplay(ballotBox) && !status.chiefObserverName && (
                                 <div className="text-xs text-gray-400">-</div>
                               )}
                             </div>
