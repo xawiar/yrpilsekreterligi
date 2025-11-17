@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ComposedChart } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
+import { calculateDHondt, calculateDHondtDetailed } from '../utils/dhondt';
 
 // Parti renkleri - Türkiye'deki yaygın partiler
 const PARTY_COLORS = {
@@ -1010,6 +1012,66 @@ const ElectionResultsPage = () => {
       alert('PDF oluşturulurken bir hata oluştu');
     }
   };
+
+  // Export as Excel
+  const handleExportExcel = useCallback(() => {
+    try {
+      const filtered = getFilteredResults();
+      const workbook = XLSX.utils.book_new();
+      
+      // Summary sheet
+      const summaryData = [
+        ['Seçim Adı', election?.name || ''],
+        ['Seçim Tarihi', election?.date ? new Date(election.date).toLocaleDateString('tr-TR') : ''],
+        ['Toplam Sandık', getTotalBallotBoxes()],
+        ['Açılan Sandık', filtered.length],
+        ['Oy Kullanan Seçmen', calculateTotalUsedVotes()],
+        ['Geçerli Oy', aggregatedResults.total],
+        ['Geçersiz Oy', calculateTotalInvalidVotes()],
+      ];
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Özet');
+      
+      // Results sheet
+      const resultsData = filtered.map(result => ({
+        'Sandık No': result.ballot_number || '',
+        'İl': result.region_name || '',
+        'İlçe': result.district_name || '',
+        'Belde': result.town_name || '',
+        'Mahalle/Köy': result.neighborhood_name || result.village_name || '',
+        'Toplam Seçmen': result.total_voters || 0,
+        'Oy Kullanan': result.used_votes || 0,
+        'Geçerli Oy': result.valid_votes || 0,
+        'Geçersiz Oy': result.invalid_votes || 0,
+        'İtiraz': result.has_objection ? 'Evet' : 'Hayır',
+      }));
+      const resultsSheet = XLSX.utils.json_to_sheet(resultsData);
+      XLSX.utils.book_append_sheet(workbook, resultsSheet, 'Sonuçlar');
+      
+      XLSX.writeFile(workbook, `${election?.name || 'seçim-sonuclari'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error('Excel export error:', error);
+      alert('Excel oluşturulurken bir hata oluştu');
+    }
+  }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes]);
+
+  // D'Hondt calculation for MV election
+  const dhondtResults = useMemo(() => {
+    if (election?.type !== 'genel' || !aggregatedResults.categories) return null;
+    
+    const mvCategory = aggregatedResults.categories.find(c => c.name === 'Milletvekili Seçimi');
+    if (!mvCategory || mvCategory.data.length === 0) return null;
+    
+    // Get total seats (this should come from election data or be configurable)
+    const totalSeats = 10; // Default, should be configurable per province
+    
+    const partyVotes = {};
+    mvCategory.data.forEach(item => {
+      partyVotes[item.name] = item.value;
+    });
+    
+    return calculateDHondtDetailed(partyVotes, totalSeats);
+  }, [election, aggregatedResults]);
 
   console.log('🎨 ElectionResultsPage render:', {
     loading,

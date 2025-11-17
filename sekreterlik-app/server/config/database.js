@@ -620,6 +620,80 @@ db.serialize(() => {
       console.error('Error adding village_id column to ballot_box_observers:', err);
     }
   });
+
+  // Create elections table
+  db.run(`CREATE TABLE IF NOT EXISTS elections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('genel', 'yerel', 'referandum')),
+    status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'active', 'closed')),
+    voter_count INTEGER,
+    cb_candidates TEXT,
+    parties TEXT,
+    independent_cb_candidates TEXT,
+    independent_mv_candidates TEXT,
+    mayor_parties TEXT,
+    mayor_candidates TEXT,
+    provincial_assembly_parties TEXT,
+    municipal_council_parties TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME
+  )`);
+
+  // Create election_results table
+  db.run(`CREATE TABLE IF NOT EXISTS election_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    election_id INTEGER NOT NULL,
+    ballot_box_id INTEGER NOT NULL,
+    ballot_number TEXT,
+    region_name TEXT,
+    district_name TEXT,
+    town_name TEXT,
+    neighborhood_name TEXT,
+    village_name TEXT,
+    total_voters INTEGER,
+    used_votes INTEGER,
+    invalid_votes INTEGER,
+    valid_votes INTEGER,
+    cb_votes TEXT,
+    mv_votes TEXT,
+    mayor_votes TEXT,
+    provincial_assembly_votes TEXT,
+    municipal_council_votes TEXT,
+    referendum_votes TEXT,
+    party_votes TEXT,
+    candidate_votes TEXT,
+    signed_protocol_photo TEXT,
+    objection_protocol_photo TEXT,
+    has_objection BOOLEAN DEFAULT 0,
+    objection_reason TEXT,
+    notes TEXT,
+    created_by INTEGER,
+    updated_by INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (election_id) REFERENCES elections (id) ON DELETE CASCADE,
+    FOREIGN KEY (ballot_box_id) REFERENCES ballot_boxes (id) ON DELETE CASCADE,
+    UNIQUE(election_id, ballot_box_id)
+  )`);
+
+  // Create audit_logs table for security
+  db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    user_type TEXT,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER,
+    old_data TEXT,
+    new_data TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES members (id) ON DELETE SET NULL
+  )`);
 });
 
 // In-memory collections for faster access

@@ -13,6 +13,7 @@ const SeçimEkleSettings = () => {
     name: '',
     date: '',
     type: 'genel', // genel, yerel, referandum
+    status: 'draft', // draft, active, closed
     // Genel Seçim için
     cb_candidates: [], // Cumhurbaşkanı adayları
     parties: [], // Partiler ve her partinin MV adayları: [{name: 'Parti Adı', mv_candidates: ['Aday1', 'Aday2']}]
@@ -436,6 +437,7 @@ const SeçimEkleSettings = () => {
       name: '',
       date: '',
       type: 'genel',
+      status: 'draft',
       cb_candidates: [],
       parties: [],
       independent_cb_candidates: [],
@@ -477,6 +479,7 @@ const SeçimEkleSettings = () => {
       name: election.name || '',
       date: dateValue,
       type: election.type || 'genel',
+      status: election.status || 'draft',
       cb_candidates: election.cb_candidates || [],
       parties: election.parties || [],
       independent_cb_candidates: election.independent_cb_candidates || [],
@@ -513,6 +516,37 @@ const SeçimEkleSettings = () => {
       'referandum': 'Referandum'
     };
     return labels[type] || type;
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'draft': 'Taslak',
+      'active': 'Aktif',
+      'closed': 'Kapalı'
+    };
+    return labels[status] || status;
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'draft': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+      'active': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+      'closed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+    };
+    return colors[status] || colors.draft;
+  };
+
+  const handleStatusChange = async (electionId, newStatus) => {
+    try {
+      await ApiService.updateElectionStatus(electionId, newStatus);
+      setMessage(`Seçim durumu "${getStatusLabel(newStatus)}" olarak güncellendi`);
+      setMessageType('success');
+      fetchElections();
+    } catch (error) {
+      console.error('Error updating election status:', error);
+      setMessage(error.message || 'Durum güncellenirken hata oluştu');
+      setMessageType('error');
+    }
   };
 
   if (loading) {
@@ -584,21 +618,39 @@ const SeçimEkleSettings = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Seçim Tipi *
-            </label>
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
-              required
-            >
-              <option value="genel">Genel Seçim (CB + MV)</option>
-              <option value="yerel">Yerel Seçim</option>
-              <option value="referandum">Referandum</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Seçim Tipi *
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                required
+              >
+                <option value="genel">Genel Seçim (CB + MV)</option>
+                <option value="yerel">Yerel Seçim</option>
+                <option value="referandum">Referandum</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Durum *
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                required
+              >
+                <option value="draft">Taslak</option>
+                <option value="active">Aktif</option>
+                <option value="closed">Kapalı</option>
+              </select>
+            </div>
           </div>
 
           {/* Genel Seçim Formu */}
@@ -1217,6 +1269,9 @@ const SeçimEkleSettings = () => {
                 Tip
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Durum
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Detaylar
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -1227,7 +1282,7 @@ const SeçimEkleSettings = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {elections.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   Henüz seçim eklenmemiş
                 </td>
               </tr>
@@ -1250,6 +1305,11 @@ const SeçimEkleSettings = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {getTypeLabel(election.type)}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(election.status || 'draft')}`}>
+                      {getStatusLabel(election.status || 'draft')}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {election.type === 'genel' && (
                       <div className="space-y-1">
@@ -1269,24 +1329,35 @@ const SeçimEkleSettings = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      to={`/election-results/${election.id}`}
-                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-4 inline-block"
-                    >
-                      Sonuçlar
-                    </Link>
-                    <button
-                      onClick={() => handleEdit(election)}
-                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-4"
-                    >
-                      Düzenle
-                    </button>
-                    <button
-                      onClick={() => handleDelete(election.id)}
-                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                    >
-                      Sil
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <select
+                        value={election.status || 'draft'}
+                        onChange={(e) => handleStatusChange(election.id, e.target.value)}
+                        className={`text-xs px-2 py-1 rounded border ${getStatusColor(election.status || 'draft')} border-gray-300 dark:border-gray-600`}
+                      >
+                        <option value="draft">Taslak</option>
+                        <option value="active">Aktif</option>
+                        <option value="closed">Kapalı</option>
+                      </select>
+                      <Link
+                        to={`/election-results/${election.id}`}
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"
+                      >
+                        Sonuçlar
+                      </Link>
+                      <button
+                        onClick={() => handleEdit(election)}
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"
+                      >
+                        Düzenle
+                      </button>
+                      <button
+                        onClick={() => handleDelete(election.id)}
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      >
+                        Sil
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

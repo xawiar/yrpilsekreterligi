@@ -439,6 +439,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       setSaving(false);
       return;
     }
+
+    // Seçim durumu kontrolü
+    if (election.status === 'closed') {
+      setMessage('Bu seçim kapalı. Sonuç girişi yapılamaz.');
+      setMessageType('error');
+      setSaving(false);
+      return;
+    }
+
+    if (election.status !== 'active') {
+      setMessage('Bu seçim henüz aktif değil. Sadece aktif seçimlerde sonuç girişi yapılabilir.');
+      setMessageType('error');
+      setSaving(false);
+      return;
+    }
     
     // Her kategori için geçerli oy sayısını ayrı ayrı kontrol et
     const validVotesByCategory = calculateValidVotesByCategory();

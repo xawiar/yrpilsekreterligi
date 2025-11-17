@@ -1689,6 +1689,20 @@ class ApiService {
     return response.json();
   }
 
+  static async updateElectionStatus(id, status) {
+    if (USE_FIREBASE) {
+      // Firebase için status update'i normal update ile yapılır
+      return FirebaseApiService.updateElection(id, { status });
+    }
+
+    const response = await fetch(`${API_BASE_URL}/elections/${id}/status`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    return response.json();
+  }
+
   // Chief Observer Login API
   static async loginChiefObserver(ballotNumber, tc) {
     if (USE_FIREBASE) {
