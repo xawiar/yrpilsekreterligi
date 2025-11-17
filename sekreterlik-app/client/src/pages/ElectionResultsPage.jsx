@@ -1263,85 +1263,88 @@ const ElectionResultsPage = () => {
           )}
         </div>
 
-        {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-            <div className="text-xs text-gray-600 dark:text-gray-400">Toplam Sandık</div>
-            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-              {getTotalBallotBoxes()}
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-            <div className="text-xs text-gray-600 dark:text-gray-400">Açılan Sandık</div>
-            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-              {hasResults ? filteredResults.length : 0}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              %{calculateOpenedBallotBoxPercentage()}
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-            <div className="text-xs text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
-            <div className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
-              {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
-            </div>
-          </div>
-        </div>
-
-        {/* Sandık Analizleri - Tek Yerde */}
-        {hasResults && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        {/* Sandık ve Seçmen İstatistikleri - Kompakt */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Sandık İstatistikleri */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Sandık Analizleri
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                <div className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1.5">Oy Kullanan Seçmen</div>
-                <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                  {calculateTotalUsedVotes().toLocaleString('tr-TR')}
-                </div>
-                {election?.voter_count && (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">
-                    Toplam Seçmen: {election.voter_count.toLocaleString('tr-TR')}
-                  </div>
-                )}
-                {hasResults && calculateTotalUsedVotes() > 0 && (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-                    Katılım: %{calculateParticipationPercentage()}
-                  </div>
-                )}
+              Sandık İstatistikleri
+            </h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Toplam Sandık:</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{getTotalBallotBoxes()}</span>
               </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                <div className="text-xs font-semibold text-green-800 dark:text-green-300 mb-1.5">Geçerli Oy</div>
-                <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-                  {aggregatedResults.total.toLocaleString('tr-TR')}
-                </div>
-                {hasResults && calculateTotalUsedVotes() > 0 && (
-                  <div className="text-xs text-green-600 dark:text-green-400 mt-1.5">
-                    %{((aggregatedResults.total / calculateTotalUsedVotes()) * 100).toFixed(2)} geçerli
-                  </div>
-                )}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Açılan Sandık:</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{hasResults ? filteredResults.length : 0}</span>
               </div>
-              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                <div className="text-xs font-semibold text-red-800 dark:text-red-300 mb-1.5">Geçersiz Oy</div>
-                <div className="text-2xl font-bold text-red-700 dark:text-red-400">
-                  {calculateTotalInvalidVotes().toLocaleString('tr-TR')}
-                </div>
-                {hasResults && calculateTotalUsedVotes() > 0 && (
-                  <div className="text-xs text-red-600 dark:text-red-400 mt-1.5">
-                    %{((calculateTotalInvalidVotes() / calculateTotalUsedVotes()) * 100).toFixed(2)} geçersiz
-                  </div>
-                )}
-                <div className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                  İtiraz: {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Açılma Oranı:</span>
+                <span className="font-semibold text-indigo-600 dark:text-indigo-400">%{calculateOpenedBallotBoxPercentage()}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Kapanan Sandık:</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{getTotalBallotBoxes() - (hasResults ? filteredResults.length : 0)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-gray-600 dark:text-gray-400">İtiraz Olan Sandık:</span>
+                <span className="font-semibold text-red-600 dark:text-red-400">{filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}</span>
               </div>
             </div>
           </div>
-        )}
+
+          {/* Seçmen ve Oy İstatistikleri */}
+          {hasResults && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Seçmen ve Oy İstatistikleri
+              </h3>
+              <div className="space-y-2 text-xs">
+                {election?.voter_count && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Toplam Seçmen:</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{election.voter_count.toLocaleString('tr-TR')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Oy Kullanan:</span>
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{calculateTotalUsedVotes().toLocaleString('tr-TR')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Katılım Oranı:</span>
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">%{calculateParticipationPercentage()}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-600 dark:text-gray-400">Geçerli Oy:</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{aggregatedResults.total.toLocaleString('tr-TR')}</span>
+                </div>
+                {calculateTotalUsedVotes() > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Geçerli Oy Oranı:</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">%{((aggregatedResults.total / calculateTotalUsedVotes()) * 100).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Geçersiz Oy:</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400">{calculateTotalInvalidVotes().toLocaleString('tr-TR')}</span>
+                </div>
+                {calculateTotalUsedVotes() > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Geçersiz Oy Oranı:</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">%{((calculateTotalInvalidVotes() / calculateTotalUsedVotes()) * 100).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Charts - Her kategori için ayrı grafik */}
         {election && aggregatedResults.categories && aggregatedResults.categories.length > 0 && (
