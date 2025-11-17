@@ -7,15 +7,27 @@ const SeçimEkleSettings = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingElection, setEditingElection] = useState(null);
+  
+  // Form data structure for new election system
   const [formData, setFormData] = useState({
     name: '',
     date: '',
-    type: 'yerel', // yerel, genel, cb
-    parties: [], // Yerel ve genel seçim için
-    candidates: [], // CB seçimi için
-    voter_count: '' // Seçmen sayısı
+    type: 'genel', // genel, yerel, referandum
+    // Genel Seçim için
+    cb_candidates: [], // Cumhurbaşkanı adayları
+    parties: [], // Partiler ve her partinin MV adayları: [{name: 'Parti Adı', mv_candidates: ['Aday1', 'Aday2']}]
+    independent_cb_candidates: [], // Bağımsız CB adayları
+    independent_mv_candidates: [], // Bağımsız MV adayları
+    // Yerel Seçim için
+    mayor_candidates: [], // Belediye Başkanı adayları
+    provincial_assembly_candidates: [], // İl Genel Meclisi Üyesi adayları
+    municipal_council_candidates: [], // Belediye Meclis Üyesi adayları
+    // Referandum için (otomatik Evet/Hayır)
   });
+  
   const [partyInput, setPartyInput] = useState('');
+  const [mvCandidateInput, setMvCandidateInput] = useState('');
+  const [selectedPartyIndex, setSelectedPartyIndex] = useState(null);
   const [candidateInput, setCandidateInput] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
@@ -45,9 +57,32 @@ const SeçimEkleSettings = () => {
       [name]: value,
       // Tip değiştiğinde ilgili alanları temizle
       ...(name === 'type' && {
+        cb_candidates: [],
         parties: [],
-        candidates: []
+        independent_cb_candidates: [],
+        independent_mv_candidates: [],
+        mayor_candidates: [],
+        provincial_assembly_candidates: [],
+        municipal_council_candidates: []
       })
+    }));
+  };
+
+  // Genel Seçim için fonksiyonlar
+  const handleAddCbCandidate = () => {
+    if (candidateInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        cb_candidates: [...prev.cb_candidates, candidateInput.trim()]
+      }));
+      setCandidateInput('');
+    }
+  };
+
+  const handleRemoveCbCandidate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      cb_candidates: prev.cb_candidates.filter((_, i) => i !== index)
     }));
   };
 
@@ -55,7 +90,7 @@ const SeçimEkleSettings = () => {
     if (partyInput.trim()) {
       setFormData(prev => ({
         ...prev,
-        parties: [...prev.parties, partyInput.trim()]
+        parties: [...prev.parties, { name: partyInput.trim(), mv_candidates: [] }]
       }));
       setPartyInput('');
     }
@@ -68,20 +103,115 @@ const SeçimEkleSettings = () => {
     }));
   };
 
-  const handleAddCandidate = () => {
+  const handleAddMvCandidate = (partyIndex) => {
+    if (mvCandidateInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        parties: prev.parties.map((party, i) => 
+          i === partyIndex 
+            ? { ...party, mv_candidates: [...party.mv_candidates, mvCandidateInput.trim()] }
+            : party
+        )
+      }));
+      setMvCandidateInput('');
+      setSelectedPartyIndex(null);
+    }
+  };
+
+  const handleRemoveMvCandidate = (partyIndex, candidateIndex) => {
+    setFormData(prev => ({
+      ...prev,
+      parties: prev.parties.map((party, i) => 
+        i === partyIndex 
+          ? { ...party, mv_candidates: party.mv_candidates.filter((_, ci) => ci !== candidateIndex) }
+          : party
+      )
+    }));
+  };
+
+  const handleAddIndependentCbCandidate = () => {
     if (candidateInput.trim()) {
       setFormData(prev => ({
         ...prev,
-        candidates: [...prev.candidates, candidateInput.trim()]
+        independent_cb_candidates: [...prev.independent_cb_candidates, candidateInput.trim()]
       }));
       setCandidateInput('');
     }
   };
 
-  const handleRemoveCandidate = (index) => {
+  const handleRemoveIndependentCbCandidate = (index) => {
     setFormData(prev => ({
       ...prev,
-      candidates: prev.candidates.filter((_, i) => i !== index)
+      independent_cb_candidates: prev.independent_cb_candidates.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddIndependentMvCandidate = () => {
+    if (candidateInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        independent_mv_candidates: [...prev.independent_mv_candidates, candidateInput.trim()]
+      }));
+      setCandidateInput('');
+    }
+  };
+
+  const handleRemoveIndependentMvCandidate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      independent_mv_candidates: prev.independent_mv_candidates.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Yerel Seçim için fonksiyonlar
+  const handleAddMayorCandidate = () => {
+    if (candidateInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        mayor_candidates: [...prev.mayor_candidates, candidateInput.trim()]
+      }));
+      setCandidateInput('');
+    }
+  };
+
+  const handleRemoveMayorCandidate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      mayor_candidates: prev.mayor_candidates.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddProvincialAssemblyCandidate = () => {
+    if (candidateInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        provincial_assembly_candidates: [...prev.provincial_assembly_candidates, candidateInput.trim()]
+      }));
+      setCandidateInput('');
+    }
+  };
+
+  const handleRemoveProvincialAssemblyCandidate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      provincial_assembly_candidates: prev.provincial_assembly_candidates.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddMunicipalCouncilCandidate = () => {
+    if (candidateInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        municipal_council_candidates: [...prev.municipal_council_candidates, candidateInput.trim()]
+      }));
+      setCandidateInput('');
+    }
+  };
+
+  const handleRemoveMunicipalCouncilCandidate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      municipal_council_candidates: prev.municipal_council_candidates.filter((_, i) => i !== index)
     }));
   };
 
@@ -100,17 +230,43 @@ const SeçimEkleSettings = () => {
       return;
     }
 
-    if (formData.type === 'cb' && formData.candidates.length === 0) {
-      setMessage('CB seçimi için en az bir aday eklenmelidir');
-      setMessageType('error');
-      return;
+    // Validasyon - Seçim türüne göre
+    if (formData.type === 'genel') {
+      if (formData.cb_candidates.length === 0) {
+        setMessage('Genel seçim için en az bir Cumhurbaşkanı adayı eklenmelidir');
+        setMessageType('error');
+        return;
+      }
+      if (formData.parties.length === 0) {
+        setMessage('Genel seçim için en az bir parti eklenmelidir');
+        setMessageType('error');
+        return;
+      }
+      // Her parti için en az bir MV adayı kontrolü
+      const partiesWithoutMvCandidates = formData.parties.filter(p => p.mv_candidates.length === 0);
+      if (partiesWithoutMvCandidates.length > 0) {
+        setMessage('Her parti için en az bir Milletvekili adayı eklenmelidir');
+        setMessageType('error');
+        return;
+      }
+    } else if (formData.type === 'yerel') {
+      if (formData.mayor_candidates.length === 0) {
+        setMessage('Yerel seçim için en az bir Belediye Başkanı adayı eklenmelidir');
+        setMessageType('error');
+        return;
+      }
+      if (formData.provincial_assembly_candidates.length === 0) {
+        setMessage('Yerel seçim için en az bir İl Genel Meclisi Üyesi adayı eklenmelidir');
+        setMessageType('error');
+        return;
+      }
+      if (formData.municipal_council_candidates.length === 0) {
+        setMessage('Yerel seçim için en az bir Belediye Meclis Üyesi adayı eklenmelidir');
+        setMessageType('error');
+        return;
+      }
     }
-
-    if ((formData.type === 'yerel' || formData.type === 'genel') && formData.parties.length === 0) {
-      setMessage('Yerel/Genel seçim için en az bir parti eklenmelidir');
-      setMessageType('error');
-      return;
-    }
+    // Referandum için validasyon gerekmez (otomatik Evet/Hayır)
 
     try {
       if (editingElection) {
@@ -122,17 +278,7 @@ const SeçimEkleSettings = () => {
       }
       
       setMessageType('success');
-      setFormData({
-        name: '',
-        date: '',
-        type: 'yerel',
-        parties: [],
-        candidates: [],
-        voter_count: ''
-      });
-      setPartyInput('');
-      setCandidateInput('');
-      setEditingElection(null);
+      resetForm();
       setShowForm(false);
       fetchElections();
     } catch (error) {
@@ -142,9 +288,27 @@ const SeçimEkleSettings = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      date: '',
+      type: 'genel',
+      cb_candidates: [],
+      parties: [],
+      independent_cb_candidates: [],
+      independent_mv_candidates: [],
+      mayor_candidates: [],
+      provincial_assembly_candidates: [],
+      municipal_council_candidates: []
+    });
+    setPartyInput('');
+    setMvCandidateInput('');
+    setSelectedPartyIndex(null);
+    setCandidateInput('');
+  };
+
   const handleEdit = (election) => {
     setEditingElection(election);
-    // Tarih formatını düzelt (ISO string'den date input formatına)
     let dateValue = '';
     if (election.date) {
       try {
@@ -159,10 +323,14 @@ const SeçimEkleSettings = () => {
     setFormData({
       name: election.name || '',
       date: dateValue,
-      type: election.type || 'yerel',
+      type: election.type || 'genel',
+      cb_candidates: election.cb_candidates || [],
       parties: election.parties || [],
-      candidates: election.candidates || [],
-      voter_count: election.voter_count || ''
+      independent_cb_candidates: election.independent_cb_candidates || [],
+      independent_mv_candidates: election.independent_mv_candidates || [],
+      mayor_candidates: election.mayor_candidates || [],
+      provincial_assembly_candidates: election.provincial_assembly_candidates || [],
+      municipal_council_candidates: election.municipal_council_candidates || []
     });
     setShowForm(true);
   };
@@ -186,9 +354,9 @@ const SeçimEkleSettings = () => {
 
   const getTypeLabel = (type) => {
     const labels = {
-      'yerel': 'Yerel Seçim',
       'genel': 'Genel Seçim',
-      'cb': 'CB Seçimi'
+      'yerel': 'Yerel Seçim',
+      'referandum': 'Referandum'
     };
     return labels[type] || type;
   };
@@ -207,22 +375,14 @@ const SeçimEkleSettings = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seçim Yönetimi</h2>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Yerel seçim, genel seçim ve CB seçimi ekleyebilirsiniz
+            Genel seçim, yerel seçim ve referandum ekleyebilirsiniz
           </p>
         </div>
         <button
           onClick={() => {
             setShowForm(!showForm);
             setEditingElection(null);
-            setFormData({
-              name: '',
-              date: '',
-              type: 'yerel',
-              parties: [],
-              candidates: []
-            });
-            setPartyInput('');
-            setCandidateInput('');
+            resetForm();
           }}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
@@ -241,7 +401,7 @@ const SeçimEkleSettings = () => {
       )}
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-4">
+        <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Seçim Adı *
@@ -272,22 +432,6 @@ const SeçimEkleSettings = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Seçmen Sayısı *
-            </label>
-            <input
-              type="number"
-              name="voter_count"
-              value={formData.voter_count}
-              onChange={handleInputChange}
-              min="0"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
-              placeholder="Toplam seçmen sayısı"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Seçim Tipi *
             </label>
             <select
@@ -297,111 +441,413 @@ const SeçimEkleSettings = () => {
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
               required
             >
+              <option value="genel">Genel Seçim (CB + MV)</option>
               <option value="yerel">Yerel Seçim</option>
-              <option value="genel">Genel Seçim</option>
-              <option value="cb">CB Seçimi</option>
+              <option value="referandum">Referandum</option>
             </select>
           </div>
 
-          {(formData.type === 'yerel' || formData.type === 'genel') && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Katılan Partiler *
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={partyInput}
-                  onChange={(e) => setPartyInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddParty();
-                    }
-                  }}
-                  placeholder="Parti adı girin ve Enter'a basın"
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddParty}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Ekle
-                </button>
+          {/* Genel Seçim Formu */}
+          {formData.type === 'genel' && (
+            <div className="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Genel Seçim Bilgileri</h3>
+              
+              {/* Cumhurbaşkanı Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Cumhurbaşkanı Adayları *
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={candidateInput}
+                    onChange={(e) => setCandidateInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCbCandidate();
+                      }
+                    }}
+                    placeholder="CB adayı adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCbCandidate}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
+                </div>
+                {formData.cb_candidates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.cb_candidates.map((candidate, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {candidate}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCbCandidate(index)}
+                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              {formData.parties.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.parties.map((party, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-3 py-1 rounded-full text-sm"
-                    >
-                      {party}
+
+              {/* Partiler ve MV Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Partiler ve Milletvekili Adayları *
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={partyInput}
+                    onChange={(e) => setPartyInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddParty();
+                      }
+                    }}
+                    placeholder="Parti adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddParty}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Parti Ekle
+                  </button>
+                </div>
+                
+                {formData.parties.map((party, partyIndex) => (
+                  <div key={partyIndex} className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{party.name}</h4>
                       <button
                         type="button"
-                        onClick={() => handleRemoveParty(index)}
-                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200"
+                        onClick={() => handleRemoveParty(partyIndex)}
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
                       >
-                        ×
+                        Partiyi Sil
                       </button>
-                    </span>
-                  ))}
+                    </div>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={selectedPartyIndex === partyIndex ? mvCandidateInput : ''}
+                        onChange={(e) => setMvCandidateInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddMvCandidate(partyIndex);
+                          }
+                        }}
+                        onFocus={() => setSelectedPartyIndex(partyIndex)}
+                        placeholder="MV adayı adı girin ve Enter'a basın"
+                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddMvCandidate(partyIndex)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        MV Ekle
+                      </button>
+                    </div>
+                    {party.mv_candidates.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {party.mv_candidates.map((candidate, candidateIndex) => (
+                          <span
+                            key={candidateIndex}
+                            className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm"
+                          >
+                            {candidate}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMvCandidate(partyIndex, candidateIndex)}
+                              className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Bağımsız CB Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Bağımsız Cumhurbaşkanı Adayları
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={candidateInput}
+                    onChange={(e) => setCandidateInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddIndependentCbCandidate();
+                      }
+                    }}
+                    placeholder="Bağımsız CB adayı adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddIndependentCbCandidate}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
                 </div>
-              )}
+                {formData.independent_cb_candidates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.independent_cb_candidates.map((candidate, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-2 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {candidate}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIndependentCbCandidate(index)}
+                          className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bağımsız MV Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Bağımsız Milletvekili Adayları
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={candidateInput}
+                    onChange={(e) => setCandidateInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddIndependentMvCandidate();
+                      }
+                    }}
+                    placeholder="Bağımsız MV adayı adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddIndependentMvCandidate}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
+                </div>
+                {formData.independent_mv_candidates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.independent_mv_candidates.map((candidate, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-2 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {candidate}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIndependentMvCandidate(index)}
+                          className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {formData.type === 'cb' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                CB Adayları *
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={candidateInput}
-                  onChange={(e) => setCandidateInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCandidate();
-                    }
-                  }}
-                  placeholder="Aday adı girin ve Enter'a basın"
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCandidate}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Ekle
-                </button>
-              </div>
-              {formData.candidates.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.candidates.map((candidate, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-3 py-1 rounded-full text-sm"
-                    >
-                      {candidate}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCandidate(index)}
-                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+          {/* Yerel Seçim Formu */}
+          {formData.type === 'yerel' && (
+            <div className="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yerel Seçim Bilgileri</h3>
+              
+              {/* Belediye Başkanı Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Belediye Başkanı Adayları *
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={candidateInput}
+                    onChange={(e) => setCandidateInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddMayorCandidate();
+                      }
+                    }}
+                    placeholder="Belediye Başkanı adayı adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddMayorCandidate}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
                 </div>
-              )}
+                {formData.mayor_candidates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.mayor_candidates.map((candidate, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {candidate}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMayorCandidate(index)}
+                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* İl Genel Meclisi Üyesi Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  İl Genel Meclisi Üyesi Adayları *
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={candidateInput}
+                    onChange={(e) => setCandidateInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddProvincialAssemblyCandidate();
+                      }
+                    }}
+                    placeholder="İl Genel Meclisi Üyesi adayı adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddProvincialAssemblyCandidate}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
+                </div>
+                {formData.provincial_assembly_candidates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.provincial_assembly_candidates.map((candidate, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {candidate}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProvincialAssemblyCandidate(index)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Belediye Meclis Üyesi Adayları */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Belediye Meclis Üyesi Adayları *
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={candidateInput}
+                    onChange={(e) => setCandidateInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddMunicipalCouncilCandidate();
+                      }
+                    }}
+                    placeholder="Belediye Meclis Üyesi adayı adı girin ve Enter'a basın"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddMunicipalCouncilCandidate}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
+                </div>
+                {formData.municipal_council_candidates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.municipal_council_candidates.map((candidate, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {candidate}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMunicipalCouncilCandidate(index)}
+                          className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2">
+          {/* Referandum Formu */}
+          {formData.type === 'referandum' && (
+            <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Referandum Bilgileri</h3>
+              <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Referandum için otomatik olarak "Evet" ve "Hayır" seçenekleri oluşturulacaktır.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="submit"
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -413,15 +859,7 @@ const SeçimEkleSettings = () => {
               onClick={() => {
                 setShowForm(false);
                 setEditingElection(null);
-                setFormData({
-                  name: '',
-                  date: '',
-                  type: 'yerel',
-                  parties: [],
-                  candidates: []
-                });
-                setPartyInput('');
-                setCandidateInput('');
+                resetForm();
               }}
               className="bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg text-sm font-medium transition-colors"
             >
@@ -479,16 +917,21 @@ const SeçimEkleSettings = () => {
                     {getTypeLabel(election.type)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {election.type === 'cb' ? (
-                      <div>
-                        <span className="font-medium">Adaylar:</span>{' '}
-                        {election.candidates?.join(', ') || '-'}
+                    {election.type === 'genel' && (
+                      <div className="space-y-1">
+                        <div><span className="font-medium">CB:</span> {election.cb_candidates?.length || 0} aday</div>
+                        <div><span className="font-medium">Partiler:</span> {election.parties?.length || 0} parti</div>
                       </div>
-                    ) : (
-                      <div>
-                        <span className="font-medium">Partiler:</span>{' '}
-                        {election.parties?.join(', ') || '-'}
+                    )}
+                    {election.type === 'yerel' && (
+                      <div className="space-y-1">
+                        <div><span className="font-medium">Belediye Başkanı:</span> {election.mayor_candidates?.length || 0} aday</div>
+                        <div><span className="font-medium">İl Genel Meclisi:</span> {election.provincial_assembly_candidates?.length || 0} aday</div>
+                        <div><span className="font-medium">Belediye Meclisi:</span> {election.municipal_council_candidates?.length || 0} aday</div>
                       </div>
+                    )}
+                    {election.type === 'referandum' && (
+                      <div>Evet / Hayır</div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -522,4 +965,3 @@ const SeçimEkleSettings = () => {
 };
 
 export default SeçimEkleSettings;
-
