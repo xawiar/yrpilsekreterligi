@@ -1491,101 +1491,13 @@ const ElectionResultsPage = () => {
                     <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                    {category.name} - İnteraktif Grafik
+                    {category.name}
                     <span className="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400">
                       Toplam: {category.total.toLocaleString('tr-TR')} oy
                     </span>
                   </h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* 3D Animasyonlu Pasta Grafiği */}
-                    <div className="relative transform transition-transform duration-300 hover:scale-105">
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
-                        <ResponsiveContainer width="100%" height={220}>
-                          <PieChart>
-                            <defs>
-                              {category.data.map((entry, index) => (
-                                <linearGradient key={`gradient-${categoryIndex}-${index}`} id={`gradient-${categoryIndex}-${index}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={1} />
-                                  <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.7} />
-                                </linearGradient>
-                              ))}
-                            </defs>
-                            <Pie
-                              data={category.data.map(item => ({
-                                ...item,
-                                name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen')
-                              }))}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              label={({ name, percentage }) => {
-                                const displayName = typeof name === 'string' ? name : (name?.name || String(name) || 'Bilinmeyen');
-                                return `${displayName}\n%${typeof percentage === 'number' ? percentage.toFixed(1) : parseFloat(percentage || 0).toFixed(1)}`;
-                              }}
-                              outerRadius={80}
-                              innerRadius={30}
-                              fill="#8884d8"
-                              dataKey="value"
-                              nameKey="name"
-                              animationBegin={0}
-                              animationDuration={1000}
-                              animationEasing="ease-out"
-                              paddingAngle={2}
-                            >
-                              {category.data.map((entry, index) => (
-                                <Cell 
-                                  key={`cell-${categoryIndex}-${index}`} 
-                                  fill={`url(#gradient-${categoryIndex}-${index})`}
-                                  style={{
-                                    filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
-                                    transition: 'all 0.3s ease',
-                                    cursor: 'pointer'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.filter = 'drop-shadow(0 8px 12px rgba(0, 0, 0, 0.2)) brightness(1.1)';
-                                    e.target.style.transform = 'scale(1.05)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.filter = 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))';
-                                    e.target.style.transform = 'scale(1)';
-                                  }}
-                                />
-                              ))}
-                            </Pie>
-                            <Tooltip 
-                              contentStyle={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '12px',
-                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                                padding: '12px'
-                              }}
-                              formatter={(value, name, props) => {
-                                const percentage = typeof props.payload.percentage === 'number' 
-                                  ? props.payload.percentage 
-                                  : parseFloat(props.payload.percentage || 0);
-                                const displayName = typeof name === 'string' ? name : (name?.name || String(name) || 'Bilinmeyen');
-                                return [
-                                  `${value.toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
-                                  displayName
-                                ];
-                              }}
-                            />
-                            <Legend 
-                              wrapperStyle={{ paddingTop: '20px' }}
-                              iconType="circle"
-                              formatter={(value) => {
-                                const displayValue = typeof value === 'string' ? value : (value?.name || String(value) || 'Bilinmeyen');
-                                return <span className="text-sm font-medium">{displayValue}</span>;
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    
-                    {/* Kazanan Parti/Aday Bilgisi */}
+                  
+                  {/* Kazanan Parti/Aday Bilgisi */}
                     {(() => {
                       const winner = getWinningCandidateForCategory(category);
                       if (!winner) return null;
@@ -1736,9 +1648,9 @@ const ElectionResultsPage = () => {
 
                     {/* Horizontal Bar Chart */}
                     <div className="mb-4">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı - Yatay Grafik</h3>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı</h3>
                       <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
-                        <ResponsiveContainer width="100%" height={Math.max(200, category.data.length * 35)}>
+                        <ResponsiveContainer width="100%" height={Math.max(200, category.data.length * 40)}>
                           <BarChart
                             data={category.data
                               .sort((a, b) => b.value - a.value)
@@ -1747,7 +1659,7 @@ const ElectionResultsPage = () => {
                                 name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen')
                               }))}
                             layout="vertical"
-                            margin={{ top: 10, right: 20, left: 80, bottom: 10 }}
+                            margin={{ top: 10, right: 20, left: 100, bottom: 10 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                             <XAxis 
@@ -1758,9 +1670,9 @@ const ElectionResultsPage = () => {
                             <YAxis 
                               dataKey="name" 
                               type="category" 
-                              width={70}
+                              width={90}
                               stroke="#6b7280"
-                              tick={{ fill: '#6b7280', fontSize: 10 }}
+                              tick={{ fill: '#6b7280', fontSize: 11 }}
                             />
                             <Tooltip
                               contentStyle={{
@@ -1787,6 +1699,16 @@ const ElectionResultsPage = () => {
                               dataKey="value" 
                               radius={[0, 8, 8, 0]}
                               fill="#6366f1"
+                              label={{
+                                position: 'right',
+                                formatter: (value, entry) => {
+                                  const displayName = typeof entry.name === 'string' 
+                                    ? entry.name 
+                                    : (entry.name?.name || String(entry.name) || 'Bilinmeyen');
+                                  return displayName;
+                                },
+                                style: { fill: '#374151', fontSize: '11px', fontWeight: '500' }
+                              }}
                             >
                               {category.data.map((entry, index) => (
                                 <Cell 
