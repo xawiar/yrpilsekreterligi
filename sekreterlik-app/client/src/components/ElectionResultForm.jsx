@@ -5,6 +5,27 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
+  // Safety check: if election is missing, show error and return early
+  if (!election) {
+    return (
+      <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+          <div className="text-center">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Hata</h2>
+            <p className="text-gray-600 mb-4">Seçim bilgisi bulunamadı. Lütfen tekrar deneyin.</p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -14,7 +35,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   
   // Form data structure for new election system
   const [formData, setFormData] = useState({
-    election_id: election.id,
+    election_id: election?.id || null,
     ballot_box_id: ballotBoxId,
     ballot_number: ballotNumber,
     // Location info (auto-filled, read-only)
@@ -60,8 +81,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
   // Fetch existing result
   useEffect(() => {
-    fetchExistingResult();
-  }, [election.id, ballotBoxId]);
+    if (election?.id && ballotBoxId) {
+      fetchExistingResult();
+    }
+  }, [election?.id, ballotBoxId]);
 
   const fetchBallotBoxInfo = async () => {
     try {
@@ -114,6 +137,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   };
 
   const fetchExistingResult = async () => {
+    if (!election?.id || !ballotBoxId) return;
+    
     try {
       const results = await ApiService.getElectionResults(election.id, ballotBoxId);
       if (results && results.length > 0) {
@@ -336,6 +361,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   };
 
   const calculateValidVotes = () => {
+    if (!election?.type) return 0;
+    
     if (election.type === 'genel') {
       // CB votes + MV votes (parti bazlı, aday bazlı değil)
       const cbTotal = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
@@ -373,6 +400,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }
 
     // Validasyon: Seçim türüne göre
+    if (!election?.type) {
+      setMessage('Seçim türü bulunamadı. Lütfen tekrar deneyin.');
+      setMessageType('error');
+      setSaving(false);
+      return;
+    }
+    
     if (election.type === 'genel') {
       // Genel seçim: CB ve MV oyları ayrı ayrı kontrol edilir
       // Her seçmen hem CB hem MV için oy kullanır, bu yüzden her ikisi de geçerli oy sayısına eşit olmalı
@@ -461,6 +495,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
 
   const getTypeLabel = () => {
+    if (!election?.type) return 'Seçim';
+    
     const labels = {
       'yerel': 'Yerel Seçim',
       'genel': 'Genel Seçim',
@@ -471,6 +507,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   };
 
   const getTypeColor = () => {
+    if (!election?.type) return 'from-gray-500 to-gray-600';
+    
     const colors = {
       'yerel': 'from-blue-500 to-blue-600',
       'genel': 'from-purple-500 to-purple-600',
@@ -650,7 +688,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             </div>
 
             {/* Genel Seçim: CB ve MV Oyları */}
-            {election.type === 'genel' && (
+            {election?.type === 'genel' && (
               <div className="space-y-5">
                 {/* Cumhurbaşkanı Oyları */}
                 {election.cb_candidates && election.cb_candidates.length > 0 && (
@@ -751,7 +789,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
 
             {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
-            {election.type === 'yerel' && (
+            {election?.type === 'yerel' && (
               <div className="space-y-5">
                 {/* Debug: Show if no local election data */}
                 {(!election.mayor_parties || !Array.isArray(election.mayor_parties) || election.mayor_parties.length === 0) &&
@@ -876,7 +914,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
 
             {/* Referandum: Evet/Hayır */}
-            {election.type === 'referandum' && (
+            {election?.type === 'referandum' && (
               <div className="bg-white border border-gray-300 rounded p-5">
                 <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                   Referandum Oyları
@@ -915,7 +953,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
 
             {/* Legacy Support: Eski seçim türleri için geriye dönük uyumluluk */}
-            {(election.type === 'yerel' || election.type === 'genel') && election.parties && Array.isArray(election.parties) && election.parties.length > 0 && typeof election.parties[0] === 'string' && (
+            {(election?.type === 'yerel' || election?.type === 'genel') && election?.parties && Array.isArray(election.parties) && election.parties.length > 0 && typeof election.parties[0] === 'string' && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
@@ -945,7 +983,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </div>
             )}
 
-            {election.type === 'cb' && election.candidates && election.candidates.length > 0 && (
+            {election?.type === 'cb' && election?.candidates && Array.isArray(election.candidates) && election.candidates.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
