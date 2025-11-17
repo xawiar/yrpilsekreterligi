@@ -414,6 +414,12 @@ const SeçimEkleSettings = () => {
         return;
       }
       // İl Genel Meclisi partileri için aday kontrolü (opsiyonel - aday olmadan da parti eklenebilir)
+      // İl Genel Meclisi ilçe bazlı üye sayıları kontrolü
+      if (!formData.provincial_assembly_district_seats || Object.keys(formData.provincial_assembly_district_seats).length === 0) {
+        setMessage('İl Genel Meclisi için en az bir ilçe ve üye sayısı girilmelidir (D\'Hondt hesaplaması için)');
+        setMessageType('error');
+        return;
+      }
       
       if (!formData.municipal_council_parties || formData.municipal_council_parties.length === 0) {
         setMessage('Yerel seçim için en az bir Belediye Meclis partisi eklenmelidir');
