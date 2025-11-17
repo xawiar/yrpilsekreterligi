@@ -1264,25 +1264,25 @@ const ElectionResultsPage = () => {
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Sandık</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+            <div className="text-xs text-gray-600 dark:text-gray-400">Toplam Sandık</div>
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
               {getTotalBallotBoxes()}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Açılan Sandık</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+            <div className="text-xs text-gray-600 dark:text-gray-400">Açılan Sandık</div>
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
               {hasResults ? filteredResults.length : 0}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               %{calculateOpenedBallotBoxPercentage()}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+            <div className="text-xs text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
+            <div className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
               {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
             </div>
           </div>
@@ -1290,52 +1290,52 @@ const ElectionResultsPage = () => {
 
         {/* Sandık Analizleri - Tek Yerde */}
         {hasResults && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               Sandık Analizleri
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-                <div className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Oy Kullanan Seçmen</div>
-                <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                <div className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1.5">Oy Kullanan Seçmen</div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
                   {calculateTotalUsedVotes().toLocaleString('tr-TR')}
                 </div>
                 {election?.voter_count && (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">
                     Toplam Seçmen: {election.voter_count.toLocaleString('tr-TR')}
                   </div>
                 )}
                 {hasResults && calculateTotalUsedVotes() > 0 && (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                     Katılım: %{calculateParticipationPercentage()}
                   </div>
                 )}
               </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
-                <div className="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">Geçerli Oy</div>
-                <div className="text-3xl font-bold text-green-700 dark:text-green-400">
+              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <div className="text-xs font-semibold text-green-800 dark:text-green-300 mb-1.5">Geçerli Oy</div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">
                   {aggregatedResults.total.toLocaleString('tr-TR')}
                 </div>
                 {hasResults && calculateTotalUsedVotes() > 0 && (
-                  <div className="text-xs text-green-600 dark:text-green-400 mt-2">
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1.5">
                     %{((aggregatedResults.total / calculateTotalUsedVotes()) * 100).toFixed(2)} geçerli
                   </div>
                 )}
               </div>
-              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
-                <div className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Geçersiz Oy</div>
-                <div className="text-3xl font-bold text-red-700 dark:text-red-400">
+              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                <div className="text-xs font-semibold text-red-800 dark:text-red-300 mb-1.5">Geçersiz Oy</div>
+                <div className="text-2xl font-bold text-red-700 dark:text-red-400">
                   {calculateTotalInvalidVotes().toLocaleString('tr-TR')}
                 </div>
                 {hasResults && calculateTotalUsedVotes() > 0 && (
-                  <div className="text-xs text-red-600 dark:text-red-400 mt-2">
+                  <div className="text-xs text-red-600 dark:text-red-400 mt-1.5">
                     %{((calculateTotalInvalidVotes() / calculateTotalUsedVotes()) * 100).toFixed(2)} geçersiz
                   </div>
                 )}
-                <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                <div className="text-xs text-red-600 dark:text-red-400 mt-0.5">
                   İtiraz: {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
                 </div>
               </div>
@@ -1345,11 +1345,11 @@ const ElectionResultsPage = () => {
 
         {/* Charts - Her kategori için ayrı grafik */}
         {election && aggregatedResults.categories && aggregatedResults.categories.length > 0 && (
-          <div className="space-y-6 mb-6">
+          <div className="space-y-4 mb-4">
             {aggregatedResults.categories.map((category, categoryIndex) => 
               category.data.length > 0 ? (
-                <div key={categoryIndex} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-2xl">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+                <div key={categoryIndex} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 transform transition-all duration-300 hover:shadow-lg">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                     <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
@@ -1362,8 +1362,8 @@ const ElectionResultsPage = () => {
                     {/* 3D Animasyonlu Pasta Grafiği */}
                     <div className="relative transform transition-transform duration-300 hover:scale-105">
                       <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
-                        <ResponsiveContainer width="100%" height={350}>
+                      <div className="relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
+                        <ResponsiveContainer width="100%" height={220}>
                           <PieChart>
                             <defs>
                               {category.data.map((entry, index) => (
@@ -1455,26 +1455,26 @@ const ElectionResultsPage = () => {
                       const winnerPercentage = typeof winner.percentage === 'number' ? winner.percentage : parseFloat(winner.percentage || 0);
                       
                       return (
-                        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl border-2 border-indigo-200 dark:border-indigo-700">
+                        <div className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
                           <div className="flex items-center justify-between">
                             <div>
-                              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">🏆 Kazanan</div>
-                              <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{winnerName}</div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">🏆 Kazanan</div>
+                              <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{winnerName}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                 {winner.value.toLocaleString('tr-TR')} oy (%{winnerPercentage.toFixed(2)})
                               </div>
                             </div>
-                            <div className="text-4xl">🏆</div>
+                            <div className="text-2xl">🏆</div>
                           </div>
                         </div>
                       );
                     })()}
 
                     {/* Horizontal Bar Chart */}
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Oy Dağılımı - Yatay Grafik</h3>
-                      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 shadow-xl border border-gray-200 dark:border-gray-700">
-                        <ResponsiveContainer width="100%" height={Math.max(300, category.data.length * 50)}>
+                    <div className="mb-4">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı - Yatay Grafik</h3>
+                      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
+                        <ResponsiveContainer width="100%" height={Math.max(200, category.data.length * 35)}>
                           <BarChart
                             data={category.data
                               .sort((a, b) => b.value - a.value)
@@ -1483,7 +1483,7 @@ const ElectionResultsPage = () => {
                                 name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen')
                               }))}
                             layout="vertical"
-                            margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                            margin={{ top: 10, right: 20, left: 80, bottom: 10 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                             <XAxis 
@@ -1494,9 +1494,9 @@ const ElectionResultsPage = () => {
                             <YAxis 
                               dataKey="name" 
                               type="category" 
-                              width={90}
+                              width={70}
                               stroke="#6b7280"
-                              tick={{ fill: '#6b7280', fontSize: 11 }}
+                              tick={{ fill: '#6b7280', fontSize: 10 }}
                             />
                             <Tooltip
                               contentStyle={{
@@ -1537,8 +1537,8 @@ const ElectionResultsPage = () => {
                     </div>
 
                     {/* İnteraktif Liste */}
-                    <div className="space-y-3">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Detaylı Sonuçlar</h3>
+                    <div className="space-y-2">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Detaylı Sonuçlar</h3>
                       {category.data
                         .sort((a, b) => b.value - a.value)
                         .map((item, index) => {
@@ -1554,30 +1554,30 @@ const ElectionResultsPage = () => {
                           return (
                             <div 
                               key={itemName} 
-                              className="group relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-indigo-300 dark:hover:border-indigo-600"
+                              className="group relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 transition-all duration-300 hover:shadow-md hover:scale-[1.01] hover:border-indigo-300 dark:hover:border-indigo-600"
                             >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2">
                                   <div 
-                                    className="w-5 h-5 rounded-full shadow-md transition-transform duration-300 group-hover:scale-125" 
+                                    className="w-4 h-4 rounded-full shadow-sm transition-transform duration-300 group-hover:scale-110" 
                                     style={{ 
                                       backgroundColor: COLORS[index % COLORS.length],
-                                      boxShadow: `0 0 10px ${COLORS[index % COLORS.length]}40`
+                                      boxShadow: `0 0 8px ${COLORS[index % COLORS.length]}40`
                                     }}
                                   ></div>
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{itemName}</span>
+                                  <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{itemName}</span>
                                 </div>
                                 <div className="text-right">
-                                  <div className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                                  <div className="font-bold text-base text-gray-900 dark:text-gray-100">
                                     {item.value.toLocaleString('tr-TR')}
                                   </div>
-                                  <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                                  <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
                                     %{percentage.toFixed(2)}
                                   </div>
                                 </div>
                               </div>
                               {/* Animasyonlu Progress Bar */}
-                              <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div
                                   className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
                                   style={{
@@ -1684,8 +1684,8 @@ const ElectionResultsPage = () => {
         })()}
 
         {/* Results Cards */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
             Sandık Bazında Detaylı Sonuçlar
           </h2>
           {filteredResults.length === 0 ? (
