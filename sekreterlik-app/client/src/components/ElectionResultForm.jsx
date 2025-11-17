@@ -416,6 +416,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (saving) {
+      return;
+    }
+    
     setSaving(true);
     setMessage('');
 
@@ -626,8 +632,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               type="submit"
               form="election-result-form"
               disabled={saving}
-              onClick={handleSubmit}
-              className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold text-lg rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg"
+              onClick={(e) => {
+                if (saving) {
+                  e.preventDefault();
+                  return;
+                }
+                setSaving(true);
+                handleSubmit(e);
+              }}
+              className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold text-lg rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg"
             >
               {saving ? (
                 <>
