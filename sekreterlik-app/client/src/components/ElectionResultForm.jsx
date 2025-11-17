@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ApiService from '../utils/ApiService';
 import { storage, auth } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -32,6 +32,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   const [messageType, setMessageType] = useState('success');
   const [existingResult, setExistingResult] = useState(null);
   const [ballotBox, setBallotBox] = useState(null);
+  const messageRef = useRef(null);
   
   // Form data structure for new election system
   const [formData, setFormData] = useState({
@@ -85,6 +86,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       fetchExistingResult();
     }
   }, [election?.id, ballotBoxId]);
+
+  // Scroll to message when error or warning occurs
+  useEffect(() => {
+    if (message && (messageType === 'error' || messageType === 'warning') && messageRef.current) {
+      setTimeout(() => {
+        messageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [message, messageType]);
 
   const fetchBallotBoxInfo = async () => {
     try {
@@ -497,6 +507,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     const usedVotes = parseInt(formData.used_votes) || 0;
     const invalidVotes = parseInt(formData.invalid_votes) || 0;
     const validVotes = parseInt(formData.valid_votes) || 0;
+    const totalVoters = parseInt(formData.total_voters) || 0;
+
+    // Seçmen sayısından fazla oy kontrolü
+    if (totalVoters > 0 && usedVotes > totalVoters) {
+      setMessage(`Oy kullanan seçmen sayısı (${usedVotes}) toplam seçmen sayısından (${totalVoters}) fazla olamaz`);
+      setMessageType('error');
+      setSaving(false);
+      return;
+    }
 
     if (usedVotes !== (invalidVotes + validVotes)) {
       setMessage(`Kullanılan oy (${usedVotes}) geçersiz oy (${invalidVotes}) + geçerli oy (${validVotes}) toplamı ile eşleşmiyor`);
@@ -627,12 +646,34 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           <form id="election-result-form" onSubmit={handleSubmit} className="p-6 space-y-6 pb-6">
             {/* Message Alert */}
             {message && (
-              <div className={`p-3 rounded border-l-4 ${
-                messageType === 'success' 
-                  ? 'bg-green-50 border-green-500 text-green-800' 
-                  : 'bg-red-50 border-red-500 text-red-800'
-              }`}>
-                <p className="text-sm font-medium">{message}</p>
+              <div 
+                ref={messageRef}
+                className={`p-4 rounded-lg border-l-4 shadow-md ${
+                  messageType === 'success' 
+                    ? 'bg-green-50 border-green-500 text-green-800' 
+                    : messageType === 'warning'
+                    ? 'bg-amber-50 border-amber-500 text-amber-800'
+                    : 'bg-red-50 border-red-500 text-red-800'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {messageType === 'warning' && (
+                    <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                  {messageType === 'error' && (
+                    <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {messageType === 'success' && (
+                    <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <p className="text-sm font-medium flex-1">{message}</p>
+                </div>
               </div>
             )}
 
