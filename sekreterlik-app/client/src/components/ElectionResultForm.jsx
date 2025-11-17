@@ -557,6 +557,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       
       if (existingResult) {
         await ApiService.updateElectionResult(existingResult.id, submitData);
+        // Anlık uyarı göster
         if (!hasProtocolPhoto) {
           setMessage('Seçim sonucu başarıyla güncellendi. ⚠️ Seçim tutanağını yükleyiniz.');
           setMessageType('warning');
@@ -566,6 +567,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         }
       } else {
         await ApiService.createElectionResult(submitData);
+        // Anlık uyarı göster
         if (!hasProtocolPhoto) {
           setMessage('Seçim sonucu başarıyla kaydedildi. ⚠️ Seçim tutanağını yükleyiniz.');
           setMessageType('warning');
@@ -575,9 +577,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         }
       }
       
+      // Mesaj gösterildikten sonra kısa bir süre bekle ve sonra onSuccess çağır
       setTimeout(() => {
         if (onSuccess) onSuccess();
-      }, hasProtocolPhoto ? 1500 : 3000);
+      }, hasProtocolPhoto ? 1500 : 2500);
     } catch (error) {
       console.error('Error saving election result:', error);
       setMessage(error.message || 'Seçim sonucu kaydedilirken hata oluştu');

@@ -1070,8 +1070,8 @@ const ElectionResultsPage = () => {
     const mvCategory = aggregatedResults.categories.find(c => c.name === 'Milletvekili Seçimi');
     if (!mvCategory || mvCategory.data.length === 0) return null;
     
-    // Get total seats (this should come from election data or be configurable)
-    const totalSeats = 10; // Default, should be configurable per province
+    // Get total seats from election data
+    const totalSeats = parseInt(election.mv_total_seats) || 10; // Default to 10 if not set
     
     const partyVotes = {};
     mvCategory.data.forEach(item => {
@@ -1088,11 +1088,11 @@ const ElectionResultsPage = () => {
     const municipalCategory = aggregatedResults.categories.find(c => c.name === 'Belediye Meclisi Seçimi');
     if (!municipalCategory || municipalCategory.data.length === 0) return null;
     
-    // Get total seats (this should come from election data or be configurable)
-    const totalSeats = 25; // Default, should be configurable per municipality
+    // Get total seats from election data
+    const totalSeats = parseInt(election.municipal_council_total_seats) || 25; // Default to 25 if not set
     
-    // Get population (this should come from election data or be configurable)
-    const population = election.population || 0; // Default, should be configurable
+    // Get population from election data
+    const population = parseInt(election.population) || 0; // Default to 0 if not set
     
     const partyVotes = {};
     municipalCategory.data.forEach(item => {

@@ -19,11 +19,14 @@ const SeçimEkleSettings = () => {
     parties: [], // Partiler ve her partinin MV adayları: [{name: 'Parti Adı', mv_candidates: ['Aday1', 'Aday2']}]
     independent_cb_candidates: [], // Bağımsız CB adayları
     independent_mv_candidates: [], // Bağımsız MV adayları
+    mv_total_seats: '', // İldeki toplam Milletvekili sayısı (D'Hondt için)
     // Yerel Seçim için
     mayor_parties: [], // Belediye Başkanı partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
     mayor_candidates: [], // Bağımsız Belediye Başkanı adayları
     provincial_assembly_parties: [], // İl Genel Meclisi partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
     municipal_council_parties: [], // Belediye Meclis partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
+    municipal_council_total_seats: '', // Belediye Meclisi toplam üye sayısı (D'Hondt için)
+    population: '', // Belediye nüfusu (Kontenjan sayısını belirlemek için)
     // Referandum için (otomatik Evet/Hayır)
   });
   
@@ -385,6 +388,12 @@ const SeçimEkleSettings = () => {
         setMessageType('error');
         return;
       }
+      // MV toplam sayısı kontrolü
+      if (!formData.mv_total_seats || parseInt(formData.mv_total_seats) <= 0) {
+        setMessage('İldeki toplam Milletvekili sayısı girilmelidir (D\'Hondt hesaplaması için)');
+        setMessageType('error');
+        return;
+      }
     } else if (formData.type === 'yerel') {
       // Belediye başkanı için parti veya bağımsız aday olmalı
       const hasMayorParties = formData.mayor_parties && formData.mayor_parties.length > 0;
@@ -409,6 +418,18 @@ const SeçimEkleSettings = () => {
         return;
       }
       // Belediye Meclisi partileri için aday kontrolü (opsiyonel - aday olmadan da parti eklenebilir)
+      // Belediye Meclisi toplam üye sayısı kontrolü
+      if (!formData.municipal_council_total_seats || parseInt(formData.municipal_council_total_seats) <= 0) {
+        setMessage('Belediye Meclisi toplam üye sayısı girilmelidir (D\'Hondt hesaplaması için)');
+        setMessageType('error');
+        return;
+      }
+      // Nüfus kontrolü
+      if (!formData.population || parseInt(formData.population) < 0) {
+        setMessage('Belediye nüfusu girilmelidir (Kontenjan hesaplaması için)');
+        setMessageType('error');
+        return;
+      }
     }
     // Referandum için validasyon gerekmez (otomatik Evet/Hayır)
 
@@ -442,10 +463,13 @@ const SeçimEkleSettings = () => {
       parties: [],
       independent_cb_candidates: [],
       independent_mv_candidates: [],
+      mv_total_seats: '',
       mayor_parties: [],
       mayor_candidates: [],
       provincial_assembly_parties: [],
-      municipal_council_parties: []
+      municipal_council_parties: [],
+      municipal_council_total_seats: '',
+      population: ''
     });
     setPartyInput('');
     setMvCandidateInput({});
@@ -484,10 +508,13 @@ const SeçimEkleSettings = () => {
       parties: election.parties || [],
       independent_cb_candidates: election.independent_cb_candidates || [],
       independent_mv_candidates: election.independent_mv_candidates || [],
+      mv_total_seats: election.mv_total_seats || '',
       mayor_parties: (election.mayor_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
       mayor_candidates: election.mayor_candidates || [],
       provincial_assembly_parties: (election.provincial_assembly_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
-      municipal_council_parties: (election.municipal_council_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p)
+      municipal_council_parties: (election.municipal_council_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
+      municipal_council_total_seats: election.municipal_council_total_seats || '',
+      population: election.population || ''
     });
     setShowForm(true);
   };
@@ -838,6 +865,26 @@ const SeçimEkleSettings = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* İldeki Toplam Milletvekili Sayısı (D'Hondt için) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  İldeki Toplam Milletvekili Sayısı (D'Hondt Hesaplaması için) *
+                </label>
+                <input
+                  type="number"
+                  name="mv_total_seats"
+                  value={formData.mv_total_seats}
+                  onChange={handleInputChange}
+                  min="1"
+                  placeholder="Örn: 10"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Bu il için seçilecek toplam milletvekili sayısı. D'Hondt hesaplaması için gereklidir.
+                </p>
               </div>
 
               {/* Bağımsız MV Adayları */}
