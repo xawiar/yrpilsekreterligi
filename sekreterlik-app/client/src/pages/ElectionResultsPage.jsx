@@ -1133,6 +1133,17 @@ const ElectionResultsPage = () => {
 
   const filteredResults = getFilteredResults();
   
+  // İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt (filteredResults tanımlandıktan sonra)
+  const provincialAssemblyResults = useMemo(() => {
+    if (election?.type !== 'yerel' || !filteredResults || filteredResults.length === 0) return null;
+    
+    // İlçe bazlı üye sayıları seçim verisinden alınır
+    const districtSeats = election.provincial_assembly_district_seats || {};
+    if (Object.keys(districtSeats).length === 0) return null;
+    
+    return calculateProvincialAssemblySeats(filteredResults, districtSeats);
+  }, [election, filteredResults]);
+  
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
