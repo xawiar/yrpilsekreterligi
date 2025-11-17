@@ -424,19 +424,32 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         ballot_number: ballotNumber || formData.ballot_number
       };
       
+      // Check if protocol photo is missing
+      const hasProtocolPhoto = !!(submitData.signed_protocol_photo || submitData.signedProtocolPhoto);
+      
       if (existingResult) {
         await ApiService.updateElectionResult(existingResult.id, submitData);
-        setMessage('Seçim sonucu başarıyla güncellendi');
+        if (!hasProtocolPhoto) {
+          setMessage('Seçim sonucu başarıyla güncellendi. ⚠️ Seçim tutanağını yükleyiniz.');
+          setMessageType('warning');
+        } else {
+          setMessage('Seçim sonucu başarıyla güncellendi');
+          setMessageType('success');
+        }
       } else {
         await ApiService.createElectionResult(submitData);
-        setMessage('Seçim sonucu başarıyla kaydedildi');
+        if (!hasProtocolPhoto) {
+          setMessage('Seçim sonucu başarıyla kaydedildi. ⚠️ Seçim tutanağını yükleyiniz.');
+          setMessageType('warning');
+        } else {
+          setMessage('Seçim sonucu başarıyla kaydedildi');
+          setMessageType('success');
+        }
       }
-      
-      setMessageType('success');
       
       setTimeout(() => {
         if (onSuccess) onSuccess();
-      }, 1500);
+      }, hasProtocolPhoto ? 1500 : 3000);
     } catch (error) {
       console.error('Error saving election result:', error);
       setMessage(error.message || 'Seçim sonucu kaydedilirken hata oluştu');

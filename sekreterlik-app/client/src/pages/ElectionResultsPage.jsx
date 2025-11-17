@@ -80,12 +80,83 @@ const getPartyColor = (partyName) => {
   return { border: borderColor, bg: bgColor, text: textColor };
 };
 
-// Sandıkta en fazla oy alan partiyi bul
+// Sandıkta en fazla oy alan partiyi/adayı bul (yeni seçim sistemine göre)
 const getWinningParty = (result, election) => {
   if (!result || !election) return null;
   
+  if (election.type === 'genel') {
+    // Genel Seçim: CB ve MV ayrı ayrı, en yüksek toplamı bul
+    let maxVotes = 0;
+    let winner = null;
+
+    // CB oyları
+    if (result.cb_votes) {
+      Object.entries(result.cb_votes).forEach(([candidate, votes]) => {
+        const voteCount = parseInt(votes) || 0;
+        if (voteCount > maxVotes) {
+          maxVotes = voteCount;
+          winner = candidate;
+        }
+      });
+    }
+
+    // MV oyları
+    if (result.mv_votes) {
+      Object.entries(result.mv_votes).forEach(([party, votes]) => {
+        const voteCount = parseInt(votes) || 0;
+        if (voteCount > maxVotes) {
+          maxVotes = voteCount;
+          winner = party;
+        }
+      });
+    }
+
+    return winner;
+  } else if (election.type === 'yerel') {
+    // Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi
+    let maxVotes = 0;
+    let winner = null;
+
+    if (result.mayor_votes) {
+      Object.entries(result.mayor_votes).forEach(([key, votes]) => {
+        const voteCount = parseInt(votes) || 0;
+        if (voteCount > maxVotes) {
+          maxVotes = voteCount;
+          winner = key;
+        }
+      });
+    }
+
+    if (result.provincial_assembly_votes) {
+      Object.entries(result.provincial_assembly_votes).forEach(([party, votes]) => {
+        const voteCount = parseInt(votes) || 0;
+        if (voteCount > maxVotes) {
+          maxVotes = voteCount;
+          winner = party;
+        }
+      });
+    }
+
+    if (result.municipal_council_votes) {
+      Object.entries(result.municipal_council_votes).forEach(([party, votes]) => {
+        const voteCount = parseInt(votes) || 0;
+        if (voteCount > maxVotes) {
+          maxVotes = voteCount;
+          winner = party;
+        }
+      });
+    }
+
+    return winner;
+  } else if (election.type === 'referandum') {
+    // Referandum: Evet/Hayır
+    const evet = parseInt(result.referendum_votes?.['Evet']) || 0;
+    const hayir = parseInt(result.referendum_votes?.['Hayır']) || 0;
+    return evet > hayir ? 'Evet' : (hayir > evet ? 'Hayır' : null);
+  }
+
+  // Legacy support
   if (election.type === 'cb' && result.candidate_votes) {
-    // CB seçimi için aday oyları
     let maxVotes = 0;
     let winningCandidate = null;
     
@@ -99,7 +170,6 @@ const getWinningParty = (result, election) => {
     
     return winningCandidate;
   } else if ((election.type === 'yerel' || election.type === 'genel') && result.party_votes) {
-    // Yerel/Genel seçim için parti oyları
     let maxVotes = 0;
     let winningParty = null;
     
@@ -139,6 +209,7 @@ const ElectionResultsPage = () => {
   const [searchQuery, setSearchQuery] = useState(''); // Arama sorgusu
   const [filterByObjection, setFilterByObjection] = useState(''); // 'all', 'with', 'without'
   const [filterByProtocolOnly, setFilterByProtocolOnly] = useState(false); // Sadece tutanak olanlar
+  const [filterByNoProtocol, setFilterByNoProtocol] = useState(false); // Hiç tutanak yüklenmemiş
   
   // Modal state for viewing photos
   const [modalPhoto, setModalPhoto] = useState(null);
@@ -163,7 +234,7 @@ const ElectionResultsPage = () => {
       // Filter results when filters change
       filterResults();
     }
-  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, results, ballotBoxes]);
+  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, filterByNoProtocol, results, ballotBoxes]);
 
   const fetchData = async () => {
     try {
@@ -326,9 +397,23 @@ const ElectionResultsPage = () => {
       filtered = filtered.filter(r => {
         const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
         const hasData = !!(r.used_votes || r.valid_votes || r.invalid_votes || 
+          (r.cb_votes && Object.keys(r.cb_votes).length > 0) ||
+          (r.mv_votes && Object.keys(r.mv_votes).length > 0) ||
+          (r.mayor_votes && Object.keys(r.mayor_votes).length > 0) ||
+          (r.provincial_assembly_votes && Object.keys(r.provincial_assembly_votes).length > 0) ||
+          (r.municipal_council_votes && Object.keys(r.municipal_council_votes).length > 0) ||
+          (r.referendum_votes && Object.keys(r.referendum_votes).length > 0) ||
           (r.candidate_votes && Object.keys(r.candidate_votes).length > 0) ||
           (r.party_votes && Object.keys(r.party_votes).length > 0));
         return hasProtocol && !hasData;
+      });
+    }
+
+    // Hiç tutanak yüklenmemiş filtresi
+    if (filterByNoProtocol) {
+      filtered = filtered.filter(r => {
+        const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
+        return !hasProtocol;
       });
     }
 
@@ -391,12 +476,203 @@ const ElectionResultsPage = () => {
     return ((opened / total) * 100).toFixed(2);
   };
 
-  // Calculate aggregated results
+  // Calculate aggregated results for new election system
   const calculateAggregatedResults = () => {
     const filtered = getFilteredResults();
     
+    if (election?.type === 'genel') {
+      // Genel Seçim: CB ve MV oyları ayrı ayrı
+      // CB Oyları
+      const cbTotals = {};
+      if (election.cb_candidates) {
+        election.cb_candidates.forEach(candidate => {
+          cbTotals[candidate] = 0;
+        });
+      }
+      if (election.independent_cb_candidates) {
+        election.independent_cb_candidates.forEach(candidate => {
+          cbTotals[candidate] = 0;
+        });
+      }
+
+      filtered.forEach(result => {
+        if (result.cb_votes) {
+          Object.keys(result.cb_votes).forEach(candidate => {
+            if (cbTotals.hasOwnProperty(candidate)) {
+              cbTotals[candidate] += parseInt(result.cb_votes[candidate]) || 0;
+            }
+          });
+        }
+      });
+
+      const cbTotal = Object.values(cbTotals).reduce((sum, val) => sum + val, 0);
+
+      // MV Oyları (Parti bazlı)
+      const mvTotals = {};
+      if (election.parties) {
+        election.parties.forEach(party => {
+          const partyName = typeof party === 'string' ? party : (party.name || party);
+          mvTotals[partyName] = 0;
+        });
+      }
+      if (election.independent_mv_candidates) {
+        election.independent_mv_candidates.forEach(candidate => {
+          mvTotals[candidate] = 0;
+        });
+      }
+
+      filtered.forEach(result => {
+        if (result.mv_votes) {
+          Object.keys(result.mv_votes).forEach(party => {
+            if (mvTotals.hasOwnProperty(party)) {
+              mvTotals[party] += parseInt(result.mv_votes[party]) || 0;
+            }
+          });
+        }
+      });
+
+      const mvTotal = Object.values(mvTotals).reduce((sum, val) => sum + val, 0);
+      const total = cbTotal + mvTotal;
+
+      // CB ve MV'yi birleştir
+      const allData = [
+        ...Object.keys(cbTotals).map(candidate => ({
+          name: candidate,
+          value: cbTotals[candidate],
+          percentage: cbTotal > 0 ? ((cbTotals[candidate] / cbTotal) * 100) : 0,
+          category: 'CB'
+        })),
+        ...Object.keys(mvTotals).map(party => ({
+          name: party,
+          value: mvTotals[party],
+          percentage: mvTotal > 0 ? ((mvTotals[party] / mvTotal) * 100) : 0,
+          category: 'MV'
+        }))
+      ];
+
+      return {
+        type: 'genel',
+        data: allData,
+        total: total,
+        cbTotal: cbTotal,
+        mvTotal: mvTotal
+      };
+    } else if (election?.type === 'yerel') {
+      // Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi
+      const mayorTotals = {};
+      if (election.mayor_parties) {
+        election.mayor_parties.forEach(party => {
+          mayorTotals[party] = 0;
+        });
+      }
+      if (election.mayor_candidates) {
+        election.mayor_candidates.forEach(candidate => {
+          mayorTotals[candidate] = 0;
+        });
+      }
+
+      const provincialTotals = {};
+      if (election.provincial_assembly_parties) {
+        election.provincial_assembly_parties.forEach(party => {
+          provincialTotals[party] = 0;
+        });
+      }
+
+      const municipalTotals = {};
+      if (election.municipal_council_parties) {
+        election.municipal_council_parties.forEach(party => {
+          municipalTotals[party] = 0;
+        });
+      }
+
+      filtered.forEach(result => {
+        if (result.mayor_votes) {
+          Object.keys(result.mayor_votes).forEach(key => {
+            if (mayorTotals.hasOwnProperty(key)) {
+              mayorTotals[key] += parseInt(result.mayor_votes[key]) || 0;
+            }
+          });
+        }
+        if (result.provincial_assembly_votes) {
+          Object.keys(result.provincial_assembly_votes).forEach(party => {
+            if (provincialTotals.hasOwnProperty(party)) {
+              provincialTotals[party] += parseInt(result.provincial_assembly_votes[party]) || 0;
+            }
+          });
+        }
+        if (result.municipal_council_votes) {
+          Object.keys(result.municipal_council_votes).forEach(party => {
+            if (municipalTotals.hasOwnProperty(party)) {
+              municipalTotals[party] += parseInt(result.municipal_council_votes[party]) || 0;
+            }
+          });
+        }
+      });
+
+      const mayorTotal = Object.values(mayorTotals).reduce((sum, val) => sum + val, 0);
+      const provincialTotal = Object.values(provincialTotals).reduce((sum, val) => sum + val, 0);
+      const municipalTotal = Object.values(municipalTotals).reduce((sum, val) => sum + val, 0);
+      const total = mayorTotal + provincialTotal + municipalTotal;
+
+      const allData = [
+        ...Object.keys(mayorTotals).map(key => ({
+          name: key,
+          value: mayorTotals[key],
+          percentage: mayorTotal > 0 ? ((mayorTotals[key] / mayorTotal) * 100) : 0,
+          category: 'Belediye Başkanı'
+        })),
+        ...Object.keys(provincialTotals).map(party => ({
+          name: party,
+          value: provincialTotals[party],
+          percentage: provincialTotal > 0 ? ((provincialTotals[party] / provincialTotal) * 100) : 0,
+          category: 'İl Genel Meclisi'
+        })),
+        ...Object.keys(municipalTotals).map(party => ({
+          name: party,
+          value: municipalTotals[party],
+          percentage: municipalTotal > 0 ? ((municipalTotals[party] / municipalTotal) * 100) : 0,
+          category: 'Belediye Meclisi'
+        }))
+      ];
+
+      return {
+        type: 'yerel',
+        data: allData,
+        total: total,
+        mayorTotal: mayorTotal,
+        provincialTotal: provincialTotal,
+        municipalTotal: municipalTotal
+      };
+    } else if (election?.type === 'referandum') {
+      // Referandum: Evet/Hayır
+      const evetTotal = filtered.reduce((sum, result) => {
+        return sum + (parseInt(result.referendum_votes?.['Evet']) || 0);
+      }, 0);
+      const hayirTotal = filtered.reduce((sum, result) => {
+        return sum + (parseInt(result.referendum_votes?.['Hayır']) || 0);
+      }, 0);
+      const total = evetTotal + hayirTotal;
+
+      return {
+        type: 'referandum',
+        data: [
+          {
+            name: 'Evet',
+            value: evetTotal,
+            percentage: total > 0 ? ((evetTotal / total) * 100) : 0
+          },
+          {
+            name: 'Hayır',
+            value: hayirTotal,
+            percentage: total > 0 ? ((hayirTotal / total) * 100) : 0
+          }
+        ],
+        total: total
+      };
+    }
+
+    // Legacy support for old election types
     if (election?.type === 'cb' && election?.candidates) {
-      // CB Seçimi - Aday oyları
       const candidateTotals = {};
       election.candidates.forEach(candidate => {
         candidateTotals[candidate] = 0;
@@ -406,7 +682,7 @@ const ElectionResultsPage = () => {
         if (result.candidate_votes) {
           Object.keys(result.candidate_votes).forEach(candidate => {
             if (candidateTotals.hasOwnProperty(candidate)) {
-              candidateTotals[candidate] += result.candidate_votes[candidate] || 0;
+              candidateTotals[candidate] += parseInt(result.candidate_votes[candidate]) || 0;
             }
           });
         }
@@ -420,35 +696,6 @@ const ElectionResultsPage = () => {
           name: candidate,
           value: candidateTotals[candidate],
           percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100) : 0
-        })),
-        total
-      };
-    } else if ((election?.type === 'yerel' || election?.type === 'genel') && election?.parties) {
-      // Yerel/Genel Seçim - Parti oyları
-      const partyTotals = {};
-      election.parties.forEach(party => {
-        const partyName = typeof party === 'string' ? party : (party.name || party);
-        partyTotals[partyName] = 0;
-      });
-
-      filtered.forEach(result => {
-        if (result.party_votes) {
-          Object.keys(result.party_votes).forEach(party => {
-            if (partyTotals.hasOwnProperty(party)) {
-              partyTotals[party] += result.party_votes[party] || 0;
-            }
-          });
-        }
-      });
-
-      const total = Object.values(partyTotals).reduce((sum, val) => sum + val, 0);
-      
-      return {
-        type: 'parties',
-        data: Object.keys(partyTotals).map(party => ({
-          name: party,
-          value: partyTotals[party],
-          percentage: total > 0 ? ((partyTotals[party] / total) * 100) : 0
         })),
         total
       };
@@ -830,6 +1077,23 @@ const ElectionResultsPage = () => {
                 Sadece tutanak fotoğrafı yüklenmiş ama veri girilmemiş sandıkları göster
               </p>
             </div>
+
+            <div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterByNoProtocol}
+                  onChange={(e) => setFilterByNoProtocol(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Tutanak Yüklenmemiş
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                Hiç tutanak fotoğrafı yüklenmemiş sandıkları göster
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1099,9 +1363,25 @@ const ElectionResultsPage = () => {
                   }
                 }
 
-                const totalValidVotes = election.type === 'cb' 
-                  ? Object.values(result.candidate_votes || {}).reduce((sum, val) => sum + (val || 0), 0)
-                  : Object.values(result.party_votes || {}).reduce((sum, val) => sum + (val || 0), 0);
+                // Calculate total valid votes based on election type
+                let totalValidVotes = 0;
+                if (election.type === 'genel') {
+                  const cbTotal = Object.values(result.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                  const mvTotal = Object.values(result.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                  totalValidVotes = cbTotal + mvTotal;
+                } else if (election.type === 'yerel') {
+                  const mayorTotal = Object.values(result.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                  const provincialTotal = Object.values(result.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                  const municipalTotal = Object.values(result.municipal_council_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                  totalValidVotes = mayorTotal + provincialTotal + municipalTotal;
+                } else if (election.type === 'referandum') {
+                  totalValidVotes = (parseInt(result.referendum_votes?.['Evet']) || 0) + (parseInt(result.referendum_votes?.['Hayır']) || 0);
+                } else {
+                  // Legacy support
+                  totalValidVotes = election.type === 'cb' 
+                    ? Object.values(result.candidate_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)
+                    : Object.values(result.party_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                }
 
                 const hasObjection = result.has_objection === true || result.has_objection === 1;
                 
@@ -1216,8 +1496,188 @@ const ElectionResultsPage = () => {
                       </div>
                     </div>
 
-                    {/* Parti/Aday Oyları */}
+                    {/* Parti/Aday Oyları - Yeni Seçim Sistemine Göre */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
+                      {election.type === 'genel' && (
+                        <div className="space-y-3">
+                          {/* CB Oyları */}
+                          {election.cb_candidates && election.cb_candidates.length > 0 && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Cumhurbaşkanı:</div>
+                              <div className="space-y-1">
+                                {election.cb_candidates.map(candidate => {
+                                  const votes = parseInt(result.cb_votes?.[candidate]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={candidate} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {election.independent_cb_candidates && election.independent_cb_candidates.map(candidate => {
+                                  const votes = parseInt(result.cb_votes?.[candidate]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={`ind_cb_${candidate}`} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{candidate} <span className="text-gray-500">(Bağımsız)</span></span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          {/* MV Oyları */}
+                          {election.parties && election.parties.length > 0 && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Milletvekili:</div>
+                              <div className="space-y-1">
+                                {election.parties.map(party => {
+                                  const partyName = typeof party === 'string' ? party : (party.name || party);
+                                  const votes = parseInt(result.mv_votes?.[partyName]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={partyName} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {election.independent_mv_candidates && election.independent_mv_candidates.map(candidate => {
+                                  const votes = parseInt(result.mv_votes?.[candidate]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={`ind_mv_${candidate}`} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{candidate} <span className="text-gray-500">(Bağımsız)</span></span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {election.type === 'yerel' && (
+                        <div className="space-y-3">
+                          {/* Belediye Başkanı */}
+                          {(election.mayor_parties && election.mayor_parties.length > 0) || (election.mayor_candidates && election.mayor_candidates.length > 0) ? (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Belediye Başkanı:</div>
+                              <div className="space-y-1">
+                                {election.mayor_parties && election.mayor_parties.map(party => {
+                                  const votes = parseInt(result.mayor_votes?.[party]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={party} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {election.mayor_candidates && election.mayor_candidates.map(candidate => {
+                                  const votes = parseInt(result.mayor_votes?.[candidate]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={candidate} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{candidate} <span className="text-gray-500">(Bağımsız)</span></span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : null}
+                          {/* İl Genel Meclisi */}
+                          {election.provincial_assembly_parties && election.provincial_assembly_parties.length > 0 && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">İl Genel Meclisi:</div>
+                              <div className="space-y-1">
+                                {election.provincial_assembly_parties.map(party => {
+                                  const votes = parseInt(result.provincial_assembly_votes?.[party]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={party} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          {/* Belediye Meclisi */}
+                          {election.municipal_council_parties && election.municipal_council_parties.length > 0 && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Belediye Meclisi:</div>
+                              <div className="space-y-1">
+                                {election.municipal_council_parties.map(party => {
+                                  const votes = parseInt(result.municipal_council_votes?.[party]) || 0;
+                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                                  return (
+                                    <div key={party} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {election.type === 'referandum' && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700 dark:text-gray-300">Evet</span>
+                            <div className="text-right">
+                              <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                {parseInt(result.referendum_votes?.['Evet']) || 0}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Evet']) || 0) / totalValidVotes) * 100).toFixed(2) : 0)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700 dark:text-gray-300">Hayır</span>
+                            <div className="text-right">
+                              <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                {parseInt(result.referendum_votes?.['Hayır']) || 0}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Hayır']) || 0) / totalValidVotes) * 100).toFixed(2) : 0)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Legacy support */}
                       {election.type === 'cb' && election.candidates && (
                         <div className="space-y-2">
                           {election.candidates.map(candidate => {
@@ -1226,24 +1686,6 @@ const ElectionResultsPage = () => {
                             return (
                               <div key={candidate} className="flex justify-between items-center text-sm">
                                 <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
-                                <div className="text-right">
-                                  <div className="font-semibold text-gray-900 dark:text-gray-100">{votes}</div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {(election.type === 'yerel' || election.type === 'genel') && election.parties && (
-                        <div className="space-y-2">
-                          {election.parties.map(party => {
-                            const partyName = typeof party === 'string' ? party : (party.name || party);
-                            const votes = result.party_votes?.[partyName] || 0;
-                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
-                            return (
-                              <div key={partyName} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                 <div className="text-right">
                                   <div className="font-semibold text-gray-900 dark:text-gray-100">{votes}</div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
