@@ -738,6 +738,37 @@ const BallotBoxesPage = () => {
                             </div>
                           </div>
                           
+                          {/* Konum Bilgileri */}
+                          {(ballotBox.district_name || ballotBox.town_name || ballotBox.neighborhood_name || ballotBox.village_name || status.chiefObserverName) && (
+                            <div className="space-y-1.5 border-t border-gray-200 pt-3">
+                              {ballotBox.district_name && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">İlçe:</span> {ballotBox.district_name}
+                                </div>
+                              )}
+                              {ballotBox.town_name && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Belde:</span> {ballotBox.town_name}
+                                </div>
+                              )}
+                              {ballotBox.neighborhood_name && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Mahalle:</span> {ballotBox.neighborhood_name}
+                                </div>
+                              )}
+                              {ballotBox.village_name && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Köy:</span> {ballotBox.village_name}
+                                </div>
+                              )}
+                              {status.chiefObserverName && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Başmüşahit:</span> {status.chiefObserverName}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
                           <div className="space-y-2 border-t border-gray-200 pt-3">
                             <div className="flex items-center space-x-2">
                               <div className={`w-3 h-3 rounded-full ${status.hasDistrict ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -755,11 +786,6 @@ const BallotBoxesPage = () => {
                               <div className={`w-3 h-3 rounded-full ${status.hasObservers ? 'bg-green-500' : 'bg-red-500'}`}></div>
                               <span className="text-sm text-gray-600">Müşahit {status.hasObservers ? 'Atanmış' : 'Atanmamış'}</span>
                             </div>
-                            {status.chiefObserverName && (
-                              <div className="text-sm text-gray-600">
-                                <span className="font-medium">Başmüşahit:</span> {status.chiefObserverName}
-                              </div>
-                            )}
                             {status.observersCount > 0 && (
                               <div className="text-sm text-gray-600">
                                 <span className="font-medium">Müşahit:</span> {status.observersCount} kişi
@@ -837,6 +863,9 @@ const BallotBoxesPage = () => {
                           Kurum Adı
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Konum Bilgileri
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Durum
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -854,6 +883,38 @@ const BallotBoxesPage = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {ballotBox.institution_name}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            <div className="space-y-1">
+                              {ballotBox.district_name && (
+                                <div className="text-xs">
+                                  <span className="font-medium">İlçe:</span> {ballotBox.district_name}
+                                </div>
+                              )}
+                              {ballotBox.town_name && (
+                                <div className="text-xs">
+                                  <span className="font-medium">Belde:</span> {ballotBox.town_name}
+                                </div>
+                              )}
+                              {ballotBox.neighborhood_name && (
+                                <div className="text-xs">
+                                  <span className="font-medium">Mahalle:</span> {ballotBox.neighborhood_name}
+                                </div>
+                              )}
+                              {ballotBox.village_name && (
+                                <div className="text-xs">
+                                  <span className="font-medium">Köy:</span> {ballotBox.village_name}
+                                </div>
+                              )}
+                              {status.chiefObserverName && (
+                                <div className="text-xs text-indigo-600">
+                                  <span className="font-medium">Başmüşahit:</span> {status.chiefObserverName}
+                                </div>
+                              )}
+                              {!ballotBox.district_name && !ballotBox.town_name && !ballotBox.neighborhood_name && !ballotBox.village_name && !status.chiefObserverName && (
+                                <div className="text-xs text-gray-400">-</div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-4">
@@ -874,11 +935,6 @@ const BallotBoxesPage = () => {
                                 <span className="text-xs text-gray-600">Müşahit</span>
                               </div>
                             </div>
-                            {status.chiefObserverName && (
-                              <div className="mt-1 text-xs text-gray-500">
-                                Başmüşahit: {status.chiefObserverName}
-                              </div>
-                            )}
                             {status.observersCount > 0 && (
                               <div className="mt-1 text-xs text-gray-500">
                                 Müşahit: {status.observersCount} kişi

@@ -122,6 +122,36 @@ const BallotBoxDetailsPage = () => {
                   <dt className="text-sm font-medium text-gray-500">Kurum Adı</dt>
                   <dd className="mt-1 text-sm text-gray-900">{ballotBox.institution_name}</dd>
                 </div>
+                {ballotBox.district_name && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">İlçe</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{ballotBox.district_name}</dd>
+                  </div>
+                )}
+                {ballotBox.town_name && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Belde</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{ballotBox.town_name}</dd>
+                  </div>
+                )}
+                {ballotBox.neighborhood_name && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Mahalle</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{ballotBox.neighborhood_name}</dd>
+                  </div>
+                )}
+                {ballotBox.village_name && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Köy</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{ballotBox.village_name}</dd>
+                  </div>
+                )}
+                {chiefObserver && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Başmüşahit</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{chiefObserver.name}</dd>
+                  </div>
+                )}
               </dl>
             </div>
           </div>
