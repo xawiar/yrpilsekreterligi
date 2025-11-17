@@ -336,12 +336,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
   const calculateValidVotes = () => {
     if (election.type === 'genel') {
-      // CB votes + MV votes (all parties and independent)
+      // CB votes + MV votes (parti bazlı, aday bazlı değil)
       const cbTotal = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       const mvTotal = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       return cbTotal + mvTotal;
     } else if (election.type === 'yerel') {
-      // Mayor + Provincial Assembly + Municipal Council votes
+      // Mayor (aday bazlı) + Provincial Assembly (parti bazlı) + Municipal Council (parti bazlı) votes
       const mayorTotal = Object.values(formData.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       const provincialTotal = Object.values(formData.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       const municipalTotal = Object.values(formData.municipal_council_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
