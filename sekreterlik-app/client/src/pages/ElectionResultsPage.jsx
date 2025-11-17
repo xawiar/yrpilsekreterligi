@@ -580,7 +580,8 @@ const ElectionResultsPage = () => {
       const mayorTotals = {};
       if (election.mayor_parties) {
         election.mayor_parties.forEach(party => {
-          mayorTotals[party] = 0;
+          const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+          mayorTotals[partyName] = 0;
         });
       }
       if (election.mayor_candidates) {
@@ -592,14 +593,16 @@ const ElectionResultsPage = () => {
       const provincialTotals = {};
       if (election.provincial_assembly_parties) {
         election.provincial_assembly_parties.forEach(party => {
-          provincialTotals[party] = 0;
+          const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+          provincialTotals[partyName] = 0;
         });
       }
 
       const municipalTotals = {};
       if (election.municipal_council_parties) {
         election.municipal_council_parties.forEach(party => {
-          municipalTotals[party] = 0;
+          const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+          municipalTotals[partyName] = 0;
         });
       }
 
@@ -768,96 +771,6 @@ const ElectionResultsPage = () => {
     return sorted[0];
   };
 
-  // Calculate strong/weak ballot boxes
-  const calculateStrongWeakBallotBoxes = () => {
-    const filtered = getFilteredResults();
-    const results = [];
-
-    filtered.forEach(result => {
-      const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-      if (!ballotBox) return;
-
-      // Calculate total votes for this ballot box
-      let totalVotes = 0;
-      let winningVotes = 0;
-      let secondVotes = 0;
-      let winnerName = null;
-
-      if (election?.type === 'genel') {
-        // For general election, check CB and MV separately
-        const cbVotes = result.cb_votes || {};
-        const cbValues = Object.values(cbVotes).map(v => parseInt(v) || 0);
-        const cbTotal = cbValues.reduce((sum, v) => sum + v, 0);
-        const cbMax = Math.max(...cbValues, 0);
-        const cbSecond = cbValues.sort((a, b) => b - a)[1] || 0;
-
-        const mvVotes = result.mv_votes || {};
-        const mvValues = Object.values(mvVotes).map(v => parseInt(v) || 0);
-        const mvTotal = mvValues.reduce((sum, v) => sum + v, 0);
-        const mvMax = Math.max(...mvValues, 0);
-        const mvSecond = mvValues.sort((a, b) => b - a)[1] || 0;
-
-        totalVotes = cbTotal + mvTotal;
-        winningVotes = cbMax + mvMax;
-        secondVotes = cbSecond + mvSecond;
-      } else if (election?.type === 'yerel') {
-        const mayorVotes = result.mayor_votes || {};
-        const mayorValues = Object.values(mayorVotes).map(v => parseInt(v) || 0);
-        const mayorTotal = mayorValues.reduce((sum, v) => sum + v, 0);
-        const mayorMax = Math.max(...mayorValues, 0);
-        const mayorSecond = mayorValues.sort((a, b) => b - a)[1] || 0;
-
-        totalVotes = mayorTotal;
-        winningVotes = mayorMax;
-        secondVotes = mayorSecond;
-      } else if (election?.type === 'referandum') {
-        const evet = parseInt(result.referendum_votes?.['Evet']) || 0;
-        const hayir = parseInt(result.referendum_votes?.['Hayır']) || 0;
-        totalVotes = evet + hayir;
-        winningVotes = Math.max(evet, hayir);
-        secondVotes = Math.min(evet, hayir);
-      }
-
-      if (totalVotes === 0) return;
-
-      const difference = winningVotes - secondVotes;
-      const differencePercent = totalVotes > 0 ? (difference / totalVotes) * 100 : 0;
-
-      // Get winner name
-      if (election?.type === 'genel') {
-        const cbVotes = result.cb_votes || {};
-        const cbMaxEntry = Object.entries(cbVotes).reduce((max, [name, votes]) => 
-          parseInt(votes) > parseInt(max[1]) ? [name, votes] : max, ['', 0]
-        );
-        winnerName = cbMaxEntry[0] || 'Bilinmeyen';
-      } else if (election?.type === 'yerel') {
-        const mayorVotes = result.mayor_votes || {};
-        const mayorMaxEntry = Object.entries(mayorVotes).reduce((max, [name, votes]) => 
-          parseInt(votes) > parseInt(max[1]) ? [name, votes] : max, ['', 0]
-        );
-        winnerName = mayorMaxEntry[0] || 'Bilinmeyen';
-      } else if (election?.type === 'referandum') {
-        const evet = parseInt(result.referendum_votes?.['Evet']) || 0;
-        const hayir = parseInt(result.referendum_votes?.['Hayır']) || 0;
-        winnerName = evet > hayir ? 'Evet' : 'Hayır';
-      }
-
-      results.push({
-        ballotBoxId: result.ballot_box_id,
-        ballotBoxNumber: ballotBox.box_number || 'N/A',
-        location: getLocationName(result.ballot_box_id),
-        totalVotes,
-        winningVotes,
-        secondVotes,
-        difference,
-        differencePercent,
-        winnerName,
-        type: differencePercent > 10 ? 'strong' : differencePercent < -10 ? 'weak' : 'critical'
-      });
-    });
-
-    return results.sort((a, b) => b.differencePercent - a.differencePercent);
-  };
 
   // Calculate location-based analysis (mahalle/ilçe)
   const calculateLocationBasedAnalysis = () => {
@@ -1351,7 +1264,7 @@ const ElectionResultsPage = () => {
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Sandık</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
@@ -1368,43 +1281,67 @@ const ElectionResultsPage = () => {
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Oy Kullanan Seçmen</div>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">
-              {hasResults ? calculateTotalUsedVotes().toLocaleString('tr-TR') : '0'}
-            </div>
-            {election?.voter_count && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Toplam: {election.voter_count.toLocaleString('tr-TR')}
-              </div>
-            )}
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
               {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Geçersiz Oy</div>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
-              {hasResults ? calculateTotalInvalidVotes().toLocaleString('tr-TR') : '0'}
-            </div>
-            {hasResults && calculateTotalUsedVotes() > 0 && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                %{((calculateTotalInvalidVotes() / calculateTotalUsedVotes()) * 100).toFixed(2)}
-              </div>
-            )}
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Katılım Yüzdesi</div>
-            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">
-              %{hasResults ? calculateParticipationPercentage() : '0.00'}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              İtiraz: {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
-            </div>
-          </div>
         </div>
+
+        {/* Sandık Analizleri - Tek Yerde */}
+        {hasResults && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Sandık Analizleri
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                <div className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Oy Kullanan Seçmen</div>
+                <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">
+                  {calculateTotalUsedVotes().toLocaleString('tr-TR')}
+                </div>
+                {election?.voter_count && (
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                    Toplam Seçmen: {election.voter_count.toLocaleString('tr-TR')}
+                  </div>
+                )}
+                {hasResults && calculateTotalUsedVotes() > 0 && (
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Katılım: %{calculateParticipationPercentage()}
+                  </div>
+                )}
+              </div>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                <div className="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">Geçerli Oy</div>
+                <div className="text-3xl font-bold text-green-700 dark:text-green-400">
+                  {aggregatedResults.total.toLocaleString('tr-TR')}
+                </div>
+                {hasResults && calculateTotalUsedVotes() > 0 && (
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-2">
+                    %{((aggregatedResults.total / calculateTotalUsedVotes()) * 100).toFixed(2)} geçerli
+                  </div>
+                )}
+              </div>
+              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
+                <div className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Geçersiz Oy</div>
+                <div className="text-3xl font-bold text-red-700 dark:text-red-400">
+                  {calculateTotalInvalidVotes().toLocaleString('tr-TR')}
+                </div>
+                {hasResults && calculateTotalUsedVotes() > 0 && (
+                  <div className="text-xs text-red-600 dark:text-red-400 mt-2">
+                    %{((calculateTotalInvalidVotes() / calculateTotalUsedVotes()) * 100).toFixed(2)} geçersiz
+                  </div>
+                )}
+                <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  İtiraz: {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Charts - Her kategori için ayrı grafik */}
         {election && aggregatedResults.categories && aggregatedResults.categories.length > 0 && (
@@ -1663,114 +1600,6 @@ const ElectionResultsPage = () => {
           </div>
         )}
 
-        {/* Strong/Weak Ballot Boxes Analysis */}
-        {hasResults && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Güçlü / Zayıf Sandık Analizi
-            </h2>
-            {(() => {
-              const strongWeakBoxes = calculateStrongWeakBallotBoxes();
-              const strongBoxes = strongWeakBoxes.filter(b => b.type === 'strong').slice(0, 10);
-              const weakBoxes = strongWeakBoxes.filter(b => b.type === 'weak').slice(0, 10);
-              const criticalBoxes = strongWeakBoxes.filter(b => b.type === 'critical').slice(0, 10);
-              
-              return (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                    <h3 className="text-lg font-semibold text-green-800 dark:text-green-300 mb-4 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                      En Güçlü Sandıklar (Top 10)
-                    </h3>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {strongBoxes.length > 0 ? (
-                        strongBoxes.map((box, index) => (
-                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-300 dark:border-green-700">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">Sandık #{box.ballotBoxNumber}</span>
-                              <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                                +%{box.differencePercent.toFixed(1)}
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">{box.location}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                              Kazanan: <span className="font-medium">{box.winnerName}</span> ({box.winningVotes} oy)
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz veri yok</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-800">
-                    <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300 mb-4 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      Kritik Sandıklar (±%10 Fark)
-                    </h3>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {criticalBoxes.length > 0 ? (
-                        criticalBoxes.map((box, index) => (
-                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-yellow-300 dark:border-yellow-700">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">Sandık #{box.ballotBoxNumber}</span>
-                              <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
-                                %{Math.abs(box.differencePercent).toFixed(1)}
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">{box.location}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                              Fark: {box.difference} oy
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz veri yok</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
-                    <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                      </svg>
-                      Zayıf Sandıklar (Top 10)
-                    </h3>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {weakBoxes.length > 0 ? (
-                        weakBoxes.map((box, index) => (
-                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-300 dark:border-red-700">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">Sandık #{box.ballotBoxNumber}</span>
-                              <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                %{box.differencePercent.toFixed(1)}
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">{box.location}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                              Kazanan: <span className="font-medium">{box.winnerName}</span> ({box.winningVotes} oy)
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz veri yok</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
 
         {/* Location-Based Analysis */}
         {hasResults && (() => {
@@ -2110,11 +1939,12 @@ const ElectionResultsPage = () => {
                               <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Belediye Başkanı:</div>
                               <div className="space-y-1">
                                 {election.mayor_parties && election.mayor_parties.map(party => {
-                                  const votes = parseInt(result.mayor_votes?.[party]) || 0;
+                                  const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                                  const votes = parseInt(result.mayor_votes?.[partyName]) || 0;
                                   const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
                                   return (
-                                    <div key={party} className="flex justify-between items-center text-xs">
-                                      <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                                    <div key={partyName} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
                                         <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
                                         <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
@@ -2144,11 +1974,12 @@ const ElectionResultsPage = () => {
                               <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">İl Genel Meclisi:</div>
                               <div className="space-y-1">
                                 {election.provincial_assembly_parties.map(party => {
-                                  const votes = parseInt(result.provincial_assembly_votes?.[party]) || 0;
+                                  const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                                  const votes = parseInt(result.provincial_assembly_votes?.[partyName]) || 0;
                                   const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
                                   return (
-                                    <div key={party} className="flex justify-between items-center text-xs">
-                                      <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                                    <div key={partyName} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
                                         <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
                                         <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
@@ -2165,11 +1996,12 @@ const ElectionResultsPage = () => {
                               <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Belediye Meclisi:</div>
                               <div className="space-y-1">
                                 {election.municipal_council_parties.map(party => {
-                                  const votes = parseInt(result.municipal_council_votes?.[party]) || 0;
+                                  const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                                  const votes = parseInt(result.municipal_council_votes?.[partyName]) || 0;
                                   const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
                                   return (
-                                    <div key={party} className="flex justify-between items-center text-xs">
-                                      <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                                    <div key={partyName} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
                                         <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
                                         <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
