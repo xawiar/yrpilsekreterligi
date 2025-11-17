@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ComposedChart } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -732,6 +732,199 @@ const ElectionResultsPage = () => {
 
   const aggregatedResults = calculateAggregatedResults();
 
+  // Calculate total used votes (oy kullanan seçmen)
+  const calculateTotalUsedVotes = () => {
+    const filtered = getFilteredResults();
+    return filtered.reduce((sum, result) => sum + (parseInt(result.used_votes) || 0), 0);
+  };
+
+  // Calculate total invalid votes
+  const calculateTotalInvalidVotes = () => {
+    const filtered = getFilteredResults();
+    return filtered.reduce((sum, result) => sum + (parseInt(result.invalid_votes) || 0), 0);
+  };
+
+  // Get winning candidate/party for each category
+  const getWinningCandidateForCategory = (category) => {
+    if (!category || !category.data || category.data.length === 0) return null;
+    const sorted = [...category.data].sort((a, b) => b.value - a.value);
+    return sorted[0];
+  };
+
+  // Calculate strong/weak ballot boxes
+  const calculateStrongWeakBallotBoxes = () => {
+    const filtered = getFilteredResults();
+    const results = [];
+
+    filtered.forEach(result => {
+      const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+      if (!ballotBox) return;
+
+      // Calculate total votes for this ballot box
+      let totalVotes = 0;
+      let winningVotes = 0;
+      let secondVotes = 0;
+      let winnerName = null;
+
+      if (election?.type === 'genel') {
+        // For general election, check CB and MV separately
+        const cbVotes = result.cb_votes || {};
+        const cbValues = Object.values(cbVotes).map(v => parseInt(v) || 0);
+        const cbTotal = cbValues.reduce((sum, v) => sum + v, 0);
+        const cbMax = Math.max(...cbValues, 0);
+        const cbSecond = cbValues.sort((a, b) => b - a)[1] || 0;
+
+        const mvVotes = result.mv_votes || {};
+        const mvValues = Object.values(mvVotes).map(v => parseInt(v) || 0);
+        const mvTotal = mvValues.reduce((sum, v) => sum + v, 0);
+        const mvMax = Math.max(...mvValues, 0);
+        const mvSecond = mvValues.sort((a, b) => b - a)[1] || 0;
+
+        totalVotes = cbTotal + mvTotal;
+        winningVotes = cbMax + mvMax;
+        secondVotes = cbSecond + mvSecond;
+      } else if (election?.type === 'yerel') {
+        const mayorVotes = result.mayor_votes || {};
+        const mayorValues = Object.values(mayorVotes).map(v => parseInt(v) || 0);
+        const mayorTotal = mayorValues.reduce((sum, v) => sum + v, 0);
+        const mayorMax = Math.max(...mayorValues, 0);
+        const mayorSecond = mayorValues.sort((a, b) => b - a)[1] || 0;
+
+        totalVotes = mayorTotal;
+        winningVotes = mayorMax;
+        secondVotes = mayorSecond;
+      } else if (election?.type === 'referandum') {
+        const evet = parseInt(result.referendum_votes?.['Evet']) || 0;
+        const hayir = parseInt(result.referendum_votes?.['Hayır']) || 0;
+        totalVotes = evet + hayir;
+        winningVotes = Math.max(evet, hayir);
+        secondVotes = Math.min(evet, hayir);
+      }
+
+      if (totalVotes === 0) return;
+
+      const difference = winningVotes - secondVotes;
+      const differencePercent = totalVotes > 0 ? (difference / totalVotes) * 100 : 0;
+
+      // Get winner name
+      if (election?.type === 'genel') {
+        const cbVotes = result.cb_votes || {};
+        const cbMaxEntry = Object.entries(cbVotes).reduce((max, [name, votes]) => 
+          parseInt(votes) > parseInt(max[1]) ? [name, votes] : max, ['', 0]
+        );
+        winnerName = cbMaxEntry[0] || 'Bilinmeyen';
+      } else if (election?.type === 'yerel') {
+        const mayorVotes = result.mayor_votes || {};
+        const mayorMaxEntry = Object.entries(mayorVotes).reduce((max, [name, votes]) => 
+          parseInt(votes) > parseInt(max[1]) ? [name, votes] : max, ['', 0]
+        );
+        winnerName = mayorMaxEntry[0] || 'Bilinmeyen';
+      } else if (election?.type === 'referandum') {
+        const evet = parseInt(result.referendum_votes?.['Evet']) || 0;
+        const hayir = parseInt(result.referendum_votes?.['Hayır']) || 0;
+        winnerName = evet > hayir ? 'Evet' : 'Hayır';
+      }
+
+      results.push({
+        ballotBoxId: result.ballot_box_id,
+        ballotBoxNumber: ballotBox.box_number || 'N/A',
+        location: getLocationName(result.ballot_box_id),
+        totalVotes,
+        winningVotes,
+        secondVotes,
+        difference,
+        differencePercent,
+        winnerName,
+        type: differencePercent > 10 ? 'strong' : differencePercent < -10 ? 'weak' : 'critical'
+      });
+    });
+
+    return results.sort((a, b) => b.differencePercent - a.differencePercent);
+  };
+
+  // Calculate location-based analysis (mahalle/ilçe)
+  const calculateLocationBasedAnalysis = () => {
+    const filtered = getFilteredResults();
+    const locationMap = {};
+
+    filtered.forEach(result => {
+      const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+      if (!ballotBox) return;
+
+      // Get location key
+      let locationKey = '';
+      let locationName = '';
+      
+      if (ballotBox.neighborhood_id) {
+        const neighborhood = neighborhoods.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+        if (neighborhood) {
+          locationKey = `neighborhood_${neighborhood.id}`;
+          locationName = neighborhood.name;
+        }
+      } else if (ballotBox.village_id) {
+        const village = villages.find(v => String(v.id) === String(ballotBox.village_id));
+        if (village) {
+          locationKey = `village_${village.id}`;
+          locationName = village.name;
+        }
+      } else if (ballotBox.district_id) {
+        const district = districts.find(d => String(d.id) === String(ballotBox.district_id));
+        if (district) {
+          locationKey = `district_${district.id}`;
+          locationName = district.name;
+        }
+      }
+
+      if (!locationKey) return;
+
+      if (!locationMap[locationKey]) {
+        locationMap[locationKey] = {
+          name: locationName,
+          type: ballotBox.neighborhood_id ? 'Mahalle' : ballotBox.village_id ? 'Köy' : 'İlçe',
+          ballotBoxCount: 0,
+          totalVotes: 0,
+          usedVotes: 0,
+          validVotes: 0,
+          invalidVotes: 0,
+          categoryVotes: {}
+        };
+      }
+
+      locationMap[locationKey].ballotBoxCount++;
+      locationMap[locationKey].usedVotes += parseInt(result.used_votes) || 0;
+      locationMap[locationKey].validVotes += parseInt(result.valid_votes) || 0;
+      locationMap[locationKey].invalidVotes += parseInt(result.invalid_votes) || 0;
+
+      // Aggregate votes by category
+      if (election?.type === 'genel') {
+        Object.entries(result.cb_votes || {}).forEach(([candidate, votes]) => {
+          if (!locationMap[locationKey].categoryVotes['CB']) {
+            locationMap[locationKey].categoryVotes['CB'] = {};
+          }
+          locationMap[locationKey].categoryVotes['CB'][candidate] = 
+            (locationMap[locationKey].categoryVotes['CB'][candidate] || 0) + (parseInt(votes) || 0);
+        });
+        Object.entries(result.mv_votes || {}).forEach(([party, votes]) => {
+          if (!locationMap[locationKey].categoryVotes['MV']) {
+            locationMap[locationKey].categoryVotes['MV'] = {};
+          }
+          locationMap[locationKey].categoryVotes['MV'][party] = 
+            (locationMap[locationKey].categoryVotes['MV'][party] || 0) + (parseInt(votes) || 0);
+        });
+      } else if (election?.type === 'yerel') {
+        Object.entries(result.mayor_votes || {}).forEach(([candidate, votes]) => {
+          if (!locationMap[locationKey].categoryVotes['Belediye Başkanı']) {
+            locationMap[locationKey].categoryVotes['Belediye Başkanı'] = {};
+          }
+          locationMap[locationKey].categoryVotes['Belediye Başkanı'][candidate] = 
+            (locationMap[locationKey].categoryVotes['Belediye Başkanı'][candidate] || 0) + (parseInt(votes) || 0);
+        });
+      }
+    });
+
+    return Object.values(locationMap).sort((a, b) => b.totalVotes - a.totalVotes);
+  };
+
   // Get location name for a ballot box
   const getLocationName = (ballotBoxId) => {
     const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
@@ -1141,7 +1334,7 @@ const ElectionResultsPage = () => {
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
             <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Sandık</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
@@ -1158,26 +1351,40 @@ const ElectionResultsPage = () => {
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Katılım Yüzdesi</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-              %{hasResults ? calculateParticipationPercentage() : '0.00'}
+            <div className="text-sm text-gray-600 dark:text-gray-400">Oy Kullanan Seçmen</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">
+              {hasResults ? calculateTotalUsedVotes().toLocaleString('tr-TR') : '0'}
             </div>
             {election?.voter_count && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Seçmen: {election.voter_count.toLocaleString('tr-TR')}
+                Toplam: {election.voter_count.toLocaleString('tr-TR')}
               </div>
             )}
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-            <div className="text-sm text-gray-600 dark:text-gray-400">İtiraz Edilen Sandık</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Geçerli Oy</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
+              {hasResults ? aggregatedResults.total.toLocaleString('tr-TR') : '0'}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
+            <div className="text-sm text-gray-600 dark:text-gray-400">Geçersiz Oy</div>
             <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">
-              {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
+              {hasResults ? calculateTotalInvalidVotes().toLocaleString('tr-TR') : '0'}
+            </div>
+            {hasResults && calculateTotalUsedVotes() > 0 && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                %{((calculateTotalInvalidVotes() / calculateTotalUsedVotes()) * 100).toFixed(2)}
+              </div>
+            )}
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
+            <div className="text-sm text-gray-600 dark:text-gray-400">Katılım Yüzdesi</div>
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">
+              %{hasResults ? calculateParticipationPercentage() : '0.00'}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              İtiraz: {filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}
             </div>
           </div>
         </div>
