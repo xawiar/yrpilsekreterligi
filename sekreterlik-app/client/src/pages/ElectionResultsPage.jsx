@@ -1622,26 +1622,56 @@ const ElectionResultsPage = () => {
                             </div>
                           </div>
                           
-                          {/* Kazanan Adaylar Listesi (Oy Sırasına Göre) */}
-                          {winningCandidates.length > 0 && (
-                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                              <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Kazanan Adaylar (Oy Sırasına Göre)</div>
-                              <div className="space-y-1.5">
-                                {winningCandidates.slice(0, 10).map((candidate, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-gray-500 dark:text-gray-400">#{idx + 1}</span>
-                                      <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
-                                    </div>
-                                    <div className="text-right">
-                                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">{candidate.votes.toLocaleString('tr-TR')}</span>
-                                      <span className="text-gray-500 dark:text-gray-400 ml-1">(%{candidate.percentage.toFixed(2)})</span>
+                          {/* Kazanan Adaylar Listesi (En Çok Oy Alandan En Aza) */}
+                          {winningCandidates.length > 0 && (() => {
+                            // En çok oy alandan en aza doğru sırala
+                            const sortedCandidates = [...winningCandidates].sort((a, b) => b.votes - a.votes);
+                            
+                            // Parti bazında kazanan sayısını hesapla
+                            const partyWinners = {};
+                            sortedCandidates.forEach(candidate => {
+                              if (candidate.partyName) {
+                                partyWinners[candidate.partyName] = (partyWinners[candidate.partyName] || 0) + 1;
+                              }
+                            });
+                            
+                            return (
+                              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Kazanan Adaylar (En Çok Oy Alandan En Aza)</div>
+                                
+                                {/* Parti Bazında Kazanan Sayısı */}
+                                {Object.keys(partyWinners).length > 0 && (
+                                  <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-200 dark:border-indigo-800">
+                                    <div className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 mb-1">🏛️ Parti Bazında Kazanan Sayısı</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {Object.entries(partyWinners)
+                                        .sort((a, b) => b[1] - a[1])
+                                        .map(([party, count]) => (
+                                          <span key={party} className="text-xs px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded">
+                                            {party}: {count} kazanan
+                                          </span>
+                                        ))}
                                     </div>
                                   </div>
-                                ))}
+                                )}
+                                
+                                <div className="space-y-1.5">
+                                  {sortedCandidates.slice(0, 10).map((candidate, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-500 dark:text-gray-400">#{idx + 1}</span>
+                                        <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">{candidate.votes.toLocaleString('tr-TR')}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 ml-1">(%{candidate.percentage.toFixed(2)})</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       );
                     })()}
