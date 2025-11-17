@@ -26,8 +26,12 @@ const BallotBoxesPage = () => {
     district_id: '',
     town_id: '',
     neighborhood_id: '',
-    village_id: ''
+    village_id: '',
+    voter_count: ''
   });
+  const [showExcelImport, setShowExcelImport] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [importErrors, setImportErrors] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     district_id: '',
@@ -138,6 +142,7 @@ const BallotBoxesPage = () => {
         town_id: formData.town_id || null,
         neighborhood_id: formData.neighborhood_id || null,
         village_id: formData.village_id || null,
+        voter_count: formData.voter_count ? parseInt(formData.voter_count) : null,
       };
       if (editingBallotBox) {
         await ApiService.updateBallotBox(editingBallotBox.id, payload);
@@ -154,7 +159,8 @@ const BallotBoxesPage = () => {
         district_id: '',
         town_id: '',
         neighborhood_id: '',
-        village_id: ''
+        village_id: '',
+        voter_count: ''
       });
       setShowAddForm(false);
       setEditingBallotBox(null);
@@ -178,7 +184,8 @@ const BallotBoxesPage = () => {
       district_id: ballotBox.district_id ? String(ballotBox.district_id) : '',
       town_id: ballotBox.town_id ? String(ballotBox.town_id) : '',
       neighborhood_id: ballotBox.neighborhood_id ? String(ballotBox.neighborhood_id) : '',
-      village_id: ballotBox.village_id ? String(ballotBox.village_id) : ''
+      village_id: ballotBox.village_id ? String(ballotBox.village_id) : '',
+      voter_count: ballotBox.voter_count ? String(ballotBox.voter_count) : ''
     });
     setShowAddForm(true);
   };
@@ -208,11 +215,169 @@ const BallotBoxesPage = () => {
       district_id: '',
       town_id: '',
       neighborhood_id: '',
-      village_id: ''
+      village_id: '',
+      voter_count: ''
     });
     setShowAddForm(false);
     setEditingBallotBox(null);
     setError('');
+  };
+
+  // Excel Import Handler
+  const handleExcelFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setExcelFile(file);
+    setImportErrors([]);
+  };
+
+  const handleExcelImport = async () => {
+    if (!excelFile) {
+      setError('Lütfen bir Excel dosyası seçin');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      setImportErrors([]);
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          // İlk satırı başlık olarak atla
+          const dataRows = jsonData.slice(1);
+          const errors = [];
+          let importedCount = 0;
+
+          for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const rowNumber = i + 2; // Excel satır numarası (başlık dahil)
+
+            if (row.length === 0 || row.every(cell => !cell)) continue; // Boş satırları atla
+
+            try {
+              // Excel formatı: İl, İlçe, Mahalle/Köy, Sandık Alanı/Okul Adı, Sandık Numarası, Sandık Seçmen Sayısı
+              const regionName = row[0] ? String(row[0]).trim() : '';
+              const districtName = row[1] ? String(row[1]).trim() : '';
+              const locationName = row[2] ? String(row[2]).trim() : ''; // Mahalle veya Köy
+              const institutionName = row[3] ? String(row[3]).trim() : '';
+              const ballotNumber = row[4] ? String(row[4]).trim() : '';
+              const voterCount = row[5] ? String(row[5]).trim() : '';
+
+              // Validasyon
+              if (!ballotNumber) {
+                errors.push(`Satır ${rowNumber}: Sandık numarası zorunludur`);
+                continue;
+              }
+              if (!institutionName) {
+                errors.push(`Satır ${rowNumber}: Kurum adı zorunludur`);
+                continue;
+              }
+
+              // İlçe kontrolü
+              let districtId = null;
+              if (districtName) {
+                const district = districts.find(d => 
+                  d.name.toLowerCase() === districtName.toLowerCase()
+                );
+                if (!district) {
+                  errors.push(`Satır ${rowNumber}: "${districtName}" ilçesi bulunamadı`);
+                  continue;
+                }
+                districtId = district.id;
+              }
+
+              // Mahalle/Köy kontrolü
+              let neighborhoodId = null;
+              let villageId = null;
+              if (locationName && districtId) {
+                const neighborhood = neighborhoods.find(n => 
+                  n.name.toLowerCase() === locationName.toLowerCase() && 
+                  String(n.district_id) === String(districtId)
+                );
+                const village = villages.find(v => 
+                  v.name.toLowerCase() === locationName.toLowerCase() && 
+                  String(v.district_id) === String(districtId)
+                );
+                
+                if (neighborhood) {
+                  neighborhoodId = neighborhood.id;
+                } else if (village) {
+                  villageId = village.id;
+                } else {
+                  errors.push(`Satır ${rowNumber}: "${locationName}" mahalle/köyü bulunamadı`);
+                  // Devam et, sadece uyarı ver
+                }
+              }
+
+              // Sandık oluştur
+              const payload = {
+                ballot_number: ballotNumber,
+                institution_name: institutionName,
+                region_name: regionName || null,
+                district_id: districtId,
+                town_id: null,
+                neighborhood_id: neighborhoodId,
+                village_id: villageId,
+                voter_count: voterCount ? parseInt(voterCount) : null
+              };
+
+              await ApiService.createBallotBox(payload);
+              importedCount++;
+            } catch (rowError) {
+              errors.push(`Satır ${rowNumber}: ${rowError.message || 'Bilinmeyen hata'}`);
+            }
+          }
+
+          if (errors.length > 0) {
+            setImportErrors(errors);
+          }
+
+          if (importedCount > 0) {
+            setMessage(`${importedCount} sandık başarıyla içe aktarıldı${errors.length > 0 ? `, ${errors.length} hata oluştu` : ''}`);
+            setMessageType(errors.length > 0 ? 'error' : 'success');
+            await fetchBallotBoxes();
+            setShowExcelImport(false);
+            setExcelFile(null);
+          } else {
+            setError('Hiçbir sandık içe aktarılamadı');
+          }
+        } catch (error) {
+          console.error('Excel import error:', error);
+          setError('Excel dosyası işlenirken hata oluştu: ' + error.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      reader.readAsArrayBuffer(excelFile);
+    } catch (error) {
+      console.error('Excel import error:', error);
+      setError('Excel dosyası okunurken hata oluştu: ' + error.message);
+      setLoading(false);
+    }
+  };
+
+  // Excel Template Download
+  const downloadExcelTemplate = () => {
+    const templateData = [
+      ['İl', 'İlçe', 'Mahalle / Köy', 'Sandık Alanı / Okul Adı', 'Sandık Numarası', 'Sandık Seçmen Sayısı (Toplam)'],
+      ['Elazığ', 'Merkez', 'Ataşehir', 'İlkokul', '1001', '200'],
+      ['Elazığ', 'Merkez', 'Yenimahalle', 'Ortaokul', '1002', '250']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sandıklar');
+    
+    XLSX.writeFile(wb, 'sandik_template.xlsx');
   };
 
   const getBallotBoxObservers = (ballotBoxId) => {
@@ -501,27 +666,20 @@ const BallotBoxesPage = () => {
               <button
                 onClick={() => {
                   const excelData = [
-                    ['Sandık No', 'Kurum Adı', 'İlçe', 'Belde', 'Mahalle', 'Köy', 'Başmüşahit', 'Müşahit Sayısı', 'Durum']
+                    ['İl', 'İlçe', 'Mahalle / Köy', 'Sandık Alanı / Okul Adı', 'Sandık Numarası', 'Sandık Seçmen Sayısı (Toplam)']
                   ];
                   
                   filteredBallotBoxes.forEach(ballotBox => {
-                    const status = getBallotBoxStatus(ballotBox.id);
-                    const districtName = districts.find(d => String(d.id) === String(ballotBox.district_id))?.name || '';
-                    const townName = towns.find(t => String(t.id) === String(ballotBox.town_id))?.name || '';
-                    const neighborhoodName = neighborhoods.find(n => String(n.id) === String(ballotBox.neighborhood_id))?.name || '';
-                    const villageName = villages.find(v => String(v.id) === String(ballotBox.village_id))?.name || '';
-                    const statusText = status.hasChiefObserver && status.hasDistrict && status.hasNeighborhoodOrVillage ? 'Tamamlandı' : 'Eksik';
+                    const locationInfo = getLocationInfo(ballotBox);
+                    const neighborhoodOrVillage = locationInfo.neighborhood || locationInfo.village || '';
                     
                     excelData.push([
-                      ballotBox.ballot_number || '',
+                      locationInfo.region || '',
+                      locationInfo.district || '',
+                      neighborhoodOrVillage,
                       ballotBox.institution_name || '',
-                      districtName,
-                      townName,
-                      neighborhoodName,
-                      villageName,
-                      status.chiefObserverName || '',
-                      status.observersCount || 0,
-                      statusText
+                      ballotBox.ballot_number || '',
+                      ballotBox.voter_count || ''
                     ]);
                   });
                   
@@ -552,6 +710,24 @@ const BallotBoxesPage = () => {
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
               >
                 Yeni Sandık Ekle
+              </button>
+              <button
+                onClick={() => setShowExcelImport(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Excel ile Yükle
+              </button>
+              <button
+                onClick={downloadExcelTemplate}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Excel Şablonu İndir
               </button>
               <Link
                 to="/election-preparation"
@@ -786,6 +962,20 @@ const BallotBoxesPage = () => {
                         required
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Seçmen Sayısı (Toplam)
+                      </label>
+                      <input
+                        type="number"
+                        name="voter_count"
+                        value={formData.voter_count}
+                        onChange={handleInputChange}
+                        min="0"
+                        placeholder="Örn: 200"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
                   </div>
                   {/* Optional location fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -878,7 +1068,69 @@ const BallotBoxesPage = () => {
               </div>
             )}
 
-            {loading && !showAddForm ? (
+            {/* Excel Import Modal */}
+            {showExcelImport && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Excel ile Sandık Yükle
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Excel Dosyası Seç
+                    </label>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleExcelFile}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    />
+                    {excelFile && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        Seçilen dosya: {excelFile.name}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {importErrors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                      <h4 className="text-sm font-medium text-red-800 mb-2">
+                        Hatalar ({importErrors.length}):
+                      </h4>
+                      <ul className="list-disc list-inside text-sm text-red-700 max-h-40 overflow-y-auto">
+                        {importErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowExcelImport(false);
+                        setExcelFile(null);
+                        setImportErrors([]);
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExcelImport}
+                      disabled={!excelFile || loading}
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {loading ? 'Yükleniyor...' : 'Yükle'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {loading && !showAddForm && !showExcelImport ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                 <p className="mt-2 text-gray-600">Sandıklar yükleniyor...</p>

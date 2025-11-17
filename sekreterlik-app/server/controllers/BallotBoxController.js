@@ -110,7 +110,7 @@ class BallotBoxController {
 
   static async create(req, res) {
     try {
-      const { ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id } = req.body;
+      const { ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id, voter_count } = req.body;
 
       // Validation
       const errors = [];
@@ -128,10 +128,10 @@ class BallotBoxController {
       }
 
       const sql = `INSERT INTO ballot_boxes 
-                   (ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                   (ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id, voter_count) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
       
-      const result = await db.run(sql, [ballot_number, institution_name, region_name || null, neighborhood_id || null, village_id || null, district_id || null, town_id || null]);
+      const result = await db.run(sql, [ballot_number, institution_name, region_name || null, neighborhood_id || null, village_id || null, district_id || null, town_id || null, voter_count || null]);
       
       // Update in-memory collection
       const newBallotBox = {
@@ -159,7 +159,7 @@ class BallotBoxController {
   static async update(req, res) {
     try {
       const { id } = req.params;
-      const { ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id } = req.body;
+      const { ballot_number, institution_name, region_name, neighborhood_id, village_id, district_id, town_id, voter_count } = req.body;
 
       // Validation
       const errors = [];
@@ -181,10 +181,10 @@ class BallotBoxController {
       }
 
       const sql = `UPDATE ballot_boxes 
-                   SET ballot_number = ?, institution_name = ?, region_name = ?, neighborhood_id = ?, village_id = ?, district_id = ?, town_id = ?, updated_at = CURRENT_TIMESTAMP
+                   SET ballot_number = ?, institution_name = ?, region_name = ?, neighborhood_id = ?, village_id = ?, district_id = ?, town_id = ?, voter_count = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?`;
       
-      await db.run(sql, [ballot_number, institution_name, region_name || null, neighborhood_id, village_id, district_id, town_id, id]);
+      await db.run(sql, [ballot_number, institution_name, region_name || null, neighborhood_id, village_id, district_id, town_id, voter_count || null, id]);
       
       // Update in-memory collection
       const ballotBoxIndex = collections.ballot_boxes.findIndex(bb => bb.id === parseInt(id));
@@ -197,6 +197,7 @@ class BallotBoxController {
           neighborhood_id,
           village_id,
           district_id,
+          voter_count: voter_count || null,
           town_id,
           updated_at: new Date().toISOString()
         };

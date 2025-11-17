@@ -581,6 +581,13 @@ db.serialize(() => {
       console.error('Error adding region_name column to ballot_boxes:', err);
     }
   });
+
+  // Add voter_count column to ballot_boxes table if it doesn't exist
+  db.run(`ALTER TABLE ballot_boxes ADD COLUMN voter_count INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding voter_count column to ballot_boxes:', err);
+    }
+  });
   
   // Add region_name column to ballot_box_observers table if it doesn't exist
   db.run(`ALTER TABLE ballot_box_observers ADD COLUMN region_name TEXT`, (err) => {
