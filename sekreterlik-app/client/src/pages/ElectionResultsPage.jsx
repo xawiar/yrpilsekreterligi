@@ -1064,7 +1064,7 @@ const ElectionResultsPage = () => {
   }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes]);
 
   // Helper function to calculate winning candidates based on party seats and candidate order
-  const calculateWinningCandidates = (partySeats, partyCandidates) => {
+  const calculateWinningCandidates = useCallback((partySeats, partyCandidates) => {
     if (!partyCandidates || !Array.isArray(partyCandidates) || partyCandidates.length === 0) {
       return [];
     }
@@ -1079,7 +1079,7 @@ const ElectionResultsPage = () => {
       order: index + 1, // 1. sıra, 2. sıra, 3. sıra...
       won: true
     }));
-  };
+  }, []);
 
   // D'Hondt calculation for MV election with winning candidates
   const dhondtResults = useMemo(() => {
