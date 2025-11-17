@@ -360,31 +360,48 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }
   };
 
-  const calculateValidVotes = () => {
-    if (!election?.type) return 0;
+  // Check if ballot box is in a village (köy)
+  const isVillage = () => {
+    return !!(formData.village_name && formData.village_name.trim() !== '');
+  };
+
+  // Calculate valid votes for each category separately
+  const calculateValidVotesByCategory = () => {
+    if (!election?.type) return {};
+    
+    const result = {};
     
     if (election.type === 'genel') {
-      // CB votes + MV votes (parti bazlı, aday bazlı değil)
-      const cbTotal = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      const mvTotal = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      return cbTotal + mvTotal;
+      // Genel Seçim: CB ve MV ayrı ayrı
+      result.cb = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+      result.mv = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
     } else if (election.type === 'yerel') {
-      // Mayor (aday bazlı) + Provincial Assembly (parti bazlı) + Municipal Council (parti bazlı) votes
-      const mayorTotal = Object.values(formData.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      const provincialTotal = Object.values(formData.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      const municipalTotal = Object.values(formData.municipal_council_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      return mayorTotal + provincialTotal + municipalTotal;
+      // Yerel Seçim: Köyde sadece İl Genel Meclisi, değilse hepsi
+      const isVil = isVillage();
+      
+      if (!isVil) {
+        // Köyde değil: Belediye Başkanı + Belediye Meclisi + İl Genel Meclisi
+        result.mayor = Object.values(formData.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+        result.municipal_council = Object.values(formData.municipal_council_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+        result.provincial_assembly = Object.values(formData.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+      } else {
+        // Köyde: Sadece İl Genel Meclisi
+        result.provincial_assembly = Object.values(formData.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+        result.mayor = 0;
+        result.municipal_council = 0;
+      }
     } else if (election.type === 'referandum') {
-      // Evet + Hayır votes
-      return Object.values(formData.referendum_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+      // Referandum: Evet + Hayır
+      result.referendum = Object.values(formData.referendum_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
     }
-    // Legacy support
-    if (election.type === 'cb' && election.candidates) {
-      return Object.values(formData.candidate_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-    } else if ((election.type === 'yerel' || election.type === 'genel') && election.parties) {
-      return Object.values(formData.party_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-    }
-    return 0;
+    
+    return result;
+  };
+
+  // Calculate total valid votes (sum of all categories)
+  const calculateTotalValidVotes = () => {
+    const byCategory = calculateValidVotesByCategory();
+    return Object.values(byCategory).reduce((sum, val) => sum + val, 0);
   };
 
   const handleSubmit = async (e) => {
@@ -407,12 +424,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       return;
     }
     
+    // Her kategori için geçerli oy sayısını ayrı ayrı kontrol et
+    const validVotesByCategory = calculateValidVotesByCategory();
+    const enteredValidVotes = parseInt(formData.valid_votes) || 0;
+    const totalCalculatedValidVotes = calculateTotalValidVotes();
+    
     if (election.type === 'genel') {
       // Genel seçim: CB ve MV oyları ayrı ayrı kontrol edilir
       // Her seçmen hem CB hem MV için oy kullanır, bu yüzden her ikisi de geçerli oy sayısına eşit olmalı
-      const cbTotal = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      const mvTotal = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-      const enteredValidVotes = parseInt(formData.valid_votes) || 0;
+      const cbTotal = validVotesByCategory.cb || 0;
+      const mvTotal = validVotesByCategory.mv || 0;
       
       if (cbTotal !== enteredValidVotes) {
         setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
@@ -427,13 +448,46 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         setSaving(false);
         return;
       }
-    } else {
-      // Yerel seçim ve Referandum: Normal validasyon
-      const calculatedValidVotes = calculateValidVotes();
-      const enteredValidVotes = parseInt(formData.valid_votes) || 0;
-
-      if (calculatedValidVotes !== enteredValidVotes) {
-        setMessage(`Geçerli oy sayısı (${enteredValidVotes}) aday oyları toplamı (${calculatedValidVotes}) ile eşleşmiyor`);
+    } else if (election.type === 'yerel') {
+      // Yerel seçim: Her kategori için ayrı ayrı kontrol
+      const isVil = isVillage();
+      const errors = [];
+      
+      if (!isVil) {
+        // Köyde değil: Belediye Başkanı + Belediye Meclisi + İl Genel Meclisi
+        if (validVotesByCategory.mayor !== enteredValidVotes) {
+          errors.push(`Belediye Başkanı oyları (${validVotesByCategory.mayor}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        }
+        if (validVotesByCategory.municipal_council !== enteredValidVotes) {
+          errors.push(`Belediye Meclisi oyları (${validVotesByCategory.municipal_council}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        }
+        if (validVotesByCategory.provincial_assembly !== enteredValidVotes) {
+          errors.push(`İl Genel Meclisi oyları (${validVotesByCategory.provincial_assembly}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        }
+      } else {
+        // Köyde: Sadece İl Genel Meclisi
+        if (validVotesByCategory.provincial_assembly !== enteredValidVotes) {
+          errors.push(`İl Genel Meclisi oyları (${validVotesByCategory.provincial_assembly}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        }
+        // Köyde Belediye Başkanı ve Belediye Meclisi oyları olmamalı
+        if (validVotesByCategory.mayor > 0) {
+          errors.push(`Köyde Belediye Başkanı oyu verilemez. Girilen oy: ${validVotesByCategory.mayor}`);
+        }
+        if (validVotesByCategory.municipal_council > 0) {
+          errors.push(`Köyde Belediye Meclisi oyu verilemez. Girilen oy: ${validVotesByCategory.municipal_council}`);
+        }
+      }
+      
+      if (errors.length > 0) {
+        setMessage(errors.join('; '));
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+    } else if (election.type === 'referandum') {
+      // Referandum: Normal validasyon
+      if (totalCalculatedValidVotes !== enteredValidVotes) {
+        setMessage(`Geçerli oy sayısı (${enteredValidVotes}) aday oyları toplamı (${totalCalculatedValidVotes}) ile eşleşmiyor`);
         setMessageType('error');
         setSaving(false);
         return;
@@ -666,11 +720,6 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Geçerli Oy Sayısı *
-                    {calculateValidVotes() > 0 && (
-                      <span className="ml-2 text-xs font-normal text-gray-500">
-                        (Aday oyları toplamı: {calculateValidVotes()})
-                      </span>
-                    )}
                   </label>
                   <input
                     type="number"
@@ -683,6 +732,46 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     required
                     placeholder="0"
                   />
+                  {/* Her kategori için geçerli oy sayısı gösterimi */}
+                  {(() => {
+                    const validVotesByCategory = calculateValidVotesByCategory();
+                    const isVil = isVillage();
+                    
+                    if (election?.type === 'genel') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>CB oyları toplamı: <span className="font-semibold">{validVotesByCategory.cb || 0}</span></div>
+                          <div>MV oyları toplamı: <span className="font-semibold">{validVotesByCategory.mv || 0}</span></div>
+                          <div className="text-gray-500 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
+                        </div>
+                      );
+                    } else if (election?.type === 'yerel') {
+                      if (isVil) {
+                        return (
+                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                            <div className="text-amber-600 font-semibold">⚠️ Köy: Sadece İl Genel Meclisi için oy kullanılır</div>
+                            <div>İl Genel Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.provincial_assembly || 0}</span></div>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                            <div>Belediye Başkanı oyları toplamı: <span className="font-semibold">{validVotesByCategory.mayor || 0}</span></div>
+                            <div>Belediye Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.municipal_council || 0}</span></div>
+                            <div>İl Genel Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.provincial_assembly || 0}</span></div>
+                            <div className="text-gray-500 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
+                          </div>
+                        );
+                      }
+                    } else if (election?.type === 'referandum') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>Referandum oyları toplamı: <span className="font-semibold">{validVotesByCategory.referendum || 0}</span></div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             </div>
@@ -791,6 +880,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
             {election?.type === 'yerel' && (
               <div className="space-y-5">
+                {/* Köy kontrolü bilgilendirmesi */}
+                {isVillage() && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded p-4">
+                    <p className="text-sm font-semibold text-amber-800">
+                      ⚠️ Köy: Bu sandık köyde bulunmaktadır. Sadece İl Genel Meclisi için oy kullanılabilir.
+                    </p>
+                  </div>
+                )}
+
                 {/* Debug: Show if no local election data */}
                 {(!election.mayor_parties || !Array.isArray(election.mayor_parties) || election.mayor_parties.length === 0) &&
                  (!election.mayor_candidates || !Array.isArray(election.mayor_candidates) || election.mayor_candidates.length === 0) &&
@@ -803,11 +901,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* Belediye Başkanı Parti Oyları */}
+                {/* Belediye Başkanı Parti Oyları - Köyde devre dışı */}
                 {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
+                  <div className={`bg-white border border-gray-300 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       Belediye Başkanı Parti Oyları
+                      {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_parties.map((party) => {
@@ -823,7 +922,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mayor_votes[partyName] || ''}
                             onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            disabled={isVillage()}
+                            className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
                         </div>
@@ -833,11 +933,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* Bağımsız Belediye Başkanı Adayları */}
+                {/* Bağımsız Belediye Başkanı Adayları - Köyde devre dışı */}
                 {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
+                  <div className={`bg-white border border-gray-300 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       Bağımsız Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
+                      {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
@@ -851,7 +952,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mayor_votes[candidate] || ''}
                             onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            disabled={isVillage()}
+                            className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
                         </div>
@@ -890,11 +992,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) */}
+                {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) - Köyde devre dışı */}
                 {election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
+                  <div className={`bg-white border border-gray-300 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
                       Belediye Meclis Parti Oyları
+                      {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.municipal_council_parties.map((party) => {
@@ -910,7 +1013,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.municipal_council_votes[partyName] || ''}
                             onChange={(e) => handleMunicipalCouncilVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            disabled={isVillage()}
+                            className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
                         </div>
