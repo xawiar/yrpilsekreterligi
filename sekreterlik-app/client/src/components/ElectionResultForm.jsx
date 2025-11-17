@@ -68,14 +68,43 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       const ballotBoxData = await ApiService.getBallotBoxById(ballotBoxId);
       if (ballotBoxData) {
         setBallotBox(ballotBoxData);
+        
+        // Önce sandığın kendi bilgilerine bak
+        let regionName = ballotBoxData.region_name || '';
+        let districtName = ballotBoxData.district_name || '';
+        let townName = ballotBoxData.town_name || '';
+        let neighborhoodName = ballotBoxData.neighborhood_name || '';
+        let villageName = ballotBoxData.village_name || '';
+        
+        // Eğer sandıkta konum bilgisi yoksa, başmüşahit bilgilerine bak
+        if (!districtName && !neighborhoodName && !villageName) {
+          try {
+            const observers = await ApiService.getBallotBoxObservers();
+            const chiefObserver = observers.find(observer => 
+              (observer.ballot_box_id === parseInt(ballotBoxId) || observer.ballot_box_id === ballotBoxId) &&
+              (observer.is_chief_observer === true || observer.is_chief_observer === 1)
+            );
+            
+            if (chiefObserver) {
+              if (!regionName) regionName = chiefObserver.region_name || '';
+              if (!districtName) districtName = chiefObserver.district_name || '';
+              if (!townName) townName = chiefObserver.town_name || '';
+              if (!neighborhoodName) neighborhoodName = chiefObserver.neighborhood_name || '';
+              if (!villageName) villageName = chiefObserver.village_name || '';
+            }
+          } catch (observerError) {
+            console.error('Error fetching observers:', observerError);
+          }
+        }
+        
         // Auto-fill location info and voter count
         setFormData(prev => ({
           ...prev,
-          region_name: ballotBoxData.region_name || '',
-          district_name: ballotBoxData.district_name || '',
-          town_name: ballotBoxData.town_name || '',
-          neighborhood_name: ballotBoxData.neighborhood_name || '',
-          village_name: ballotBoxData.village_name || '',
+          region_name: regionName,
+          district_name: districtName,
+          town_name: townName,
+          neighborhood_name: neighborhoodName,
+          village_name: villageName,
           total_voters: ballotBoxData.voter_count || ''
         }));
       }
@@ -146,12 +175,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }));
   };
 
-  const handleMvVoteChange = (partyName, candidateName, value) => {
+  // MV oyları parti bazlı (aday bazlı değil)
+  const handleMvVoteChange = (partyName, value) => {
     setFormData(prev => ({
       ...prev,
       mv_votes: {
         ...prev.mv_votes,
-        [`${partyName}_${candidateName}`]: parseInt(value) || 0
+        [partyName]: parseInt(value) || 0
       }
     }));
   };
@@ -166,22 +196,24 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }));
   };
 
-  const handleProvincialAssemblyVoteChange = (candidateName, value) => {
+  // İl Genel Meclisi oyları parti bazlı
+  const handleProvincialAssemblyVoteChange = (partyName, value) => {
     setFormData(prev => ({
       ...prev,
       provincial_assembly_votes: {
         ...prev.provincial_assembly_votes,
-        [candidateName]: parseInt(value) || 0
+        [partyName]: parseInt(value) || 0
       }
     }));
   };
 
-  const handleMunicipalCouncilVoteChange = (candidateName, value) => {
+  // Belediye Meclisi oyları parti bazlı
+  const handleMunicipalCouncilVoteChange = (partyName, value) => {
     setFormData(prev => ({
       ...prev,
       municipal_council_votes: {
         ...prev.municipal_council_votes,
-        [candidateName]: parseInt(value) || 0
+        [partyName]: parseInt(value) || 0
       }
     }));
   };
@@ -435,8 +467,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ height: '100vh', overflow: 'hidden' }}>
+      <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full h-[95vh] overflow-hidden flex flex-col">
         {/* Tutanak Başlığı - Minimal ve Kurumsal */}
         <div className="bg-white border-b-2 border-gray-300 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -528,6 +560,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     value={formData.used_votes}
                     onChange={handleInputChange}
                     min="0"
+                    inputMode="numeric"
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                     required
                     placeholder="0"
@@ -543,6 +576,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     value={formData.invalid_votes}
                     onChange={handleInputChange}
                     min="0"
+                    inputMode="numeric"
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                     required
                     placeholder="0"
@@ -563,6 +597,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     value={formData.valid_votes}
                     onChange={handleInputChange}
                     min="0"
+                    inputMode="numeric"
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                     required
                     placeholder="0"
@@ -591,6 +626,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             min="0"
                             value={formData.cb_votes[candidate] || ''}
                             onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
+                            inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
@@ -609,6 +645,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                                 min="0"
                                 value={formData.cb_votes[candidate] || ''}
                                 onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
+                                inputMode="numeric"
                                 className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                                 placeholder="0"
                               />
@@ -624,61 +661,45 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 {election.parties && election.parties.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
-                      Milletvekili Adayları ve Aldıkları Oy Sayıları
+                      Milletvekili Parti Oyları
                     </h2>
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {election.parties.map((party) => (
-                        <div key={party.name || party} className="border border-gray-200 rounded p-3">
-                          <h3 className="text-sm font-bold text-gray-900 mb-3 pb-2 border-b border-gray-200">
+                        <div key={party.name || party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
                             {party.name || party}
-                          </h3>
-                          <div className="space-y-2">
-                            {party.mv_candidates && party.mv_candidates.length > 0 ? (
-                              party.mv_candidates.map((candidate) => (
-                                <div key={candidate} className="flex items-center justify-between py-1.5">
-                                  <label className="flex-1 text-sm text-gray-700">
-                                    {candidate}
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={formData.mv_votes[`${party.name || party}_${candidate}`] || ''}
-                                    onChange={(e) => handleMvVoteChange(party.name || party, candidate, e.target.value)}
-                                    className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
-                                    placeholder="0"
-                                  />
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-xs text-gray-500 italic">Bu parti için MV adayı eklenmemiş</p>
-                            )}
-                          </div>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.mv_votes[party.name || party] || ''}
+                            onChange={(e) => handleMvVoteChange(party.name || party, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
                         </div>
                       ))}
                       {/* Bağımsız MV Adayları */}
                       {election.independent_mv_candidates && election.independent_mv_candidates.length > 0 && (
-                        <div className="border border-gray-200 rounded p-3">
-                          <h3 className="text-sm font-bold text-gray-900 mb-3 pb-2 border-b border-gray-200">
-                            Bağımsız Milletvekili Adayları
-                          </h3>
-                          <div className="space-y-2">
-                            {election.independent_mv_candidates.map((candidate) => (
-                              <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-1.5">
-                                <label className="flex-1 text-sm text-gray-700">
-                                  {candidate}
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={formData.mv_votes[`Bağımsız_${candidate}`] || ''}
-                                  onChange={(e) => handleMvVoteChange('Bağımsız', candidate, e.target.value)}
-                                  className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
-                                  placeholder="0"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                        <>
+                          {election.independent_mv_candidates.map((candidate) => (
+                            <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900">
+                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={formData.mv_votes[candidate] || ''}
+                                onChange={(e) => handleMvVoteChange(candidate, e.target.value)}
+                                inputMode="numeric"
+                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                placeholder="0"
+                              />
+                            </div>
+                          ))}
+                        </>
                       )}
                     </div>
                   </div>
@@ -706,6 +727,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             min="0"
                             value={formData.mayor_votes[candidate] || ''}
                             onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
+                            inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
@@ -715,23 +737,24 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* İl Genel Meclisi Üyesi Oyları */}
-                {election.provincial_assembly_candidates && election.provincial_assembly_candidates.length > 0 && (
+                {/* İl Genel Meclisi Üyesi Oyları (Parti Bazlı) */}
+                {election.provincial_assembly_parties && election.provincial_assembly_parties.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
-                      İl Genel Meclisi Üyesi Adayları ve Aldıkları Oy Sayıları
+                      İl Genel Meclisi Parti Oyları
                     </h2>
                     <div className="space-y-2">
-                      {election.provincial_assembly_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                      {election.provincial_assembly_parties.map((party) => (
+                        <div key={party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
                           <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate}
+                            {party}
                           </label>
                           <input
                             type="number"
                             min="0"
-                            value={formData.provincial_assembly_votes[candidate] || ''}
-                            onChange={(e) => handleProvincialAssemblyVoteChange(candidate, e.target.value)}
+                            value={formData.provincial_assembly_votes[party] || ''}
+                            onChange={(e) => handleProvincialAssemblyVoteChange(party, e.target.value)}
+                            inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
@@ -741,23 +764,24 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* Belediye Meclis Üyesi Oyları */}
-                {election.municipal_council_candidates && election.municipal_council_candidates.length > 0 && (
+                {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) */}
+                {election.municipal_council_parties && election.municipal_council_parties.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
-                      Belediye Meclis Üyesi Adayları ve Aldıkları Oy Sayıları
+                      Belediye Meclis Parti Oyları
                     </h2>
                     <div className="space-y-2">
-                      {election.municipal_council_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                      {election.municipal_council_parties.map((party) => (
+                        <div key={party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
                           <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate}
+                            {party}
                           </label>
                           <input
                             type="number"
                             min="0"
-                            value={formData.municipal_council_votes[candidate] || ''}
-                            onChange={(e) => handleMunicipalCouncilVoteChange(candidate, e.target.value)}
+                            value={formData.municipal_council_votes[party] || ''}
+                            onChange={(e) => handleMunicipalCouncilVoteChange(party, e.target.value)}
+                            inputMode="numeric"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
@@ -785,6 +809,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       min="0"
                       value={formData.referendum_votes['Evet'] || 0}
                       onChange={(e) => handleReferendumVoteChange('Evet', e.target.value)}
+                      inputMode="numeric"
                       className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                       placeholder="0"
                     />
@@ -798,6 +823,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       min="0"
                       value={formData.referendum_votes['Hayır'] || 0}
                       onChange={(e) => handleReferendumVoteChange('Hayır', e.target.value)}
+                      inputMode="numeric"
                       className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                       placeholder="0"
                     />
