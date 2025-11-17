@@ -1081,6 +1081,27 @@ const ElectionResultsPage = () => {
     return calculateDHondtDetailed(partyVotes, totalSeats);
   }, [election, aggregatedResults]);
 
+  // Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt
+  const municipalCouncilResults = useMemo(() => {
+    if (election?.type !== 'yerel' || !aggregatedResults.categories) return null;
+    
+    const municipalCategory = aggregatedResults.categories.find(c => c.name === 'Belediye Meclisi Seçimi');
+    if (!municipalCategory || municipalCategory.data.length === 0) return null;
+    
+    // Get total seats (this should come from election data or be configurable)
+    const totalSeats = 25; // Default, should be configurable per municipality
+    
+    // Get population (this should come from election data or be configurable)
+    const population = election.population || 0; // Default, should be configurable
+    
+    const partyVotes = {};
+    municipalCategory.data.forEach(item => {
+      partyVotes[item.name] = item.value;
+    });
+    
+    return calculateMunicipalCouncilSeats(partyVotes, totalSeats, population);
+  }, [election, aggregatedResults]);
+
   console.log('🎨 ElectionResultsPage render:', {
     loading,
     election: election ? { id: election.id, name: election.name } : null,
