@@ -1132,6 +1132,12 @@ const ElectionResultsPage = () => {
 
   const filteredResults = getFilteredResults();
   
+  // Pagination
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedResults = filteredResults.slice(startIndex, endIndex);
+  
   // Sonuç yoksa bile sayfa görünsün - sıfır değerlerle
   const hasResults = filteredResults.length > 0;
 
