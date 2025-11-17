@@ -1179,6 +1179,80 @@ const SeçimEkleSettings = () => {
                 )}
               </div>
 
+              {/* İl Genel Meclisi İlçe Bazlı Üye Sayıları (D'Hondt için) */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  İl Genel Meclisi İlçe Bazlı Üye Sayıları (D'Hondt Hesaplaması için) *
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={districtInput}
+                    onChange={(e) => setDistrictInput(e.target.value)}
+                    placeholder="İlçe adı"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <input
+                    type="number"
+                    value={districtSeatsInput}
+                    onChange={(e) => setDistrictSeatsInput(e.target.value)}
+                    min="1"
+                    placeholder="Üye sayısı"
+                    className="w-32 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (districtInput.trim() && districtSeatsInput && parseInt(districtSeatsInput) > 0) {
+                        setFormData(prev => ({
+                          ...prev,
+                          provincial_assembly_district_seats: {
+                            ...prev.provincial_assembly_district_seats,
+                            [districtInput.trim()]: parseInt(districtSeatsInput)
+                          }
+                        }));
+                        setDistrictInput('');
+                        setDistrictSeatsInput('');
+                      }
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Ekle
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Her ilçe için ayrı D'Hondt hesaplaması yapılacaktır. İlçe adı ve üye sayısını girin.
+                </p>
+                {formData.provincial_assembly_district_seats && Object.keys(formData.provincial_assembly_district_seats).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Object.entries(formData.provincial_assembly_district_seats).map(([district, seats]) => (
+                      <span
+                        key={district}
+                        className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm"
+                      >
+                        {district}: {seats} üye
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => {
+                              const newSeats = { ...prev.provincial_assembly_district_seats };
+                              delete newSeats[district];
+                              return {
+                                ...prev,
+                                provincial_assembly_district_seats: newSeats
+                              };
+                            });
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Belediye Meclis Partileri */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
