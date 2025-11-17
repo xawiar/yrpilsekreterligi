@@ -414,7 +414,8 @@ const ElectionResultsPage = () => {
       // Yerel/Genel Seçim - Parti oyları
       const partyTotals = {};
       election.parties.forEach(party => {
-        partyTotals[party] = 0;
+        const partyName = typeof party === 'string' ? party : (party.name || party);
+        partyTotals[partyName] = 0;
       });
 
       filtered.forEach(result => {
@@ -1011,11 +1012,14 @@ const ElectionResultsPage = () => {
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       <p className="font-medium mb-2">Partiler:</p>
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {election.parties.map((party, idx) => (
-                          <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                            {party}: 0 oy (%0)
-                          </span>
-                        ))}
+                        {election.parties.map((party, idx) => {
+                          const partyName = typeof party === 'string' ? party : (party.name || party);
+                          return (
+                            <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                              {partyName}: 0 oy (%0)
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1203,11 +1207,12 @@ const ElectionResultsPage = () => {
                       {(election.type === 'yerel' || election.type === 'genel') && election.parties && (
                         <div className="space-y-2">
                           {election.parties.map(party => {
-                            const votes = result.party_votes?.[party] || 0;
+                            const partyName = typeof party === 'string' ? party : (party.name || party);
+                            const votes = result.party_votes?.[partyName] || 0;
                             const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
                             return (
-                              <div key={party} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-700 dark:text-gray-300">{party}</span>
+                              <div key={partyName} className="flex justify-between items-center text-sm">
+                                <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                 <div className="text-right">
                                   <div className="font-semibold text-gray-900 dark:text-gray-100">{votes}</div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
