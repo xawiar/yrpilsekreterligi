@@ -186,12 +186,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }));
   };
 
-  const handleMayorVoteChange = (candidateName, value) => {
+  // Belediye Başkanı: Parti bazlı (bağımsızlar hariç)
+  const handleMayorVoteChange = (partyOrCandidate, value) => {
     setFormData(prev => ({
       ...prev,
       mayor_votes: {
         ...prev.mayor_votes,
-        [candidateName]: parseInt(value) || 0
+        [partyOrCandidate]: parseInt(value) || 0
       }
     }));
   };
@@ -710,17 +711,44 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
             {election.type === 'yerel' && (
               <div className="space-y-5">
-                {/* Belediye Başkanı Oyları */}
+                {/* Belediye Başkanı Parti Oyları */}
+                {election.mayor_parties && election.mayor_parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Belediye Başkanı Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_parties.map((party) => (
+                        <div key={party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
+                            {party}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.mayor_votes[party] || ''}
+                            onChange={(e) => handleMayorVoteChange(party, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bağımsız Belediye Başkanı Adayları */}
                 {election.mayor_candidates && election.mayor_candidates.length > 0 && (
                   <div className="bg-white border border-gray-300 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
-                      Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
+                      Bağımsız Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
                         <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
                           <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate}
+                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
                           </label>
                           <input
                             type="number"
