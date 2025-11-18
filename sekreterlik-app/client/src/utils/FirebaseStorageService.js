@@ -1,10 +1,14 @@
 /**
  * Firebase Storage Service
  * Dosya yükleme ve indirme işlemleri için
+ * 
+ * NOT: ElectionResultForm için UploadQueue kullanılmalı (concurrent limit ve retry için)
+ * Bu service diğer upload'lar için kullanılabilir
  */
 
 import { storage } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
+import uploadQueue from './UploadQueue';
 
 class FirebaseStorageService {
   /**
@@ -12,12 +16,20 @@ class FirebaseStorageService {
    * @param {File} file - Yüklenecek dosya
    * @param {string} path - Storage path (örn: 'photos/member-123.jpg')
    * @param {Object} metadata - Ek metadata (contentType, customMetadata vb.)
+   * @param {Function} onProgress - Progress callback (0-100) - optional
+   * @param {boolean} useQueue - UploadQueue kullanılsın mı? (default: false, küçük dosyalar için)
    * @returns {Promise<string>} Download URL
    */
-  static async uploadFile(file, path, metadata = {}) {
+  static async uploadFile(file, path, metadata = {}, onProgress = null, useQueue = false) {
     try {
-      console.log('📤 Uploading file to Firebase Storage:', { path, size: file.size, type: file.type });
+      console.log('📤 Uploading file to Firebase Storage:', { path, size: file.size, type: file.type, useQueue });
       
+      // Büyük dosyalar veya eşzamanlı upload riski varsa queue kullan
+      if (useQueue || file.size > 1024 * 1024) { // 1MB'dan büyükse queue kullan
+        return await uploadQueue.add(file, path, metadata, onProgress, 5);
+      }
+      
+      // Küçük dosyalar için direkt upload (hızlı)
       const storageRef = ref(storage, path);
       
       // Metadata'yı hazırla
@@ -37,6 +49,18 @@ class FirebaseStorageService {
       return downloadURL;
     } catch (error) {
       console.error('❌ Firebase Storage upload error:', error);
+      
+      // Retry yapılabilir hatalar için queue'ya ekle
+      const retryableErrors = ['quota-exceeded', 'unauthenticated', 'unauthorized', 'retry-limit-exceeded', 'network', 'QUIC'];
+      const isRetryable = retryableErrors.some(err => 
+        error.code?.includes(err) || error.message?.includes(err)
+      );
+      
+      if (isRetryable && !useQueue) {
+        console.log('⚠️ Retryable error detected, retrying with queue...');
+        return await uploadQueue.add(file, path, metadata, onProgress, 5);
+      }
+      
       throw new Error(`Dosya yüklenirken hata oluştu: ${error.message}`);
     }
   }

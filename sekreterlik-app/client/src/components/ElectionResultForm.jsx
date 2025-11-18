@@ -5,6 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { useAuth } from '../contexts/AuthContext';
+import uploadQueue from '../utils/UploadQueue';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
   const { userRole, user } = useAuth();
@@ -75,6 +76,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   const [uploadingPhotos, setUploadingPhotos] = useState({
     signed: false,
     objection: false
+  });
+  const [uploadProgress, setUploadProgress] = useState({
+    signed: 0,
+    objection: 0
   });
 
   // Fetch ballot box information
@@ -359,10 +364,28 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       
       const timestamp = Date.now();
       const fileName = `election_results/${election.id}/${ballotBoxId}/${type}_${timestamp}_${optimizedFile.name}`;
-      const storageRef = ref(storage, fileName);
       
-      await uploadBytes(storageRef, optimizedFile);
-      const downloadURL = await getDownloadURL(storageRef);
+      // Progress callback
+      const onProgress = (progress) => {
+        setUploadProgress(prev => ({ ...prev, [type]: progress }));
+      };
+      
+      // Upload queue'ya ekle (retry mechanism ve concurrent limit ile)
+      const downloadURL = await uploadQueue.add(
+        optimizedFile,
+        fileName,
+        {
+          contentType: optimizedFile.type,
+          customMetadata: {
+            electionId: String(election.id),
+            ballotBoxId: String(ballotBoxId),
+            type: type,
+            uploadedAt: new Date().toISOString()
+          }
+        },
+        onProgress,
+        5 // maxRetries: 5
+      );
       
       setFormData(prev => ({
         ...prev,
@@ -371,10 +394,32 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       
       setMessage('Fotoğraf başarıyla yüklendi');
       setMessageType('success');
+      
+      // Progress'i sıfırla
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }));
     } catch (error) {
       console.error('Photo upload error:', error);
-      setMessage('Fotoğraf yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      
+      // Hata mesajını kullanıcı dostu hale getir
+      let errorMessage = 'Fotoğraf yüklenirken hata oluştu';
+      
+      if (error.code === 'storage/quota-exceeded') {
+        errorMessage = 'Depolama kotası aşıldı. Lütfen daha sonra tekrar deneyin.';
+      } else if (error.code === 'storage/unauthenticated' || error.code === 'storage/unauthorized') {
+        errorMessage = 'Kimlik doğrulama hatası. Lütfen tekrar giriş yapın.';
+      } else if (error.code === 'storage/retry-limit-exceeded') {
+        errorMessage = 'Yükleme başarısız oldu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
+      } else if (error.message?.includes('network') || error.message?.includes('QUIC')) {
+        errorMessage = 'Ağ hatası. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
+      } else if (error.message) {
+        errorMessage = `Fotoğraf yüklenirken hata oluştu: ${error.message}`;
+      }
+      
+      setMessage(errorMessage);
       setMessageType('error');
+      
+      // Progress'i sıfırla
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }));
     } finally {
       setUploadingPhotos(prev => ({ ...prev, [type]: false }));
     }
@@ -1252,9 +1297,19 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
                     {uploadingPhotos.signed ? (
-                      <div className="flex flex-col items-center justify-center">
+                      <div className="flex flex-col items-center justify-center w-full">
                         <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-indigo-600 mb-2"></div>
-                        <span className="text-xs text-gray-600">Yükleniyor...</span>
+                        <span className="text-xs text-gray-600 mb-1">
+                          {uploadProgress.signed > 0 ? `Yükleniyor... %${uploadProgress.signed}` : 'Yükleniyor...'}
+                        </span>
+                        {uploadProgress.signed > 0 && (
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress.signed}%` }}
+                            ></div>
+                          </div>
+                        )}
                       </div>
                     ) : formData.signed_protocol_photo ? (
                       <div className="relative w-full h-full">
@@ -1294,9 +1349,19 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
                     {uploadingPhotos.objection ? (
-                      <div className="flex flex-col items-center justify-center">
+                      <div className="flex flex-col items-center justify-center w-full">
                         <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-indigo-600 mb-2"></div>
-                        <span className="text-xs text-gray-600">Yükleniyor...</span>
+                        <span className="text-xs text-gray-600 mb-1">
+                          {uploadProgress.objection > 0 ? `Yükleniyor... %${uploadProgress.objection}` : 'Yükleniyor...'}
+                        </span>
+                        {uploadProgress.objection > 0 && (
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress.objection}%` }}
+                            ></div>
+                          </div>
+                        )}
                       </div>
                     ) : formData.objection_protocol_photo ? (
                       <div className="relative w-full h-full">
