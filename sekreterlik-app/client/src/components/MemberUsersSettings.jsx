@@ -1236,20 +1236,8 @@ const MemberUsersSettings = () => {
       
       console.log('🔍 Backend URL:', API_BASE_URL);
 
-      // Önce backend'in çalışıp çalışmadığını kontrol et
-      try {
-        const healthCheck = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(5000)
-        });
-        console.log('✅ Backend health check:', healthCheck.status);
-      } catch (healthError) {
-        console.warn('⚠️ Backend health check failed:', healthError.message);
-        setMessage('⚠️ Backend servisi erişilemiyor. Render.com\'da "sekreterlik-backend" servisi oluşturulmuş mu kontrol edin.\n\nBackend URL: ' + API_BASE_URL);
-        setMessageType('warning');
-        setIsCleaningUp(false);
-        return;
-      }
+      // Health check'i kaldırdık - direkt cleanup endpoint'ini deneyeceğiz
+      // Eğer backend çalışmıyorsa, cleanup endpoint'i zaten 404 dönecek
 
       // Backend cleanup endpoint'ini çağır
       const controller = new AbortController();
