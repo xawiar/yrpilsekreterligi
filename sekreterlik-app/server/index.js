@@ -207,6 +207,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// CORS middleware - Tüm request'ler için
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Render.com origin kontrolü (en geniş kontrol - önce bunu kontrol et)
+  if (origin && (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    console.log('✅ CORS header set for:', origin, req.method, req.path);
+  } else if (origin && allowedOrigins.has(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    console.log('✅ CORS header set (from list):', origin, req.method, req.path);
+  } else if (process.env.NODE_ENV !== 'production') {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    console.log('✅ CORS header set (development):', origin || '*', req.method, req.path);
+  }
+  
+  next();
+});
+
 app.use(cors({
   origin: (origin, callback) => {
     // No origin (mobile apps, Postman, etc.)
@@ -301,6 +331,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 // Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
+// CORS'tan SONRA kullanılmalı - CORS header'larını override etmemesi için
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -309,7 +340,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // React için gerekli
       imgSrc: ["'self'", "data:", "blob:", "https:"], // Firebase Storage ve data URI için
       connectSrc: process.env.NODE_ENV === 'production' 
-        ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com"]
+        ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com", "https://*.onrender.com"]
         : ["'self'", "http://localhost:5000", "http://127.0.0.1:5000", "https://*.firebaseio.com", "https://*.googleapis.com"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
@@ -318,6 +349,7 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false, // Firebase için gerekli
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Firebase Storage için
+  crossOriginOpenerPolicy: false, // CORS için gerekli
 }));
 // Gzip compression for JSON/text responses (threshold 1KB)
 app.use(compression({
