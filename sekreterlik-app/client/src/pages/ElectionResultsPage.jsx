@@ -1265,7 +1265,7 @@ const ElectionResultsPage = () => {
     const districtSeats = election.provincial_assembly_district_seats || {};
     if (Object.keys(districtSeats).length === 0) return null;
     
-    const assemblyData = calculateProvincialAssemblySeats(filtered, districtSeats);
+    const assemblyData = calculateProvincialAssemblySeats(filtered, districtSeats, ballotBoxes, districts);
     
     // Her ilçe için kazanan adayları hesapla
     const districtWinningCandidates = {};
@@ -2146,12 +2146,24 @@ const ElectionResultsPage = () => {
               </span>
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* İlçe Bazlı Sonuçlar */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">İlçe Bazlı Dağılım</h3>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {Object.entries(provincialAssemblyResults.districtResults).map(([districtName, districtData]) => (
+            {Object.keys(provincialAssemblyResults.districtResults || {}).length === 0 ? (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⚠️ İl Genel Meclisi sonuçları hesaplanamadı. Lütfen kontrol edin:
+                </p>
+                <ul className="mt-2 text-xs text-yellow-700 dark:text-yellow-300 list-disc list-inside space-y-1">
+                  <li>İlçe bazlı üye sayıları seçim ayarlarında tanımlı mı?</li>
+                  <li>Sandık sonuçlarında İl Genel Meclisi oyları girilmiş mi?</li>
+                  <li>Sandıkların ilçe bilgileri doğru mu?</li>
+                </ul>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* İlçe Bazlı Sonuçlar */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">İlçe Bazlı Dağılım</h3>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {Object.entries(provincialAssemblyResults.districtResults).map(([districtName, districtData]) => (
                     <div key={districtName} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                       <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">
                         {districtName} ({districtData.seats} üye)

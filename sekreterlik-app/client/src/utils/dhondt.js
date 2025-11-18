@@ -258,9 +258,11 @@ export const calculateMunicipalCouncilSeats = (partyVotes, totalSeats, populatio
  * 
  * @param {Array} results - Seçim sonuçları array'i (her biri bir sandık)
  * @param {Object} districtSeats - İlçe isimleri ve üye sayıları: { 'İlçe Adı': üyeSayısı }
+ * @param {Array} ballotBoxes - Sandık listesi (ilçe eşleşmesi için)
+ * @param {Array} districts - İlçe listesi (ilçe ID'den isim bulmak için)
  * @returns {Object} - Detaylı sonuç: { districtResults, totalDistribution, chartData }
  */
-export const calculateProvincialAssemblySeats = (results, districtSeats) => {
+export const calculateProvincialAssemblySeats = (results, districtSeats, ballotBoxes = [], districts = []) => {
   if (!results || !Array.isArray(results) || results.length === 0) {
     return {
       districtResults: {},
@@ -282,6 +284,18 @@ export const calculateProvincialAssemblySeats = (results, districtSeats) => {
   const districtResults = {};
   const totalDistribution = {};
 
+  // İlçe ID'den isim mapping'i oluştur
+  const districtIdToName = {};
+  districts.forEach(d => {
+    districtIdToName[String(d.id)] = d.name;
+  });
+
+  // İlçe isminden ID mapping'i oluştur (districtSeats'te isim var)
+  const districtNameToId = {};
+  districts.forEach(d => {
+    districtNameToId[d.name] = String(d.id);
+  });
+
   // Her ilçe için ayrı D'Hondt hesaplaması
   Object.entries(districtSeats).forEach(([districtName, seats]) => {
     const seatsCount = parseInt(seats) || 0;
@@ -290,8 +304,26 @@ export const calculateProvincialAssemblySeats = (results, districtSeats) => {
     // Bu ilçedeki sandıklardan parti oylarını topla
     const districtPartyVotes = {};
     results.forEach(result => {
-      // İlçe eşleşmesi kontrolü
-      if (result.district_name === districtName && result.provincial_assembly_votes) {
+      // İlçe eşleşmesi: Önce result.district_name'e bak, yoksa ballot_box_id üzerinden bul
+      let matchesDistrict = false;
+      
+      // Yöntem 1: result.district_name ile direkt eşleşme
+      if (result.district_name === districtName) {
+        matchesDistrict = true;
+      } else {
+        // Yöntem 2: ballot_box_id üzerinden ilçe bul
+        if (result.ballot_box_id && ballotBoxes.length > 0) {
+          const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+          if (ballotBox && ballotBox.district_id) {
+            const ballotBoxDistrictName = districtIdToName[String(ballotBox.district_id)];
+            if (ballotBoxDistrictName === districtName) {
+              matchesDistrict = true;
+            }
+          }
+        }
+      }
+      
+      if (matchesDistrict && result.provincial_assembly_votes) {
         Object.entries(result.provincial_assembly_votes).forEach(([party, votes]) => {
           districtPartyVotes[party] = (districtPartyVotes[party] || 0) + (parseInt(votes) || 0);
         });
