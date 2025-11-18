@@ -1057,20 +1057,42 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
       });
     }
 
-    // Firestore'daki tüm member_users'ları al (Firebase kullanılıyorsa)
-    // SQLite kullanılıyorsa, member_users tablosundan al
+    // Firestore/SQLite'daki tüm member_users'ları al
     const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
     
     let firestoreAuthUids = new Set();
+    let adminUid = null;
     
     if (USE_FIREBASE) {
-      // Firestore'dan member_users'ları almak için client-side API'ye ihtiyaç var
-      // Bu yüzden şimdilik sadece SQLite'dan kontrol ediyoruz
-      // İleride Firestore Admin SDK ile direkt Firestore'dan alınabilir
-      console.log('ℹ️ Firebase kullanılıyor, Firestore kontrolü için client-side API gerekli');
+      // Firebase kullanılıyorsa, Firestore Admin SDK ile direkt Firestore'dan al
+      try {
+        const firestore = firebaseAdmin.firestore();
+        const memberUsersSnapshot = await firestore.collection('member_users').get();
+        memberUsersSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.authUid) {
+            firestoreAuthUids.add(data.authUid);
+          }
+        });
+        
+        // Admin UID'sini Firestore'dan al
+        const adminDoc = await firestore.collection('admin').doc('main').get();
+        if (adminDoc.exists) {
+          const adminData = adminDoc.data();
+          if (adminData.uid) {
+            adminUid = adminData.uid;
+            firestoreAuthUids.add(adminUid);
+          }
+        }
+        
+        console.log(`📊 Found ${firestoreAuthUids.size} authUids in Firestore (including admin)`);
+      } catch (firestoreError) {
+        console.error('❌ Error reading from Firestore:', firestoreError);
+        // Fallback: SQLite'dan da kontrol et
+      }
     }
     
-    // SQLite'dan member_users'ları al
+    // SQLite'dan da member_users'ları al (hem Firebase hem SQLite için backup)
     const db = require('../config/database');
     const memberUsers = await new Promise((resolve, reject) => {
       db.all('SELECT auth_uid, authUid FROM member_users WHERE (auth_uid IS NOT NULL AND auth_uid != "") OR (authUid IS NOT NULL AND authUid != "")', (err, rows) => {
@@ -1079,19 +1101,11 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
       });
     });
     
-    // SQLite'daki authUid'leri topla
+    // SQLite'daki authUid'leri de topla
     memberUsers.forEach(user => {
       if (user.auth_uid) firestoreAuthUids.add(user.auth_uid);
       if (user.authUid) firestoreAuthUids.add(user.authUid);
     });
-    
-    // Admin UID'yi al
-    const Admin = require('../models/Admin');
-    const admin = await Admin.getAdmin();
-    const adminUid = admin?.uid || null;
-    if (adminUid) {
-      firestoreAuthUids.add(adminUid);
-    }
     
     console.log(`📊 Found ${firestoreAuthUids.size} authUids in database (including admin)`);
     
