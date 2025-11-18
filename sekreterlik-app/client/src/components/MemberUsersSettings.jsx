@@ -753,6 +753,56 @@ const MemberUsersSettings = () => {
 
   // Üye kullanıcılarını Firebase Auth'a kaydet
   const handleSyncToFirebaseAuth = async () => {
+    if (!window.confirm('Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Auth\'da olan ama Firestore\'da olmayan kullanıcıları siler\n- Email ve displayName bilgilerini günceller\n\nDevam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    try {
+      setIsSyncingToAuth(true);
+      setMessage('');
+      setSyncProgress({ current: 0, total: 0 });
+
+      // Backend endpoint'ini kullan
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/sync-member-users-with-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setMessage(result.message || 'Senkronizasyon tamamlandı');
+        setMessageType('success');
+        
+        // Detayları göster
+        if (result.results) {
+          const details = `Oluşturulan: ${result.results.created}\nSilinen: ${result.results.deleted}\nGüncellenen: ${result.results.updated}\nHata: ${result.results.errors}`;
+          console.log('Senkronizasyon detayları:', result.results.details);
+          if (result.results.errors > 0) {
+            setMessageType('warning');
+            setMessage(`${result.message}\n\n${details}`);
+          }
+        }
+        
+        // Listeyi yenile
+        await fetchMemberUsers();
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Senkronizasyon başarısız oldu' }));
+        throw new Error(errorData.message || 'Senkronizasyon başarısız oldu');
+      }
+    } catch (error) {
+      console.error('Error syncing to Firebase Auth:', error);
+      setMessage('Senkronizasyon sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsSyncingToAuth(false);
+      setSyncProgress({ current: 0, total: 0 });
+    }
+  };
+
+  const handleSyncToFirebaseAuthOld = async () => {
     try {
       setIsSyncingToAuth(true);
       setMessage('');

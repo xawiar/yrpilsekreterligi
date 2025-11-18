@@ -1178,4 +1178,314 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
   }
 });
 
+// Sync member_users with Firebase Auth - ensures they are identical
+// This endpoint:
+// 1. Creates Firebase Auth users for member_users that don't have authUid
+// 2. Deletes Firebase Auth users that don't exist in member_users
+// 3. Updates Firebase Auth email/password if they differ from member_users
+router.post('/sync-member-users-with-auth', async (req, res) => {
+  try {
+    console.log('🔄 Sync member_users with Firebase Auth request received');
+    
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+    
+    if (!firebaseAdmin) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
+      });
+    }
+
+    const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+    const db = require('../config/database');
+    const MemberUser = require('../models/MemberUser');
+    const { decryptField } = require('../utils/crypto');
+    
+    // Get all member_users from database
+    const memberUsers = await new Promise((resolve, reject) => {
+      db.all(`
+        SELECT mu.*, m.name as member_name, m.tc as member_tc, m.phone as member_phone
+        FROM member_users mu
+        LEFT JOIN members m ON mu.member_id = m.id
+        WHERE mu.user_type = 'member' OR mu.user_type IS NULL
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+    
+    console.log(`📊 Found ${memberUsers.length} member_users in database`);
+    
+    // If Firebase is used, also get from Firestore
+    let firestoreMemberUsers = [];
+    if (USE_FIREBASE) {
+      try {
+        const firestore = firebaseAdmin.firestore();
+        const memberUsersSnapshot = await firestore.collection('member_users')
+          .where('userType', '==', 'member')
+          .get();
+        
+        firestoreMemberUsers = memberUsersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        console.log(`📊 Found ${firestoreMemberUsers.length} member_users in Firestore`);
+      } catch (firestoreError) {
+        console.error('❌ Error reading from Firestore:', firestoreError);
+      }
+    }
+    
+    // Combine SQLite and Firestore member_users (prioritize Firestore if both exist)
+    const allMemberUsers = USE_FIREBASE && firestoreMemberUsers.length > 0 
+      ? firestoreMemberUsers 
+      : memberUsers;
+    
+    // Get all Firebase Auth users
+    let allAuthUsers = [];
+    let nextPageToken = null;
+    
+    do {
+      const listUsersResult = await firebaseAdmin.auth().listUsers(1000, nextPageToken);
+      allAuthUsers = allAuthUsers.concat(listUsersResult.users);
+      nextPageToken = listUsersResult.pageToken;
+    } while (nextPageToken);
+    
+    // Filter only @ilsekreterlik.local users (member users)
+    const memberAuthUsers = allAuthUsers.filter(authUser => {
+      const email = authUser.email || '';
+      return email.includes('@ilsekreterlik.local') && !email.includes('admin@');
+    });
+    
+    console.log(`📊 Found ${memberAuthUsers.length} member users in Firebase Auth`);
+    
+    // Get admin UID to exclude
+    let adminUid = null;
+    if (USE_FIREBASE) {
+      try {
+        const firestore = firebaseAdmin.firestore();
+        const adminDoc = await firestore.collection('admin').doc('main').get();
+        if (adminDoc.exists) {
+          adminUid = adminDoc.data().uid;
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not get admin UID:', e);
+      }
+    }
+    
+    const results = {
+      created: [],
+      deleted: [],
+      updated: [],
+      errors: []
+    };
+    
+    // Step 1: Create Firebase Auth users for member_users that don't have authUid
+    for (const memberUser of allMemberUsers) {
+      try {
+        // Skip if already has authUid
+        const authUid = memberUser.auth_uid || memberUser.authUid;
+        if (authUid) {
+          // Verify user exists in Firebase Auth
+          try {
+            await firebaseAdmin.auth().getUser(authUid);
+            // User exists, continue
+            continue;
+          } catch (e) {
+            // User doesn't exist, clear authUid and create new
+            console.log(`⚠️ Auth user ${authUid} not found, will create new`);
+            if (USE_FIREBASE) {
+              const firestore = firebaseAdmin.firestore();
+              await firestore.collection('member_users').doc(memberUser.id).update({
+                authUid: null
+              });
+            } else {
+              await db.run('UPDATE member_users SET auth_uid = NULL WHERE id = ?', [memberUser.id]);
+            }
+          }
+        }
+        
+        // Get username and password
+        let username = memberUser.username;
+        let password = memberUser.password;
+        
+        // If password is encrypted, decrypt it
+        if (password && password.startsWith('U2FsdGVkX1')) {
+          password = decryptField(password);
+        }
+        
+        // If username is not available, try to get from member
+        if (!username && memberUser.member_id) {
+          const member = await db.get('SELECT * FROM members WHERE id = ?', [memberUser.member_id]);
+          if (member) {
+            username = decryptField(member.tc) || member.tc;
+            const memberPhone = decryptField(member.phone) || member.phone;
+            password = memberPhone.replace(/\D/g, '');
+          }
+        }
+        
+        if (!username || !password) {
+          results.errors.push({
+            memberUserId: memberUser.id,
+            error: 'Username or password missing'
+          });
+          continue;
+        }
+        
+        // Create Firebase Auth user
+        const email = `${username}@ilsekreterlik.local`;
+        const authUser = await firebaseAdmin.auth().createUser({
+          email: email,
+          password: password,
+          emailVerified: false,
+          displayName: memberUser.member_name || username
+        });
+        
+        // Update member_user with authUid
+        if (USE_FIREBASE) {
+          const firestore = firebaseAdmin.firestore();
+          await firestore.collection('member_users').doc(memberUser.id).update({
+            authUid: authUser.uid
+          });
+        } else {
+          await db.run('UPDATE member_users SET auth_uid = ? WHERE id = ?', [authUser.uid, memberUser.id]);
+        }
+        
+        results.created.push({
+          memberUserId: memberUser.id,
+          username: username,
+          authUid: authUser.uid,
+          email: email
+        });
+        
+        console.log(`✅ Created Firebase Auth user for member_user ${memberUser.id}: ${email}`);
+      } catch (error) {
+        console.error(`❌ Error creating Firebase Auth user for member_user ${memberUser.id}:`, error);
+        results.errors.push({
+          memberUserId: memberUser.id,
+          error: error.message
+        });
+      }
+    }
+    
+    // Step 2: Delete Firebase Auth users that don't exist in member_users
+    const memberUserAuthUids = new Set();
+    allMemberUsers.forEach(mu => {
+      const uid = mu.auth_uid || mu.authUid;
+      if (uid) memberUserAuthUids.add(uid);
+    });
+    
+    for (const authUser of memberAuthUsers) {
+      // Skip admin
+      if (adminUid && authUser.uid === adminUid) continue;
+      
+      // Skip if exists in member_users
+      if (memberUserAuthUids.has(authUser.uid)) {
+        // Verify email matches username
+        const email = authUser.email || '';
+        const username = email.replace('@ilsekreterlik.local', '');
+        
+        // Find corresponding member_user
+        const memberUser = allMemberUsers.find(mu => {
+          const muUsername = mu.username;
+          return muUsername === username;
+        });
+        
+        if (memberUser) {
+          // Check if password needs update (if phone changed)
+          // This is handled in member update, so we skip here
+          continue;
+        }
+      }
+      
+      // User doesn't exist in member_users, delete from Auth
+      try {
+        await firebaseAdmin.auth().deleteUser(authUser.uid);
+        results.deleted.push({
+          authUid: authUser.uid,
+          email: authUser.email
+        });
+        console.log(`✅ Deleted orphaned Firebase Auth user: ${authUser.email}`);
+      } catch (error) {
+        console.error(`❌ Error deleting Firebase Auth user ${authUser.uid}:`, error);
+        results.errors.push({
+          authUid: authUser.uid,
+          error: error.message
+        });
+      }
+    }
+    
+    // Step 3: Update Firebase Auth users if email/password differs
+    for (const memberUser of allMemberUsers) {
+      const authUid = memberUser.auth_uid || memberUser.authUid;
+      if (!authUid) continue; // Already handled in Step 1
+      
+      try {
+        const authUser = await firebaseAdmin.auth().getUser(authUid);
+        const email = authUser.email || '';
+        const username = memberUser.username;
+        const expectedEmail = `${username}@ilsekreterlik.local`;
+        
+        // Check if email needs update
+        if (email !== expectedEmail) {
+          await firebaseAdmin.auth().updateUser(authUid, {
+            email: expectedEmail,
+            emailVerified: false
+          });
+          results.updated.push({
+            memberUserId: memberUser.id,
+            authUid: authUid,
+            change: 'email',
+            oldEmail: email,
+            newEmail: expectedEmail
+          });
+          console.log(`✅ Updated email for auth user ${authUid}: ${email} -> ${expectedEmail}`);
+        }
+        
+        // Display name update (if member name available)
+        if (memberUser.member_name && authUser.displayName !== memberUser.member_name) {
+          await firebaseAdmin.auth().updateUser(authUid, {
+            displayName: memberUser.member_name
+          });
+          results.updated.push({
+            memberUserId: memberUser.id,
+            authUid: authUid,
+            change: 'displayName',
+            oldDisplayName: authUser.displayName,
+            newDisplayName: memberUser.member_name
+          });
+          console.log(`✅ Updated displayName for auth user ${authUid}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error updating Firebase Auth user ${authUid}:`, error);
+        results.errors.push({
+          memberUserId: memberUser.id,
+          authUid: authUid,
+          error: error.message
+        });
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: `Senkronizasyon tamamlandı: ${results.created.length} oluşturuldu, ${results.deleted.length} silindi, ${results.updated.length} güncellendi`,
+      results: {
+        created: results.created.length,
+        deleted: results.deleted.length,
+        updated: results.updated.length,
+        errors: results.errors.length,
+        details: results
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error syncing member_users with Firebase Auth:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
