@@ -1277,9 +1277,9 @@ const MemberUsersSettings = () => {
     }
   };
 
-  // Tüm işlemleri tek seferde yap: İlçe Başkanı + Belde Başkanı + Müşahit + Senkronizasyon + Temizlik
+  // Tüm kullanıcıları oluştur (Temizlik YAPMA)
   const handleProcessAllUsers = async () => {
-    if (!window.confirm('Tüm kullanıcı işlemlerini gerçekleştirmek istediğinize emin misiniz?\n\nBu işlem:\n1. İlçe Başkanı kullanıcılarını oluşturur/günceller\n2. Belde Başkanı kullanıcılarını oluşturur/günceller\n3. Müşahit kullanıcılarını oluşturur/günceller\n4. Firebase Auth ile senkronize eder\n5. Gereksiz Auth kullanıcılarını temizler\n\nBu işlem birkaç dakika sürebilir. Devam etmek istiyor musunuz?')) {
+    if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. İlçe Başkanı kullanıcılarını oluşturur/günceller\n2. Belde Başkanı kullanıcılarını oluşturur/günceller\n3. Müşahit kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
       return;
     }
 
@@ -1291,16 +1291,13 @@ const MemberUsersSettings = () => {
       const results = {
         districtPresidents: { created: 0, updated: 0, errors: 0 },
         townPresidents: { created: 0, updated: 0, errors: 0 },
-        observers: { created: 0, updated: 0, deleted: 0, errors: 0 },
-        sync: { success: false, message: '' },
-        cleanup: { deleted: 0, errors: 0 }
+        observers: { created: 0, updated: 0, deleted: 0, errors: 0 }
       };
 
       // 1. İlçe Başkanı Kullanıcıları
       setMessage('İlçe Başkanı kullanıcıları oluşturuluyor...');
       try {
         await handleCreateDistrictPresidentUsers();
-        // handleCreateDistrictPresidentUsers içinde mesaj set ediliyor, bu yüzden sonucu almak için bekliyoruz
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error('İlçe Başkanı kullanıcıları hatası:', error);
@@ -1327,34 +1324,11 @@ const MemberUsersSettings = () => {
         results.observers.errors++;
       }
 
-      // 4. Firebase Auth Senkronizasyonu
-      setMessage('Firebase Auth ile senkronize ediliyor...');
-      try {
-        await handleSyncToFirebaseAuth();
-        results.sync.success = true;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error('Senkronizasyon hatası:', error);
-        results.sync.message = error.message;
-      }
-
-      // 5. Gereksiz Auth Kullanıcılarını Temizle
-      setMessage('Gereksiz Auth kullanıcıları temizleniyor...');
-      try {
-        await handleCleanupOrphanedAuthUsers();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error('Temizleme hatası:', error);
-        results.cleanup.errors++;
-      }
-
       // Sonuç mesajı
-      let finalMessage = '✅ Tüm işlemler tamamlandı!\n\n';
+      let finalMessage = '✅ Tüm kullanıcılar oluşturuldu!\n\n';
       finalMessage += `• İlçe Başkanı: Oluşturuldu/Güncellendi\n`;
       finalMessage += `• Belde Başkanı: Oluşturuldu/Güncellendi\n`;
       finalMessage += `• Müşahit: Oluşturuldu/Güncellendi\n`;
-      finalMessage += `• Senkronizasyon: ${results.sync.success ? 'Başarılı' : 'Hata'}\n`;
-      finalMessage += `• Temizlik: Tamamlandı\n`;
 
       setMessage(finalMessage);
       setMessageType('success');
@@ -1410,21 +1384,61 @@ const MemberUsersSettings = () => {
             </button>
             <button
               onClick={handleProcessAllUsers}
-              disabled={isProcessingAll || isUpdating || isSyncingToAuth || isCleaningUp}
+              disabled={isProcessingAll || isUpdating}
               className="bg-gradient-to-r from-blue-600 via-green-600 to-purple-600 hover:from-blue-700 hover:via-green-700 hover:to-purple-700 disabled:from-gray-400 disabled:via-gray-400 disabled:to-gray-400 text-white px-6 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center shadow-lg"
-              title="Tüm kullanıcı işlemlerini gerçekleştir: İlçe Başkanı + Belde Başkanı + Müşahit + Senkronizasyon + Temizlik"
+              title="Tüm kullanıcıları oluştur: İlçe Başkanı + Belde Başkanı + Müşahit (Silme yapmaz)"
             >
-              {isProcessingAll || isUpdating || isSyncingToAuth || isCleaningUp ? (
+              {isProcessingAll || isUpdating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  İşleniyor...
+                  Oluşturuluyor...
                 </>
               ) : (
                 <>
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Tümünü Oluştur ve Senkronize Et
+                  Tüm Kullanıcıları Oluştur
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleSyncToFirebaseAuth}
+              disabled={isSyncingToAuth}
+              className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+              title="Firestore'daki kullanıcıları Firebase Auth'a senkronize et (Eksikleri ekler, fazlaları silmez)"
+            >
+              {isSyncingToAuth ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Senkronize Ediliyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Firebase Auth'a Senkronize Et
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCleanupOrphanedAuthUsers}
+              disabled={isCleaningUp}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+              title="⚠️ DİKKAT: Firestore'da olmayan Firebase Auth kullanıcılarını siler"
+            >
+              {isCleaningUp ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Temizleniyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Gereksiz Auth Kullanıcılarını Temizle
                 </>
               )}
             </button>
