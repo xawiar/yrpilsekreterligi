@@ -197,17 +197,48 @@ const defaultOrigins = [
   // common vite ports
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  // Production Render.com URLs
+  'https://yrpilsekreterligi.onrender.com',
+  'https://ilce-sekreterlik.onrender.com',
 ];
-const allowedOrigins = new Set([...(envOrigins.length ? envOrigins : defaultOrigins)]);
+
+// Production'da Render.com URL'lerini de allow et
+const productionOrigins = [
+  'https://yrpilsekreterligi.onrender.com',
+  'https://ilce-sekreterlik.onrender.com',
+  'https://sekreterlik-backend.onrender.com',
+];
+
+const allowedOrigins = new Set([
+  ...(envOrigins.length ? envOrigins : defaultOrigins),
+  ...(process.env.NODE_ENV === 'production' ? productionOrigins : [])
+]);
+
 app.use(cors({
   origin: (origin, callback) => {
+    // No origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
     if (allowedOrigins.has(origin)) return callback(null, true);
+    
+    // Production'da sadece Render.com URL'lerine izin ver
     if (process.env.NODE_ENV === 'production') {
+      // Render.com domain kontrolü
+      if (origin.includes('.onrender.com')) {
+        console.log('✅ Allowing Render.com origin:', origin);
+        return callback(null, true);
+      }
+      console.warn('❌ CORS blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     }
+    
+    // Development'da tüm origin'lere izin ver
     return callback(null, true);
   },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 // Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
 app.use(helmet({
