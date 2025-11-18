@@ -880,6 +880,29 @@ const MemberUsersSettings = () => {
           
           // Firebase Auth'da kullanıcı oluştur
           try {
+            // Email ve password validasyonu
+            if (!email || email.length < 3) {
+              errors.push(`${user.username}: Email geçersiz (${email})`);
+              errorCount++;
+              continue;
+            }
+            
+            if (!password || password.length < 6) {
+              errors.push(`${user.username}: Şifre çok kısa (minimum 6 karakter)`);
+              errorCount++;
+              continue;
+            }
+            
+            // Email formatını kontrol et
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              errors.push(`${user.username}: Email formatı geçersiz (${email})`);
+              errorCount++;
+              continue;
+            }
+            
+            console.log(`🔄 Creating Firebase Auth user: ${email} (password length: ${password.length})`);
+            
             const authUser = await createUserWithEmailAndPassword(auth, email, password);
             console.log(`✅ Firebase Auth user created: ${user.username} -> ${authUser.user.uid}`);
             
@@ -902,14 +925,31 @@ const MemberUsersSettings = () => {
               }
             }
           } catch (authError) {
+            console.error(`❌ Firebase Auth error for ${user.username}:`, {
+              code: authError.code,
+              message: authError.message,
+              email,
+              passwordLength: password.length
+            });
+            
             if (authError.code === 'auth/email-already-in-use') {
-              console.warn(`⚠️ Email already in use: ${email}`);
+              console.warn(`⚠️ Email already in use: ${email} - Skipping`);
+              // Email zaten kullanılıyorsa, mevcut kullanıcıyı bulmaya çalış
+              // Ancak client-side'da bu mümkün değil, bu yüzden sadece skip ediyoruz
               successCount++;
+            } else if (authError.code === 'auth/invalid-email') {
+              errors.push(`${user.username}: Geçersiz email formatı (${email})`);
+              errorCount++;
+            } else if (authError.code === 'auth/weak-password') {
+              errors.push(`${user.username}: Şifre çok zayıf (minimum 6 karakter)`);
+              errorCount++;
+            } else if (authError.code === 'auth/operation-not-allowed') {
+              errors.push(`${user.username}: Email/Password authentication devre dışı`);
+              errorCount++;
             } else {
               const errorMsg = `${user.username}: ${authError.code || 'Unknown error'} - ${authError.message || 'Firebase Auth error'}`;
               errors.push(errorMsg);
               errorCount++;
-              console.error(`❌ Error creating Firebase Auth user for ${user.username}:`, authError);
             }
           }
         } catch (error) {
