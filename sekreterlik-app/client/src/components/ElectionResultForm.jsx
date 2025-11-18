@@ -84,7 +84,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   // Fetch existing result
   useEffect(() => {
     if (election?.id && ballotBoxId) {
-      fetchExistingResult();
+    fetchExistingResult();
     }
   }, [election?.id, ballotBoxId]);
 
@@ -477,9 +477,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       
       if (cbTotal !== enteredValidVotes) {
         setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+      setMessageType('error');
+      setSaving(false);
+      return;
       }
       
       if (mvTotal !== enteredValidVotes) {
@@ -603,7 +603,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           setMessage('Seçim sonucu başarıyla güncellendi. ⚠️ Seçim tutanağını yükleyiniz.');
           setMessageType('warning');
         } else {
-          setMessage('Seçim sonucu başarıyla güncellendi');
+        setMessage('Seçim sonucu başarıyla güncellendi');
           setMessageType('success');
         }
       } else {
@@ -613,7 +613,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           setMessage('Seçim sonucu başarıyla kaydedildi. ⚠️ Seçim tutanağını yükleyiniz.');
           setMessageType('warning');
         } else {
-          setMessage('Seçim sonucu başarıyla kaydedildi');
+        setMessage('Seçim sonucu başarıyla kaydedildi');
           setMessageType('success');
         }
       }
@@ -662,10 +662,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         {/* Tutanak Başlığı - Minimal ve Kurumsal */}
         <div className="bg-white border-b-2 border-gray-300 px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
+                <div>
               <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">Seçim Sonuç Tutanağı</h1>
               <p className="text-sm text-gray-600 mt-1">{election.name} - {getTypeLabel()}</p>
-            </div>
+                </div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -721,7 +721,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div 
                 ref={messageRef}
                 className={`p-4 rounded-lg border-l-4 shadow-md ${
-                  messageType === 'success' 
+                messageType === 'success' 
                     ? 'bg-green-50 border-green-500 text-green-800' 
                     : messageType === 'warning'
                     ? 'bg-amber-50 border-amber-500 text-amber-800'
@@ -998,8 +998,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   <div className="bg-amber-50 border-2 border-amber-300 rounded p-4">
                     <p className="text-sm font-semibold text-amber-800">
                       ⚠️ Köy: Bu sandık köyde bulunmaktadır. Sadece İl Genel Meclisi için oy kullanılabilir.
-                    </p>
-                  </div>
+                  </p>
+                </div>
                 )}
 
                 {/* Debug: Show if no local election data */}
@@ -1011,7 +1011,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     <p className="text-sm text-yellow-800">
                       ⚠️ Yerel seçim için aday/parti bilgisi bulunamadı. Lütfen seçim ayarlarını kontrol edin.
                     </p>
-                  </div>
+              </div>
                 )}
 
                 {/* Belediye Başkanı Parti Oyları - Köyde devre dışı */}
@@ -1039,7 +1039,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
-                        </div>
+            </div>
                         );
                       })}
                     </div>
@@ -1248,7 +1248,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     İmzalı Tutanak Fotoğrafı
-                  </label>
+                </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
                     {uploadingPhotos.signed ? (
                       <div className="flex flex-col items-center justify-center">
@@ -1285,12 +1285,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       disabled={uploadingPhotos.signed}
                     />
                   </label>
-                </div>
+              </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    İtiraz Tutanağı (Varsa)
-                  </label>
+                  İtiraz Tutanağı (Varsa)
+                </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
                     {uploadingPhotos.objection ? (
                       <div className="flex flex-col items-center justify-center">
@@ -1338,25 +1338,25 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </h2>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="has_objection"
-                    checked={formData.has_objection}
-                    onChange={(e) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        has_objection: e.target.checked,
-                        objection_reason: e.target.checked ? prev.objection_reason : ''
-                      }));
-                    }}
+                <input
+                  type="checkbox"
+                  id="has_objection"
+                  checked={formData.has_objection}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      has_objection: e.target.checked,
+                      objection_reason: e.target.checked ? prev.objection_reason : ''
+                    }));
+                  }}
                     className="w-5 h-5 text-red-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-red-500 cursor-pointer"
-                  />
+                />
                   <label htmlFor="has_objection" className="text-sm font-semibold text-gray-900 cursor-pointer">
-                    İtiraz Edildi
-                  </label>
-                </div>
-                
-                {formData.has_objection && (
+                  İtiraz Edildi
+                </label>
+              </div>
+              
+              {formData.has_objection && (
                   <div className="ml-8">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       İtiraz Sebebi *
@@ -1370,8 +1370,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       placeholder="İtiraz sebebini detaylı olarak yazınız..."
                       required={formData.has_objection}
                     />
-                  </div>
-                )}
+                </div>
+              )}
               </div>
             </div>
 

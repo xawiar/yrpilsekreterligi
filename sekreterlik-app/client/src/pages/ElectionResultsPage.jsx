@@ -234,7 +234,7 @@ const ElectionResultsPage = () => {
   const fetchData = async () => {
     try {
       if (import.meta.env.DEV) {
-        console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
+      console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
       }
       setLoading(true);
       
@@ -271,11 +271,11 @@ const ElectionResultsPage = () => {
     } catch (error) {
       console.error('❌ Error fetching data:', error);
       if (import.meta.env.DEV) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        });
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       }
     } finally {
       setLoading(false);
@@ -712,11 +712,11 @@ const ElectionResultsPage = () => {
         categories: [
           {
             name: 'Cumhurbaşkanı Seçimi',
-            data: Object.keys(candidateTotals).map(candidate => ({
-              name: candidate,
-              value: candidateTotals[candidate],
-              percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100) : 0
-            })),
+        data: Object.keys(candidateTotals).map(candidate => ({
+          name: candidate,
+          value: candidateTotals[candidate],
+          percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100) : 0
+        })),
             total: total
           }
         ],
@@ -754,7 +754,7 @@ const ElectionResultsPage = () => {
     const filtered = getFilteredResults();
     const locationMap = {};
 
-    filtered.forEach(result => {
+      filtered.forEach(result => {
       const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
       if (!ballotBox) return;
 
@@ -1354,12 +1354,12 @@ const ElectionResultsPage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                {election.name} - Seçim Sonuçları
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {election.date ? new Date(election.date).toLocaleDateString('tr-TR') : '-'}
-              </p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            {election.name} - Seçim Sonuçları
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {election.date ? new Date(election.date).toLocaleDateString('tr-TR') : '-'}
+          </p>
             </div>
             <div className="flex gap-2">
               <button
@@ -1410,7 +1410,7 @@ const ElectionResultsPage = () => {
           
           {showFilters && (
             <div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-700">
-              {/* Hızlı Arama Kutusu */}
+          {/* Hızlı Arama Kutusu */}
               <div className="mb-6 pt-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Hızlı Arama (İlçe, Belde, Mahalle, Köy, Sandık No)
@@ -1567,7 +1567,7 @@ const ElectionResultsPage = () => {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
                 Sadece tutanak fotoğrafı yüklenmiş ama veri girilmemiş sandıkları göster
               </p>
-            </div>
+        </div>
 
             <div>
               <label className="flex items-center space-x-2 cursor-pointer">
@@ -1588,7 +1588,7 @@ const ElectionResultsPage = () => {
           </div>
             </div>
           )}
-        </div>
+            </div>
 
         {/* Sandık ve Seçmen İstatistikleri - Kompakt */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -1604,19 +1604,19 @@ const ElectionResultsPage = () => {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Toplam Sandık:</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">{getTotalBallotBoxes()}</span>
-              </div>
+          </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Açılan Sandık:</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">{hasResults ? filteredResults.length : 0}</span>
-              </div>
+            </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Açılma Oranı:</span>
                 <span className="font-semibold text-indigo-600 dark:text-indigo-400">%{calculateOpenedBallotBoxPercentage()}</span>
-              </div>
+          </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Kapanan Sandık:</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">{getTotalBallotBoxes() - (hasResults ? filteredResults.length : 0)}</span>
-              </div>
+            </div>
               <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-gray-600 dark:text-gray-400">İtiraz Olan Sandık:</span>
                 <span className="font-semibold text-red-600 dark:text-red-400">{filteredResults.filter(r => r.has_objection === true || r.has_objection === 1).length}</span>
@@ -1634,24 +1634,24 @@ const ElectionResultsPage = () => {
                 Seçmen ve Oy İstatistikleri
               </h3>
               <div className="space-y-2 text-xs">
-                {election?.voter_count && (
+            {election?.voter_count && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Toplam Seçmen:</span>
                     <span className="font-semibold text-gray-900 dark:text-gray-100">{election.voter_count.toLocaleString('tr-TR')}</span>
-                  </div>
-                )}
+              </div>
+            )}
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Oy Kullanan:</span>
                   <span className="font-semibold text-blue-600 dark:text-blue-400">{calculateTotalUsedVotes().toLocaleString('tr-TR')}</span>
-                </div>
+          </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Katılım Oranı:</span>
                   <span className="font-semibold text-indigo-600 dark:text-indigo-400">%{calculateParticipationPercentage()}</span>
-                </div>
+            </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-600 dark:text-gray-400">Geçerli Oy:</span>
                   <span className="font-semibold text-green-600 dark:text-green-400">{aggregatedResults.total.toLocaleString('tr-TR')}</span>
-                </div>
+          </div>
                 {calculateTotalUsedVotes() > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Geçerli Oy Oranı:</span>
@@ -1680,14 +1680,14 @@ const ElectionResultsPage = () => {
               category.data.length > 0 ? (
                 <div key={categoryIndex} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 transform transition-all duration-300 hover:shadow-lg">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-                    <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+              <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
                     {category.name}
                     <span className="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400">
                       Toplam: {category.total.toLocaleString('tr-TR')} oy
                     </span>
-                  </h2>
+            </h2>
                   
                   {/* Kazanan Parti/Aday Bilgisi */}
                   {(() => {
@@ -1722,7 +1722,7 @@ const ElectionResultsPage = () => {
                         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı</h3>
                         <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
                           <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
+                      <PieChart>
                               <Pie
                                 data={category.data
                                   .filter(item => item && (item.value || item.value === 0))
@@ -1733,54 +1733,54 @@ const ElectionResultsPage = () => {
                                       ? item.name 
                                       : (item.name?.name || String(item.name || '') || 'Bilinmeyen')
                                   }))}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
                                 label={({ name, percentage, value }) => {
                                   const displayName = typeof name === 'string' ? name : (name?.name || String(name || '') || 'Bilinmeyen');
                                   const pct = typeof percentage === 'number' ? percentage : parseFloat(percentage || 0);
                                   return `${displayName}: %${pct.toFixed(1)}`;
                                 }}
                                 outerRadius={100}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
                                 {category.data.map((entry, index) => (
-                                  <Cell 
+                            <Cell 
                                     key={`pie-cell-${categoryIndex}-${index}`}
                                     fill={COLORS[index % COLORS.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                                  padding: '12px'
-                                }}
-                                formatter={(value, name, props) => {
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                            padding: '12px'
+                          }}
+                          formatter={(value, name, props) => {
                                   if (!props || !props.payload) {
                                     return [`${(value || 0).toLocaleString('tr-TR')} oy`, 'Bilinmeyen'];
                                   }
-                                  const percentage = typeof props.payload.percentage === 'number' 
-                                    ? props.payload.percentage 
-                                    : parseFloat(props.payload.percentage || 0);
+                            const percentage = typeof props.payload.percentage === 'number' 
+                              ? props.payload.percentage 
+                              : parseFloat(props.payload.percentage || 0);
                                   const displayName = typeof props.payload.name === 'string' 
                                     ? props.payload.name 
                                     : (props.payload.name?.name || String(props.payload.name || '') || 'Bilinmeyen');
-                                  return [
+                            return [
                                     `%${percentage.toFixed(1)} (${(value || 0).toLocaleString('tr-TR')} oy)`,
                                     displayName
-                                  ];
-                                }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-
+                            ];
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
                       {/* Kazanan Adaylar Listesi */}
                       {(() => {
                         // Kazanan adayları bul (D'Hondt sonuçlarına göre)
@@ -2097,13 +2097,13 @@ const ElectionResultsPage = () => {
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                                       <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
                                         {candidate.name}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                            </div>
                           </div>
+                                  )}
+                        </div>
+                      );
+                    })}
+                </div>
                           
                           {/* Kontenjan ve D'Hondt Detayı */}
                           <div className="flex gap-2 text-xs mb-2">
@@ -2117,7 +2117,7 @@ const ElectionResultsPage = () => {
                                 {item.dhondtSeats} D'Hondt
                               </span>
                             )}
-                          </div>
+              </div>
                         </div>
                       );
                     })}
@@ -2191,19 +2191,19 @@ const ElectionResultsPage = () => {
                                         >
                                           <span className="font-medium">#{candidate.order}</span>
                                           <span>{candidate.name}</span>
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                               </div>
                             );
                           })}
                       </div>
                     </div>
-                  ))}
-                  </div>
-                </div>
+                        ))}
+                      </div>
+                    </div>
               
                 {/* Toplam Meclis Koltukları */}
                 <div>
@@ -2308,7 +2308,7 @@ const ElectionResultsPage = () => {
                   <p><strong>Toplam Üye:</strong> {provincialAssemblyResults.totalSeats} üye</p>
                   <p><strong>İlçe Sayısı:</strong> {Object.keys(provincialAssemblyResults.districtResults).length} ilçe</p>
                 </div>
-              </div>
+                </div>
               </div>
             )}
           </div>
@@ -2581,17 +2581,17 @@ const ElectionResultsPage = () => {
                               <div className="space-y-1">
                                 {election.cb_candidates.map(candidate => {
                                   const votes = parseInt(result.cb_votes?.[candidate]) || 0;
-                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
-                                  return (
+                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                            return (
                                     <div key={candidate} className="flex justify-between items-center text-xs">
-                                      <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
-                                      <div className="text-right">
+                                <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
+                                <div className="text-right">
                                         <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
                                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                                </div>
+                              </div>
+                            );
+                          })}
                                 {election.independent_cb_candidates && election.independent_cb_candidates.map(candidate => {
                                   const votes = parseInt(result.cb_votes?.[candidate]) || 0;
                                   const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
@@ -2606,21 +2606,21 @@ const ElectionResultsPage = () => {
                                   );
                                 })}
                               </div>
-                            </div>
-                          )}
+                        </div>
+                      )}
                           {/* MV Oyları */}
                           {election.parties && election.parties.length > 0 && (
                             <div>
                               <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Milletvekili:</div>
                               <div className="space-y-1">
-                                {election.parties.map(party => {
+                          {election.parties.map(party => {
                                   const partyName = typeof party === 'string' ? party : (party.name || party);
                                   const votes = parseInt(result.mv_votes?.[partyName]) || 0;
-                                  const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
-                                  return (
+                            const percentage = totalValidVotes > 0 ? ((votes / totalValidVotes) * 100).toFixed(2) : 0;
+                            return (
                                     <div key={partyName} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
-                                      <div className="text-right">
+                                <div className="text-right">
                                         <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
                                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
@@ -2885,7 +2885,7 @@ const ElectionResultsPage = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+            </div>
             )}
             </>
           )}

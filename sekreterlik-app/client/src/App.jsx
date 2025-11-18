@@ -529,25 +529,25 @@ function RouterContent() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
           <ToastProvider>
-            <Router
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true
-              }}
-            >
-              <RouterContent />
-            </Router>
-            <PWANotification />
-            <AppInstallBanner />
-            <OfflineStatus />
-            {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
-            {/* <PerformanceMonitor /> */}
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <RouterContent />
+        </Router>
+        <PWANotification />
+        <AppInstallBanner />
+        <OfflineStatus />
+        {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
+        {/* <PerformanceMonitor /> */}
           </ToastProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      </AuthProvider>
+    </ThemeProvider>
     </ErrorBoundary>
   );
 }

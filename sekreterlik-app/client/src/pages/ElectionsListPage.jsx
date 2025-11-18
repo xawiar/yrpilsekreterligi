@@ -137,9 +137,9 @@ const ElectionsListPage = () => {
                         {election.parties.slice(0, 3).map((party, idx) => {
                           const partyName = typeof party === 'string' ? party : (party.name || party);
                           return (
-                            <span key={idx} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                          <span key={idx} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
                               {partyName}
-                            </span>
+                          </span>
                           );
                         })}
                         {election.parties.length > 3 && (

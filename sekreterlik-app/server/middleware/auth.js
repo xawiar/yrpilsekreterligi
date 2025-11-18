@@ -10,10 +10,20 @@ const authenticateToken = (req, res, next) => {
   req.user = {
     id: 4, // Use a real user ID from member_users table
     username: 'admin',
-    role: 'admin'
+    role: 'admin',
+    type: 'admin'
   };
   
   next();
 };
 
-module.exports = { authenticateToken };
+const requireAdmin = (req, res, next) => {
+  // For demo purposes, we'll allow all requests to pass through
+  // In a real application, you would check if user is admin
+  if (!req.user || (req.user.role !== 'admin' && req.user.type !== 'admin')) {
+    return res.status(403).json({ message: 'Admin yetkisi gerekli' });
+  }
+  next();
+};
+
+module.exports = { authenticateToken, requireAdmin };
