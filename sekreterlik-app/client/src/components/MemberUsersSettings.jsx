@@ -775,13 +775,20 @@ const MemberUsersSettings = () => {
       
       if (!API_BASE_URL) {
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-          const hostname = window.location.hostname;
-          const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
-          API_BASE_URL = `https://${backendHostname}/api`;
+          // Render.com'da backend URL'ini belirle
+          // Önce direkt sekreterlik-backend.onrender.com'u dene
+          API_BASE_URL = 'https://sekreterlik-backend.onrender.com/api';
+          
+          // Eğer bu çalışmazsa, hostname'den türet
+          // const hostname = window.location.hostname;
+          // const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
+          // API_BASE_URL = `https://${backendHostname}/api`;
         } else {
           API_BASE_URL = 'http://localhost:5000/api';
         }
       }
+      
+      console.log('🔍 Backend URL:', API_BASE_URL);
       
       // Backend'i dene (5 saniye timeout)
       try {
@@ -1195,12 +1202,34 @@ const MemberUsersSettings = () => {
       let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
       if (!API_BASE_URL) {
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-          const hostname = window.location.hostname;
-          const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
-          API_BASE_URL = `https://${backendHostname}/api`;
+          // Render.com'da backend URL'ini belirle
+          // Önce direkt sekreterlik-backend.onrender.com'u dene
+          API_BASE_URL = 'https://sekreterlik-backend.onrender.com/api';
+          
+          // Eğer bu çalışmazsa, hostname'den türet
+          // const hostname = window.location.hostname;
+          // const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
+          // API_BASE_URL = `https://${backendHostname}/api`;
         } else {
           API_BASE_URL = 'http://localhost:5000/api';
         }
+      }
+      
+      console.log('🔍 Backend URL:', API_BASE_URL);
+
+      // Önce backend'in çalışıp çalışmadığını kontrol et
+      try {
+        const healthCheck = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(5000)
+        });
+        console.log('✅ Backend health check:', healthCheck.status);
+      } catch (healthError) {
+        console.warn('⚠️ Backend health check failed:', healthError.message);
+        setMessage('⚠️ Backend servisi erişilemiyor. Render.com\'da "sekreterlik-backend" servisi oluşturulmuş mu kontrol edin.\n\nBackend URL: ' + API_BASE_URL);
+        setMessageType('warning');
+        setIsCleaningUp(false);
+        return;
       }
 
       // Backend cleanup endpoint'ini çağır
