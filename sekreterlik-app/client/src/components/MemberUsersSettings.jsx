@@ -188,7 +188,7 @@ const MemberUsersSettings = () => {
             setMessageType('warning');
           } else {
             setMessage(response.message || 'Kullanıcı başarıyla silindi');
-            setMessageType('success');
+          setMessageType('success');
           }
           await fetchMemberUsers();
         } else {

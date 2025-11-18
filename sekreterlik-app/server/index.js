@@ -135,14 +135,9 @@ console.log('Starting server setup');
 // ============================================
 const allowedOrigins = [
   'https://yrpilsekreterligi.onrender.com',
-  'https://ilce-sekreterlik.onrender.com',
   'https://sekreterlik-backend.onrender.com',
   'http://localhost:5173',
-  'http://localhost:5180',
-  'http://localhost:5181',
   'http://127.0.0.1:5173',
-  'http://127.0.0.1:5180',
-  'http://127.0.0.1:5181',
 ];
 
 // Environment variable'dan ekstra origin'ler ekle

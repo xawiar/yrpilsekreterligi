@@ -183,12 +183,12 @@ const FirebaseAuthUsersPage = () => {
               >
                 Temizle (Orphaned)
               </button>
-              <button
-                onClick={fetchAuthUsers}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-              >
-                Yenile
-              </button>
+            <button
+              onClick={fetchAuthUsers}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            >
+              Yenile
+            </button>
             </div>
           </div>
         </div>
