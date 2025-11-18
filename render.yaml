@@ -43,11 +43,9 @@ services:
       - key: VITE_ENCRYPTION_KEY
         value: ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: sekreterlik-backend
-          property: url
-        # Backend URL'i otomatik olarak backend servisinden alınacak
-        # Eğer bu çalışmazsa, manuel olarak ekleyin:
-        # value: https://sekreterlik-backend.onrender.com/api
+        # Backend URL'i - Backend servisinin URL'ini buraya yazın
+        # Örnek: https://sekreterlik-backend.onrender.com/api
+        # Backend servisi oluşturulduktan sonra URL'i buraya ekleyin
+        value: https://sekreterlik-backend.onrender.com/api
+        # Not: Eğer backend servis adı farklıysa, URL'i buna göre güncelleyin
 
