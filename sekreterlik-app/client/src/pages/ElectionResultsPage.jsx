@@ -1274,45 +1274,19 @@ const ElectionResultsPage = () => {
     return winningCandidates.sort((a, b) => b.votes - a.votes);
   }, [election]);
 
-  console.log('🎨 ElectionResultsPage render:', {
-    loading,
-    election: election ? { id: election.id, name: election.name } : null,
-    resultsCount: results.length,
-    electionId
-  });
-
-  if (loading) {
-    console.log('⏳ Loading state: true, spinner gösteriliyor');
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!election) {
-    console.log('⚠️ Election bulunamadı, hata mesajı gösteriliyor');
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Seçim bulunamadı</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Election ID: {electionId}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const filteredResults = getFilteredResults();
-  
-  // İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt with winning candidates (filteredResults tanımlandıktan sonra)
+  // İl Genel Meclisi Üyesi Seçimi - İlçe Bazlı D'Hondt with winning candidates
+  // Bu useMemo early return'lerden önce olmalı (React hook kuralı)
   const provincialAssemblyResults = useMemo(() => {
-    if (election?.type !== 'yerel' || !filteredResults || filteredResults.length === 0) return null;
+    if (!election || election?.type !== 'yerel') return null;
+    
+    const filtered = getFilteredResults();
+    if (!filtered || filtered.length === 0) return null;
     
     // İlçe bazlı üye sayıları seçim verisinden alınır
     const districtSeats = election.provincial_assembly_district_seats || {};
     if (Object.keys(districtSeats).length === 0) return null;
     
-    const assemblyData = calculateProvincialAssemblySeats(filteredResults, districtSeats);
+    const assemblyData = calculateProvincialAssemblySeats(filtered, districtSeats);
     
     // Her ilçe için kazanan adayları hesapla
     const districtWinningCandidates = {};
@@ -1355,16 +1329,46 @@ const ElectionResultsPage = () => {
       districtWinningCandidates,
       totalWinningCandidates
     };
-  }, [election, filteredResults, calculateWinningCandidatesFromSeats]);
+  }, [election, results, ballotBoxes, districts, towns, neighborhoods, villages, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, filterByNoProtocol, calculateWinningCandidatesFromSeats]);
+
+  console.log('🎨 ElectionResultsPage render:', {
+    loading,
+    election: election ? { id: election.id, name: election.name } : null,
+    resultsCount: results.length,
+    electionId
+  });
+
+  if (loading) {
+    console.log('⏳ Loading state: true, spinner gösteriliyor');
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (!election) {
+    console.log('⚠️ Election bulunamadı, hata mesajı gösteriliyor');
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Seçim bulunamadı</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Election ID: {electionId}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredResults = getFilteredResults() || [];
   
   // Pagination
-  const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+  const totalPages = Math.ceil((filteredResults.length || 0) / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedResults = filteredResults.slice(startIndex, endIndex);
+  const paginatedResults = (filteredResults || []).slice(startIndex, endIndex);
   
   // Sonuç yoksa bile sayfa görünsün - sıfır değerlerle
-  const hasResults = filteredResults.length > 0;
+  const hasResults = (filteredResults || []).length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 pb-24 lg:pb-8">
