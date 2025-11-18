@@ -906,6 +906,11 @@ db.all('SELECT * FROM event_visits', [], (err, rows) => {
   if (!err) collections.event_visits = rows;
 });
 
+  console.log('✅ SQLite data loaded into in-memory collections');
+} else {
+  console.log('ℹ️ Skipping SQLite data loading (USE_FIREBASE=true)');
+}
+
 // Promisify database methods for easier use
 const { recordDbQuery } = require('../utils/metrics');
 
