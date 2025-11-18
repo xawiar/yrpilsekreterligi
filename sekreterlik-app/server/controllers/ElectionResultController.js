@@ -150,6 +150,33 @@ class ElectionResultController {
       if (election.status === 'closed') {
         return res.status(400).json({ message: 'Kapalı seçimde sonuç girişi yapılamaz' });
       }
+      
+      // Check election date - allow result entry only on election day or after (with 7 days grace period)
+      if (election.date) {
+        const electionDate = new Date(election.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        electionDate.setHours(0, 0, 0, 0);
+        
+        // Allow entry 1 day before election (for preparation) and up to 7 days after
+        const daysBefore = 1;
+        const daysAfter = 7;
+        const minDate = new Date(electionDate);
+        minDate.setDate(minDate.getDate() - daysBefore);
+        const maxDate = new Date(electionDate);
+        maxDate.setDate(maxDate.getDate() + daysAfter);
+        
+        if (today < minDate) {
+          return res.status(400).json({ 
+            message: `Seçim sonucu girişi seçim tarihinden ${daysBefore} gün önce başlayabilir. Seçim tarihi: ${new Date(election.date).toLocaleDateString('tr-TR')}` 
+          });
+        }
+        if (today > maxDate && req.user?.type !== 'admin') {
+          return res.status(400).json({ 
+            message: `Seçim sonucu girişi seçim tarihinden sonra ${daysAfter} gün içinde yapılabilir. Sadece admin daha sonra giriş yapabilir.` 
+          });
+        }
+      }
 
       // Check if result already exists
       const existingResult = await db.get(
@@ -235,6 +262,33 @@ class ElectionResultController {
         // Only admin can edit closed elections
         if (req.user?.type !== 'admin') {
           return res.status(403).json({ message: 'Kapalı seçimde sadece admin düzenleme yapabilir' });
+        }
+      }
+      
+      // Check election date - allow result update only on election day or after (with 7 days grace period)
+      if (election && election.date) {
+        const electionDate = new Date(election.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        electionDate.setHours(0, 0, 0, 0);
+        
+        // Allow entry 1 day before election (for preparation) and up to 7 days after
+        const daysBefore = 1;
+        const daysAfter = 7;
+        const minDate = new Date(electionDate);
+        minDate.setDate(minDate.getDate() - daysBefore);
+        const maxDate = new Date(electionDate);
+        maxDate.setDate(maxDate.getDate() + daysAfter);
+        
+        if (today < minDate && req.user?.type !== 'admin') {
+          return res.status(400).json({ 
+            message: `Seçim sonucu güncelleme seçim tarihinden ${daysBefore} gün önce başlayabilir. Seçim tarihi: ${new Date(election.date).toLocaleDateString('tr-TR')}` 
+          });
+        }
+        if (today > maxDate && req.user?.type !== 'admin') {
+          return res.status(400).json({ 
+            message: `Seçim sonucu güncelleme seçim tarihinden sonra ${daysAfter} gün içinde yapılabilir. Sadece admin daha sonra güncelleme yapabilir.` 
+          });
         }
       }
 

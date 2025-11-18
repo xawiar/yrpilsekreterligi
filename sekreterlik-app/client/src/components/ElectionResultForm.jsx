@@ -3,6 +3,7 @@ import ApiService from '../utils/ApiService';
 import { storage, auth } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
   // Safety check: if election is missing, show error and return early
@@ -347,11 +348,19 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         }
       }
       
+      // Optimize image before upload (max 2MB, quality 0.85)
+      const optimizedFile = await optimizeImage(file, {
+        maxWidth: 1920,
+        maxHeight: 1920,
+        quality: 0.85,
+        maxSizeMB: 2
+      });
+      
       const timestamp = Date.now();
-      const fileName = `election_results/${election.id}/${ballotBoxId}/${type}_${timestamp}_${file.name}`;
+      const fileName = `election_results/${election.id}/${ballotBoxId}/${type}_${timestamp}_${optimizedFile.name}`;
       const storageRef = ref(storage, fileName);
       
-      await uploadBytes(storageRef, file);
+      await uploadBytes(storageRef, optimizedFile);
       const downloadURL = await getDownloadURL(storageRef);
       
       setFormData(prev => ({
@@ -543,6 +552,38 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       setMessageType('error');
       setSaving(false);
       return;
+    }
+
+    // Check election date - allow result entry only on election day or after (with 7 days grace period)
+    if (election?.date) {
+      const electionDate = new Date(election.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      electionDate.setHours(0, 0, 0, 0);
+      
+      // Allow entry 1 day before election (for preparation) and up to 7 days after
+      const daysBefore = 1;
+      const daysAfter = 7;
+      const minDate = new Date(electionDate);
+      minDate.setDate(minDate.getDate() - daysBefore);
+      const maxDate = new Date(electionDate);
+      maxDate.setDate(maxDate.getDate() + daysAfter);
+      
+      const userRole = localStorage.getItem('userRole');
+      const isAdmin = userRole === 'admin';
+      
+      if (today < minDate && !isAdmin) {
+        setMessage(`Seçim sonucu girişi seçim tarihinden ${daysBefore} gün önce başlayabilir. Seçim tarihi: ${new Date(election.date).toLocaleDateString('tr-TR')}`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+      if (today > maxDate && !isAdmin) {
+        setMessage(`Seçim sonucu girişi seçim tarihinden sonra ${daysAfter} gün içinde yapılabilir. Sadece admin daha sonra giriş yapabilir.`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
     }
 
     try {

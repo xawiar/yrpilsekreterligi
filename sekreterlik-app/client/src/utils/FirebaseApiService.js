@@ -61,6 +61,9 @@ class FirebaseApiService {
     GROUPS: 'groups',
     POSITION_PERMISSIONS: 'position_permissions',
     SCHEDULED_SMS: 'scheduled_sms',
+    AUDIT_LOGS: 'audit_logs',
+    ELECTIONS: 'elections',
+    ELECTION_RESULTS: 'election_results',
     // Visit counts collections
     DISTRICT_VISITS: 'district_visits',
     TOWN_VISITS: 'town_visits',
@@ -3955,6 +3958,21 @@ class FirebaseApiService {
         null,
         resultData
       );
+      
+      // Audit log
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const auditData = {
+        user_id: user.id || user.uid || null,
+        user_type: localStorage.getItem('userRole') || 'observer',
+        action: 'create',
+        entity_type: 'election_result',
+        entity_id: docId,
+        new_data: resultData,
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString()
+      };
+      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+      
       return { success: true, id: docId, message: 'Seçim sonucu oluşturuldu' };
     } catch (error) {
       console.error('Create election result error:', error);
@@ -3964,7 +3982,41 @@ class FirebaseApiService {
 
   static async updateElectionResult(id, resultData) {
     try {
+      // Get old data for audit
+      const oldResult = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
+      
       await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, resultData);
+      
+      // Audit log with change tracking
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const changes = {};
+      
+      // Track which fields changed
+      if (oldResult) {
+        Object.keys(resultData).forEach(key => {
+          if (JSON.stringify(oldResult[key]) !== JSON.stringify(resultData[key])) {
+            changes[key] = {
+              old: oldResult[key],
+              new: resultData[key]
+            };
+          }
+        });
+      }
+      
+      const auditData = {
+        user_id: user.id || user.uid || null,
+        user_type: localStorage.getItem('userRole') || 'observer',
+        action: 'update',
+        entity_type: 'election_result',
+        entity_id: id,
+        old_data: oldResult,
+        new_data: resultData,
+        changes: changes,
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString()
+      };
+      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+      
       return { success: true, message: 'Seçim sonucu güncellendi' };
     } catch (error) {
       console.error('Update election result error:', error);
@@ -3974,7 +4026,25 @@ class FirebaseApiService {
 
   static async deleteElectionResult(id) {
     try {
+      // Get old data for audit
+      const oldResult = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
+      
       await FirebaseService.delete(this.COLLECTIONS.ELECTION_RESULTS, id);
+      
+      // Audit log
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const auditData = {
+        user_id: user.id || user.uid || null,
+        user_type: localStorage.getItem('userRole') || 'admin',
+        action: 'delete',
+        entity_type: 'election_result',
+        entity_id: id,
+        old_data: oldResult,
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString()
+      };
+      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+      
       return { success: true, message: 'Seçim sonucu silindi' };
     } catch (error) {
       console.error('Delete election result error:', error);
