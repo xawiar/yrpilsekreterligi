@@ -25,6 +25,7 @@ const MemberUsersSettings = () => {
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [isProcessingAll, setIsProcessingAll] = useState(false);
+  const [isClearingAuthUids, setIsClearingAuthUids] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -1277,6 +1278,76 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Firestore'daki tüm authUid'leri temizle (Firebase Auth'da olmayan authUid'leri)
+  const handleClearAuthUids = async () => {
+    if (!window.confirm('Firestore\'daki tüm authUid field\'larını temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- Tüm member_users dokümanlarındaki authUid field\'ını siler\n- Firebase Auth\'daki kullanıcıları SİLMEZ\n- Sadece Firestore\'daki referansları temizler\n\nSonrasında "Firebase Auth\'a Senkronize Et" butonuna tıklamanız gerekecek.\n\nDevam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    try {
+      setIsClearingAuthUids(true);
+      setMessage('');
+      setMessageType('info');
+
+      const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+      const { collection, getDocs, updateDoc, doc, deleteField } = await import('firebase/firestore');
+
+      // Tüm member_users'ları al
+      const querySnapshot = await getDocs(collection(FirebaseService.db, 'member_users'));
+      
+      console.log(`📊 Toplam ${querySnapshot.size} kullanıcı bulundu`);
+      setMessage(`AuthUid'ler temizleniyor... (0/${querySnapshot.size})`);
+
+      let clearedCount = 0;
+      let skipCount = 0;
+      const errors = [];
+
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        const username = data.username || docSnapshot.id;
+
+        if (data.authUid) {
+          try {
+            await updateDoc(doc(FirebaseService.db, 'member_users', docSnapshot.id), {
+              authUid: deleteField()
+            });
+            clearedCount++;
+            setMessage(`AuthUid'ler temizleniyor... (${clearedCount}/${querySnapshot.size})`);
+            console.log(`✅ ${clearedCount}/${querySnapshot.size} - Temizlendi: ${username}`);
+          } catch (error) {
+            errors.push(`${username}: ${error.message}`);
+            console.error(`❌ Hata (${username}):`, error.message);
+          }
+        } else {
+          skipCount++;
+        }
+      }
+
+      // Sonuç mesajı
+      let finalMessage = `✅ AuthUid temizleme tamamlandı!\n\n`;
+      finalMessage += `• Temizlenen: ${clearedCount} authUid\n`;
+      finalMessage += `• Atlanan: ${skipCount} (zaten yoktu)\n`;
+      if (errors.length > 0) {
+        finalMessage += `• Hata: ${errors.length}\n`;
+        finalMessage += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        finalMessage += `\n⏭️ Sonraki adım: "Firebase Auth'a Senkronize Et" butonuna tıklayın`;
+        setMessageType('success');
+      }
+
+      setMessage(finalMessage);
+      await fetchMemberUsers();
+
+    } catch (error) {
+      console.error('Error clearing authUids:', error);
+      setMessage('AuthUid temizleme sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsClearingAuthUids(false);
+    }
+  };
+
   // Tüm kullanıcıları oluştur (Temizlik YAPMA)
   const handleProcessAllUsers = async () => {
     if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. İlçe Başkanı kullanıcılarını oluşturur/günceller\n2. Belde Başkanı kullanıcılarını oluşturur/günceller\n3. Müşahit kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
@@ -1403,10 +1474,30 @@ const MemberUsersSettings = () => {
               )}
             </button>
             <button
+              onClick={handleClearAuthUids}
+              disabled={isClearingAuthUids}
+              className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+              title="Firestore'daki authUid field'larını temizle (Firebase Auth'daki kullanıcıları silmez)"
+            >
+              {isClearingAuthUids ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Temizleniyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                  </svg>
+                  AuthUid'leri Temizle
+                </>
+              )}
+            </button>
+            <button
               onClick={handleSyncToFirebaseAuth}
               disabled={isSyncingToAuth}
               className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
-              title="Firestore'daki kullanıcıları Firebase Auth'a senkronize et (Eksikleri ekler, fazlaları silmez)"
+              title="Firestore'daki kullanıcıları Firebase Auth'a senkronize et (Eksikleri ekler)"
             >
               {isSyncingToAuth ? (
                 <>
