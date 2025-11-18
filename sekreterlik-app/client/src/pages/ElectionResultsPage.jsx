@@ -1064,7 +1064,7 @@ const ElectionResultsPage = () => {
   }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes]);
 
   // Helper function to calculate winning candidates based on party seats and candidate order
-  const calculateWinningCandidates = useCallback((partySeats, partyCandidates) => {
+  const calculateWinningCandidatesFromSeats = useCallback((partySeats, partyCandidates) => {
     if (!partyCandidates || !Array.isArray(partyCandidates) || partyCandidates.length === 0) {
       return [];
     }
@@ -1108,7 +1108,7 @@ const ElectionResultsPage = () => {
       });
       
       if (party && typeof party === 'object' && party.mv_candidates) {
-        winningCandidates[partyName] = calculateWinningCandidates(seats, party.mv_candidates);
+        winningCandidates[partyName] = calculateWinningCandidatesFromSeats(seats, party.mv_candidates);
       } else {
         winningCandidates[partyName] = [];
       }
@@ -1118,7 +1118,7 @@ const ElectionResultsPage = () => {
       ...dhondtData,
       winningCandidates
     };
-  }, [election, aggregatedResults, calculateWinningCandidates]);
+  }, [election, aggregatedResults, calculateWinningCandidatesFromSeats]);
 
   // Belediye Meclisi Üyesi Seçimi - Kontenjan + D'Hondt with winning candidates
   const municipalCouncilResults = useMemo(() => {
@@ -1150,7 +1150,7 @@ const ElectionResultsPage = () => {
       });
       
       if (party && typeof party === 'object' && party.candidates) {
-        winningCandidates[partyName] = calculateWinningCandidates(seats, party.candidates);
+        winningCandidates[partyName] = calculateWinningCandidatesFromSeats(seats, party.candidates);
       } else {
         winningCandidates[partyName] = [];
       }
@@ -1160,7 +1160,7 @@ const ElectionResultsPage = () => {
       ...councilData,
       winningCandidates
     };
-  }, [election, aggregatedResults, calculateWinningCandidates]);
+  }, [election, aggregatedResults, calculateWinningCandidatesFromSeats]);
 
   // Calculate winning candidates based on D'Hondt results and candidate order
   const calculateWinningCandidates = useCallback((category, dhondtData, municipalCouncilData, provincialAssemblyData) => {
@@ -1327,7 +1327,7 @@ const ElectionResultsPage = () => {
         });
         
         if (party && typeof party === 'object' && party.candidates) {
-          districtWinningCandidates[districtName][partyName] = calculateWinningCandidates(seats, party.candidates);
+          districtWinningCandidates[districtName][partyName] = calculateWinningCandidatesFromSeats(seats, party.candidates);
         } else {
           districtWinningCandidates[districtName][partyName] = [];
         }
@@ -1344,7 +1344,7 @@ const ElectionResultsPage = () => {
       });
       
       if (party && typeof party === 'object' && party.candidates) {
-        totalWinningCandidates[partyName] = calculateWinningCandidates(seats, party.candidates);
+        totalWinningCandidates[partyName] = calculateWinningCandidatesFromSeats(seats, party.candidates);
       } else {
         totalWinningCandidates[partyName] = [];
       }
@@ -1355,7 +1355,7 @@ const ElectionResultsPage = () => {
       districtWinningCandidates,
       totalWinningCandidates
     };
-  }, [election, filteredResults, calculateWinningCandidates]);
+  }, [election, filteredResults, calculateWinningCandidatesFromSeats]);
   
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
@@ -1919,7 +1919,6 @@ const ElectionResultsPage = () => {
                           );
                         })}
                     </div>
-                  </div>
                 </div>
               ) : null
             )}
