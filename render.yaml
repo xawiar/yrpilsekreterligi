@@ -9,6 +9,10 @@ services:
       - path: /*
         name: Cache-Control
         value: public, max-age=0
+      # SPA Routing için - Tüm route'ları index.html'e yönlendir
+      - path: /*
+        name: X-Redirect
+        value: /* /index.html 200
     envVars:
       - key: VITE_USE_FIREBASE
         value: true

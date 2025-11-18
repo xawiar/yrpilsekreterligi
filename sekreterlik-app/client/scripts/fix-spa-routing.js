@@ -20,17 +20,27 @@ console.log('Index.html exists:', fs.existsSync(indexHtmlPath));
 // Copy _redirects file from public to dist if it exists
 if (fs.existsSync(publicRedirectsPath)) {
   fs.copyFileSync(publicRedirectsPath, distRedirectsPath);
-  console.log('Copied _redirects file to dist directory');
+  console.log('✅ Copied _redirects file to dist directory');
 } else {
-  console.warn('_redirects file not found in public directory');
+  console.warn('⚠️ _redirects file not found in public directory');
+  // Create a default _redirects file if it doesn't exist
+  const defaultRedirects = '/*    /index.html   200';
+  fs.writeFileSync(distRedirectsPath, defaultRedirects);
+  console.log('✅ Created default _redirects file in dist directory');
 }
 
 // Copy static.json file from public to dist if it exists
 if (fs.existsSync(publicStaticJsonPath)) {
   fs.copyFileSync(publicStaticJsonPath, distStaticJsonPath);
-  console.log('Copied static.json file to dist directory');
+  console.log('✅ Copied static.json file to dist directory');
 } else {
-  console.warn('static.json file not found in public directory');
+  console.warn('⚠️ static.json file not found in public directory');
+  // Create a default static.json file if it doesn't exist
+  const defaultStaticJson = JSON.stringify({
+    rewrites: [{ source: '**', destination: '/index.html' }]
+  }, null, 2);
+  fs.writeFileSync(distStaticJsonPath, defaultStaticJson);
+  console.log('✅ Created default static.json file in dist directory');
 }
 
 // Routes that need index.html copies
