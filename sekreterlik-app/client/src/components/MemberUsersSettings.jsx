@@ -23,6 +23,7 @@ const MemberUsersSettings = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSyncingToAuth, setIsSyncingToAuth] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -1178,6 +1179,77 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Gereksiz Firebase Auth kullanıcılarını temizle (orphaned users)
+  const handleCleanupOrphanedAuthUsers = async () => {
+    if (!window.confirm('Firestore\'da olmayan ama Firebase Auth\'da olan gereksiz kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- @ilsekreterlik.local email\'li kullanıcıları kontrol eder\n- Firestore\'daki member_users\'da olmayan kullanıcıları Firebase Auth\'dan siler\n- Admin kullanıcısını korur\n\nDevam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    try {
+      setIsCleaningUp(true);
+      setMessage('');
+      setMessageType('info');
+
+      // Backend URL'ini belirle
+      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      if (!API_BASE_URL) {
+        if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+          const hostname = window.location.hostname;
+          const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
+          API_BASE_URL = `https://${backendHostname}/api`;
+        } else {
+          API_BASE_URL = 'http://localhost:5000/api';
+        }
+      }
+
+      // Backend cleanup endpoint'ini çağır
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 saniye timeout
+
+      const response = await fetch(`${API_BASE_URL}/auth/cleanup-orphaned-auth-users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const result = await response.json();
+        setMessage(`✅ Temizleme tamamlandı!\n\nSilinen: ${result.deleted || 0} kullanıcı\nHata: ${result.errors || 0} kullanıcı`);
+        setMessageType('success');
+        
+        if (result.deletedUsers && result.deletedUsers.length > 0) {
+          console.log('✅ Silinen kullanıcılar:', result.deletedUsers);
+        }
+        
+        if (result.errors && result.errors.length > 0) {
+          console.warn('⚠️ Silme hataları:', result.errors);
+          setMessageType('warning');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        setMessage('Temizleme işlemi timeout oldu (30 saniye). Backend servisi yanıt vermiyor olabilir.');
+        setMessageType('warning');
+      } else if (error.message?.includes('CORS') || error.message?.includes('Failed to fetch')) {
+        setMessage('Backend servisi erişilemiyor. Backend servisi oluşturuldu mu?');
+        setMessageType('error');
+      } else {
+        console.error('Error cleaning up orphaned auth users:', error);
+        setMessage('Temizleme işlemi sırasında hata oluştu: ' + error.message);
+        setMessageType('error');
+      }
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -1289,6 +1361,26 @@ const MemberUsersSettings = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Firebase Auth ile Senkronize Et
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCleanupOrphanedAuthUsers}
+              disabled={isCleaningUp}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+              title="Firestore'da olmayan ama Firebase Auth'da olan gereksiz kullanıcıları temizle"
+            >
+              {isCleaningUp ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Temizleniyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Gereksiz Auth Kullanıcılarını Temizle
                 </>
               )}
             </button>
