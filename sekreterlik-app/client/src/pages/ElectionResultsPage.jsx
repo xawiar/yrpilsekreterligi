@@ -1063,6 +1063,12 @@ const ElectionResultsPage = () => {
     
     const dhondtData = calculateDHondtDetailed(partyVotes, totalSeats);
     
+    // chartData'dan partySeats array'ini oluştur
+    const partySeats = (dhondtData.chartData || []).map(item => ({
+      party: item.party,
+      seats: item.seats
+    }));
+    
     // Her parti için kazanan adayları hesapla
     const winningCandidates = {};
     Object.entries(dhondtData.distribution).forEach(([partyName, seats]) => {
@@ -1081,6 +1087,7 @@ const ElectionResultsPage = () => {
     
     return {
       ...dhondtData,
+      partySeats,
       winningCandidates
     };
   }, [election, aggregatedResults, calculateWinningCandidatesFromSeats]);
@@ -1105,6 +1112,12 @@ const ElectionResultsPage = () => {
     
     const councilData = calculateMunicipalCouncilSeats(partyVotes, totalSeats, population);
     
+    // chartData'dan partySeats array'ini oluştur
+    const partySeats = (councilData.chartData || []).map(item => ({
+      party: item.party,
+      seats: item.seats
+    }));
+    
     // Her parti için kazanan adayları hesapla
     const winningCandidates = {};
     Object.entries(councilData.distribution).forEach(([partyName, seats]) => {
@@ -1123,6 +1136,7 @@ const ElectionResultsPage = () => {
     
     return {
       ...councilData,
+      partySeats,
       winningCandidates
     };
   }, [election, aggregatedResults, calculateWinningCandidatesFromSeats]);
@@ -1141,7 +1155,7 @@ const ElectionResultsPage = () => {
           votes: item.value,
           percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
         })));
-      } else if (category.name === 'Milletvekili Seçimi' && dhondtData) {
+      } else if (category.name === 'Milletvekili Seçimi' && dhondtData && dhondtData.partySeats && Array.isArray(dhondtData.partySeats)) {
         // MV için D'Hondt sonuçlarına göre kazanan adayları belirle
         dhondtData.partySeats.forEach(partySeat => {
           const partyName = partySeat.party;
@@ -1178,7 +1192,7 @@ const ElectionResultsPage = () => {
           votes: item.value,
           percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
         })));
-      } else if (category.name === 'Belediye Meclisi Seçimi' && municipalCouncilData) {
+      } else if (category.name === 'Belediye Meclisi Seçimi' && municipalCouncilData && municipalCouncilData.partySeats && Array.isArray(municipalCouncilData.partySeats)) {
         // Belediye Meclisi için D'Hondt sonuçlarına göre kazanan adayları belirle
         municipalCouncilData.partySeats.forEach(partySeat => {
           const partyName = partySeat.party;
@@ -1205,7 +1219,7 @@ const ElectionResultsPage = () => {
             }
           }
         });
-      } else if (category.name === 'İl Genel Meclisi Seçimi' && provincialAssemblyData) {
+      } else if (category.name === 'İl Genel Meclisi Seçimi' && provincialAssemblyData && provincialAssemblyData.totalPartySeats && Array.isArray(provincialAssemblyData.totalPartySeats)) {
         // İl Genel Meclisi için D'Hondt sonuçlarına göre kazanan adayları belirle
         provincialAssemblyData.totalPartySeats.forEach(partySeat => {
           const partyName = partySeat.party;
@@ -1289,10 +1303,17 @@ const ElectionResultsPage = () => {
       }
     });
     
+    // chartData'dan totalPartySeats array'ini oluştur
+    const totalPartySeats = (assemblyData.chartData || []).map(item => ({
+      party: item.party,
+      seats: item.seats
+    }));
+    
     return {
       ...assemblyData,
       districtWinningCandidates,
-      totalWinningCandidates
+      totalWinningCandidates,
+      totalPartySeats
     };
   }, [election, results, ballotBoxes, districts, towns, neighborhoods, villages, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, filterByNoProtocol, calculateWinningCandidatesFromSeats]);
 
@@ -1685,14 +1706,16 @@ const ElectionResultsPage = () => {
                       
                       // Party-based winner count
                       const partyWinnerCount = {};
-                      winningCandidates.forEach(candidate => {
-                        if (candidate.partyName) {
-                          partyWinnerCount[candidate.partyName] = (partyWinnerCount[candidate.partyName] || 0) + 1;
-                        }
-                      });
+                      if (Array.isArray(winningCandidates)) {
+                        winningCandidates.forEach(candidate => {
+                          if (candidate && candidate.partyName) {
+                            partyWinnerCount[candidate.partyName] = (partyWinnerCount[candidate.partyName] || 0) + 1;
+                          }
+                        });
+                      }
                       
                       // Sort candidates by votes (highest to lowest) - already sorted in calculateWinningCandidates
-                      const sortedCandidates = [...winningCandidates];
+                      const sortedCandidates = Array.isArray(winningCandidates) ? [...winningCandidates] : [];
                       
                       return (
                         <div className="mb-4 space-y-3">
@@ -1711,7 +1734,7 @@ const ElectionResultsPage = () => {
                           </div>
                           
                           {/* Kazanan Adaylar Listesi (Oy Sırasına Göre) */}
-                          {sortedCandidates.length > 0 && (
+                          {sortedCandidates && sortedCandidates.length > 0 && (
                             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                               <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Kazanan Adaylar (Oy Sırasına Göre)</div>
                               {Object.keys(partyWinnerCount).length > 0 && (
