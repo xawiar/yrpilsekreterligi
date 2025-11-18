@@ -811,7 +811,15 @@ const MemberUsersSettings = () => {
           }
         }
       } catch (backendError) {
-        console.warn('⚠️ Backend servisi kullanılamıyor, client-side senkronizasyon kullanılıyor:', backendError.message);
+        // Backend servisi yoksa veya CORS hatası varsa, bu normal bir durum
+        // Sessizce client-side senkronizasyona geçiyoruz
+        if (backendError.name === 'AbortError') {
+          console.log('ℹ️ Backend servisi timeout (5 saniye), client-side senkronizasyon kullanılıyor');
+        } else if (backendError.message?.includes('CORS') || backendError.message?.includes('Failed to fetch')) {
+          console.log('ℹ️ Backend servisi erişilemiyor (CORS/Network), client-side senkronizasyon kullanılıyor');
+        } else {
+          console.warn('⚠️ Backend servisi kullanılamıyor, client-side senkronizasyon kullanılıyor:', backendError.message);
+        }
       }
 
       // Backend başarısız, client-side senkronizasyon kullan
@@ -925,31 +933,33 @@ const MemberUsersSettings = () => {
               }
             }
           } catch (authError) {
-            console.error(`❌ Firebase Auth error for ${user.username}:`, {
-              code: authError.code,
-              message: authError.message,
-              email,
-              passwordLength: password.length
-            });
-            
             if (authError.code === 'auth/email-already-in-use') {
-              console.warn(`⚠️ Email already in use: ${email} - Skipping`);
-              // Email zaten kullanılıyorsa, mevcut kullanıcıyı bulmaya çalış
-              // Ancak client-side'da bu mümkün değil, bu yüzden sadece skip ediyoruz
+              // Email zaten kullanılıyorsa, bu normal bir durum (kullanıcı zaten Firebase Auth'da)
+              console.log(`ℹ️ Email already in use: ${email} - Kullanıcı zaten Firebase Auth'da, atlanıyor`);
               successCount++;
-            } else if (authError.code === 'auth/invalid-email') {
-              errors.push(`${user.username}: Geçersiz email formatı (${email})`);
-              errorCount++;
-            } else if (authError.code === 'auth/weak-password') {
-              errors.push(`${user.username}: Şifre çok zayıf (minimum 6 karakter)`);
-              errorCount++;
-            } else if (authError.code === 'auth/operation-not-allowed') {
-              errors.push(`${user.username}: Email/Password authentication devre dışı`);
-              errorCount++;
             } else {
-              const errorMsg = `${user.username}: ${authError.code || 'Unknown error'} - ${authError.message || 'Firebase Auth error'}`;
-              errors.push(errorMsg);
-              errorCount++;
+              // Diğer hatalar için detaylı log
+              console.error(`❌ Firebase Auth error for ${user.username}:`, {
+                code: authError.code,
+                message: authError.message,
+                email,
+                passwordLength: password.length
+              });
+              
+              if (authError.code === 'auth/invalid-email') {
+                errors.push(`${user.username}: Geçersiz email formatı (${email})`);
+                errorCount++;
+              } else if (authError.code === 'auth/weak-password') {
+                errors.push(`${user.username}: Şifre çok zayıf (minimum 6 karakter)`);
+                errorCount++;
+              } else if (authError.code === 'auth/operation-not-allowed') {
+                errors.push(`${user.username}: Email/Password authentication devre dışı`);
+                errorCount++;
+              } else {
+                const errorMsg = `${user.username}: ${authError.code || 'Unknown error'} - ${authError.message || 'Firebase Auth error'}`;
+                errors.push(errorMsg);
+                errorCount++;
+              }
             }
           }
         } catch (error) {
