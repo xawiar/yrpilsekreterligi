@@ -1,9 +1,10 @@
-const MemberController = require('./MemberController');
-const MeetingController = require('./MeetingController');
-const EventController = require('./EventController');
-const MemberRegistrationController = require('./MemberRegistrationController');
-const NeighborhoodRepresentativeController = require('./NeighborhoodRepresentativeController');
-const VillageRepresentativeController = require('./VillageRepresentativeController');
+// Note: We don't actually use these controllers, we access database/Firebase directly
+// Keeping imports commented out to avoid module resolution issues
+// const MemberController = require('./MemberController');
+// const MeetingController = require('./MeetingController');
+// const EventController = require('./EventController');
+// const NeighborhoodRepresentativeController = require('./NeighborhoodRepresentativeController');
+// const VillageRepresentativeController = require('./VillageRepresentativeController');
 
 // Check if Firebase is being used
 const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';

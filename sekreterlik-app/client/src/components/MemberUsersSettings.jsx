@@ -1348,24 +1348,19 @@ const MemberUsersSettings = () => {
     }
   };
 
-  // Üyeler için kullanıcı oluştur
-  const handleCreateMemberUsers = async () => {
+  // Üyeler için kullanıcı oluştur (sonuç döndürür)
+  const handleCreateMemberUsersWithResults = async () => {
     try {
-      setIsUpdating(true);
-      setMessage('');
-      
       // Tüm üyeleri al
       const allMembers = members.filter(m => m.tc && m.phone);
       
       if (allMembers.length === 0) {
-        setMessage('TC ve telefon numarası olan üye bulunamadı');
-        setMessageType('error');
-        return;
+        return { created: 0, updated: 0, errors: 0, message: 'TC ve telefon numarası olan üye bulunamadı' };
       }
 
       // Mevcut kullanıcıları al
       const existingUsers = await ApiService.getMemberUsers();
-      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      const existingUsersList = existingUsers.users || existingUsers || [];
       
       let createdCount = 0;
       let updatedCount = 0;
@@ -1410,10 +1405,11 @@ const MemberUsersSettings = () => {
             continue;
           }
 
-          // Kullanıcı zaten var mı kontrol et
-          const existingUser = existingUsers.users?.find(u => 
+          // Kullanıcı zaten var mı kontrol et (username veya member_id ile)
+          const existingUser = existingUsersList.find(u => 
             u.username === username || 
-            (u.member_id === member.id || u.memberId === member.id)
+            (u.member_id === member.id || u.memberId === member.id) ||
+            (u.member_id === String(member.id) || u.memberId === String(member.id))
           );
           
           if (!existingUser) {
@@ -1426,6 +1422,8 @@ const MemberUsersSettings = () => {
               if (authError.code !== 'auth/email-already-in-use') {
                 throw authError;
               }
+              // Email zaten kullanılıyorsa, mevcut kullanıcıyı bul
+              console.log(`Email zaten kullanılıyor: ${email}, devam ediliyor...`);
             }
 
             const userData = {
@@ -1442,20 +1440,38 @@ const MemberUsersSettings = () => {
             await FirebaseService.create('member_users', null, userData, false);
             createdCount++;
           } else {
-            // Kullanıcı varsa güncelle
-            const updateData = {
-              userType: 'member',
-              member_id: member.id,
-              memberId: member.id,
-              name: member.name
-            };
+            // Kullanıcı varsa güncelle (sadece değişmişse)
+            const needsUpdate = 
+              existingUser.name !== member.name ||
+              existingUser.member_id !== member.id && existingUser.memberId !== member.id ||
+              existingUser.userType !== 'member';
             
-            if (existingUser.password !== password) {
-              updateData.password = password;
-            }
+            if (needsUpdate) {
+              const updateData = {
+                userType: 'member',
+                member_id: member.id,
+                memberId: member.id,
+                name: member.name
+              };
+              
+              // Şifre değişmişse güncelle
+              const currentPassword = existingUser.password || '';
+              let decryptedCurrentPassword = currentPassword;
+              try {
+                if (currentPassword && typeof currentPassword === 'string' && currentPassword.startsWith('U2FsdGVkX1')) {
+                  decryptedCurrentPassword = decryptData(currentPassword);
+                }
+              } catch (e) {
+                // Decrypt edilemezse, yeni şifreyi kullan
+              }
+              
+              if (decryptedCurrentPassword !== password) {
+                updateData.password = password;
+              }
 
-            await FirebaseService.update('member_users', existingUser.id, updateData, false);
-            updatedCount++;
+              await FirebaseService.update('member_users', existingUser.id, updateData, false);
+              updatedCount++;
+            }
           }
         } catch (error) {
           errorCount++;
@@ -1464,13 +1480,40 @@ const MemberUsersSettings = () => {
         }
       }
 
+      return {
+        created: createdCount,
+        updated: updatedCount,
+        errors: errorCount,
+        errorMessages: errors
+      };
+    } catch (error) {
+      console.error('Error creating member users:', error);
+      return {
+        created: 0,
+        updated: 0,
+        errors: 1,
+        message: 'Üye kullanıcıları oluşturulurken hata oluştu: ' + error.message
+      };
+    }
+  };
+
+  // Üyeler için kullanıcı oluştur (UI için)
+  const handleCreateMemberUsers = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      const result = await handleCreateMemberUsersWithResults();
+      
       // Sonuç mesajı
       let message = `Üye kullanıcıları oluşturuldu!\n`;
-      message += `• Yeni oluşturulan: ${createdCount}\n`;
-      message += `• Güncellenen: ${updatedCount}\n`;
-      if (errorCount > 0) {
-        message += `• Hata: ${errorCount}\n`;
-        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+      message += `• Yeni oluşturulan: ${result.created}\n`;
+      message += `• Güncellenen: ${result.updated}\n`;
+      if (result.errors > 0) {
+        message += `• Hata: ${result.errors}\n`;
+        if (result.errorMessages && result.errorMessages.length > 0) {
+          message += `\nHatalar:\n${result.errorMessages.slice(0, 5).join('\n')}`;
+        }
         setMessageType('warning');
       } else {
         setMessageType('success');
@@ -1508,7 +1551,10 @@ const MemberUsersSettings = () => {
       // 1. Üye Kullanıcıları
       setMessage('Üye kullanıcıları oluşturuluyor...');
       try {
-        await handleCreateMemberUsers();
+        const memberResult = await handleCreateMemberUsersWithResults();
+        results.members.created = memberResult.created || 0;
+        results.members.updated = memberResult.updated || 0;
+        results.members.errors = memberResult.errors || 0;
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error('Üye kullanıcıları hatası:', error);
@@ -1545,15 +1591,39 @@ const MemberUsersSettings = () => {
         results.observers.errors++;
       }
 
-      // Sonuç mesajı
-      let finalMessage = '✅ Tüm kullanıcılar oluşturuldu!\n\n';
-      finalMessage += `• Üye: Oluşturuldu/Güncellendi\n`;
-      finalMessage += `• İlçe Başkanı: Oluşturuldu/Güncellendi\n`;
-      finalMessage += `• Belde Başkanı: Oluşturuldu/Güncellendi\n`;
-      finalMessage += `• Müşahit: Oluşturuldu/Güncellendi\n`;
+        // Sonuç mesajı
+        let finalMessage = '✅ Tüm kullanıcılar oluşturuldu!\n\n';
+        finalMessage += `• Üye: ${results.members.created} oluşturuldu, ${results.members.updated} güncellendi`;
+        if (results.members.errors > 0) {
+          finalMessage += `, ${results.members.errors} hata`;
+        }
+        finalMessage += `\n`;
+        finalMessage += `• İlçe Başkanı: ${results.districtPresidents.created} oluşturuldu, ${results.districtPresidents.updated} güncellendi`;
+        if (results.districtPresidents.errors > 0) {
+          finalMessage += `, ${results.districtPresidents.errors} hata`;
+        }
+        finalMessage += `\n`;
+        finalMessage += `• Belde Başkanı: ${results.townPresidents.created} oluşturuldu, ${results.townPresidents.updated} güncellendi`;
+        if (results.townPresidents.errors > 0) {
+          finalMessage += `, ${results.townPresidents.errors} hata`;
+        }
+        finalMessage += `\n`;
+        finalMessage += `• Müşahit: ${results.observers.created} oluşturuldu, ${results.observers.updated} güncellendi`;
+        if (results.observers.errors > 0) {
+          finalMessage += `, ${results.observers.errors} hata`;
+        }
+        finalMessage += `\n`;
 
-      setMessage(finalMessage);
-      setMessageType('success');
+        // Hata varsa warning, yoksa success
+        const totalErrors = results.members.errors + results.districtPresidents.errors + 
+                           results.townPresidents.errors + results.observers.errors;
+        if (totalErrors > 0) {
+          setMessageType('warning');
+        } else {
+          setMessageType('success');
+        }
+
+        setMessage(finalMessage);
 
       // Listeyi yenile
       await fetchMemberUsers();
