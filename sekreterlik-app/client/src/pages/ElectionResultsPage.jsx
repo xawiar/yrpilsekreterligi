@@ -1715,95 +1715,70 @@ const ElectionResultsPage = () => {
                     );
                   })()}
 
-                    {/* Horizontal Bar Chart and Detailed Results - Side by Side */}
+                    {/* Pie Chart and Winning Candidates - Side by Side */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                      {/* Horizontal Bar Chart */}
+                      {/* Pie Chart - Modern Alternative */}
                       <div>
                         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı</h3>
                         <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
-                          <ResponsiveContainer width="100%" height={Math.min(300, Math.max(200, category.data.length * 30))}>
-                          <BarChart
-                            data={category.data
-                              .filter(item => item && (item.value || item.value === 0)) // Filter out invalid items
-                              .sort((a, b) => (b.value || 0) - (a.value || 0))
-                              .map(item => ({
-                                ...item,
-                                name: typeof item.name === 'string' 
-                                  ? item.name 
-                                  : (item.name?.name || String(item.name || '') || 'Bilinmeyen')
-                              }))}
-                            layout="vertical"
-                            margin={{ top: 10, right: 20, left: 100, bottom: 10 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis 
-                              type="number" 
-                              stroke="#6b7280"
-                              tick={{ fill: '#6b7280', fontSize: 12 }}
-                            />
-                            <YAxis 
-                              dataKey="name" 
-                              type="category" 
-                              width={90}
-                              stroke="#6b7280"
-                              tick={{ fill: '#6b7280', fontSize: 11 }}
-                              tickFormatter={(value) => {
-                                if (!value) return 'Bilinmeyen';
-                                return typeof value === 'string' 
-                                  ? value 
-                                  : (value?.name || String(value || '') || 'Bilinmeyen');
-                              }}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '12px',
-                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                                padding: '12px'
-                              }}
-                              formatter={(value, name, props) => {
-                                if (!props || !props.payload) {
-                                  return [`${(value || 0).toLocaleString('tr-TR')} oy`, 'Bilinmeyen'];
-                                }
-                                const percentage = typeof props.payload.percentage === 'number' 
-                                  ? props.payload.percentage 
-                                  : parseFloat(props.payload.percentage || 0);
-                                const displayName = typeof props.payload.name === 'string' 
-                                  ? props.payload.name 
-                                  : (props.payload.name?.name || String(props.payload.name || '') || 'Bilinmeyen');
-                                return [
-                                  `%${percentage.toFixed(1)} (${(value || 0).toLocaleString('tr-TR')} oy)`,
-                                  displayName
-                                ];
-                              }}
-                            />
-                            <Bar 
-                              dataKey="value" 
-                              radius={[0, 8, 8, 0]}
-                              fill="#6366f1"
-                              label={{
-                                position: 'right',
-                                formatter: (value, entry) => {
-                                  if (!entry) return 'Bilinmeyen';
-                                  const displayName = typeof entry.name === 'string' 
-                                    ? entry.name 
-                                    : (entry.name?.name || String(entry.name || '') || 'Bilinmeyen');
-                                  return displayName;
-                                },
-                                style: { fill: '#374151', fontSize: '11px', fontWeight: '500' }
-                              }}
-                            >
-                              {category.data.map((entry, index) => (
-                                <Cell 
-                                  key={`bar-cell-${categoryIndex}-${index}`}
-                                  fill={COLORS[index % COLORS.length]}
-                                />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                              <Pie
+                                data={category.data
+                                  .filter(item => item && (item.value || item.value === 0))
+                                  .sort((a, b) => (b.value || 0) - (a.value || 0))
+                                  .map(item => ({
+                                    ...item,
+                                    name: typeof item.name === 'string' 
+                                      ? item.name 
+                                      : (item.name?.name || String(item.name || '') || 'Bilinmeyen')
+                                  }))}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percentage, value }) => {
+                                  const displayName = typeof name === 'string' ? name : (name?.name || String(name || '') || 'Bilinmeyen');
+                                  const pct = typeof percentage === 'number' ? percentage : parseFloat(percentage || 0);
+                                  return `${displayName}: %${pct.toFixed(1)}`;
+                                }}
+                                outerRadius={100}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {category.data.map((entry, index) => (
+                                  <Cell 
+                                    key={`pie-cell-${categoryIndex}-${index}`}
+                                    fill={COLORS[index % COLORS.length]}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '12px',
+                                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                                  padding: '12px'
+                                }}
+                                formatter={(value, name, props) => {
+                                  if (!props || !props.payload) {
+                                    return [`${(value || 0).toLocaleString('tr-TR')} oy`, 'Bilinmeyen'];
+                                  }
+                                  const percentage = typeof props.payload.percentage === 'number' 
+                                    ? props.payload.percentage 
+                                    : parseFloat(props.payload.percentage || 0);
+                                  const displayName = typeof props.payload.name === 'string' 
+                                    ? props.payload.name 
+                                    : (props.payload.name?.name || String(props.payload.name || '') || 'Bilinmeyen');
+                                  return [
+                                    `%${percentage.toFixed(1)} (${(value || 0).toLocaleString('tr-TR')} oy)`,
+                                    displayName
+                                  ];
+                                }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
 
                       {/* Kazanan Adaylar Listesi */}
@@ -2030,36 +2005,106 @@ const ElectionResultsPage = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              {/* Distribution List with Winning Candidates */}
+              {/* Meclis Koltukları Tasarımı */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazında Dağılım ve Kazanan Adaylar</h3>
-                <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Meclis Koltukları</h3>
+                <div className="space-y-4">
                   {municipalCouncilResults.chartData
                     .sort((a, b) => b.seats - a.seats)
                     .map((item, index) => {
                       const winningCandidates = municipalCouncilResults.winningCandidates?.[item.party] || [];
+                      const partyColor = getPartyColor(item.party);
+                      const seats = item.seats || 0;
+                      
                       return (
                         <div 
                           key={item.party}
-                          className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                          className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               <div 
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: partyColor.border }}
                               ></div>
-                              <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                              <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold text-base text-indigo-600 dark:text-indigo-400">
-                                {item.seats} Üye
+                              <div className="font-bold text-lg" style={{ color: partyColor.border }}>
+                                {seats} Koltuk
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {item.votes.toLocaleString('tr-TR')} oy
                               </div>
                             </div>
                           </div>
+                          
+                          {/* Meclis Koltukları Grid */}
+                          <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 mb-3">
+                            {Array.from({ length: seats }, (_, seatIndex) => {
+                              const candidate = winningCandidates[seatIndex];
+                              return (
+                                <div
+                                  key={seatIndex}
+                                  className="relative group"
+                                  title={candidate ? `${candidate.name} (#${candidate.order})` : `Koltuk ${seatIndex + 1}`}
+                                >
+                                  {/* Sandalye SVG */}
+                                  <svg
+                                    width="40"
+                                    height="40"
+                                    viewBox="0 0 40 40"
+                                    className="w-full h-auto transition-transform group-hover:scale-110"
+                                  >
+                                    {/* Sandalye gövdesi */}
+                                    <rect
+                                      x="8"
+                                      y="12"
+                                      width="24"
+                                      height="20"
+                                      rx="2"
+                                      fill={partyColor.border}
+                                      opacity="0.9"
+                                    />
+                                    {/* Sandalye sırtı */}
+                                    <rect
+                                      x="8"
+                                      y="12"
+                                      width="24"
+                                      height="6"
+                                      rx="2"
+                                      fill={partyColor.border}
+                                    />
+                                    {/* Sandalye kolçakları */}
+                                    <rect x="6" y="18" width="4" height="12" rx="1" fill={partyColor.border} />
+                                    <rect x="30" y="18" width="4" height="12" rx="1" fill={partyColor.border} />
+                                    {/* Koltuk numarası */}
+                                    {candidate && (
+                                      <text
+                                        x="20"
+                                        y="28"
+                                        textAnchor="middle"
+                                        fontSize="10"
+                                        fill="white"
+                                        fontWeight="bold"
+                                      >
+                                        {candidate.order}
+                                      </text>
+                                    )}
+                                  </svg>
+                                  {/* Hover tooltip */}
+                                  {candidate && (
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                                      <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                        {candidate.name}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
                           {/* Kontenjan ve D'Hondt Detayı */}
                           <div className="flex gap-2 text-xs mb-2">
                             {item.quotaSeats > 0 && (
@@ -2073,23 +2118,6 @@ const ElectionResultsPage = () => {
                               </span>
                             )}
                           </div>
-                          {/* Kazanan Adaylar */}
-                          {winningCandidates.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
-                              <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">✅ Kazanan Adaylar (Sıralamaya Göre):</div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {winningCandidates.map((candidate, idx) => (
-                                  <span 
-                                    key={idx}
-                                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
-                                  >
-                                    <span className="font-medium">#{candidate.order}</span>
-                                    <span>{candidate.name}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -2165,48 +2193,100 @@ const ElectionResultsPage = () => {
                 </div>
               </div>
               
-              {/* Toplam Dağılım */}
+              {/* Toplam Meclis Koltukları */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Toplam Meclis Dağılımı ve Kazanan Adaylar</h3>
-                <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Toplam Meclis Koltukları</h3>
+                <div className="space-y-4">
                   {provincialAssemblyResults.chartData.map((item, index) => {
                     const winningCandidates = provincialAssemblyResults.totalWinningCandidates?.[item.party] || [];
+                    const partyColor = getPartyColor(item.party);
+                    const seats = item.seats || 0;
+                    
                     return (
                       <div 
                         key={item.party}
-                        className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                        className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
                       >
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              className="w-4 h-4 rounded-full"
+                              style={{ backgroundColor: partyColor.border }}
                             ></div>
-                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
+                            <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
                           </div>
                           <div className="text-right">
-                            <div className="font-bold text-base text-blue-600 dark:text-blue-400">
-                              {item.seats} Üye
+                            <div className="font-bold text-lg" style={{ color: partyColor.border }}>
+                              {seats} Koltuk
                             </div>
                           </div>
                         </div>
-                        {/* Kazanan Adaylar */}
-                        {winningCandidates.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
-                            <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">✅ Kazanan Adaylar (Sıralamaya Göre):</div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {winningCandidates.map((candidate, idx) => (
-                                <span 
-                                  key={idx}
-                                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
+                        
+                        {/* Meclis Koltukları Grid */}
+                        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                          {Array.from({ length: seats }, (_, seatIndex) => {
+                            const candidate = winningCandidates[seatIndex];
+                            return (
+                              <div
+                                key={seatIndex}
+                                className="relative group"
+                                title={candidate ? `${candidate.name} (#${candidate.order})` : `Koltuk ${seatIndex + 1}`}
+                              >
+                                {/* Sandalye SVG */}
+                                <svg
+                                  width="40"
+                                  height="40"
+                                  viewBox="0 0 40 40"
+                                  className="w-full h-auto transition-transform group-hover:scale-110"
                                 >
-                                  <span className="font-medium">#{candidate.order}</span>
-                                  <span>{candidate.name}</span>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                                  {/* Sandalye gövdesi */}
+                                  <rect
+                                    x="8"
+                                    y="12"
+                                    width="24"
+                                    height="20"
+                                    rx="2"
+                                    fill={partyColor.border}
+                                    opacity="0.9"
+                                  />
+                                  {/* Sandalye sırtı */}
+                                  <rect
+                                    x="8"
+                                    y="12"
+                                    width="24"
+                                    height="6"
+                                    rx="2"
+                                    fill={partyColor.border}
+                                  />
+                                  {/* Sandalye kolçakları */}
+                                  <rect x="6" y="18" width="4" height="12" rx="1" fill={partyColor.border} />
+                                  <rect x="30" y="18" width="4" height="12" rx="1" fill={partyColor.border} />
+                                  {/* Koltuk numarası */}
+                                  {candidate && (
+                                    <text
+                                      x="20"
+                                      y="28"
+                                      textAnchor="middle"
+                                      fontSize="10"
+                                      fill="white"
+                                      fontWeight="bold"
+                                    >
+                                      {candidate.order}
+                                    </text>
+                                  )}
+                                </svg>
+                                {/* Hover tooltip */}
+                                {candidate && (
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                                    <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                      {candidate.name}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
