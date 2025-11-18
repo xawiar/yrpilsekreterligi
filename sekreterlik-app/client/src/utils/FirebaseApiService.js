@@ -5130,34 +5130,77 @@ class FirebaseApiService {
         return { success: false, message: 'Kullanıcı bulunamadı' };
       }
 
-      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa), backend üzerinden sil
+      // Firebase Auth'dan silme işlemi - Backend servisi gerektirir
+      let authDeleted = false;
       if (memberUser.authUid) {
         try {
+          // Backend URL'ini belirle
+          let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+          if (!API_BASE_URL) {
+            if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+              const hostname = window.location.hostname;
+              const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
+              API_BASE_URL = `https://${backendHostname}/api`;
+            } else {
+              API_BASE_URL = 'http://localhost:5000/api';
+            }
+          }
+          
           // Backend endpoint'ini kullanarak Firebase Auth kullanıcısını sil
-          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
           const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json'
-            }
+            },
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           
           if (response.ok) {
             console.log('✅ Firebase Auth user deleted via backend:', memberUser.authUid);
+            authDeleted = true;
           } else {
             const errorData = await response.json().catch(() => ({}));
-            console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
+            const errorMsg = errorData.message || response.statusText;
+            console.warn('⚠️ Firebase Auth deletion via backend failed:', errorMsg);
+            // Backend yoksa veya hata varsa, Firestore'dan silmeye devam et
+            // Ama kullanıcıya bilgi ver
+            if (errorMsg.includes('CORS') || errorMsg.includes('Failed to fetch') || response.status === 0) {
+              console.warn('⚠️ Backend servisi erişilemiyor, sadece Firestore\'dan siliniyor');
+            }
           }
         } catch (authError) {
-          console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
+          if (authError.name === 'AbortError') {
+            console.warn('⚠️ Backend servisi timeout, sadece Firestore\'dan siliniyor');
+          } else if (authError.message?.includes('CORS') || authError.message?.includes('Failed to fetch')) {
+            console.warn('⚠️ Backend servisi erişilemiyor (CORS/Network), sadece Firestore\'dan siliniyor');
+          } else {
+            console.warn('⚠️ Firebase Auth deletion failed:', authError.message);
+          }
         }
       }
 
-      // Firestore'dan sil
+      // Firestore'dan sil (her durumda)
       await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, id);
       
       console.log('✅ Member user deleted from Firestore:', id);
-      return { success: true, message: 'Kullanıcı silindi' };
+      
+      // Sonuç mesajı
+      if (authDeleted) {
+        return { success: true, message: 'Kullanıcı Firestore ve Firebase Auth\'dan silindi' };
+      } else if (memberUser.authUid) {
+        return { 
+          success: true, 
+          message: 'Kullanıcı Firestore\'dan silindi. Firebase Auth\'dan silmek için backend servisi gereklidir. Senkronizasyon butonunu kullanarak temizleyebilirsiniz.',
+          warning: true
+        };
+      } else {
+        return { success: true, message: 'Kullanıcı Firestore\'dan silindi' };
+      }
     } catch (error) {
       console.error('Delete member user error:', error);
       throw new Error('Kullanıcı silinirken hata oluştu: ' + error.message);

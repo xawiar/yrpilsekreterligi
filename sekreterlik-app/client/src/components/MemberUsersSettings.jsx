@@ -177,12 +177,17 @@ const MemberUsersSettings = () => {
   };
 
   const handleDeleteUser = async (userId, userName) => {
-    if (window.confirm(`${userName} kullanıcısını silmek istediğinizden emin misiniz?`)) {
+    if (window.confirm(`${userName} kullanıcısını silmek istediğinizden emin misiniz?\n\nBu işlem:\n- Kullanıcıyı Firestore'dan siler\n- Backend servisi varsa Firebase Auth'dan da siler\n- Backend servisi yoksa Firebase Auth'da kalır (senkronizasyon ile temizlenebilir)`)) {
       try {
         const response = await ApiService.deleteMemberUser(userId);
         if (response.success) {
-          setMessage('Kullanıcı başarıyla silindi');
-          setMessageType('success');
+          if (response.warning) {
+            setMessage(response.message);
+            setMessageType('warning');
+          } else {
+            setMessage(response.message || 'Kullanıcı başarıyla silindi');
+            setMessageType('success');
+          }
           await fetchMemberUsers();
         } else {
           setMessage(response.message || 'Kullanıcı silinirken hata oluştu');
@@ -190,7 +195,7 @@ const MemberUsersSettings = () => {
         }
       } catch (error) {
         console.error('Error deleting user:', error);
-        setMessage('Kullanıcı silinirken hata oluştu');
+        setMessage('Kullanıcı silinirken hata oluştu: ' + error.message);
         setMessageType('error');
       }
     }
