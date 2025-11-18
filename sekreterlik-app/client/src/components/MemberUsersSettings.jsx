@@ -769,12 +769,18 @@ const MemberUsersSettings = () => {
       if (!API_BASE_URL) {
         // Production'da mevcut hostname'i kullanarak backend URL'ini belirle
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-          // Render.com'da frontend ve backend aynı domain'de olabilir veya farklı olabilir
-          // Önce environment variable'dan al, yoksa mevcut hostname'i kullan
+          // Render.com'da backend servisi genellikle farklı bir URL'de
+          // Backend servis adı: sekreterlik-backend
+          // Frontend: yrpilsekreterligi.onrender.com
+          // Backend: sekreterlik-backend.onrender.com (veya benzer)
           const hostname = window.location.hostname;
-          // Eğer frontend 'yrpilsekreterligi.onrender.com' ise, backend muhtemelen aynı veya farklı bir service
-          // En güvenli yol: environment variable kullanmak
-          API_BASE_URL = 'https://yrpilsekreterligi.onrender.com/api';
+          // Frontend hostname'inden backend hostname'ini tahmin et
+          // Eğer frontend 'yrpilsekreterligi.onrender.com' ise, backend 'sekreterlik-backend.onrender.com' olabilir
+          const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
+          API_BASE_URL = `https://${backendHostname}/api`;
+          
+          // Alternatif: Eğer backend aynı domain'de ise
+          // API_BASE_URL = `https://${hostname}/api`;
         } else {
           // Development
           API_BASE_URL = 'http://localhost:5000/api';

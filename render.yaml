@@ -1,4 +1,28 @@
 services:
+  # Backend Web Service
+  - type: web
+    name: sekreterlik-backend
+    branch: main
+    rootDir: "sekreterlik-app/server"
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: VITE_USE_FIREBASE
+        value: true
+      - key: USE_FIREBASE
+        value: true
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false  # Render.com dashboard'dan manuel eklenmeli
+      - key: VITE_ENCRYPTION_KEY
+        value: ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://yrpilsekreterligi.onrender.com
+
+  # Frontend Static Site
   - type: static
     name: ilce-sekreterlik
     branch: main
@@ -18,4 +42,12 @@ services:
         value: true
       - key: VITE_ENCRYPTION_KEY
         value: ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: sekreterlik-backend
+          property: url
+        # Backend URL'i otomatik olarak backend servisinden alınacak
+        # Eğer bu çalışmazsa, manuel olarak ekleyin:
+        # value: https://sekreterlik-backend.onrender.com/api
 
