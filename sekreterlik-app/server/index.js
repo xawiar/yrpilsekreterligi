@@ -214,19 +214,63 @@ const allowedOrigins = new Set([
   ...(process.env.NODE_ENV === 'production' ? productionOrigins : [])
 ]);
 
+// CORS middleware - OPTIONS request'leri için özel handling
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // OPTIONS request (preflight) için özel handling
+  if (req.method === 'OPTIONS') {
+    // Render.com origin kontrolü
+    if (origin && origin.includes('.onrender.com')) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400'); // 24 hours
+      return res.status(200).end();
+    }
+    
+    // Allowed origins kontrolü
+    if (origin && allowedOrigins.has(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400');
+      return res.status(200).end();
+    }
+    
+    // Development'da tüm origin'lere izin ver
+    if (process.env.NODE_ENV !== 'production') {
+      res.header('Access-Control-Allow-Origin', origin || '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      return res.status(200).end();
+    }
+    
+    return res.status(403).json({ error: 'CORS policy violation' });
+  }
+  
+  next();
+});
+
 app.use(cors({
   origin: (origin, callback) => {
     // No origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
     // Check if origin is in allowed list
-    if (allowedOrigins.has(origin)) return callback(null, true);
+    if (allowedOrigins.has(origin)) {
+      console.log('✅ CORS allowed (from list):', origin);
+      return callback(null, true);
+    }
     
     // Production'da sadece Render.com URL'lerine izin ver
     if (process.env.NODE_ENV === 'production') {
       // Render.com domain kontrolü
       if (origin.includes('.onrender.com')) {
-        console.log('✅ Allowing Render.com origin:', origin);
+        console.log('✅ CORS allowed (Render.com):', origin);
         return callback(null, true);
       }
       console.warn('❌ CORS blocked origin:', origin);
@@ -234,11 +278,14 @@ app.use(cors({
     }
     
     // Development'da tüm origin'lere izin ver
+    console.log('✅ CORS allowed (development):', origin);
     return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200,
 }));
 // Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
 app.use(helmet({
