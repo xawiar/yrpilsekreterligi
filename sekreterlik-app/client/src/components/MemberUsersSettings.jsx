@@ -773,6 +773,15 @@ const MemberUsersSettings = () => {
       let useBackend = false;
       let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
       
+      // Eğer VITE_API_BASE_URL set edilmişse ama /api ile bitmiyorsa, ekle
+      if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
+        if (API_BASE_URL.endsWith('/')) {
+          API_BASE_URL = API_BASE_URL + 'api';
+        } else {
+          API_BASE_URL = API_BASE_URL + '/api';
+        }
+      }
+      
       if (!API_BASE_URL) {
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
           // Render.com'da backend URL'ini belirle
@@ -1200,6 +1209,16 @@ const MemberUsersSettings = () => {
 
       // Backend URL'ini belirle
       let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      
+      // Eğer VITE_API_BASE_URL set edilmişse ama /api ile bitmiyorsa, ekle
+      if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
+        if (API_BASE_URL.endsWith('/')) {
+          API_BASE_URL = API_BASE_URL + 'api';
+        } else {
+          API_BASE_URL = API_BASE_URL + '/api';
+        }
+      }
+      
       if (!API_BASE_URL) {
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
           // Render.com'da backend URL'ini belirle
