@@ -1726,7 +1726,8 @@ const ElectionResultsPage = () => {
                                 <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">🏆 Kazanan</div>
                                 <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{winnerName}</div>
                                 <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                  {winner.value.toLocaleString('tr-TR')} oy (%{winnerPercentage.toFixed(2)})
+                                  <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">%{winnerPercentage.toFixed(2)}</span>
+                                  <span className="ml-2">({winner.value.toLocaleString('tr-TR')} oy)</span>
                                 </div>
                               </div>
                               <div className="text-2xl">🏆</div>
@@ -1757,8 +1758,8 @@ const ElectionResultsPage = () => {
                                       <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
                                     </div>
                                     <div className="text-right">
-                                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">{candidate.votes.toLocaleString('tr-TR')}</span>
-                                      <span className="text-gray-500 dark:text-gray-400 ml-1">(%{candidate.percentage.toFixed(2)})</span>
+                                      <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">%{candidate.percentage.toFixed(2)}</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({candidate.votes.toLocaleString('tr-TR')} oy)</span>
                                     </div>
                                   </div>
                                 ))}
@@ -1827,7 +1828,7 @@ const ElectionResultsPage = () => {
                                   ? props.payload.name 
                                   : (props.payload.name?.name || String(props.payload.name || '') || 'Bilinmeyen');
                                 return [
-                                  `${(value || 0).toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
+                                  `%${percentage.toFixed(1)} (${(value || 0).toLocaleString('tr-TR')} oy)`,
                                   displayName
                                 ];
                               }}
@@ -1893,11 +1894,11 @@ const ElectionResultsPage = () => {
                                   <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{itemName}</span>
                                 </div>
                                 <div className="text-right">
-                                  <div className="font-bold text-base text-gray-900 dark:text-gray-100">
-                                    {item.value.toLocaleString('tr-TR')}
-                                  </div>
-                                  <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                                     %{percentage.toFixed(2)}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    ({item.value.toLocaleString('tr-TR')} oy)
                                   </div>
                                 </div>
                               </div>
@@ -2544,8 +2545,8 @@ const ElectionResultsPage = () => {
                                     <div key={candidate} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2557,8 +2558,8 @@ const ElectionResultsPage = () => {
                                     <div key={`ind_cb_${candidate}`} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{candidate} <span className="text-gray-500">(Bağımsız)</span></span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2579,8 +2580,8 @@ const ElectionResultsPage = () => {
                                     <div key={partyName} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2592,8 +2593,8 @@ const ElectionResultsPage = () => {
                                     <div key={`ind_mv_${candidate}`} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{candidate} <span className="text-gray-500">(Bağımsız)</span></span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2618,8 +2619,8 @@ const ElectionResultsPage = () => {
                                     <div key={partyName} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2631,8 +2632,8 @@ const ElectionResultsPage = () => {
                                     <div key={candidate} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{candidate} <span className="text-gray-500">(Bağımsız)</span></span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2653,8 +2654,8 @@ const ElectionResultsPage = () => {
                                     <div key={partyName} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2675,8 +2676,8 @@ const ElectionResultsPage = () => {
                                     <div key={partyName} className="flex justify-between items-center text-xs">
                                       <span className="text-gray-700 dark:text-gray-300">{partyName}</span>
                                       <div className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{votes}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">%{percentage}</span>
+                                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({votes} oy)</span>
                                       </div>
                                     </div>
                                   );
@@ -2691,22 +2692,22 @@ const ElectionResultsPage = () => {
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-700 dark:text-gray-300">Evet</span>
                             <div className="text-right">
-                              <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                {parseInt(result.referendum_votes?.['Evet']) || 0}
+                              <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Evet']) || 0) / totalValidVotes) * 100).toFixed(2) : '0.00'}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Evet']) || 0) / totalValidVotes) * 100).toFixed(2) : '0.00'}
+                                ({(parseInt(result.referendum_votes?.['Evet']) || 0)} oy)
                               </div>
                             </div>
                           </div>
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-700 dark:text-gray-300">Hayır</span>
                             <div className="text-right">
-                              <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                {parseInt(result.referendum_votes?.['Hayır']) || 0}
+                              <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Hayır']) || 0) / totalValidVotes) * 100).toFixed(2) : '0.00'}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                %{totalValidVotes > 0 ? (((parseInt(result.referendum_votes?.['Hayır']) || 0) / totalValidVotes) * 100).toFixed(2) : '0.00'}
+                                ({(parseInt(result.referendum_votes?.['Hayır']) || 0)} oy)
                               </div>
                             </div>
                           </div>
@@ -2722,8 +2723,8 @@ const ElectionResultsPage = () => {
                               <div key={candidate} className="flex justify-between items-center text-sm">
                                 <span className="text-gray-700 dark:text-gray-300">{candidate}</span>
                                 <div className="text-right">
-                                  <div className="font-semibold text-gray-900 dark:text-gray-100">{votes}</div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">%{percentage}</div>
+                                  <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{percentage}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">({votes} oy)</div>
                                 </div>
                               </div>
                             );
