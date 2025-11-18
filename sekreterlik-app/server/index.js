@@ -244,21 +244,6 @@ app.use(cors({
   optionsSuccessStatus: 200,
 }));
 
-// Explicit OPTIONS handler for all routes (backup - CORS middleware'den sonra)
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  if (origin && (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    console.log('✅ OPTIONS route handler - allowed:', origin);
-    return res.status(200).end();
-  }
-  res.status(200).end();
-});
-
 // Initialize database models and MongoDB
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
 const Notification = require('./models/Notification');
