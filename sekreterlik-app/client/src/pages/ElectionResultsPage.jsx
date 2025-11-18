@@ -1769,11 +1769,13 @@ const ElectionResultsPage = () => {
                       );
                     })()}
 
-                    {/* Horizontal Bar Chart */}
-                    <div className="mb-4">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı</h3>
-                      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
-                        <ResponsiveContainer width="100%" height={Math.max(200, category.data.length * 40)}>
+                    {/* Horizontal Bar Chart and Detailed Results - Side by Side */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                      {/* Horizontal Bar Chart */}
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Oy Dağılımı</h3>
+                        <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-md border border-gray-200 dark:border-gray-700">
+                          <ResponsiveContainer width="100%" height={Math.min(300, Math.max(200, category.data.length * 30))}>
                           <BarChart
                             data={category.data
                               .filter(item => item && (item.value || item.value === 0)) // Filter out invalid items
@@ -1856,11 +1858,12 @@ const ElectionResultsPage = () => {
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                    </div>
+                      </div>
 
-                    {/* İnteraktif Liste */}
-                    <div className="space-y-2">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Detaylı Sonuçlar</h3>
+                      {/* İnteraktif Liste */}
+                      <div className="space-y-2">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Detaylı Sonuçlar</h3>
+                        <div className="max-h-[300px] overflow-y-auto pr-2">
                       {category.data
                         .sort((a, b) => b.value - a.value)
                         .map((item, index) => {
@@ -1914,6 +1917,8 @@ const ElectionResultsPage = () => {
                             </div>
                           );
                         })}
+                        </div>
+                      </div>
                     </div>
                 </div>
               ) : null
