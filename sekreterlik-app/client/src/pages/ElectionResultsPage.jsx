@@ -1690,85 +1690,30 @@ const ElectionResultsPage = () => {
                   </h2>
                   
                   {/* Kazanan Parti/Aday Bilgisi */}
-                    {(() => {
-                      const winner = getWinningCandidateForCategory(category);
-                      if (!winner) return null;
-                      const winnerName = typeof winner.name === 'string' ? winner.name : (winner.name?.name || String(winner.name) || 'Bilinmeyen');
-                      const winnerPercentage = typeof winner.percentage === 'number' ? winner.percentage : parseFloat(winner.percentage || 0);
-                      
-                      // Kazanan adayları bul (D'Hondt sonuçlarına göre)
-                      const winningCandidates = calculateWinningCandidates(
-                        category,
-                        category.name === 'Milletvekili Seçimi' ? dhondtResults : null,
-                        category.name === 'Belediye Meclisi Seçimi' ? municipalCouncilResults : null,
-                        category.name === 'İl Genel Meclisi Seçimi' ? provincialAssemblyResults : null
-                      );
-                      
-                      // Party-based winner count
-                      const partyWinnerCount = {};
-                      if (Array.isArray(winningCandidates)) {
-                        winningCandidates.forEach(candidate => {
-                          if (candidate && candidate.partyName) {
-                            partyWinnerCount[candidate.partyName] = (partyWinnerCount[candidate.partyName] || 0) + 1;
-                          }
-                        });
-                      }
-                      
-                      // Sort candidates by votes (highest to lowest) - already sorted in calculateWinningCandidates
-                      const sortedCandidates = Array.isArray(winningCandidates) ? [...winningCandidates] : [];
-                      
-                      return (
-                        <div className="mb-4 space-y-3">
-                          {/* Kazanan Parti/Aday */}
-                          <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">🏆 Kazanan</div>
-                                <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{winnerName}</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                  <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">%{winnerPercentage.toFixed(2)}</span>
-                                  <span className="ml-2">({winner.value.toLocaleString('tr-TR')} oy)</span>
-                                </div>
+                  {(() => {
+                    const winner = getWinningCandidateForCategory(category);
+                    if (!winner) return null;
+                    const winnerName = typeof winner.name === 'string' ? winner.name : (winner.name?.name || String(winner.name) || 'Bilinmeyen');
+                    const winnerPercentage = typeof winner.percentage === 'number' ? winner.percentage : parseFloat(winner.percentage || 0);
+                    
+                    return (
+                      <div className="mb-4 space-y-3">
+                        <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">🏆 Kazanan</div>
+                              <div className="text-lg font-bold text-indigo-700 dark:text-indigo-300">{winnerName}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">%{winnerPercentage.toFixed(2)}</span>
+                                <span className="ml-2">({winner.value.toLocaleString('tr-TR')} oy)</span>
                               </div>
-                              <div className="text-2xl">🏆</div>
                             </div>
+                            <div className="text-2xl">🏆</div>
                           </div>
-                          
-                          {/* Kazanan Adaylar Listesi (Oy Sırasına Göre) */}
-                          {sortedCandidates && sortedCandidates.length > 0 && (
-                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                              <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Kazanan Adaylar (Oy Sırasına Göre)</div>
-                              {Object.keys(partyWinnerCount).length > 0 && (
-                                <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-200 dark:border-indigo-700">
-                                  <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Parti Bazında Kazanan Sayısı:</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {Object.entries(partyWinnerCount).map(([party, count]) => (
-                                      <span key={party} className="text-xs px-2 py-1 bg-white dark:bg-gray-800 rounded border border-indigo-200 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300">
-                                        {party}: {count} kazanan
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              <div className="space-y-1.5">
-                                {sortedCandidates.slice(0, 10).map((candidate, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-gray-500 dark:text-gray-400">#{idx + 1}</span>
-                                      <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
-                                    </div>
-                                    <div className="text-right">
-                                      <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">%{candidate.percentage.toFixed(2)}</span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({candidate.votes.toLocaleString('tr-TR')} oy)</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      );
-                    })()}
+                      </div>
+                    );
+                  })()}
 
                     {/* Horizontal Bar Chart and Detailed Results - Side by Side */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
@@ -1861,65 +1806,68 @@ const ElectionResultsPage = () => {
                       </div>
                       </div>
 
-                      {/* İnteraktif Liste */}
-                      <div className="space-y-2">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Detaylı Sonuçlar</h3>
-                        <div className="max-h-[300px] overflow-y-auto pr-2">
-                      {category.data
-                        .sort((a, b) => b.value - a.value)
-                        .map((item, index) => {
-                          const itemName = typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen');
-                          const percentage = typeof item.percentage === 'number' 
-                            ? item.percentage 
-                            : parseFloat(item.percentage || 0);
-                          const maxPercentage = Math.max(...category.data.map(d => 
-                            typeof d.percentage === 'number' ? d.percentage : parseFloat(d.percentage || 0)
-                          ));
-                          const barWidth = maxPercentage > 0 ? (percentage / maxPercentage) * 100 : 0;
-                          
-                          return (
-                            <div 
-                              key={itemName} 
-                              className="group relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 transition-all duration-300 hover:shadow-md hover:scale-[1.01] hover:border-indigo-300 dark:hover:border-indigo-600"
-                            >
-                              <div className="flex items-center justify-between mb-1.5">
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-4 h-4 rounded-full shadow-sm transition-transform duration-300 group-hover:scale-110" 
-                                    style={{ 
-                                      backgroundColor: COLORS[index % COLORS.length],
-                                      boxShadow: `0 0 8px ${COLORS[index % COLORS.length]}40`
-                                    }}
-                                  ></div>
-                                  <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{itemName}</span>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                                    %{percentage.toFixed(2)}
-                                  </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    ({item.value.toLocaleString('tr-TR')} oy)
-                                  </div>
+                      {/* Kazanan Adaylar Listesi */}
+                      {(() => {
+                        // Kazanan adayları bul (D'Hondt sonuçlarına göre)
+                        const winningCandidates = calculateWinningCandidates(
+                          category,
+                          category.name === 'Milletvekili Seçimi' ? dhondtResults : null,
+                          category.name === 'Belediye Meclisi Seçimi' ? municipalCouncilResults : null,
+                          category.name === 'İl Genel Meclisi Seçimi' ? provincialAssemblyResults : null
+                        );
+                        
+                        // Party-based winner count
+                        const partyWinnerCount = {};
+                        if (Array.isArray(winningCandidates)) {
+                          winningCandidates.forEach(candidate => {
+                            if (candidate && candidate.partyName) {
+                              partyWinnerCount[candidate.partyName] = (partyWinnerCount[candidate.partyName] || 0) + 1;
+                            }
+                          });
+                        }
+                        
+                        // Sort candidates by votes (highest to lowest) - already sorted in calculateWinningCandidates
+                        const sortedCandidates = Array.isArray(winningCandidates) ? [...winningCandidates] : [];
+                        
+                        return sortedCandidates && sortedCandidates.length > 0 ? (
+                          <div className="space-y-2">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">📋 Kazanan Adaylar (Oy Sırasına Göre)</h3>
+                            {Object.keys(partyWinnerCount).length > 0 && (
+                              <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-200 dark:border-indigo-700">
+                                <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Parti Bazında Kazanan Sayısı:</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {Object.entries(partyWinnerCount).map(([party, count]) => (
+                                    <span key={party} className="text-xs px-2 py-1 bg-white dark:bg-gray-800 rounded border border-indigo-200 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300">
+                                      {party}: {count} kazanan
+                                    </span>
+                                  ))}
                                 </div>
                               </div>
-                              {/* Animasyonlu Progress Bar */}
-                              <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div
-                                  className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
-                                  style={{
-                                    width: `${barWidth}%`,
-                                    background: `linear-gradient(90deg, ${COLORS[index % COLORS.length]}, ${COLORS[index % COLORS.length]}dd)`,
-                                    boxShadow: `0 0 10px ${COLORS[index % COLORS.length]}60`
-                                  }}
-                                >
-                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                            )}
+                            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-1.5">
+                              {sortedCandidates.map((candidate, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-500 dark:text-gray-400">#{idx + 1}</span>
+                                    <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">%{candidate.percentage.toFixed(2)}</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({candidate.votes.toLocaleString('tr-TR')} oy)</span>
+                                  </div>
                                 </div>
-                              </div>
+                              ))}
                             </div>
-                          );
-                        })}
-                        </div>
-                      </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">📋 Kazanan Adaylar</h3>
+                            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                              Bu seçim türü için kazanan aday bilgisi bulunmamaktadır.
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                 </div>
               ) : null
