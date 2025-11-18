@@ -794,27 +794,57 @@ const MemberUsersSettings = () => {
         }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setMessage(result.message || 'Senkronizasyon tamamlandı');
-        setMessageType('success');
-        
-        // Detayları göster
-        if (result.results) {
-          const details = `Oluşturulan: ${result.results.created}\nSilinen: ${result.results.deleted}\nGüncellenen: ${result.results.updated}\nHata: ${result.results.errors}`;
-          console.log('Senkronizasyon detayları:', result.results.details);
-          if (result.results.errors > 0) {
-            setMessageType('warning');
-            setMessage(`${result.message}\n\n${details}`);
+      console.log('📥 Response status:', response.status, response.statusText);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Response body'yi text olarak oku (JSON parse hatası için)
+      const responseText = await response.text();
+      console.log('📥 Response text:', responseText.substring(0, 500)); // İlk 500 karakter
+
+      if (!response.ok) {
+        // Hata durumunda
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // JSON parse edilemezse, text'i kullan
+          if (responseText) {
+            errorMessage = responseText.substring(0, 200);
           }
         }
-        
-        // Listeyi yenile
-        await fetchMemberUsers();
-      } else {
-        const errorData = await response.json().catch(() => ({ message: 'Senkronizasyon başarısız oldu' }));
-        throw new Error(errorData.message || 'Senkronizasyon başarısız oldu');
+        throw new Error(errorMessage);
       }
+
+      // Başarılı response
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Backend\'den boş yanıt alındı');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error(`Backend yanıtı geçersiz JSON: ${parseError.message}`);
+      }
+
+      setMessage(result.message || 'Senkronizasyon tamamlandı');
+      setMessageType('success');
+      
+      // Detayları göster
+      if (result.results) {
+        const details = `Oluşturulan: ${result.results.created}\nSilinen: ${result.results.deleted}\nGüncellenen: ${result.results.updated}\nHata: ${result.results.errors}`;
+        console.log('✅ Senkronizasyon detayları:', result.results.details);
+        if (result.results.errors > 0) {
+          setMessageType('warning');
+          setMessage(`${result.message}\n\n${details}`);
+        }
+      }
+      
+      // Listeyi yenile
+      await fetchMemberUsers();
     } catch (error) {
       console.error('Error syncing to Firebase Auth:', error);
       setMessage('Senkronizasyon sırasında hata oluştu: ' + error.message);
