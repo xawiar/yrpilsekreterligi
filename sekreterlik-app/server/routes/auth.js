@@ -1093,19 +1093,26 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
     }
     
     // SQLite'dan da member_users'ları al (hem Firebase hem SQLite için backup)
-    const db = require('../config/database');
-    const memberUsers = await new Promise((resolve, reject) => {
-      db.all('SELECT auth_uid, authUid FROM member_users WHERE (auth_uid IS NOT NULL AND auth_uid != "") OR (authUid IS NOT NULL AND authUid != "")', (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows || []);
-      });
-    });
-    
-    // SQLite'daki authUid'leri de topla
-    memberUsers.forEach(user => {
-      if (user.auth_uid) firestoreAuthUids.add(user.auth_uid);
-      if (user.authUid) firestoreAuthUids.add(user.authUid);
-    });
+    // Sadece SQLite kullanılıyorsa (Firebase kullanılmıyorsa)
+    if (!USE_FIREBASE) {
+      try {
+        const db = require('../config/database');
+        const memberUsers = await new Promise((resolve, reject) => {
+          db.all('SELECT auth_uid, authUid FROM member_users WHERE (auth_uid IS NOT NULL AND auth_uid != "") OR (authUid IS NOT NULL AND authUid != "")', (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        
+        // SQLite'daki authUid'leri de topla
+        memberUsers.forEach(user => {
+          if (user.auth_uid) firestoreAuthUids.add(user.auth_uid);
+          if (user.authUid) firestoreAuthUids.add(user.authUid);
+        });
+      } catch (sqliteError) {
+        console.warn('⚠️ SQLite query failed (normal if using Firebase only):', sqliteError.message);
+      }
+    }
     
     console.log(`📊 Found ${firestoreAuthUids.size} authUids in database (including admin)`);
     
@@ -1219,19 +1226,31 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
     const { decryptField } = require('../utils/crypto');
     
     // Get all member_users from database
-    const memberUsers = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT mu.*, m.name as member_name, m.tc as member_tc, m.phone as member_phone
-        FROM member_users mu
-        LEFT JOIN members m ON mu.member_id = m.id
-        WHERE mu.user_type = 'member' OR mu.user_type IS NULL
-      `, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows || []);
-      });
-    });
+    let memberUsers = [];
     
-    console.log(`📊 Found ${memberUsers.length} member_users in database`);
+    // SQLite'dan al (sadece USE_FIREBASE false ise)
+    if (!USE_FIREBASE) {
+      try {
+        memberUsers = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT mu.*, m.name as member_name, m.tc as member_tc, m.phone as member_phone
+            FROM member_users mu
+            LEFT JOIN members m ON mu.member_id = m.id
+            WHERE mu.user_type = 'member' OR mu.user_type IS NULL
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        
+        console.log(`📊 Found ${memberUsers.length} member_users in SQLite database`);
+      } catch (sqliteError) {
+        console.warn('⚠️ SQLite query failed (normal if using Firebase only):', sqliteError.message);
+        memberUsers = [];
+      }
+    } else {
+      console.log(`ℹ️ Skipping SQLite query (USE_FIREBASE=true)`);
+    }
     
     // If Firebase is used, also get from Firestore
     let firestoreMemberUsers = [];
