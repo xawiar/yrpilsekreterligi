@@ -1,12 +1,17 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
+// Check if Firebase is being used
+const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+
 // Create or connect to SQLite database
 const dbPath = path.join(__dirname, '../database.sqlite');
 const db = new sqlite3.Database(dbPath);
 
-// Initialize database tables
-db.serialize(() => {
+// Initialize database tables - Skip if using Firebase
+if (!USE_FIREBASE) {
+  console.log('📦 Initializing SQLite database tables...');
+  db.serialize(() => {
   // Create members table with tc column
   db.run(`CREATE TABLE IF NOT EXISTS members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -754,12 +759,14 @@ const collections = {
   event_visits: []
 };
 
-// Load data from SQLite to in-memory collections
-db.all('SELECT * FROM members WHERE archived = 0', [], (err, rows) => {
-  if (!err) collections.members = rows;
-});
+// Load data from SQLite to in-memory collections - Skip if using Firebase
+if (!USE_FIREBASE) {
+  console.log('📦 Loading SQLite data into in-memory collections...');
+  db.all('SELECT * FROM members WHERE archived = 0', [], (err, rows) => {
+    if (!err) collections.members = rows;
+  });
 
-db.all('SELECT * FROM members WHERE archived = 1', [], (err, rows) => {
+  db.all('SELECT * FROM members WHERE archived = 1', [], (err, rows) => {
   if (!err) collections.archivedMembers = rows;
 });
 
