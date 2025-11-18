@@ -131,148 +131,55 @@ const PORT = process.env.PORT || 5000;
 console.log('Starting server setup');
 
 // ============================================
-// CORS MIDDLEWARE - EN ÜSTTE (TÜM MIDDLEWARE'LERDEN ÖNCE)
+// CLEAN CORS - TEK VE BASIT YAPILANDIRMA
 // ============================================
-// CORS - allow only known dev origins by default, fallback to * if not matched
-const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-const defaultOrigins = [
-  'http://localhost:5180',
-  'http://localhost:5181',
-  'http://localhost:5182',
-  'http://127.0.0.1:5180',
-  'http://127.0.0.1:5181',
-  'http://127.0.0.1:5182',
-  // common vite ports
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  // Production Render.com URLs
-  'https://yrpilsekreterligi.onrender.com',
-  'https://ilce-sekreterlik.onrender.com',
-];
-
-// Production'da Render.com URL'lerini de allow et
-const productionOrigins = [
+const allowedOrigins = [
   'https://yrpilsekreterligi.onrender.com',
   'https://ilce-sekreterlik.onrender.com',
   'https://sekreterlik-backend.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:5180',
+  'http://localhost:5181',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5180',
+  'http://127.0.0.1:5181',
 ];
 
-const allowedOrigins = new Set([
-  ...(envOrigins.length ? envOrigins : defaultOrigins),
-  ...(process.env.NODE_ENV === 'production' ? productionOrigins : [])
-]);
+// Environment variable'dan ekstra origin'ler ekle
+const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+envOrigins.forEach(origin => {
+  if (origin && !allowedOrigins.includes(origin)) {
+    allowedOrigins.push(origin);
+  }
+});
 
-// CORS middleware - OPTIONS request'leri için özel handling (EN ÜSTTE - diğer middleware'lerden önce)
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // OPTIONS request (preflight) için özel handling
-  if (req.method === 'OPTIONS') {
-    // Render.com origin kontrolü (en geniş kontrol - önce bunu kontrol et)
-    if (origin && (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Max-Age', '86400'); // 24 hours
-      console.log('✅ OPTIONS preflight allowed for:', origin);
-      return res.status(200).end();
-    }
+// CLEAN CORS - Tek ve basit yapılandırma
+app.use(cors({
+  origin: function(origin, callback) {
+    // No origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
     
     // Allowed origins kontrolü
-    if (origin && allowedOrigins.has(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Max-Age', '86400');
-      console.log('✅ OPTIONS preflight allowed (from list):', origin);
-      return res.status(200).end();
-    }
-    
-    // Development'da tüm origin'lere izin ver
-    if (process.env.NODE_ENV !== 'production') {
-      res.header('Access-Control-Allow-Origin', origin || '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      console.log('✅ OPTIONS preflight allowed (development):', origin || '*');
-      return res.status(200).end();
-    }
-    
-    console.warn('❌ OPTIONS preflight blocked:', origin);
-    return res.status(403).json({ error: 'CORS policy violation' });
-  }
-  
-  next();
-});
-
-// CORS middleware - Tüm request'ler için
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Render.com origin kontrolü (en geniş kontrol - önce bunu kontrol et)
-  if (origin && (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    console.log('✅ CORS header set for:', origin, req.method, req.path);
-  } else if (origin && allowedOrigins.has(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    console.log('✅ CORS header set (from list):', origin, req.method, req.path);
-  } else if (process.env.NODE_ENV !== 'production') {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    console.log('✅ CORS header set (development):', origin || '*', req.method, req.path);
-  }
-  
-  next();
-});
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // No origin (mobile apps, Postman, etc.)
-    if (!origin) {
-      console.log('✅ CORS allowed (no origin):', 'mobile/Postman');
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-    // Render.com domain kontrolü (en geniş kontrol - önce bunu kontrol et)
-    if (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      console.log('✅ CORS allowed (Render.com/localhost):', origin);
+    // Development'da localhost'a izin ver
+    if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       return callback(null, true);
     }
     
-    // Check if origin is in allowed list
-    if (allowedOrigins.has(origin)) {
-      console.log('✅ CORS allowed (from list):', origin);
-      return callback(null, true);
-    }
-    
-    // Production'da sadece Render.com URL'lerine izin ver
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('❌ CORS blocked origin:', origin);
-      return callback(new Error('Not allowed by CORS'));
-    }
-    
-    // Development'da tüm origin'lere izin ver
-    console.log('✅ CORS allowed (development):', origin);
-    return callback(null, true);
+    // Production'da sadece allowed origins
+    console.warn('❌ CORS blocked origin:', origin);
+    return callback(new Error('CORS blocked: ' + origin));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  preflightContinue: false,
-  optionsSuccessStatus: 200,
 }));
+
+// Preflight için explicit handler
+app.options('*', cors());
 
 // Initialize database models and MongoDB
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
