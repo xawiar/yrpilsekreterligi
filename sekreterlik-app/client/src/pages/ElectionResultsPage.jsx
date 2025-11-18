@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ComposedChart } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -222,11 +222,6 @@ const ElectionResultsPage = () => {
   const [modalPhoto, setModalPhoto] = useState(null);
   const [modalTitle, setModalTitle] = useState('');
   
-  // Chart detail modal state
-  const [selectedChartData, setSelectedChartData] = useState(null);
-  const [showChartDetailModal, setShowChartDetailModal] = useState(false);
-  const [activeChartType, setActiveChartType] = useState('pie'); // 'pie' or 'bar'
-  
   // Refs for export
   const chartContainerRef = useRef(null);
 
@@ -236,19 +231,13 @@ const ElectionResultsPage = () => {
     }
   }, [electionId]);
 
-  useEffect(() => {
-    if (results.length > 0 && ballotBoxes.length > 0) {
-      // Filter results when filters change
-      filterResults();
-    }
-  }, [selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, filterByNoProtocol, results, ballotBoxes]);
-
   const fetchData = async () => {
     try {
-      console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
+      if (import.meta.env.DEV) {
+        console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
+      }
       setLoading(true);
       
-      console.log('📡 API çağrıları başlatılıyor...');
       const [
         electionsData,
         resultsData,
@@ -269,19 +258,7 @@ const ElectionResultsPage = () => {
         ApiService.getBallotBoxObservers()
       ]);
 
-      console.log('✅ API çağrıları tamamlandı:', {
-        electionsCount: electionsData?.length || 0,
-        resultsCount: resultsData?.length || 0,
-        ballotBoxesCount: ballotBoxesData?.length || 0,
-        districtsCount: districtsData?.length || 0,
-        townsCount: townsData?.length || 0,
-        neighborhoodsCount: neighborhoodsData?.length || 0,
-        villagesCount: villagesData?.length || 0,
-        observersCount: observersData?.length || 0
-      });
-
       const selectedElection = electionsData.find(e => String(e.id) === String(electionId));
-      console.log('🔍 Seçim bulundu:', selectedElection ? { id: selectedElection.id, name: selectedElection.name } : 'BULUNAMADI');
       
       setElection(selectedElection);
       setResults(resultsData || []);
@@ -291,24 +268,18 @@ const ElectionResultsPage = () => {
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
       setObservers(observersData || []);
-      
-      console.log('✅ State güncellendi');
     } catch (error) {
       console.error('❌ Error fetching data:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+      if (import.meta.env.DEV) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
     } finally {
       setLoading(false);
-      console.log('🏁 Loading false yapıldı');
     }
-  };
-
-  const filterResults = () => {
-    // Results are already filtered by electionId from API
-    // We just need to apply location filters
   };
 
   // Get filtered results based on location filters and search query
@@ -953,12 +924,6 @@ const ElectionResultsPage = () => {
     document.body.removeChild(link);
   };
 
-  // Handle chart segment click
-  const handleChartClick = (data) => {
-    setSelectedChartData(data);
-    setShowChartDetailModal(true);
-  };
-
   // Export as PNG
   const handleExportPNG = async () => {
     if (!chartContainerRef.current) return;
@@ -1331,15 +1296,7 @@ const ElectionResultsPage = () => {
     };
   }, [election, results, ballotBoxes, districts, towns, neighborhoods, villages, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, selectedBallotNumber, searchQuery, filterByObjection, filterByProtocolOnly, filterByNoProtocol, calculateWinningCandidatesFromSeats]);
 
-  console.log('🎨 ElectionResultsPage render:', {
-    loading,
-    election: election ? { id: election.id, name: election.name } : null,
-    resultsCount: results.length,
-    electionId
-  });
-
   if (loading) {
-    console.log('⏳ Loading state: true, spinner gösteriliyor');
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -1348,7 +1305,6 @@ const ElectionResultsPage = () => {
   }
 
   if (!election) {
-    console.log('⚠️ Election bulunamadı, hata mesajı gösteriliyor');
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
