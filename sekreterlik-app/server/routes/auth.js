@@ -1040,4 +1040,128 @@ router.delete('/firebase-auth-user/:authUid', async (req, res) => {
   }
 });
 
+// Cleanup orphaned Firebase Auth users (users that exist in Firebase Auth but not in Firestore member_users)
+// This endpoint requires admin authentication
+router.post('/cleanup-orphaned-auth-users', async (req, res) => {
+  try {
+    console.log('🧹 Cleanup orphaned Firebase Auth users request received');
+    
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+    
+    if (!firebaseAdmin) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
+      });
+    }
+
+    // Firestore'daki tüm member_users'ları al (Firebase kullanılıyorsa)
+    // SQLite kullanılıyorsa, member_users tablosundan al
+    const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+    
+    let firestoreAuthUids = new Set();
+    
+    if (USE_FIREBASE) {
+      // Firestore'dan member_users'ları almak için client-side API'ye ihtiyaç var
+      // Bu yüzden şimdilik sadece SQLite'dan kontrol ediyoruz
+      // İleride Firestore Admin SDK ile direkt Firestore'dan alınabilir
+      console.log('ℹ️ Firebase kullanılıyor, Firestore kontrolü için client-side API gerekli');
+    }
+    
+    // SQLite'dan member_users'ları al
+    const db = require('../config/database');
+    const memberUsers = await new Promise((resolve, reject) => {
+      db.all('SELECT auth_uid, authUid FROM member_users WHERE (auth_uid IS NOT NULL AND auth_uid != "") OR (authUid IS NOT NULL AND authUid != "")', (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+    
+    // SQLite'daki authUid'leri topla
+    memberUsers.forEach(user => {
+      if (user.auth_uid) firestoreAuthUids.add(user.auth_uid);
+      if (user.authUid) firestoreAuthUids.add(user.authUid);
+    });
+    
+    // Admin UID'yi al
+    const Admin = require('../models/Admin');
+    const admin = await Admin.getAdmin();
+    const adminUid = admin?.uid || null;
+    if (adminUid) {
+      firestoreAuthUids.add(adminUid);
+    }
+    
+    console.log(`📊 Found ${firestoreAuthUids.size} authUids in database (including admin)`);
+    
+    // Firebase Auth'daki tüm kullanıcıları al
+    let allAuthUsers = [];
+    let nextPageToken = null;
+    
+    do {
+      const listUsersResult = await firebaseAdmin.auth().listUsers(1000, nextPageToken);
+      allAuthUsers = allAuthUsers.concat(listUsersResult.users);
+      nextPageToken = listUsersResult.pageToken;
+    } while (nextPageToken);
+    
+    console.log(`📊 Found ${allAuthUsers.length} users in Firebase Auth`);
+    
+    // Orphaned kullanıcıları bul (Firestore'da olmayan ama Firebase Auth'da olan)
+    const orphanedUsers = allAuthUsers.filter(authUser => {
+      // Admin kullanıcısını atla
+      if (adminUid && authUser.uid === adminUid) return false;
+      
+      // Email formatı kontrolü - @ilsekreterlik.local olanları kontrol et
+      const email = authUser.email || '';
+      if (!email.includes('@ilsekreterlik.local')) {
+        // Sistem kullanıcıları (admin vs) - bunları atla
+        return false;
+      }
+      
+      // Firestore'da yoksa orphaned
+      return !firestoreAuthUids.has(authUser.uid);
+    });
+    
+    console.log(`🗑️ Found ${orphanedUsers.length} orphaned users to delete`);
+    
+    // Orphaned kullanıcıları sil
+    const deletedUsers = [];
+    const errors = [];
+    
+    for (const orphanedUser of orphanedUsers) {
+      try {
+        await firebaseAdmin.auth().deleteUser(orphanedUser.uid);
+        deletedUsers.push({
+          uid: orphanedUser.uid,
+          email: orphanedUser.email
+        });
+        console.log(`✅ Deleted orphaned user: ${orphanedUser.email} (${orphanedUser.uid})`);
+      } catch (deleteError) {
+        errors.push({
+          uid: orphanedUser.uid,
+          email: orphanedUser.email,
+          error: deleteError.message
+        });
+        console.error(`❌ Error deleting orphaned user ${orphanedUser.uid}:`, deleteError.message);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: `${deletedUsers.length} orphaned kullanıcı silindi`,
+      deleted: deletedUsers.length,
+      errors: errors.length,
+      deletedUsers: deletedUsers,
+      errors: errors
+    });
+  } catch (error) {
+    console.error('❌ Error cleaning up orphaned auth users:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası: ' + error.message
+    });
+  }
+});
+
 module.exports = router;

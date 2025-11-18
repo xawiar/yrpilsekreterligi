@@ -100,11 +100,38 @@ const FirebaseAuthUsersPage = () => {
   };
 
   const handleCleanupOrphanedAuthUsers = async () => {
-    if (!window.confirm('Firestore\'da olmayan ama Firebase Auth\'da olan kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem sadece Firestore\'da authUid olmayan kullanıcıları etkilemez. Firebase Console\'dan manuel kontrol etmeniz gerekir.')) {
+    if (!window.confirm('Firestore\'da olmayan ama Firebase Auth\'da olan kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- @ilsekreterlik.local email\'li kullanıcıları kontrol eder\n- Firestore/SQLite\'da authUid olmayan kullanıcıları siler\n- Admin kullanıcısını korur\n\nDevam etmek istiyor musunuz?')) {
       return;
     }
 
-    alert('Bu özellik şu anda kullanılamıyor. Firebase Console\'dan manuel olarak kontrol edip silmeniz gerekiyor.\n\nBackend\'de bir cleanup endpoint\'i eklenebilir.');
+    try {
+      setLoading(true);
+      setError('');
+
+      // Backend cleanup endpoint'ini çağır
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/cleanup-orphaned-auth-users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Temizleme tamamlandı!\n\nSilinen: ${result.deleted} kullanıcı\nHata: ${result.errors || 0} kullanıcı`);
+        fetchAuthUsers(); // Listeyi yenile
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Temizleme işlemi başarısız oldu');
+      }
+    } catch (err) {
+      console.error('Error cleaning up orphaned auth users:', err);
+      setError('Temizleme işlemi sırasında hata oluştu: ' + err.message);
+      alert('Hata: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getMemberInfo = (memberId) => {
