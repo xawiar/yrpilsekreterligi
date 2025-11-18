@@ -31,185 +31,58 @@ const DashboardPage = () => {
     try {
       setLoading(true);
       
-      // Fetch all data
-      const [members, meetings, events, memberRegistrations, neighborhoodRepresentatives, villageRepresentatives] = await Promise.all([
-        ApiService.getMembers(),
-        ApiService.getMeetings(),
-        ApiService.getEvents(),
-        ApiService.getMemberRegistrations(),
-        ApiService.getNeighborhoodRepresentatives(),
-        ApiService.getVillageRepresentatives()
-      ]);
+      // Fetch dashboard data from backend (all calculations done server-side)
+      const response = await ApiService.getDashboard();
       
-      // Calculate total members
-      const totalMembers = members.length;
-      
-      // Calculate total meetings
-      const totalMeetings = meetings.length;
-      
-      // Calculate total events
-      const totalEvents = events.length;
-      
-      // Calculate total representatives
-      const totalNeighborhoodRepresentatives = neighborhoodRepresentatives.length;
-      const totalVillageRepresentatives = villageRepresentatives.length;
-      
-      // Calculate average attendance rate
-      let totalAttendanceRate = 0;
-      let validMeetings = 0;
-      
-      meetings.forEach(meeting => {
-        if (meeting.attendees && meeting.attendees.length > 0) {
-          const totalExpected = meeting.attendees.length;
-          const attendedCount = meeting.attendees.filter(a => a.attended).length;
-          const attendanceRate = (attendedCount / totalExpected) * 100;
-          totalAttendanceRate += attendanceRate;
-          validMeetings++;
-        }
-      });
-      
-      const avgAttendanceRate = validMeetings > 0 ? (totalAttendanceRate / validMeetings) : 0;
-      
-      // Set stats
-      setStats({
-        totalMembers,
-        totalMeetings,
-        totalEvents,
-        totalNeighborhoodRepresentatives,
-        totalVillageRepresentatives,
-        avgAttendanceRate: Math.round(avgAttendanceRate)
-      });
-      
-      // Calculate top 3 registrars (members with most registrations)
-      const memberRegistrationCounts = {};
-      members.forEach(member => {
-        memberRegistrationCounts[member.id] = {
-          member,
-          count: 0
-        };
-      });
-      
-      memberRegistrations.forEach(reg => {
-        if (memberRegistrationCounts[reg.memberId]) {
-          memberRegistrationCounts[reg.memberId].count += reg.count;
-        }
-      });
-      
-      const sortedRegistrars = Object.values(memberRegistrationCounts)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3);
-      
-      setTopRegistrars(sortedRegistrars);
-      
-      // Calculate top 3 attendees (members with most meeting attendances)
-      const memberAttendanceCounts = {};
-      members.forEach(member => {
-        memberAttendanceCounts[member.id] = {
-          member,
-          count: 0
-        };
-      });
-      
-      meetings.forEach(meeting => {
-        if (meeting.attendees) {
-          meeting.attendees.forEach(attendee => {
-            if (attendee.attended) {
-              // Handle both string and number memberId values
-              const attendeeMemberId = attendee.memberId || attendee.member_id;
-              const memberIdStr = String(attendeeMemberId);
-              const memberIdNum = Number(attendeeMemberId);
-              
-              // Find matching member by checking both string and number IDs
-              const matchingMemberId = Object.keys(memberAttendanceCounts).find(id => {
-                const idStr = String(id);
-                const idNum = Number(id);
-                return idStr === memberIdStr || idNum === memberIdNum || idStr === memberIdNum || idNum === memberIdStr;
-              });
-              
-              if (matchingMemberId && memberAttendanceCounts[matchingMemberId]) {
-                memberAttendanceCounts[matchingMemberId].count += 1;
-              }
-            }
-          });
-        }
-      });
-      
-      const sortedAttendees = Object.values(memberAttendanceCounts)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3);
-      
-      setTopAttendees(sortedAttendees);
-      
-      // Get upcoming events and meetings (next 7 days)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
-      
-      const upcomingEventsList = events
-        .filter(event => {
-          if (!event.date || event.archived) return false;
-          try {
-            let eventDate;
-            if (event.date.includes('T')) {
-              eventDate = new Date(event.date);
-            } else if (event.date.includes('.')) {
-              const [day, month, year] = event.date.split('.');
-              eventDate = new Date(year, month - 1, day);
-            } else {
-              eventDate = new Date(event.date);
-            }
-            eventDate.setHours(0, 0, 0, 0);
-            return eventDate >= today && eventDate <= nextWeek;
-          } catch (e) {
-            return false;
-          }
-        })
-        .sort((a, b) => {
-          try {
-            const dateA = a.date.includes('T') ? new Date(a.date) : new Date(a.date.split('.').reverse().join('-'));
-            const dateB = b.date.includes('T') ? new Date(b.date) : new Date(b.date.split('.').reverse().join('-'));
-            return dateA - dateB;
-          } catch (e) {
-            return 0;
-          }
-        })
-        .slice(0, 5);
-      
-      const upcomingMeetingsList = meetings
-        .filter(meeting => {
-          if (!meeting.date || meeting.archived) return false;
-          try {
-            let meetingDate;
-            if (meeting.date.includes('T')) {
-              meetingDate = new Date(meeting.date);
-            } else if (meeting.date.includes('.')) {
-              const [day, month, year] = meeting.date.split('.');
-              meetingDate = new Date(year, month - 1, day);
-            } else {
-              meetingDate = new Date(meeting.date);
-            }
-            meetingDate.setHours(0, 0, 0, 0);
-            return meetingDate >= today && meetingDate <= nextWeek;
-          } catch (e) {
-            return false;
-          }
-        })
-        .sort((a, b) => {
-          try {
-            const dateA = a.date.includes('T') ? new Date(a.date) : new Date(a.date.split('.').reverse().join('-'));
-            const dateB = b.date.includes('T') ? new Date(b.date) : new Date(b.date.split('.').reverse().join('-'));
-            return dateA - dateB;
-          } catch (e) {
-            return 0;
-          }
-        })
-        .slice(0, 5);
-      
-      setUpcomingEvents(upcomingEventsList);
-      setUpcomingMeetings(upcomingMeetingsList);
+      if (response.success) {
+        // Set stats from backend
+        setStats(response.stats || {
+          totalMembers: 0,
+          totalMeetings: 0,
+          totalEvents: 0,
+          totalNeighborhoodRepresentatives: 0,
+          totalVillageRepresentatives: 0,
+          avgAttendanceRate: 0
+        });
+        
+        // Set top registrars and attendees from backend
+        setTopRegistrars(response.topRegistrars || []);
+        setTopAttendees(response.topAttendees || []);
+        
+        // Set upcoming events and meetings from backend
+        setUpcomingEvents(response.upcomingEvents || []);
+        setUpcomingMeetings(response.upcomingMeetings || []);
+      } else {
+        console.error('Dashboard API error:', response.message);
+        // Fallback to empty data
+        setStats({
+          totalMembers: 0,
+          totalMeetings: 0,
+          totalEvents: 0,
+          totalNeighborhoodRepresentatives: 0,
+          totalVillageRepresentatives: 0,
+          avgAttendanceRate: 0
+        });
+        setTopRegistrars([]);
+        setTopAttendees([]);
+        setUpcomingEvents([]);
+        setUpcomingMeetings([]);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Fallback to empty data on error
+      setStats({
+        totalMembers: 0,
+        totalMeetings: 0,
+        totalEvents: 0,
+        totalNeighborhoodRepresentatives: 0,
+        totalVillageRepresentatives: 0,
+        avgAttendanceRate: 0
+      });
+      setTopRegistrars([]);
+      setTopAttendees([]);
+      setUpcomingEvents([]);
+      setUpcomingMeetings([]);
     } finally {
       setLoading(false);
     }

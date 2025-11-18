@@ -225,6 +225,25 @@ class ApiService {
     return response.json();
   }
 
+  // Dashboard API
+  static async getDashboard() {
+    if (USE_FIREBASE) {
+      // For Firebase, we still use the backend endpoint for consistency
+      // The backend will handle Firebase queries
+      const response = await fetch(`${API_BASE_URL}/dashboard`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+      return response.json();
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/dashboard`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   // Members API
   static async getMembers(archived = false) {
     if (USE_FIREBASE) {

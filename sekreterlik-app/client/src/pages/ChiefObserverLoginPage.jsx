@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { useAuth } from '../contexts/AuthContext';
 
 const ChiefObserverLoginPage = () => {
   const [ballotNumber, setBallotNumber] = useState('');
@@ -9,6 +10,8 @@ const ChiefObserverLoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const { isLoggedIn, userRole, user, setUserFromLogin } = useAuth();
+  
   // Zaten giriş yapılmışsa dashboard'a yönlendir (tek seferlik - sadece mount'ta)
   // NOT: useRef ile bir kez kontrol et - sonsuz döngüyü önle
   const hasCheckedAuth = React.useRef(false);
@@ -20,25 +23,15 @@ const ChiefObserverLoginPage = () => {
     }
     
     hasCheckedAuth.current = true;
-    
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUser = localStorage.getItem('user');
     const currentPath = window.location.pathname;
     
     // Sadece gerçekten giriş yapılmışsa ve login sayfasındaysak yönlendir
-    if (userRole === 'chief_observer' && isLoggedIn && savedUser && currentPath === '/chief-observer-login') {
-      try {
-        // savedUser'ın geçerli JSON olduğunu kontrol et
-        JSON.parse(savedUser);
-        // Yönlendirme yap - replace ile (geri butonu çalışmasın)
-        navigate('/chief-observer-dashboard', { replace: true });
-      } catch (e) {
-        // JSON parse hatası varsa yönlendirme yapma
-      }
+    if (userRole === 'chief_observer' && isLoggedIn && user && currentPath === '/chief-observer-login') {
+      // Yönlendirme yap - replace ile (geri butonu çalışmasın)
+      navigate('/chief-observer-dashboard', { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Boş dependency array - sadece component mount olduğunda çalışır
+  }, [isLoggedIn, userRole, user]); // Auth state değiştiğinde kontrol et
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,11 +42,8 @@ const ChiefObserverLoginPage = () => {
       const result = await ApiService.loginChiefObserver(ballotNumber.trim(), tc.trim());
       
       if (result.success) {
-        // Kullanıcı bilgilerini localStorage'a kaydet
-        localStorage.setItem('user', JSON.stringify(result.user));
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', 'chief_observer');
-        
+        // Set user in AuthContext (localStorage is managed automatically)
+        setUserFromLogin(result.user);
         // Dashboard'a yönlendir - replace ile
         navigate('/chief-observer-dashboard', { replace: true });
       } else {

@@ -1,9 +1,22 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import {
+  ProtectedRoute,
+  AdminRoute,
+  MemberRoute,
+  DistrictPresidentRoute,
+  TownPresidentRoute,
+  STKManagerRoute,
+  PublicInstitutionManagerRoute,
+  MosqueManagerRoute,
+  TownPresidentRoleRoute,
+  PublicRoute,
+  ChiefObserverRoute
+} from './routes/RoleGuards';
 
 // Lazy loading - Code splitting için
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -67,180 +80,6 @@ const LoadingSpinner = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
   </div>
 );
-
-// Protected route component
-const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  return isLoggedIn ? children : <Navigate to="/login" />;
-};
-
-// Admin only route component
-const AdminRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  
-  // Başmüşahit kullanıcısını kendi dashboard'ına yönlendir
-  const userRole = localStorage.getItem('userRole');
-  if (userRole === 'chief_observer') {
-    return <Navigate to="/chief-observer-dashboard" replace />;
-  }
-  
-  if (user?.role !== 'admin') return <Navigate to="/member-dashboard" />;
-  return children;
-};
-
-// Member route component (for members only)
-const MemberRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role !== 'member') return <Navigate to="/" />;
-  return children;
-};
-
-// District President route component
-const DistrictPresidentRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role !== 'district_president') return <Navigate to="/" />;
-  return children;
-};
-
-// Town President route component
-const TownPresidentRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role !== 'town_president') return <Navigate to="/" />;
-  return children;
-};
-
-// STK Manager route component (for STK management permission)
-const STKManagerRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  // İleri seviye: İzin kontrolü yapılabilir (grantedPermissions)
-  // Şu an için admin, member veya district_president'a izin ver
-  if (user?.role === 'admin' || user?.role === 'member' || user?.role === 'district_president') {
-    return children;
-  }
-  return <Navigate to="/" />;
-};
-
-// Public Institution Manager route component
-const PublicInstitutionManagerRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  // İleri seviye: İzin kontrolü yapılabilir (grantedPermissions)
-  // Şu an için admin, member veya district_president'a izin ver
-  if (user?.role === 'admin' || user?.role === 'member' || user?.role === 'district_president') {
-    return children;
-  }
-  return <Navigate to="/" />;
-};
-
-// Mosque Manager route component
-const MosqueManagerRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  // İleri seviye: İzin kontrolü yapılabilir (grantedPermissions)
-  // Şu an için admin, member veya district_president'a izin ver
-  if (user?.role === 'admin' || user?.role === 'member' || user?.role === 'district_president') {
-    return children;
-  }
-  return <Navigate to="/" />;
-};
-
-// Town President role-based route
-const TownPresidentRoleRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  if (!isLoggedIn) return <Navigate to="/login" />;
-  if (user?.role === 'town_president') return children;
-  return <Navigate to="/login" />;
-};
-
-// Public route component - Sadece loading kontrolü yapar
-// NOT: Yönlendirme yapmıyor - login sayfası kendi içinde kontrol edecek
-const PublicRoute = ({ children }) => {
-  const { loading } = useAuth();
-  const location = useLocation();
-  
-  // Sadece loading kontrolü
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  }
-  
-  // Login sayfasındaysak ve zaten giriş yapılmışsa yönlendir
-  if (location.pathname === '/login') {
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUser = localStorage.getItem('user');
-    
-    if (userRole === 'chief_observer' && isLoggedIn && savedUser) {
-      try {
-        JSON.parse(savedUser);
-        return <Navigate to="/chief-observer-dashboard" replace />;
-      } catch (e) {
-        // JSON parse hatası - devam et
-      }
-    }
-  }
-  
-  // Children'ı göster - yönlendirme yapmadan
-  return children;
-};
-
-// Chief Observer için özel route guard
-// NOT: useRef ile bir kez kontrol et - sonsuz döngüyü önle
-const ChiefObserverRoute = ({ children }) => {
-  const { loading } = useAuth();
-  const hasCheckedAuth = React.useRef(false);
-  const authResult = React.useRef(null);
-  
-  // Loading state
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Yükleniyor...</div>;
-  }
-  
-  // Authentication kontrolü - sadece bir kez yap
-  if (!hasCheckedAuth.current) {
-    hasCheckedAuth.current = true;
-    
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUser = localStorage.getItem('user');
-    
-    // Temel kontroller
-    let isAuthenticated = false;
-    if (savedUser && userRole === 'chief_observer' && isLoggedIn) {
-      try {
-        JSON.parse(savedUser);
-        isAuthenticated = true;
-      } catch (e) {
-        // JSON parse hatası - authenticated değil
-        isAuthenticated = false;
-      }
-    }
-    
-    authResult.current = isAuthenticated;
-  }
-  
-  // Eğer authenticated değilse login'e yönlendir
-  // NOT: Sadece bir kez yönlendir - replace ile
-  if (!authResult.current) {
-    return <Navigate to="/login?type=chief-observer" replace />;
-  }
-  
-  // Tüm kontroller geçti - dashboard'ı göster
-  return children;
-};
 
 // Router içinde kullanılacak component - useNavigate burada güvenli
 function RouterContent() {

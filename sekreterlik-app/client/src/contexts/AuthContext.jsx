@@ -21,6 +21,47 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true); // Başlangıçta loading true
   const [error, setError] = useState(null);
+  
+  // Helper function to get userRole from user object
+  const getUserRole = () => {
+    if (!user) return null;
+    // Check multiple possible fields for role
+    return user.role || user.userRole || user.user_type || user.userType || null;
+  };
+  
+  // Helper function to save to localStorage (centralized)
+  const saveToLocalStorage = (userData, loggedIn) => {
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('isLoggedIn', loggedIn ? 'true' : 'false');
+      // Also save userRole separately for backward compatibility (will be removed later)
+      const role = userData.role || userData.userRole || userData.user_type || userData.userType || null;
+      if (role) {
+        localStorage.setItem('userRole', role);
+      }
+    } else {
+      localStorage.removeItem('user');
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userRole');
+    }
+  };
+  
+  // Helper function to load from localStorage (centralized)
+  const loadFromLocalStorage = () => {
+    const savedUser = localStorage.getItem('user');
+    const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+    
+    if (savedUser && savedIsLoggedIn === 'true') {
+      try {
+        const userData = JSON.parse(savedUser);
+        return { user: userData, isLoggedIn: true };
+      } catch (error) {
+        console.error('Error parsing saved user data:', error);
+        return { user: null, isLoggedIn: false };
+      }
+    }
+    return { user: null, isLoggedIn: false };
+  };
 
   // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
   useEffect(() => {
@@ -43,19 +84,12 @@ export const AuthProvider = ({ children }) => {
         }
         
         // First, try to load user from localStorage immediately (for faster initial load)
-        const savedUser = localStorage.getItem('user');
-        const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+        const { user: savedUserData, isLoggedIn: savedIsLoggedIn } = loadFromLocalStorage();
         
-        if (savedUser && savedIsLoggedIn === 'true') {
-          try {
-            const userData = JSON.parse(savedUser);
-            setUser(userData);
-            setIsLoggedIn(true);
-            setLoading(false); // Set loading to false immediately
-          } catch (error) {
-            console.error('Error parsing saved user data:', error);
-            setLoading(false);
-          }
+        if (savedUserData && savedIsLoggedIn) {
+          setUser(savedUserData);
+          setIsLoggedIn(true);
+          setLoading(false); // Set loading to false immediately
         } else {
           setLoading(false);
         }
@@ -64,85 +98,49 @@ export const AuthProvider = ({ children }) => {
         unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
           if (firebaseUser) {
             // Firebase user varsa, kullanıcı bilgilerini localStorage'dan al
-            const savedUser = localStorage.getItem('user');
-            const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+            const { user: savedUserData, isLoggedIn: savedIsLoggedIn } = loadFromLocalStorage();
             
-            if (savedUser && savedIsLoggedIn === 'true') {
-              try {
-                const userData = JSON.parse(savedUser);
-                // Firebase UID ile eşleşiyorsa kullanıcıyı ayarla
-                if (userData.id === firebaseUser.uid || userData.uid === firebaseUser.uid) {
-                  setUser(userData);
-                  setIsLoggedIn(true);
-                  // localStorage'ı güncelle (yeniden kaydet)
-                  localStorage.setItem('user', JSON.stringify(userData));
-                  localStorage.setItem('isLoggedIn', 'true');
-                } else {
-                  // UID eşleşmiyorsa, ancak localStorage'da user varsa ve isLoggedIn true ise
-                  // Kullanıcı manuel logout yapmadıysa, localStorage'daki user'ı kullan
-                  // (Firebase auth state değişikliği bazen yanlış logout'a neden olabilir)
-                  console.warn('Firebase UID mismatch, but keeping localStorage user');
-                  setUser(userData);
-                  setIsLoggedIn(true);
-                }
-              } catch (error) {
-                console.error('Error parsing saved user data:', error);
-                // Hata durumunda bile localStorage'daki user'ı kullan
-                const savedUserRaw = localStorage.getItem('user');
-                if (savedUserRaw && savedIsLoggedIn === 'true') {
-                  try {
-                    const userData = JSON.parse(savedUserRaw);
-                    setUser(userData);
-                    setIsLoggedIn(true);
-                  } catch (e) {
-                    // Parse hatası varsa logout yap
-                    setUser(null);
-                    setIsLoggedIn(false);
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('isLoggedIn');
-                  }
-                }
+            if (savedUserData && savedIsLoggedIn) {
+              // Firebase UID ile eşleşiyorsa kullanıcıyı ayarla
+              if (savedUserData.id === firebaseUser.uid || savedUserData.uid === firebaseUser.uid) {
+                setUser(savedUserData);
+                setIsLoggedIn(true);
+                // localStorage'ı güncelle (yeniden kaydet)
+                saveToLocalStorage(savedUserData, true);
+              } else {
+                // UID eşleşmiyorsa, ancak localStorage'da user varsa ve isLoggedIn true ise
+                // Kullanıcı manuel logout yapmadıysa, localStorage'daki user'ı kullan
+                // (Firebase auth state değişikliği bazen yanlış logout'a neden olabilir)
+                console.warn('Firebase UID mismatch, but keeping localStorage user');
+                setUser(savedUserData);
+                setIsLoggedIn(true);
               }
-            } else if (savedUser) {
+            } else {
               // localStorage'da user var ama isLoggedIn false/null
               // Bu durumda user'ı yükle (sayfa yenileme sonrası)
-              try {
-                const userData = JSON.parse(savedUser);
-                setUser(userData);
+              const { user: fallbackUser } = loadFromLocalStorage();
+              if (fallbackUser) {
+                setUser(fallbackUser);
                 setIsLoggedIn(true);
-                localStorage.setItem('isLoggedIn', 'true');
-              } catch (error) {
-                console.error('Error parsing saved user data:', error);
+                saveToLocalStorage(fallbackUser, true);
               }
             }
           } else {
             // Firebase user yoksa, ancak localStorage'da user varsa ve isLoggedIn true ise
             // Kullanıcı manuel logout yapmadıysa, localStorage'daki user'ı kullan
-            const savedUser = localStorage.getItem('user');
-            const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+            const { user: savedUserData, isLoggedIn: savedIsLoggedIn } = loadFromLocalStorage();
             
-            if (savedUser && savedIsLoggedIn === 'true') {
+            if (savedUserData && savedIsLoggedIn) {
               // Firebase auth state değişikliği bazen yanlış logout'a neden olabilir
               // Bu durumda localStorage'daki user'ı kullan
               console.warn('Firebase user not found, but keeping localStorage user');
-              try {
-                const userData = JSON.parse(savedUser);
-                setUser(userData);
-                setIsLoggedIn(true);
-              } catch (error) {
-                console.error('Error parsing saved user data:', error);
-                // Parse hatası varsa logout yap
-                setUser(null);
-                setIsLoggedIn(false);
-                localStorage.removeItem('user');
-                localStorage.removeItem('isLoggedIn');
-              }
+              setUser(savedUserData);
+              setIsLoggedIn(true);
             } else {
               // Gerçekten logout yapılmalı
               setUser(null);
               setIsLoggedIn(false);
-              localStorage.removeItem('user');
-              localStorage.removeItem('isLoggedIn');
+              saveToLocalStorage(null, false);
             }
           }
           // Don't set loading to false here - it's already set above
@@ -160,21 +158,12 @@ export const AuthProvider = ({ children }) => {
       };
     } else {
       // Firebase kullanılmıyorsa, localStorage'dan yükle
-      const savedUser = localStorage.getItem('user');
-      const savedIsLoggedIn = localStorage.getItem('isLoggedIn');
+      const { user: savedUserData, isLoggedIn: savedIsLoggedIn } = loadFromLocalStorage();
       
-      if (savedUser && savedIsLoggedIn === 'true') {
-        try {
-          const userData = JSON.parse(savedUser);
-          setUser(userData);
-          setIsLoggedIn(true);
-          setLoading(false); // Set loading to false immediately
-        } catch (error) {
-          console.error('Error parsing saved user data:', error);
-          localStorage.removeItem('user');
-          localStorage.removeItem('isLoggedIn');
-          setLoading(false);
-        }
+      if (savedUserData && savedIsLoggedIn) {
+        setUser(savedUserData);
+        setIsLoggedIn(true);
+        setLoading(false); // Set loading to false immediately
       } else {
         setLoading(false);
       }
@@ -191,9 +180,8 @@ export const AuthProvider = ({ children }) => {
       if (response.success) {
         setUser(response.user);
         setIsLoggedIn(true);
-        // localStorage'a kullanıcı bilgilerini kaydet
-        localStorage.setItem('user', JSON.stringify(response.user));
-        localStorage.setItem('isLoggedIn', 'true');
+        // localStorage'a kullanıcı bilgilerini kaydet (centralized)
+        saveToLocalStorage(response.user, true);
         return true;
       } else {
         setError(response.message || 'Giriş başarısız');
@@ -211,9 +199,15 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsLoggedIn(false);
     setError(null);
-    // localStorage'dan kullanıcı bilgilerini temizle
-    localStorage.removeItem('user');
-    localStorage.removeItem('isLoggedIn');
+    // localStorage'dan kullanıcı bilgilerini temizle (centralized)
+    saveToLocalStorage(null, false);
+  };
+
+  // Set user directly (for loginChiefObserver and similar cases)
+  const setUserFromLogin = (userData) => {
+    setUser(userData);
+    setIsLoggedIn(true);
+    saveToLocalStorage(userData, true);
   };
 
   const value = {
@@ -221,8 +215,10 @@ export const AuthProvider = ({ children }) => {
     isLoggedIn,
     loading,
     error,
+    userRole: getUserRole(), // Computed property for userRole
     login,
-    logout
+    logout,
+    setUserFromLogin // For direct user setting (e.g., chief observer login)
   };
 
   return (

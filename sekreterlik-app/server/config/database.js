@@ -11,7 +11,7 @@ const db = new sqlite3.Database(dbPath);
 // Initialize database tables - Skip if using Firebase
 if (!USE_FIREBASE) {
   console.log('📦 Initializing SQLite database tables...');
-  db.serialize(() => {
+db.serialize(() => {
   // Create members table with tc column
   db.run(`CREATE TABLE IF NOT EXISTS members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -766,11 +766,11 @@ const collections = {
 // Load data from SQLite to in-memory collections - Skip if using Firebase
 if (!USE_FIREBASE) {
   console.log('📦 Loading SQLite data into in-memory collections...');
-  db.all('SELECT * FROM members WHERE archived = 0', [], (err, rows) => {
-    if (!err) collections.members = rows;
-  });
+db.all('SELECT * FROM members WHERE archived = 0', [], (err, rows) => {
+  if (!err) collections.members = rows;
+});
 
-  db.all('SELECT * FROM members WHERE archived = 1', [], (err, rows) => {
+db.all('SELECT * FROM members WHERE archived = 1', [], (err, rows) => {
   if (!err) collections.archivedMembers = rows;
 });
 

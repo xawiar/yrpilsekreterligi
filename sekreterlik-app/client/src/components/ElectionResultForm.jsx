@@ -4,8 +4,11 @@ import { storage, auth } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { optimizeImage } from '../utils/imageOptimizer';
+import { useAuth } from '../contexts/AuthContext';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
+  const { userRole, user } = useAuth();
+  
   // Safety check: if election is missing, show error and return early
   if (!election) {
     return (
@@ -301,12 +304,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       const currentUser = auth.currentUser;
       
       if (!currentUser) {
-        const savedUser = localStorage.getItem('user');
-        const userRole = localStorage.getItem('userRole');
-        
-        if (userRole === 'chief_observer' && savedUser) {
+        // Use AuthContext instead of localStorage
+        if (userRole === 'chief_observer' && user) {
           try {
-            const userData = JSON.parse(savedUser);
+            const userData = user; // Already parsed from AuthContext
             const username = userData.username || userData.ballotNumber;
             const email = `${username}@ilsekreterlik.local`;
             
@@ -569,7 +570,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       const maxDate = new Date(electionDate);
       maxDate.setDate(maxDate.getDate() + daysAfter);
       
-      const userRole = localStorage.getItem('userRole');
+      // Use AuthContext instead of localStorage
       const isAdmin = userRole === 'admin';
       
       if (today < minDate && !isAdmin) {

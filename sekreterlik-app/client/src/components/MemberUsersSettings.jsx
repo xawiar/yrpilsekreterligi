@@ -1348,9 +1348,148 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Üyeler için kullanıcı oluştur
+  const handleCreateMemberUsers = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      // Tüm üyeleri al
+      const allMembers = members.filter(m => m.tc && m.phone);
+      
+      if (allMembers.length === 0) {
+        setMessage('TC ve telefon numarası olan üye bulunamadı');
+        setMessageType('error');
+        return;
+      }
+
+      // Mevcut kullanıcıları al
+      const existingUsers = await ApiService.getMemberUsers();
+      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      
+      let createdCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const member of allMembers) {
+        try {
+          // TC'yi decrypt et
+          let tc = member.tc || '';
+          try {
+            if (tc && typeof tc === 'string' && tc.startsWith('U2FsdGVkX1')) {
+              tc = decryptData(tc);
+            }
+          } catch (e) {
+            console.error('TC decrypt hatası:', e);
+          }
+
+          // Telefon numarasını decrypt et
+          let phone = member.phone || '';
+          try {
+            if (phone && typeof phone === 'string' && phone.startsWith('U2FsdGVkX1')) {
+              phone = decryptData(phone);
+            }
+          } catch (e) {
+            console.error('Telefon decrypt hatası:', e);
+          }
+
+          // Kullanıcı adı ve şifre belirle
+          const username = (tc || '').toString().replace(/\D/g, ''); // Sadece rakamlar
+          const password = (phone || '').toString().replace(/\D/g, ''); // Sadece rakamlar
+
+          if (!username || username.length < 11) {
+            errors.push(`${member.name || 'Bilinmeyen'}: Geçerli TC numarası yok`);
+            errorCount++;
+            continue;
+          }
+
+          if (!password || password.length < 6) {
+            errors.push(`${member.name || 'Bilinmeyen'}: Geçerli telefon numarası yok (minimum 6 karakter)`);
+            errorCount++;
+            continue;
+          }
+
+          // Kullanıcı zaten var mı kontrol et
+          const existingUser = existingUsers.users?.find(u => 
+            u.username === username || 
+            (u.member_id === member.id || u.memberId === member.id)
+          );
+          
+          if (!existingUser) {
+            // Yeni kullanıcı oluştur
+            const email = `${username}@ilsekreterlik.local`;
+            let authUser = null;
+            try {
+              authUser = await createUserWithEmailAndPassword(auth, email, password);
+            } catch (authError) {
+              if (authError.code !== 'auth/email-already-in-use') {
+                throw authError;
+              }
+            }
+
+            const userData = {
+              username,
+              password,
+              userType: 'member',
+              member_id: member.id,
+              memberId: member.id,
+              isActive: true,
+              name: member.name,
+              authUid: authUser?.user?.uid || null
+            };
+
+            await FirebaseService.create('member_users', null, userData, false);
+            createdCount++;
+          } else {
+            // Kullanıcı varsa güncelle
+            const updateData = {
+              userType: 'member',
+              member_id: member.id,
+              memberId: member.id,
+              name: member.name
+            };
+            
+            if (existingUser.password !== password) {
+              updateData.password = password;
+            }
+
+            await FirebaseService.update('member_users', existingUser.id, updateData, false);
+            updatedCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${member.name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error('Üye kullanıcısı oluşturma hatası:', error);
+        }
+      }
+
+      // Sonuç mesajı
+      let message = `Üye kullanıcıları oluşturuldu!\n`;
+      message += `• Yeni oluşturulan: ${createdCount}\n`;
+      message += `• Güncellenen: ${updatedCount}\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount}\n`;
+        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error creating member users:', error);
+      setMessage('Üye kullanıcıları oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Tüm kullanıcıları oluştur (Temizlik YAPMA)
   const handleProcessAllUsers = async () => {
-    if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. İlçe Başkanı kullanıcılarını oluşturur/günceller\n2. Belde Başkanı kullanıcılarını oluşturur/günceller\n3. Müşahit kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
+    if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. Üye kullanıcılarını oluşturur/günceller (TC ve telefon ile)\n2. İlçe Başkanı kullanıcılarını oluşturur/günceller\n3. Belde Başkanı kullanıcılarını oluşturur/günceller\n4. Müşahit kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
       return;
     }
 
@@ -1360,12 +1499,23 @@ const MemberUsersSettings = () => {
       setMessageType('info');
 
       const results = {
+        members: { created: 0, updated: 0, errors: 0 },
         districtPresidents: { created: 0, updated: 0, errors: 0 },
         townPresidents: { created: 0, updated: 0, errors: 0 },
         observers: { created: 0, updated: 0, deleted: 0, errors: 0 }
       };
 
-      // 1. İlçe Başkanı Kullanıcıları
+      // 1. Üye Kullanıcıları
+      setMessage('Üye kullanıcıları oluşturuluyor...');
+      try {
+        await handleCreateMemberUsers();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error('Üye kullanıcıları hatası:', error);
+        results.members.errors++;
+      }
+
+      // 2. İlçe Başkanı Kullanıcıları
       setMessage('İlçe Başkanı kullanıcıları oluşturuluyor...');
       try {
         await handleCreateDistrictPresidentUsers();
@@ -1375,7 +1525,7 @@ const MemberUsersSettings = () => {
         results.districtPresidents.errors++;
       }
 
-      // 2. Belde Başkanı Kullanıcıları
+      // 3. Belde Başkanı Kullanıcıları
       setMessage('Belde Başkanı kullanıcıları oluşturuluyor...');
       try {
         await handleCreateTownPresidentUsers();
@@ -1385,7 +1535,7 @@ const MemberUsersSettings = () => {
         results.townPresidents.errors++;
       }
 
-      // 3. Müşahit Kullanıcıları
+      // 4. Müşahit Kullanıcıları
       setMessage('Müşahit kullanıcıları oluşturuluyor...');
       try {
         await handleCreateObserverUsers();
@@ -1397,6 +1547,7 @@ const MemberUsersSettings = () => {
 
       // Sonuç mesajı
       let finalMessage = '✅ Tüm kullanıcılar oluşturuldu!\n\n';
+      finalMessage += `• Üye: Oluşturuldu/Güncellendi\n`;
       finalMessage += `• İlçe Başkanı: Oluşturuldu/Güncellendi\n`;
       finalMessage += `• Belde Başkanı: Oluşturuldu/Güncellendi\n`;
       finalMessage += `• Müşahit: Oluşturuldu/Güncellendi\n`;

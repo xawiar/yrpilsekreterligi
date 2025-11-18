@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import ElectionResultForm from '../components/ElectionResultForm';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Başmüşahit Dashboard Sayfası - Modern, Animasyonlu, Mobile Uyumlu
@@ -11,67 +12,26 @@ import ElectionResultForm from '../components/ElectionResultForm';
  */
 const ChiefObserverDashboardPage = () => {
   const navigate = useNavigate();
+  const { isLoggedIn, userRole, user, logout } = useAuth();
   
   // State management
-  const [user, setUser] = useState(null);
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedElection, setSelectedElection] = useState(null);
   const [showResultForm, setShowResultForm] = useState(false);
   const [electionResults, setElectionResults] = useState({}); // electionId -> result
-  
-  // Authentication kontrolü - sadece bir kez yap (useRef ile)
-  const hasCheckedAuth = React.useRef(false);
-  const [authChecked, setAuthChecked] = useState(false);
 
-  // Authentication kontrolü - sadece mount'ta bir kez
+  // Authentication kontrolü - AuthContext'ten gelen değerleri kullan
   useEffect(() => {
-    if (hasCheckedAuth.current) return;
-    
-    hasCheckedAuth.current = true;
-    
-    const checkAuth = () => {
-      try {
-        const savedUser = localStorage.getItem('user');
-        const userRole = localStorage.getItem('userRole');
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const currentPath = window.location.pathname;
-
-        if (!savedUser || userRole !== 'chief_observer' || !isLoggedIn) {
-          setAuthChecked(true);
-          if (currentPath !== '/login' && currentPath !== '/chief-observer-login') {
-            navigate('/login?type=chief-observer', { replace: true });
-          }
-          return;
-        }
-
-        try {
-          const userData = JSON.parse(savedUser);
-          setUser(userData);
-          setAuthChecked(true);
-        } catch (e) {
-          setAuthChecked(true);
-          if (currentPath !== '/login' && currentPath !== '/chief-observer-login') {
-            navigate('/login?type=chief-observer', { replace: true });
-          }
-        }
-      } catch (err) {
-        console.error('Error checking auth:', err);
-        setAuthChecked(true);
-        const currentPath = window.location.pathname;
-        if (currentPath !== '/login' && currentPath !== '/chief-observer-login') {
-          navigate('/login?type=chief-observer', { replace: true });
-        }
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
+    if (!isLoggedIn || userRole !== 'chief_observer' || !user) {
+      navigate('/login?type=chief-observer', { replace: true });
+    }
+  }, [isLoggedIn, userRole, user, navigate]);
 
   // Seçimleri ve sonuçları yükle
   useEffect(() => {
-    if (!authChecked || !user) return;
+    if (!isLoggedIn || !user || userRole !== 'chief_observer') return;
 
     let isMounted = true;
 
@@ -132,7 +92,7 @@ const ChiefObserverDashboardPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [user, authChecked]);
+  }, [user, isLoggedIn, userRole]);
 
   // Event handlers
   const handleElectionClick = useCallback((election) => {
@@ -164,11 +124,9 @@ const ChiefObserverDashboardPage = () => {
   }, [selectedElection, user]);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userRole');
+    logout(); // AuthContext'ten logout fonksiyonu
     navigate('/login?type=chief-observer', { replace: true });
-  }, [navigate]);
+  }, [navigate, logout]);
 
   const getTypeLabel = useCallback((type) => {
     const labels = {

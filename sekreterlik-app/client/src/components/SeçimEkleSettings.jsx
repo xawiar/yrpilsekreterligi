@@ -979,7 +979,7 @@ const SeçimEkleSettings = () => {
                   <button
                     type="button"
                     onClick={handleAddIndependentCbCandidate}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
                   Ekle
                 </button>

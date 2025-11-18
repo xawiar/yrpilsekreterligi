@@ -19,7 +19,7 @@ const LoginEnhanced = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { login } = useAuth();
+  const { login, user, setUserFromLogin } = useAuth();
   const navigate = useNavigate();
   
   // Başmüşahit form state
@@ -145,11 +145,8 @@ const LoginEnhanced = () => {
       const result = await ApiService.loginChiefObserver(ballotNumber.trim(), tc.trim());
       
       if (result.success) {
-        // Kullanıcı bilgilerini localStorage'a kaydet
-        localStorage.setItem('user', JSON.stringify(result.user));
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', 'chief_observer');
-        
+        // Set user in AuthContext (localStorage is managed automatically)
+        setUserFromLogin(result.user);
         // Dashboard'a yönlendir
         navigate('/chief-observer-dashboard', { replace: true });
       } else {
