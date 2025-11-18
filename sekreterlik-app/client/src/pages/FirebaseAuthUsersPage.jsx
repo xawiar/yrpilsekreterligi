@@ -65,7 +65,14 @@ const FirebaseAuthUsersPage = () => {
       setError('');
 
       // Backend üzerinden Firebase Auth kullanıcısını sil
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      if (!API_BASE_URL) {
+        if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+          API_BASE_URL = 'https://yrpilsekreterligi.onrender.com/api';
+        } else {
+          API_BASE_URL = 'http://localhost:5000/api';
+        }
+      }
       const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${authUid}`, {
         method: 'DELETE',
         headers: {
@@ -109,7 +116,14 @@ const FirebaseAuthUsersPage = () => {
       setError('');
 
       // Backend cleanup endpoint'ini çağır
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      if (!API_BASE_URL) {
+        if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+          API_BASE_URL = 'https://yrpilsekreterligi.onrender.com/api';
+        } else {
+          API_BASE_URL = 'http://localhost:5000/api';
+        }
+      }
       const response = await fetch(`${API_BASE_URL}/auth/cleanup-orphaned-auth-users`, {
         method: 'POST',
         headers: {
