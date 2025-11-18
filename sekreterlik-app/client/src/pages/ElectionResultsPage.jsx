@@ -2309,7 +2309,7 @@ const ElectionResultsPage = () => {
                   <p><strong>İlçe Sayısı:</strong> {Object.keys(provincialAssemblyResults.districtResults).length} ilçe</p>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
