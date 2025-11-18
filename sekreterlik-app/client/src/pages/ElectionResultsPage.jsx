@@ -1162,6 +1162,118 @@ const ElectionResultsPage = () => {
     };
   }, [election, aggregatedResults, calculateWinningCandidates]);
 
+  // Calculate winning candidates based on D'Hondt results and candidate order
+  const calculateWinningCandidates = useCallback((category, dhondtData, municipalCouncilData, provincialAssemblyData) => {
+    if (!category || !category.data || category.data.length === 0) return [];
+    
+    const winningCandidates = [];
+    
+    if (election?.type === 'genel') {
+      if (category.name === 'Cumhurbaşkanı Seçimi') {
+        // CB adayları zaten category.data'da, oy sırasına göre
+        winningCandidates.push(...category.data.map(item => ({
+          name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen'),
+          votes: item.value,
+          percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
+        })));
+      } else if (category.name === 'Milletvekili Seçimi' && dhondtData) {
+        // MV için D'Hondt sonuçlarına göre kazanan adayları belirle
+        dhondtData.partySeats.forEach(partySeat => {
+          const partyName = partySeat.party;
+          const seats = partySeat.seats;
+          const party = election.parties?.find(p => {
+            const pName = typeof p === 'string' ? p : p.name;
+            return pName === partyName;
+          });
+          
+          if (party && typeof party === 'object' && party.mv_candidates && seats > 0) {
+            // Partinin kazandığı sandalye sayısı kadar adayı al (sırayla)
+            for (let i = 0; i < Math.min(seats, party.mv_candidates.length); i++) {
+              const candidate = party.mv_candidates[i];
+              const partyVotes = category.data.find(item => {
+                const itemName = typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || '');
+                return itemName === partyName;
+              });
+              winningCandidates.push({
+                name: `${candidate} (${partyName})`,
+                votes: partyVotes ? partyVotes.value : 0,
+                percentage: partyVotes ? (typeof partyVotes.percentage === 'number' ? partyVotes.percentage : parseFloat(partyVotes.percentage || 0)) : 0,
+                partyName: partyName,
+                isParty: false
+              });
+            }
+          }
+        });
+      }
+    } else if (election?.type === 'yerel') {
+      if (category.name === 'Belediye Başkanı Seçimi') {
+        // Belediye başkanı adayları (parti ve bağımsız)
+        winningCandidates.push(...category.data.map(item => ({
+          name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen'),
+          votes: item.value,
+          percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
+        })));
+      } else if (category.name === 'Belediye Meclisi Seçimi' && municipalCouncilData) {
+        // Belediye Meclisi için D'Hondt sonuçlarına göre kazanan adayları belirle
+        municipalCouncilData.partySeats.forEach(partySeat => {
+          const partyName = partySeat.party;
+          const seats = partySeat.seats;
+          const party = election.municipal_council_parties?.find(p => {
+            const pName = typeof p === 'string' ? p : (p?.name || String(p));
+            return pName === partyName;
+          });
+          
+          if (party && typeof party === 'object' && party.candidates && seats > 0) {
+            for (let i = 0; i < Math.min(seats, party.candidates.length); i++) {
+              const candidate = party.candidates[i];
+              const partyVotes = category.data.find(item => {
+                const itemName = typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || '');
+                return itemName === partyName;
+              });
+              winningCandidates.push({
+                name: `${candidate} (${partyName})`,
+                votes: partyVotes ? partyVotes.value : 0,
+                percentage: partyVotes ? (typeof partyVotes.percentage === 'number' ? partyVotes.percentage : parseFloat(partyVotes.percentage || 0)) : 0,
+                partyName: partyName,
+                isParty: false
+              });
+            }
+          }
+        });
+      } else if (category.name === 'İl Genel Meclisi Seçimi' && provincialAssemblyData) {
+        // İl Genel Meclisi için D'Hondt sonuçlarına göre kazanan adayları belirle
+        provincialAssemblyData.totalPartySeats.forEach(partySeat => {
+          const partyName = partySeat.party;
+          const seats = partySeat.seats;
+          const party = election.provincial_assembly_parties?.find(p => {
+            const pName = typeof p === 'string' ? p : (p?.name || String(p));
+            return pName === partyName;
+          });
+          
+          if (party && typeof party === 'object' && party.candidates && seats > 0) {
+            for (let i = 0; i < Math.min(seats, party.candidates.length); i++) {
+              const candidate = party.candidates[i];
+              const partyVotes = category.data.find(item => {
+                const itemName = typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || '');
+                return itemName === partyName;
+              });
+              winningCandidates.push({
+                name: `${candidate} (${partyName})`,
+                votes: partyVotes ? partyVotes.value : 0,
+                percentage: partyVotes ? (typeof partyVotes.percentage === 'number' ? partyVotes.percentage : parseFloat(partyVotes.percentage || 0)) : 0,
+                partyName: partyName,
+                isParty: false
+              });
+            }
+          }
+        });
+      }
+    }
+    
+    // Oy sırasına göre sırala (highest to lowest)
+    return winningCandidates.sort((a, b) => b.votes - a.votes);
+  }, [election]);
+
   console.log('🎨 ElectionResultsPage render:', {
     loading,
     election: election ? { id: election.id, name: election.name } : null,
@@ -1603,107 +1715,24 @@ const ElectionResultsPage = () => {
                       const winnerName = typeof winner.name === 'string' ? winner.name : (winner.name?.name || String(winner.name) || 'Bilinmeyen');
                       const winnerPercentage = typeof winner.percentage === 'number' ? winner.percentage : parseFloat(winner.percentage || 0);
                       
-                      // Kazanan adayları bul (oy sırasına göre)
-                      const winningCandidates = [];
+                      // Kazanan adayları bul (D'Hondt sonuçlarına göre)
+                      const winningCandidates = calculateWinningCandidates(
+                        category,
+                        category.name === 'Milletvekili Seçimi' ? dhondtResults : null,
+                        category.name === 'Belediye Meclisi Seçimi' ? municipalCouncilResults : null,
+                        category.name === 'İl Genel Meclisi Seçimi' ? provincialAssemblyResults : null
+                      );
                       
-                      if (election?.type === 'genel') {
-                        if (category.name === 'Cumhurbaşkanı Seçimi') {
-                          // CB adayları zaten category.data'da
-                          winningCandidates.push(...category.data.slice(0, 3).map(item => ({
-                            name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen'),
-                            votes: item.value,
-                            percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
-                          })));
-                        } else if (category.name === 'Milletvekili Seçimi') {
-                          // MV için partiler ve adayları
-                          category.data.slice(0, 5).forEach(partyItem => {
-                            const partyName = typeof partyItem.name === 'string' ? partyItem.name : (partyItem.name?.name || String(partyItem.name) || 'Bilinmeyen');
-                            // Bu parti için adayları bul
-                            const party = election.parties?.find(p => (typeof p === 'string' ? p : p.name) === partyName);
-                            if (party && typeof party === 'object' && party.mv_candidates) {
-                              party.mv_candidates.forEach((candidate, idx) => {
-                                winningCandidates.push({
-                                  name: `${candidate} (${partyName})`,
-                                  votes: partyItem.value,
-                                  percentage: typeof partyItem.percentage === 'number' ? partyItem.percentage : parseFloat(partyItem.percentage || 0),
-                                  isParty: false,
-                                  partyName: partyName
-                                });
-                              });
-                            } else {
-                              winningCandidates.push({
-                                name: partyName,
-                                votes: partyItem.value,
-                                percentage: typeof partyItem.percentage === 'number' ? partyItem.percentage : parseFloat(partyItem.percentage || 0),
-                                isParty: true
-                              });
-                            }
-                          });
+                      // Party-based winner count
+                      const partyWinnerCount = {};
+                      winningCandidates.forEach(candidate => {
+                        if (candidate.partyName) {
+                          partyWinnerCount[candidate.partyName] = (partyWinnerCount[candidate.partyName] || 0) + 1;
                         }
-                      } else if (election?.type === 'yerel') {
-                        if (category.name === 'Belediye Başkanı Seçimi') {
-                          // Belediye başkanı adayları (parti ve bağımsız)
-                          winningCandidates.push(...category.data.slice(0, 5).map(item => ({
-                            name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen'),
-                            votes: item.value,
-                            percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
-                          })));
-                        } else if (category.name === 'İl Genel Meclisi Seçimi') {
-                          // İl Genel Meclisi partileri ve adayları
-                          category.data.slice(0, 5).forEach(partyItem => {
-                            const partyName = typeof partyItem.name === 'string' ? partyItem.name : (partyItem.name?.name || String(partyItem.name) || 'Bilinmeyen');
-                            const party = election.provincial_assembly_parties?.find(p => {
-                              const pName = typeof p === 'string' ? p : (p?.name || String(p));
-                              return pName === partyName;
-                            });
-                            if (party && typeof party === 'object' && party.candidates) {
-                              party.candidates.forEach((candidate) => {
-                                winningCandidates.push({
-                                  name: `${candidate} (${partyName})`,
-                                  votes: partyItem.value,
-                                  percentage: typeof partyItem.percentage === 'number' ? partyItem.percentage : parseFloat(partyItem.percentage || 0),
-                                  isParty: false,
-                                  partyName: partyName
-                                });
-                              });
-                            } else {
-                              winningCandidates.push({
-                                name: partyName,
-                                votes: partyItem.value,
-                                percentage: typeof partyItem.percentage === 'number' ? partyItem.percentage : parseFloat(partyItem.percentage || 0),
-                                isParty: true
-                              });
-                            }
-                          });
-                        } else if (category.name === 'Belediye Meclisi Seçimi') {
-                          // Belediye Meclisi partileri ve adayları
-                          category.data.slice(0, 5).forEach(partyItem => {
-                            const partyName = typeof partyItem.name === 'string' ? partyItem.name : (partyItem.name?.name || String(partyItem.name) || 'Bilinmeyen');
-                            const party = election.municipal_council_parties?.find(p => {
-                              const pName = typeof p === 'string' ? p : (p?.name || String(p));
-                              return pName === partyName;
-                            });
-                            if (party && typeof party === 'object' && party.candidates) {
-                              party.candidates.forEach((candidate) => {
-                                winningCandidates.push({
-                                  name: `${candidate} (${partyName})`,
-                                  votes: partyItem.value,
-                                  percentage: typeof partyItem.percentage === 'number' ? partyItem.percentage : parseFloat(partyItem.percentage || 0),
-                                  isParty: false,
-                                  partyName: partyName
-                                });
-                              });
-                            } else {
-                              winningCandidates.push({
-                                name: partyName,
-                                votes: partyItem.value,
-                                percentage: typeof partyItem.percentage === 'number' ? partyItem.percentage : parseFloat(partyItem.percentage || 0),
-                                isParty: true
-                              });
-                            }
-                          });
-                        }
-                      }
+                      });
+                      
+                      // Sort candidates by votes (highest to lowest) - already sorted in calculateWinningCandidates
+                      const sortedCandidates = [...winningCandidates];
                       
                       return (
                         <div className="mb-4 space-y-3">
@@ -1721,56 +1750,38 @@ const ElectionResultsPage = () => {
                             </div>
                           </div>
                           
-                          {/* Kazanan Adaylar Listesi (En Çok Oy Alandan En Aza) */}
-                          {winningCandidates.length > 0 && (() => {
-                            // En çok oy alandan en aza doğru sırala
-                            const sortedCandidates = [...winningCandidates].sort((a, b) => b.votes - a.votes);
-                            
-                            // Parti bazında kazanan sayısını hesapla
-                            const partyWinners = {};
-                            sortedCandidates.forEach(candidate => {
-                              if (candidate.partyName) {
-                                partyWinners[candidate.partyName] = (partyWinners[candidate.partyName] || 0) + 1;
-                              }
-                            });
-                            
-                            return (
-                              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Kazanan Adaylar (En Çok Oy Alandan En Aza)</div>
-                                
-                                {/* Parti Bazında Kazanan Sayısı */}
-                                {Object.keys(partyWinners).length > 0 && (
-                                  <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-200 dark:border-indigo-800">
-                                    <div className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 mb-1">🏛️ Parti Bazında Kazanan Sayısı</div>
-                                    <div className="flex flex-wrap gap-2">
-                                      {Object.entries(partyWinners)
-                                        .sort((a, b) => b[1] - a[1])
-                                        .map(([party, count]) => (
-                                          <span key={party} className="text-xs px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded">
-                                            {party}: {count} kazanan
-                                          </span>
-                                        ))}
+                          {/* Kazanan Adaylar Listesi (Oy Sırasına Göre) */}
+                          {sortedCandidates.length > 0 && (
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                              <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Kazanan Adaylar (Oy Sırasına Göre)</div>
+                              {Object.keys(partyWinnerCount).length > 0 && (
+                                <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-200 dark:border-indigo-700">
+                                  <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Parti Bazında Kazanan Sayısı:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {Object.entries(partyWinnerCount).map(([party, count]) => (
+                                      <span key={party} className="text-xs px-2 py-1 bg-white dark:bg-gray-800 rounded border border-indigo-200 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300">
+                                        {party}: {count} kazanan
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="space-y-1.5">
+                                {sortedCandidates.slice(0, 10).map((candidate, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-500 dark:text-gray-400">#{idx + 1}</span>
+                                      <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">{candidate.votes.toLocaleString('tr-TR')}</span>
+                                      <span className="text-gray-500 dark:text-gray-400 ml-1">(%{candidate.percentage.toFixed(2)})</span>
                                     </div>
                                   </div>
-                                )}
-                                
-                                <div className="space-y-1.5">
-                                  {sortedCandidates.slice(0, 10).map((candidate, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-gray-500 dark:text-gray-400">#{idx + 1}</span>
-                                        <span className="text-gray-900 dark:text-gray-100">{candidate.name}</span>
-                                      </div>
-                                      <div className="text-right">
-                                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">{candidate.votes.toLocaleString('tr-TR')}</span>
-                                        <span className="text-gray-500 dark:text-gray-400 ml-1">(%{candidate.percentage.toFixed(2)})</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                ))}
                               </div>
-                            );
-                          })()}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
