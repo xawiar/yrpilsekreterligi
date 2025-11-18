@@ -31,12 +31,23 @@ const DistrictMembersPage = () => {
 
   const fetchDistrict = async () => {
     try {
+      setLoading(true);
+      setError('');
       const data = await ApiService.getDistricts();
-      const districtData = data.find(d => d.id === parseInt(id));
+      const districtData = data.find(d => d.id === parseInt(id) || String(d.id) === String(id));
+      
+      if (!districtData) {
+        setError(`İlçe bulunamadı (ID: ${id})`);
+        setLoading(false);
+        return;
+      }
+      
       setDistrict(districtData);
+      // Loading state'i fetchMembers'da yönetilecek, burada false yapmıyoruz
     } catch (error) {
       console.error('Error fetching district:', error);
-      setError('İlçe bilgileri yüklenirken hata oluştu');
+      setError('İlçe bilgileri yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      setLoading(false);
     }
   };
 

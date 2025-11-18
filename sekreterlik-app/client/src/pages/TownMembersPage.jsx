@@ -39,18 +39,34 @@ const TownMembersPage = () => {
 
   const fetchTown = async () => {
     try {
+      setLoading(true);
+      setError('');
       const towns = await ApiService.getTowns();
-      const townData = towns.find(t => t.id === parseInt(id));
+      const townData = towns.find(t => t.id === parseInt(id) || String(t.id) === String(id));
+      
+      if (!townData) {
+        setError(`Belde bulunamadı (ID: ${id})`);
+        setLoading(false);
+        return;
+      }
+      
       setTown(townData);
       
-      if (townData) {
+      // İlçe bilgisini de al
+      try {
         const districts = await ApiService.getDistricts();
-        const districtData = districts.find(d => d.id === townData.district_id);
+        const districtData = districts.find(d => d.id === townData.district_id || String(d.id) === String(townData.district_id));
         setDistrict(districtData);
+      } catch (districtError) {
+        console.error('Error fetching district:', districtError);
+        // İlçe bilgisi yüklenemezse de devam et
       }
+      
+      // Loading state'i fetchMembers'da yönetilecek, burada false yapmıyoruz
     } catch (error) {
       console.error('Error fetching town:', error);
-      setError('Belde bilgileri yüklenirken hata oluştu');
+      setError('Belde bilgileri yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      setLoading(false);
     }
   };
 
