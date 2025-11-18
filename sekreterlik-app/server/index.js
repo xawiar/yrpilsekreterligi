@@ -214,41 +214,45 @@ const allowedOrigins = new Set([
   ...(process.env.NODE_ENV === 'production' ? productionOrigins : [])
 ]);
 
-// CORS middleware - OPTIONS request'leri için özel handling
+// CORS middleware - OPTIONS request'leri için özel handling (EN ÜSTTE - diğer middleware'lerden önce)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
   // OPTIONS request (preflight) için özel handling
   if (req.method === 'OPTIONS') {
-    // Render.com origin kontrolü
-    if (origin && origin.includes('.onrender.com')) {
+    // Render.com origin kontrolü (en geniş kontrol - önce bunu kontrol et)
+    if (origin && (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Max-Age', '86400'); // 24 hours
+      console.log('✅ OPTIONS preflight allowed for:', origin);
       return res.status(200).end();
     }
     
     // Allowed origins kontrolü
     if (origin && allowedOrigins.has(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Max-Age', '86400');
+      console.log('✅ OPTIONS preflight allowed (from list):', origin);
       return res.status(200).end();
     }
     
     // Development'da tüm origin'lere izin ver
     if (process.env.NODE_ENV !== 'production') {
       res.header('Access-Control-Allow-Origin', origin || '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
       res.header('Access-Control-Allow-Credentials', 'true');
+      console.log('✅ OPTIONS preflight allowed (development):', origin || '*');
       return res.status(200).end();
     }
     
+    console.warn('❌ OPTIONS preflight blocked:', origin);
     return res.status(403).json({ error: 'CORS policy violation' });
   }
   
@@ -258,7 +262,16 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: (origin, callback) => {
     // No origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ CORS allowed (no origin):', 'mobile/Postman');
+      return callback(null, true);
+    }
+    
+    // Render.com domain kontrolü (en geniş kontrol - önce bunu kontrol et)
+    if (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      console.log('✅ CORS allowed (Render.com/localhost):', origin);
+      return callback(null, true);
+    }
     
     // Check if origin is in allowed list
     if (allowedOrigins.has(origin)) {
@@ -268,11 +281,6 @@ app.use(cors({
     
     // Production'da sadece Render.com URL'lerine izin ver
     if (process.env.NODE_ENV === 'production') {
-      // Render.com domain kontrolü
-      if (origin.includes('.onrender.com')) {
-        console.log('✅ CORS allowed (Render.com):', origin);
-        return callback(null, true);
-      }
       console.warn('❌ CORS blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     }
@@ -282,11 +290,27 @@ app.use(cors({
     return callback(null, true);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   preflightContinue: false,
   optionsSuccessStatus: 200,
 }));
+
+// Explicit OPTIONS handler for all routes (backup - CORS middleware'den sonra)
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && (origin.includes('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    console.log('✅ OPTIONS route handler - allowed:', origin);
+    return res.status(200).end();
+  }
+  res.status(200).end();
+});
+
 // Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
 app.use(helmet({
   contentSecurityPolicy: {
