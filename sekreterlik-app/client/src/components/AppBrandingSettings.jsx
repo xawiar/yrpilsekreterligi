@@ -252,6 +252,9 @@ const AppBrandingSettings = () => {
 
   const handleUpdateApp = async () => {
     try {
+      // Önce manifest'i güncelle
+      await updateManifest();
+      
       // Tüm kullanıcılara in-app notification oluştur (güncelleme bildirimi)
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       

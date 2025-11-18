@@ -13,6 +13,8 @@ const AdminSettings = () => {
     confirmPassword: '',
     currentPassword: ''
   });
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showUsernameForm, setShowUsernameForm] = useState(false);
   const [selectedRegionName, setSelectedRegionName] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
@@ -72,75 +74,7 @@ const AdminSettings = () => {
     }));
   };
 
-  const handleUpdateAdminInfo = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    
-    // Validation
-    if (!formData.username.trim()) {
-      setMessage('Kullanıcı adı zorunludur');
-      setMessageType('error');
-      return;
-    }
-    
-    if (!formData.currentPassword.trim()) {
-      setMessage('Mevcut şifre zorunludur');
-      setMessageType('error');
-      return;
-    }
-    
-    if (!formData.password.trim()) {
-      setMessage('Yeni şifre zorunludur');
-      setMessageType('error');
-      return;
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      setMessage('Yeni şifreler eşleşmiyor');
-      setMessageType('error');
-      return;
-    }
-    
-    if (formData.password.length < 3) {
-      setMessage('Şifre en az 3 karakter olmalıdır');
-      setMessageType('error');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await ApiService.updateAdminCredentials(
-        formData.username,
-        formData.password,
-        formData.currentPassword
-      );
-      
-      if (response.success) {
-        setMessage('Admin bilgileri başarıyla güncellendi');
-        setMessageType('success');
-        
-        // Clear password fields
-        setFormData(prev => ({
-          ...prev,
-          password: '',
-          confirmPassword: '',
-          currentPassword: ''
-        }));
-        
-        // Refresh admin info
-        await fetchAdminInfo();
-      } else {
-        setMessage(response.message || 'Güncelleme sırasında hata oluştu');
-        setMessageType('error');
-      }
-    } catch (error) {
-      console.error('Error updating admin info:', error);
-      setMessage('Admin bilgileri güncellenirken hata oluştu');
-      setMessageType('error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // handleUpdateAdminInfo artık kullanılmıyor, formlar ayrı ayrı handle ediliyor
 
   const handleRecalculateVisitCounts = async () => {
     if (!window.confirm('Tüm ziyaret sayıları yeniden hesaplanacak. Bu işlem biraz zaman alabilir. Devam etmek istiyor musunuz?')) {
@@ -224,92 +158,242 @@ const AdminSettings = () => {
         </div>
       </div>
 
-      {/* Update Form */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Admin Bilgilerini Güncelle</h3>
-        
-        {message && (
-          <div className={`mb-4 p-3 rounded-lg shadow-sm ${
-            messageType === 'success' 
-              ? 'bg-green-100 text-green-700 border border-green-200' 
-              : 'bg-red-100 text-red-700 border border-red-200'
-          }`}>
-            {message}
-          </div>
-        )}
-        
-        <form onSubmit={handleUpdateAdminInfo} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kullanıcı Adı
-            </label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
-              placeholder="Yeni kullanıcı adı"
-            />
+      {/* Update Forms */}
+      <div className="space-y-6">
+        {/* Kullanıcı Adı Güncelleme */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Kullanıcı Adını Güncelle</h3>
+            <button
+              onClick={() => {
+                setShowUsernameForm(!showUsernameForm);
+                setFormData(prev => ({ ...prev, username: adminInfo.username }));
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+            >
+              {showUsernameForm ? 'İptal' : 'Kullanıcı Adını Değiştir'}
+            </button>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mevcut Şifre
-            </label>
-            <input
-              type="password"
-              name="currentPassword"
-              value={formData.currentPassword}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
-              placeholder="Mevcut şifrenizi girin"
-            />
+          {showUsernameForm && (
+            <>
+              {message && message.includes('Kullanıcı adı') && (
+                <div className={`mb-4 p-3 rounded-lg shadow-sm ${
+                  messageType === 'success' 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  {message}
+                </div>
+              )}
+              
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!formData.currentPassword.trim()) {
+                  setMessage('Mevcut şifre zorunludur');
+                  setMessageType('error');
+                  return;
+                }
+                if (!formData.username.trim()) {
+                  setMessage('Kullanıcı adı zorunludur');
+                  setMessageType('error');
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  setMessage('');
+                  const response = await ApiService.updateAdminCredentials(
+                    formData.username,
+                    null, // Şifre değiştirilmiyor
+                    formData.currentPassword
+                  );
+                  if (response.success) {
+                    setMessage('Kullanıcı adı başarıyla güncellendi');
+                    setMessageType('success');
+                    setFormData(prev => ({ ...prev, currentPassword: '' }));
+                    setShowUsernameForm(false);
+                    await fetchAdminInfo();
+                  } else {
+                    setMessage(response.message || 'Güncelleme sırasında hata oluştu');
+                    setMessageType('error');
+                  }
+                } catch (error) {
+                  setMessage('Kullanıcı adı güncellenirken hata oluştu');
+                  setMessageType('error');
+                } finally {
+                  setLoading(false);
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Yeni Kullanıcı Adı
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+                    placeholder="Yeni kullanıcı adı"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mevcut Şifre *
+                  </label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={formData.currentPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+                    placeholder="Mevcut şifrenizi girin"
+                    required
+                  />
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200"
+                >
+                  {loading ? 'Güncelleniyor...' : 'Kullanıcı Adını Güncelle'}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+
+        {/* Şifre Güncelleme */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Şifreyi Güncelle</h3>
+            <button
+              onClick={() => {
+                setShowPasswordForm(!showPasswordForm);
+                setFormData(prev => ({ ...prev, password: '', confirmPassword: '', currentPassword: '' }));
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+            >
+              {showPasswordForm ? 'İptal' : 'Şifreyi Değiştir'}
+            </button>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Yeni Şifre
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
-              placeholder="Yeni şifre (en az 3 karakter)"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Yeni Şifre (Tekrar)
-            </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
-              placeholder="Yeni şifreyi tekrar girin"
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Güncelleniyor...
-              </div>
-            ) : (
-              'Güncelle'
-            )}
-          </button>
-        </form>
+          {showPasswordForm && (
+            <>
+              {message && message.includes('şifre') && (
+                <div className={`mb-4 p-3 rounded-lg shadow-sm ${
+                  messageType === 'success' 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  {message}
+                </div>
+              )}
+              
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!formData.currentPassword.trim()) {
+                  setMessage('Mevcut şifre zorunludur');
+                  setMessageType('error');
+                  return;
+                }
+                if (!formData.password.trim()) {
+                  setMessage('Yeni şifre zorunludur');
+                  setMessageType('error');
+                  return;
+                }
+                if (formData.password !== formData.confirmPassword) {
+                  setMessage('Yeni şifreler eşleşmiyor');
+                  setMessageType('error');
+                  return;
+                }
+                if (formData.password.length < 3) {
+                  setMessage('Şifre en az 3 karakter olmalıdır');
+                  setMessageType('error');
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  setMessage('');
+                  const response = await ApiService.updateAdminCredentials(
+                    adminInfo.username, // Kullanıcı adı değiştirilmiyor
+                    formData.password,
+                    formData.currentPassword
+                  );
+                  if (response.success) {
+                    setMessage('Şifre başarıyla güncellendi');
+                    setMessageType('success');
+                    setFormData(prev => ({ ...prev, password: '', confirmPassword: '', currentPassword: '' }));
+                    setShowPasswordForm(false);
+                  } else {
+                    setMessage(response.message || 'Güncelleme sırasında hata oluştu');
+                    setMessageType('error');
+                  }
+                } catch (error) {
+                  setMessage('Şifre güncellenirken hata oluştu');
+                  setMessageType('error');
+                } finally {
+                  setLoading(false);
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mevcut Şifre *
+                  </label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={formData.currentPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+                    placeholder="Mevcut şifrenizi girin"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Yeni Şifre *
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+                    placeholder="Yeni şifre (en az 3 karakter)"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Yeni Şifre (Tekrar) *
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+                    placeholder="Yeni şifreyi tekrar girin"
+                    required
+                  />
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200"
+                >
+                  {loading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Recalculate Visit Counts */}

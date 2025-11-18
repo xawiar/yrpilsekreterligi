@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 
-const SeçimEkleSettings = () => {
+const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) => {
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -465,6 +465,13 @@ const SeçimEkleSettings = () => {
       
       setMessageType('success');
       
+      // Callback'leri çağır
+      if (editingElection && onElectionUpdated) {
+        onElectionUpdated(savedElection);
+      } else if (!editingElection && onElectionCreated) {
+        onElectionCreated(savedElection);
+      }
+      
       // Seçim kaydedildikten sonra ittifakları yükle
       if (savedElection && savedElection.id) {
         setEditingElection(savedElection);
@@ -477,10 +484,17 @@ const SeçimEkleSettings = () => {
         }
       } else {
         resetForm();
-      setShowForm(false);
+        setShowForm(false);
       }
       
       fetchElections();
+      
+      // Modal'dan kapatılması gerekiyorsa
+      if (onClose && !editingElection) {
+        setTimeout(() => {
+          onClose();
+        }, 1500); // 1.5 saniye sonra kapat (başarı mesajını görmek için)
+      }
     } catch (error) {
       console.error('Error saving election:', error);
       setMessage(error.message || 'Seçim kaydedilirken hata oluştu');
