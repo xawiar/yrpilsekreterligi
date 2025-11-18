@@ -28,6 +28,7 @@ const SeçimEkleSettings = () => {
     municipal_council_parties: [], // Belediye Meclis partileri ve adayları: [{name: 'Parti Adı', candidates: ['Aday1', 'Aday2']}]
     municipal_council_total_seats: '', // Belediye Meclisi toplam üye sayısı (D'Hondt için)
     population: '', // Belediye nüfusu (Kontenjan sayısını belirlemek için)
+    baraj_percent: 7.0, // Baraj yüzdesi (default %7)
     // Referandum için (otomatik Evet/Hayır)
   });
   
@@ -49,6 +50,13 @@ const SeçimEkleSettings = () => {
   const [districtSeatsInput, setDistrictSeatsInput] = useState(''); // İl Genel Meclisi için ilçe üye sayısı
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  
+  // İttifak yönetimi state'leri
+  const [alliances, setAlliances] = useState([]); // Seçim için ittifaklar
+  const [allianceNameInput, setAllianceNameInput] = useState('');
+  const [selectedAllianceParties, setSelectedAllianceParties] = useState([]); // Seçili partiler (ittifak için)
+  const [showAllianceForm, setShowAllianceForm] = useState(false);
+  const [editingAlliance, setEditingAlliance] = useState(null);
 
   useEffect(() => {
     fetchElections();
@@ -443,17 +451,35 @@ const SeçimEkleSettings = () => {
     // Referandum için validasyon gerekmez (otomatik Evet/Hayır)
 
     try {
+      let savedElection;
       if (editingElection) {
         await ApiService.updateElection(editingElection.id, formData);
         setMessage('Seçim başarıyla güncellendi');
+        savedElection = { ...editingElection, ...formData };
       } else {
-        await ApiService.createElection(formData);
+        const result = await ApiService.createElection(formData);
         setMessage('Seçim başarıyla eklendi');
+        // Yeni seçim oluşturulduğunda election objesi dönebilir
+        savedElection = result.election || { id: result.id, ...formData };
       }
       
       setMessageType('success');
-      resetForm();
-      setShowForm(false);
+      
+      // Seçim kaydedildikten sonra ittifakları yükle
+      if (savedElection && savedElection.id) {
+        setEditingElection(savedElection);
+        try {
+          const alliancesData = await ApiService.getAlliances(savedElection.id);
+          setAlliances(Array.isArray(alliancesData) ? alliancesData : []);
+        } catch (error) {
+          console.error('Error fetching alliances:', error);
+          setAlliances([]);
+        }
+      } else {
+        resetForm();
+        setShowForm(false);
+      }
+      
       fetchElections();
     } catch (error) {
       console.error('Error saving election:', error);
@@ -479,8 +505,15 @@ const SeçimEkleSettings = () => {
       provincial_assembly_district_seats: {},
       municipal_council_parties: [],
       municipal_council_total_seats: '',
-      population: ''
+      population: '',
+      baraj_percent: 7.0
     });
+    setAlliances([]);
+    setAllianceNameInput('');
+    setSelectedAllianceParties([]);
+    setShowAllianceForm(false);
+    setEditingAlliance(null);
+    setEditingElection(null);
     setPartyInput('');
     setMvCandidateInput({});
     setSelectedPartyIndex(null);
@@ -525,8 +558,21 @@ const SeçimEkleSettings = () => {
       provincial_assembly_district_seats: election.provincial_assembly_district_seats || {},
       municipal_council_parties: (election.municipal_council_parties || []).map(p => typeof p === 'string' ? { name: p, candidates: [] } : p),
       municipal_council_total_seats: election.municipal_council_total_seats || '',
-      population: election.population || ''
+      population: election.population || '',
+      baraj_percent: election.baraj_percent || 7.0
     });
+    
+    // İttifakları yükle
+    if (election.id) {
+      try {
+        const alliancesData = await ApiService.getAlliances(election.id);
+        setAlliances(Array.isArray(alliancesData) ? alliancesData : []);
+      } catch (error) {
+        console.error('Error fetching alliances:', error);
+        setAlliances([]);
+      }
+    }
+    
     setShowForm(true);
   };
 
@@ -572,6 +618,87 @@ const SeçimEkleSettings = () => {
       'closed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
     };
     return colors[status] || colors.draft;
+  };
+
+  // İttifak yönetimi fonksiyonları
+  const handleCreateAlliance = async () => {
+    if (!allianceNameInput.trim()) {
+      setMessage('İttifak adı gerekli');
+      setMessageType('error');
+      return;
+    }
+    
+    if (selectedAllianceParties.length < 2) {
+      setMessage('İttifak en az 2 parti içermelidir');
+      setMessageType('error');
+      return;
+    }
+    
+    if (!editingElection || !editingElection.id) {
+      setMessage('Önce seçimi kaydedin');
+      setMessageType('error');
+      return;
+    }
+    
+    try {
+      const partyIds = selectedAllianceParties.map(p => {
+        const partyName = typeof p === 'string' ? p : (p.name || String(p));
+        return partyName;
+      });
+      
+      const result = await ApiService.createAlliance({
+        election_id: editingElection.id,
+        name: allianceNameInput.trim(),
+        party_ids: partyIds
+      });
+      
+      if (result.id) {
+        setAlliances([...alliances, result]);
+        setAllianceNameInput('');
+        setSelectedAllianceParties([]);
+        setShowAllianceForm(false);
+        setMessage('İttifak başarıyla oluşturuldu');
+        setMessageType('success');
+      } else {
+        throw new Error(result.message || 'İttifak oluşturulamadı');
+      }
+    } catch (error) {
+      console.error('Error creating alliance:', error);
+      setMessage(error.message || 'İttifak oluşturulurken hata oluştu');
+      setMessageType('error');
+    }
+  };
+  
+  const handleDeleteAlliance = async (allianceId) => {
+    if (!window.confirm('Bu ittifakı silmek istediğinize emin misiniz?')) {
+      return;
+    }
+    
+    try {
+      await ApiService.deleteAlliance(allianceId);
+      setAlliances(alliances.filter(a => a.id !== allianceId));
+      setMessage('İttifak başarıyla silindi');
+      setMessageType('success');
+    } catch (error) {
+      console.error('Error deleting alliance:', error);
+      setMessage(error.message || 'İttifak silinirken hata oluştu');
+      setMessageType('error');
+    }
+  };
+  
+  const togglePartyForAlliance = (party) => {
+    const partyName = typeof party === 'string' ? party : (party.name || String(party));
+    if (selectedAllianceParties.some(p => {
+      const pName = typeof p === 'string' ? p : (p.name || String(p));
+      return pName === partyName;
+    })) {
+      setSelectedAllianceParties(selectedAllianceParties.filter(p => {
+        const pName = typeof p === 'string' ? p : (p.name || String(p));
+        return pName !== partyName;
+      }));
+    } else {
+      setSelectedAllianceParties([...selectedAllianceParties, party]);
+    }
   };
 
   const handleStatusChange = async (electionId, newStatus) => {
@@ -897,6 +1024,176 @@ const SeçimEkleSettings = () => {
                   Bu il için seçilecek toplam milletvekili sayısı. D'Hondt hesaplaması için gereklidir.
                 </p>
               </div>
+
+              {/* Baraj Yüzdesi */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Baraj Yüzdesi (%)
+                </label>
+                <input
+                  type="number"
+                  name="baraj_percent"
+                  value={formData.baraj_percent}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="7.0"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Seçim barajı yüzdesi (Türkiye için genellikle %7). İttifaklar ve partiler bu barajı geçmek zorundadır.
+                </p>
+              </div>
+
+              {/* İttifak Yönetimi - Sadece kaydedilmiş seçimler için */}
+              {editingElection && editingElection.id && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      İttifak Yönetimi
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAllianceForm(!showAllianceForm);
+                        setAllianceNameInput('');
+                        setSelectedAllianceParties([]);
+                        setEditingAlliance(null);
+                      }}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {showAllianceForm ? 'İptal' : '+ Yeni İttifak'}
+                    </button>
+                  </div>
+
+                  {/* Mevcut İttifaklar */}
+                  {alliances.length > 0 && (
+                    <div className="space-y-3 mb-4">
+                      {alliances.map((alliance) => (
+                        <div
+                          key={alliance.id}
+                          className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                {alliance.name}
+                              </h4>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {(alliance.party_ids || []).map((partyId, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded text-sm"
+                                  >
+                                    {typeof partyId === 'string' ? partyId : (partyId.name || String(partyId))}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAlliance(alliance.id)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors"
+                            >
+                              Sil
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* İttifak Oluşturma Formu */}
+                  {showAllianceForm && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                        Yeni İttifak Oluştur
+                      </h4>
+                      
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          İttifak Adı *
+                        </label>
+                        <input
+                          type="text"
+                          value={allianceNameInput}
+                          onChange={(e) => setAllianceNameInput(e.target.value)}
+                          placeholder="Örn: Cumhur İttifakı"
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                        />
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Partileri Seçin (En az 2 parti) *
+                        </label>
+                        <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-white dark:bg-gray-800">
+                          {formData.parties.length > 0 ? (
+                            formData.parties.map((party, idx) => {
+                              const partyName = typeof party === 'string' ? party : (party.name || String(party));
+                              const isSelected = selectedAllianceParties.some(p => {
+                                const pName = typeof p === 'string' ? p : (p.name || String(p));
+                                return pName === partyName;
+                              });
+                              
+                              // Bu parti zaten başka bir ittifakta mı?
+                              const isInOtherAlliance = alliances.some(a => {
+                                const partyIds = a.party_ids || [];
+                                return partyIds.some(pid => {
+                                  const pidName = typeof pid === 'string' ? pid : (pid.name || String(pid));
+                                  return pidName === partyName;
+                                });
+                              });
+                              
+                              return (
+                                <label
+                                  key={idx}
+                                  className={`flex items-center p-2 rounded cursor-pointer mb-1 ${
+                                    isSelected
+                                      ? 'bg-indigo-100 dark:bg-indigo-900'
+                                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                  } ${isInOtherAlliance ? 'opacity-50' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => togglePartyForAlliance(party)}
+                                    disabled={isInOtherAlliance}
+                                    className="mr-2"
+                                  />
+                                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                                    {partyName}
+                                    {isInOtherAlliance && (
+                                      <span className="ml-2 text-xs text-gray-500">(Başka ittifakta)</span>
+                                    )}
+                                  </span>
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                              Önce parti ekleyin
+                            </p>
+                          )}
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          Seçili: {selectedAllianceParties.length} parti
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleCreateAlliance}
+                        disabled={!allianceNameInput.trim() || selectedAllianceParties.length < 2}
+                        className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        İttifak Oluştur
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Bağımsız MV Adayları */}
               <div>
