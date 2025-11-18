@@ -1776,10 +1776,13 @@ const ElectionResultsPage = () => {
                         <ResponsiveContainer width="100%" height={Math.max(200, category.data.length * 40)}>
                           <BarChart
                             data={category.data
-                              .sort((a, b) => b.value - a.value)
+                              .filter(item => item && (item.value || item.value === 0)) // Filter out invalid items
+                              .sort((a, b) => (b.value || 0) - (a.value || 0))
                               .map(item => ({
                                 ...item,
-                                name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name) || 'Bilinmeyen')
+                                name: typeof item.name === 'string' 
+                                  ? item.name 
+                                  : (item.name?.name || String(item.name || '') || 'Bilinmeyen')
                               }))}
                             layout="vertical"
                             margin={{ top: 10, right: 20, left: 100, bottom: 10 }}
@@ -1796,6 +1799,12 @@ const ElectionResultsPage = () => {
                               width={90}
                               stroke="#6b7280"
                               tick={{ fill: '#6b7280', fontSize: 11 }}
+                              tickFormatter={(value) => {
+                                if (!value) return 'Bilinmeyen';
+                                return typeof value === 'string' 
+                                  ? value 
+                                  : (value?.name || String(value || '') || 'Bilinmeyen');
+                              }}
                             />
                             <Tooltip
                               contentStyle={{
@@ -1806,14 +1815,17 @@ const ElectionResultsPage = () => {
                                 padding: '12px'
                               }}
                               formatter={(value, name, props) => {
+                                if (!props || !props.payload) {
+                                  return [`${(value || 0).toLocaleString('tr-TR')} oy`, 'Bilinmeyen'];
+                                }
                                 const percentage = typeof props.payload.percentage === 'number' 
                                   ? props.payload.percentage 
                                   : parseFloat(props.payload.percentage || 0);
                                 const displayName = typeof props.payload.name === 'string' 
                                   ? props.payload.name 
-                                  : (props.payload.name?.name || String(props.payload.name) || 'Bilinmeyen');
+                                  : (props.payload.name?.name || String(props.payload.name || '') || 'Bilinmeyen');
                                 return [
-                                  `${value.toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
+                                  `${(value || 0).toLocaleString('tr-TR')} oy (%${percentage.toFixed(1)})`,
                                   displayName
                                 ];
                               }}
@@ -1825,9 +1837,10 @@ const ElectionResultsPage = () => {
                               label={{
                                 position: 'right',
                                 formatter: (value, entry) => {
+                                  if (!entry) return 'Bilinmeyen';
                                   const displayName = typeof entry.name === 'string' 
                                     ? entry.name 
-                                    : (entry.name?.name || String(entry.name) || 'Bilinmeyen');
+                                    : (entry.name?.name || String(entry.name || '') || 'Bilinmeyen');
                                   return displayName;
                                 },
                                 style: { fill: '#374151', fontSize: '11px', fontWeight: '500' }
