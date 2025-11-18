@@ -145,17 +145,37 @@ class ArchiveController {
         return res.status(404).json({ message: 'Arşivlenmiş üye bulunamadı' });
       }
       
-      // Delete associated member_user first (if exists)
+      // Delete associated member_user first (if exists) - including Firebase Auth user
       try {
         const memberUser = await MemberUser.getUserByMemberId(parseInt(id));
         if (memberUser) {
+          // Firebase Auth kullanıcısını sil (eğer varsa)
+          if (memberUser.auth_uid || memberUser.authUid) {
+            const authUid = memberUser.auth_uid || memberUser.authUid;
+            try {
+              const { getAdmin } = require('../config/firebaseAdmin');
+              const firebaseAdmin = getAdmin();
+              if (firebaseAdmin) {
+                await firebaseAdmin.auth().deleteUser(authUid);
+                console.log(`✅ Firebase Auth user deleted for member ID ${id} (authUid: ${authUid})`);
+              }
+            } catch (authError) {
+              // Kullanıcı zaten yoksa veya başka bir hata varsa, devam et
+              if (authError.code !== 'auth/user-not-found') {
+                console.error(`⚠️ Error deleting Firebase Auth user for member ID ${id}:`, authError.message);
+              } else {
+                console.log(`ℹ️ Firebase Auth user already deleted for member ID ${id}`);
+              }
+            }
+          }
+          
           await MemberUser.deleteUser(memberUser.id);
-          console.log(`Member user deleted for member ID ${id} (user ID: ${memberUser.id})`);
+          console.log(`✅ Member user deleted for member ID ${id} (user ID: ${memberUser.id})`);
         } else {
-          console.log(`No member user found for member ID ${id}`);
+          console.log(`ℹ️ No member user found for member ID ${id}`);
         }
       } catch (userError) {
-        console.error(`Error deleting member user for member ID ${id}:`, userError);
+        console.error(`❌ Error deleting member user for member ID ${id}:`, userError);
         // Continue with member deletion even if user deletion fails
       }
       
@@ -173,15 +193,32 @@ class ArchiveController {
         for (const user of usersByUsername) {
           if (user.member_id === parseInt(id) || !user.member_id) {
             try {
+              // Firebase Auth kullanıcısını sil (eğer varsa)
+              if (user.auth_uid || user.authUid) {
+                const authUid = user.auth_uid || user.authUid;
+                try {
+                  const { getAdmin } = require('../config/firebaseAdmin');
+                  const firebaseAdmin = getAdmin();
+                  if (firebaseAdmin) {
+                    await firebaseAdmin.auth().deleteUser(authUid);
+                    console.log(`✅ Firebase Auth user deleted (ID: ${user.id}, authUid: ${authUid})`);
+                  }
+                } catch (authError) {
+                  if (authError.code !== 'auth/user-not-found') {
+                    console.error(`⚠️ Error deleting Firebase Auth user ${user.id}:`, authError.message);
+                  }
+                }
+              }
+              
               await MemberUser.deleteUser(user.id);
-              console.log(`Additional member user deleted (ID: ${user.id}) by username for member ID ${id}`);
+              console.log(`✅ Additional member user deleted (ID: ${user.id}) by username for member ID ${id}`);
             } catch (err) {
-              console.error(`Error deleting additional member user ${user.id}:`, err);
+              console.error(`❌ Error deleting additional member user ${user.id}:`, err);
             }
           }
         }
       } catch (usernameError) {
-        console.error(`Error checking member users by username for member ID ${id}:`, usernameError);
+        console.error(`❌ Error checking member users by username for member ID ${id}:`, usernameError);
         // Continue even if this fails
       }
       

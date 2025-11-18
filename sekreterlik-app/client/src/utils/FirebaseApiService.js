@@ -2990,17 +2990,24 @@ class FirebaseApiService {
               userType: memberUser.userType
             });
             
-            // Firebase Auth'dan da sil (eğer authUid varsa)
-            // Not: Client-side'dan Firebase Auth kullanıcısını direkt silemeyiz
-            // Bu işlem için backend/Cloud Functions gerekir
-            // Ancak member_users silindiğinde, login sırasında kontrol edilip Firebase Auth'daki kullanıcı da geçersiz sayılır
+            // Firebase Auth'dan da sil (eğer authUid varsa) - Backend üzerinden
             if (memberUser.authUid) {
               try {
-                // Firebase Auth kullanıcısını silmeyi dene
-                // Not: Bu işlem client-side'dan tam olarak yapılamaz
-                // Ancak member_users silindiğinde, login sırasında kontrol edilip Firebase Auth'daki kullanıcı da geçersiz sayılır
-                await this.deleteFirebaseAuthUser(memberUser.authUid);
-                console.log('✅ Firebase Auth user deletion attempted:', memberUser.authUid);
+                // Backend endpoint'ini kullanarak Firebase Auth kullanıcısını sil
+                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+                
+                if (response.ok) {
+                  console.log('✅ Firebase Auth user deleted via backend:', memberUser.authUid);
+                } else {
+                  const errorData = await response.json().catch(() => ({}));
+                  console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
+                }
               } catch (authError) {
                 console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
                 // Firestore'dan member_user silindiğinde, login sırasında kontrol edilip Firebase Auth'daki kullanıcı da geçersiz sayılır
@@ -5032,11 +5039,24 @@ class FirebaseApiService {
         return { success: false, message: 'Kullanıcı bulunamadı' };
       }
 
-      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa), sil
+      // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa), backend üzerinden sil
       if (memberUser.authUid) {
         try {
-          await this.deleteFirebaseAuthUser(memberUser.authUid);
-          console.log('✅ Firebase Auth user deletion attempted:', memberUser.authUid);
+          // Backend endpoint'ini kullanarak Firebase Auth kullanıcısını sil
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+          const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            console.log('✅ Firebase Auth user deleted via backend:', memberUser.authUid);
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
+          }
         } catch (authError) {
           console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
         }

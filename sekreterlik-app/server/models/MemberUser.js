@@ -33,6 +33,7 @@ class MemberUser {
           db.run(`ALTER TABLE member_users ADD COLUMN district_id INTEGER`, () => {});
           db.run(`ALTER TABLE member_users ADD COLUMN town_id INTEGER`, () => {});
           db.run(`ALTER TABLE member_users ADD COLUMN chairman_name TEXT`, () => {});
+          db.run(`ALTER TABLE member_users ADD COLUMN auth_uid TEXT`, () => {}); // Firebase Auth UID
           // Backfill NULL is_active values to 1 to ensure active logins
           db.run(`UPDATE member_users SET is_active = 1 WHERE is_active IS NULL`, () => {});
           resolve();

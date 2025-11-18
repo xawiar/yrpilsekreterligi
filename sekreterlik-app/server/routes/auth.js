@@ -974,4 +974,70 @@ router.post('/update-firebase-auth-user', async (req, res) => {
   }
 });
 
+// Delete Firebase Auth user endpoint (server-side, requires Firebase Admin SDK)
+router.delete('/firebase-auth-user/:authUid', async (req, res) => {
+  try {
+    const { authUid } = req.params;
+    
+    console.log('🗑️ Firebase Auth user deletion request received:', { authUid });
+    
+    if (!authUid) {
+      return res.status(400).json({
+        success: false,
+        message: 'authUid gerekli'
+      });
+    }
+    
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+    
+    if (!firebaseAdmin) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
+      });
+    }
+
+    try {
+      await firebaseAdmin.auth().deleteUser(authUid);
+      
+      console.log('✅ Firebase Auth user deleted successfully:', authUid);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Firebase Auth kullanıcısı silindi',
+        authUid: authUid
+      });
+    } catch (firebaseError) {
+      console.error('❌ Firebase Auth user deletion error:', {
+        code: firebaseError.code,
+        message: firebaseError.message,
+        authUid
+      });
+      
+      // Kullanıcı zaten yoksa, başarılı say
+      if (firebaseError.code === 'auth/user-not-found') {
+        console.log('ℹ️ User not found in Firebase Auth (already deleted):', authUid);
+        return res.status(200).json({
+          success: true,
+          message: 'Firebase Auth kullanıcısı zaten silinmiş',
+          authUid: authUid
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: `Firebase Auth kullanıcı silme hatası: ${firebaseError.message}`
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error deleting Firebase Auth user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
