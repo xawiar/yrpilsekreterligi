@@ -774,30 +774,25 @@ const MemberUsersSettings = () => {
       let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
       
       // Eğer VITE_API_BASE_URL set edilmişse ama /api ile bitmiyorsa, ekle
-      if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
-        if (API_BASE_URL.endsWith('/')) {
-          API_BASE_URL = API_BASE_URL + 'api';
-        } else {
+      if (API_BASE_URL) {
+        // Trailing slash'leri temizle
+        API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
+        // /api ile bitmiyorsa ekle
+        if (!API_BASE_URL.endsWith('/api')) {
           API_BASE_URL = API_BASE_URL + '/api';
         }
-      }
-      
-      if (!API_BASE_URL) {
+      } else {
+        // VITE_API_BASE_URL set edilmemişse, fallback kullan
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
           // Render.com'da backend URL'ini belirle
-          // Önce direkt sekreterlik-backend.onrender.com'u dene
           API_BASE_URL = 'https://sekreterlik-backend.onrender.com/api';
-          
-          // Eğer bu çalışmazsa, hostname'den türet
-          // const hostname = window.location.hostname;
-          // const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
-          // API_BASE_URL = `https://${backendHostname}/api`;
         } else {
           API_BASE_URL = 'http://localhost:5000/api';
         }
       }
       
       console.log('🔍 Backend URL:', API_BASE_URL);
+      console.log('🔍 VITE_API_BASE_URL env:', import.meta.env.VITE_API_BASE_URL);
       
       // Backend'i dene (5 saniye timeout)
       try {
@@ -1211,30 +1206,25 @@ const MemberUsersSettings = () => {
       let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
       
       // Eğer VITE_API_BASE_URL set edilmişse ama /api ile bitmiyorsa, ekle
-      if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
-        if (API_BASE_URL.endsWith('/')) {
-          API_BASE_URL = API_BASE_URL + 'api';
-        } else {
+      if (API_BASE_URL) {
+        // Trailing slash'leri temizle
+        API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
+        // /api ile bitmiyorsa ekle
+        if (!API_BASE_URL.endsWith('/api')) {
           API_BASE_URL = API_BASE_URL + '/api';
         }
-      }
-      
-      if (!API_BASE_URL) {
+      } else {
+        // VITE_API_BASE_URL set edilmemişse, fallback kullan
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
           // Render.com'da backend URL'ini belirle
-          // Önce direkt sekreterlik-backend.onrender.com'u dene
           API_BASE_URL = 'https://sekreterlik-backend.onrender.com/api';
-          
-          // Eğer bu çalışmazsa, hostname'den türet
-          // const hostname = window.location.hostname;
-          // const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
-          // API_BASE_URL = `https://${backendHostname}/api`;
         } else {
           API_BASE_URL = 'http://localhost:5000/api';
         }
       }
       
       console.log('🔍 Backend URL:', API_BASE_URL);
+      console.log('🔍 VITE_API_BASE_URL env:', import.meta.env.VITE_API_BASE_URL);
 
       // Health check'i kaldırdık - direkt cleanup endpoint'ini deneyeceğiz
       // Eğer backend çalışmıyorsa, cleanup endpoint'i zaten 404 dönecek
