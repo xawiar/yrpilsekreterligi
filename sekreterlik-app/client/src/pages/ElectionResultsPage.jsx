@@ -2202,11 +2202,11 @@ const ElectionResultsPage = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
-              </div>
               
-              {/* Toplam Meclis Koltukları */}
-              <div>
+                {/* Toplam Meclis Koltukları */}
+                <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Toplam Meclis Koltukları</h3>
                 <div className="space-y-4">
                   {provincialAssemblyResults.chartData.map((item, index) => {
