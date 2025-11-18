@@ -718,7 +718,11 @@ if (!USE_FIREBASE) {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES members (id) ON DELETE SET NULL
   )`);
-});
+  });
+  console.log('✅ SQLite database tables initialized');
+} else {
+  console.log('ℹ️ Skipping SQLite database initialization (USE_FIREBASE=true)');
+}
 
 // In-memory collections for faster access
 const collections = {
