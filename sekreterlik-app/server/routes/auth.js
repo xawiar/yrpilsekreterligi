@@ -1186,6 +1186,19 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
 router.post('/sync-member-users-with-auth', async (req, res) => {
   try {
     console.log('🔄 Sync member_users with Firebase Auth request received');
+    console.log('📥 Request headers:', req.headers);
+    console.log('📥 Request body:', req.body);
+    
+    // Response'un gönderildiğinden emin olmak için timeout ekle
+    res.setTimeout(300000, () => {
+      if (!res.headersSent) {
+        console.error('❌ Request timeout - response not sent');
+        return res.status(504).json({
+          success: false,
+          message: 'İstek zaman aşımına uğradı (5 dakika)'
+        });
+      }
+    });
     
     const { getAdmin } = require('../config/firebaseAdmin');
     const firebaseAdmin = getAdmin();
@@ -1197,6 +1210,8 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
         message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
       });
     }
+    
+    console.log('✅ Firebase Admin SDK initialized');
 
     const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
     const db = require('../config/database');
@@ -1468,7 +1483,7 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
       }
     }
     
-    return res.status(200).json({
+    const responseData = {
       success: true,
       message: `Senkronizasyon tamamlandı: ${results.created.length} oluşturuldu, ${results.deleted.length} silindi, ${results.updated.length} güncellendi`,
       results: {
@@ -1478,12 +1493,31 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
         errors: results.errors.length,
         details: results
       }
-    });
+    };
+    
+    console.log('✅ Sync completed, sending response:', JSON.stringify(responseData).substring(0, 200));
+    
+    // Response'un gönderildiğinden emin ol
+    if (res.headersSent) {
+      console.warn('⚠️ Response already sent, skipping');
+      return;
+    }
+    
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('❌ Error syncing member_users with Firebase Auth:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Response'un gönderildiğinden emin ol
+    if (res.headersSent) {
+      console.warn('⚠️ Response already sent, cannot send error');
+      return;
+    }
+    
     return res.status(500).json({
       success: false,
-      message: 'Sunucu hatası: ' + error.message
+      message: 'Sunucu hatası: ' + error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
