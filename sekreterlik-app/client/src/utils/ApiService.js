@@ -1651,6 +1651,88 @@ class ApiService {
     return response.json();
   }
 
+  // Alliance API
+  static async getAlliances(electionId) {
+    if (USE_FIREBASE) {
+      // Firebase için implementasyon gerekirse buraya eklenebilir
+      throw new Error('Alliance API is not yet implemented for Firebase');
+    }
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/alliances/election/${electionId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...this.getAuthHeaders()
+      }
+    });
+    return response.json();
+  }
+
+  static async getAlliance(id) {
+    if (USE_FIREBASE) {
+      throw new Error('Alliance API is not yet implemented for Firebase');
+    }
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/alliances/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...this.getAuthHeaders()
+      }
+    });
+    return response.json();
+  }
+
+  static async createAlliance(allianceData) {
+    if (USE_FIREBASE) {
+      throw new Error('Alliance API is not yet implemented for Firebase');
+    }
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/alliances`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...this.getAuthHeaders()
+      },
+      body: JSON.stringify(allianceData)
+    });
+    return response.json();
+  }
+
+  static async updateAlliance(id, allianceData) {
+    if (USE_FIREBASE) {
+      throw new Error('Alliance API is not yet implemented for Firebase');
+    }
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/alliances/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...this.getAuthHeaders()
+      },
+      body: JSON.stringify(allianceData)
+    });
+    return response.json();
+  }
+
+  static async deleteAlliance(id) {
+    if (USE_FIREBASE) {
+      throw new Error('Alliance API is not yet implemented for Firebase');
+    }
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/alliances/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...this.getAuthHeaders()
+      }
+    });
+    return response.json();
+  }
+
   static async createElection(electionData) {
     if (USE_FIREBASE) {
       return FirebaseApiService.createElection(electionData);

@@ -637,9 +637,28 @@ db.serialize(() => {
     mayor_candidates TEXT,
     provincial_assembly_parties TEXT,
     municipal_council_parties TEXT,
+    baraj_percent REAL DEFAULT 7.0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     closed_at DATETIME
+  )`);
+
+  // Add baraj_percent column if it doesn't exist (for existing databases)
+  db.run(`ALTER TABLE elections ADD COLUMN baraj_percent REAL DEFAULT 7.0`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding baraj_percent column:', err);
+    }
+  });
+
+  // Create alliances table
+  db.run(`CREATE TABLE IF NOT EXISTS alliances (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    election_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    party_ids TEXT, -- JSON array: ["Parti1", "Parti2"] or [1, 2] if using IDs
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (election_id) REFERENCES elections(id) ON DELETE CASCADE
   )`);
 
   // Create election_results table

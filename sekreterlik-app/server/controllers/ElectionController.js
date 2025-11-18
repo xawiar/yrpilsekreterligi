@@ -31,7 +31,8 @@ class ElectionController {
         mayor_parties: election.mayor_parties ? JSON.parse(election.mayor_parties) : [],
         mayor_candidates: election.mayor_candidates ? JSON.parse(election.mayor_candidates) : [],
         provincial_assembly_parties: election.provincial_assembly_parties ? JSON.parse(election.provincial_assembly_parties) : [],
-        municipal_council_parties: election.municipal_council_parties ? JSON.parse(election.municipal_council_parties) : []
+        municipal_council_parties: election.municipal_council_parties ? JSON.parse(election.municipal_council_parties) : [],
+        baraj_percent: election.baraj_percent || 7.0
       }));
 
       res.json(parsedElections);
@@ -60,7 +61,8 @@ class ElectionController {
         mayor_parties: election.mayor_parties ? JSON.parse(election.mayor_parties) : [],
         mayor_candidates: election.mayor_candidates ? JSON.parse(election.mayor_candidates) : [],
         provincial_assembly_parties: election.provincial_assembly_parties ? JSON.parse(election.provincial_assembly_parties) : [],
-        municipal_council_parties: election.municipal_council_parties ? JSON.parse(election.municipal_council_parties) : []
+        municipal_council_parties: election.municipal_council_parties ? JSON.parse(election.municipal_council_parties) : [],
+        baraj_percent: election.baraj_percent || 7.0
       };
       
       res.json(parsedElection);
@@ -90,8 +92,8 @@ class ElectionController {
       const sql = `INSERT INTO elections 
                    (name, date, type, status, voter_count, cb_candidates, parties, independent_cb_candidates, 
                     independent_mv_candidates, mayor_parties, mayor_candidates, provincial_assembly_parties, 
-                    municipal_council_parties) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    municipal_council_parties, baraj_percent) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       
       const params = [
         electionData.name,
@@ -106,7 +108,8 @@ class ElectionController {
         JSON.stringify(electionData.mayor_parties || []),
         JSON.stringify(electionData.mayor_candidates || []),
         JSON.stringify(electionData.provincial_assembly_parties || []),
-        JSON.stringify(electionData.municipal_council_parties || [])
+        JSON.stringify(electionData.municipal_council_parties || []),
+        electionData.baraj_percent || 7.0
       ];
 
       const result = await db.run(sql, params);
@@ -144,6 +147,7 @@ class ElectionController {
                        cb_candidates = ?, parties = ?, independent_cb_candidates = ?, 
                        independent_mv_candidates = ?, mayor_parties = ?, mayor_candidates = ?, 
                        provincial_assembly_parties = ?, municipal_council_parties = ?,
+                       baraj_percent = ?,
                        updated_at = CURRENT_TIMESTAMP,
                        closed_at = CASE WHEN ? = 'closed' AND status != 'closed' THEN CURRENT_TIMESTAMP ELSE closed_at END
                    WHERE id = ?`;
@@ -162,6 +166,7 @@ class ElectionController {
         JSON.stringify(electionData.mayor_candidates || []),
         JSON.stringify(electionData.provincial_assembly_parties || []),
         JSON.stringify(electionData.municipal_council_parties || []),
+        electionData.baraj_percent !== undefined ? electionData.baraj_percent : (oldElection.baraj_percent || 7.0),
         electionData.status || oldElection.status,
         id
       ];

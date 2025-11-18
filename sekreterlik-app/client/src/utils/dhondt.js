@@ -333,3 +333,258 @@ export const calculateProvincialAssemblySeats = (results, districtSeats) => {
   };
 };
 
+/**
+ * Baraj kontrolü - Parti veya ittifak barajı geçiyor mu?
+ * @param {number} votes - Parti veya ittifak oy sayısı
+ * @param {number} totalVotes - Toplam geçerli oy sayısı
+ * @param {number} thresholdPercent - Baraj yüzdesi (default 7.0)
+ * @returns {boolean} - Barajı geçiyor mu?
+ */
+export const applyThreshold = (votes, totalVotes, thresholdPercent = 7.0) => {
+  if (!totalVotes || totalVotes <= 0) return false;
+  const threshold = (totalVotes * thresholdPercent) / 100;
+  return votes >= threshold;
+};
+
+/**
+ * İttifak oylarını hesapla
+ * @param {Object} partyVotes - Parti isimleri ve oy sayıları: { 'Parti Adı': oySayısı }
+ * @param {Array} alliances - İttifaklar: [{id: 1, name: 'İttifak Adı', party_ids: ['Parti1', 'Parti2']}]
+ * @returns {Object} - İttifak ID'leri ve toplam oyları: { allianceId: toplamOy }
+ */
+export const computeAllianceVotes = (partyVotes, alliances = []) => {
+  const allianceVotes = {};
+  
+  alliances.forEach(alliance => {
+    const partyIds = alliance.party_ids || alliance.partyIds || [];
+    allianceVotes[alliance.id] = partyIds.reduce((sum, partyId) => {
+      // partyId parti ismi olabilir veya parti objesi olabilir
+      const partyName = typeof partyId === 'string' ? partyId : (partyId.name || String(partyId));
+      return sum + (parseInt(partyVotes[partyName]) || 0);
+    }, 0);
+  });
+  
+  return allianceVotes;
+};
+
+/**
+ * Parti ismine göre ittifak ID'sini bul
+ * @param {string} partyName - Parti ismi
+ * @param {Array} alliances - İttifaklar
+ * @returns {number|null} - İttifak ID veya null
+ */
+const getAllianceIdForParty = (partyName, alliances = []) => {
+  for (const alliance of alliances) {
+    const partyIds = alliance.party_ids || alliance.partyIds || [];
+    if (partyIds.some(pid => {
+      const pidName = typeof pid === 'string' ? pid : (pid.name || String(pid));
+      return pidName === partyName;
+    })) {
+      return alliance.id;
+    }
+  }
+  return null;
+};
+
+/**
+ * İttifaklı D'Hondt - 2 Aşamalı Hesaplama
+ * 
+ * Aşama 1: İttifaklar arası D'Hondt (ittifaklar + solo partiler)
+ * Aşama 2: İttifak içi D'Hondt (her ittifak kazandığı sandalyeleri içindeki partilere dağıtır)
+ * 
+ * @param {Object} partyVotes - Parti isimleri ve oy sayıları: { 'Parti Adı': oySayısı }
+ * @param {number} totalSeats - Toplam sandalye sayısı
+ * @param {Array} alliances - İttifaklar: [{id: 1, name: 'İttifak', party_ids: ['Parti1', 'Parti2']}]
+ * @param {number} thresholdPercent - Baraj yüzdesi (default 7.0)
+ * @param {Array} parties - Parti listesi (allianceId bilgisi için): [{name: 'Parti', allianceId: 1}]
+ * @returns {Object} - Detaylı sonuç: { distribution, allianceSeats, auditLog, chartData }
+ */
+export const calculateDHondtWithAlliances = (
+  partyVotes,
+  totalSeats,
+  alliances = [],
+  thresholdPercent = 7.0,
+  parties = []
+) => {
+  if (!partyVotes || typeof partyVotes !== 'object') {
+    return {
+      distribution: {},
+      allianceSeats: {},
+      auditLog: { error: 'Geçersiz parti oyları' },
+      chartData: [],
+      totalSeats
+    };
+  }
+
+  if (totalSeats <= 0 || !Number.isInteger(totalSeats)) {
+    return {
+      distribution: {},
+      allianceSeats: {},
+      auditLog: { error: 'Geçersiz sandalye sayısı' },
+      chartData: [],
+      totalSeats
+    };
+  }
+
+  // 1. Toplam geçerli oy hesapla
+  const totalVotes = Object.values(partyVotes).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+  
+  if (totalVotes <= 0) {
+    return {
+      distribution: {},
+      allianceSeats: {},
+      auditLog: { error: 'Toplam oy sıfır', totalVotes: 0 },
+      chartData: [],
+      totalSeats
+    };
+  }
+
+  // 2. İttifak oylarını hesapla
+  const allianceVotes = computeAllianceVotes(partyVotes, alliances);
+  
+  // 3. Baraj kontrolü - İttifaklar
+  const passedAlliances = alliances.filter(alliance => {
+    const votes = allianceVotes[alliance.id] || 0;
+    return applyThreshold(votes, totalVotes, thresholdPercent);
+  });
+  
+  // 4. Baraj kontrolü - Solo partiler (ittifakta olmayan partiler)
+  const soloParties = Object.entries(partyVotes)
+    .filter(([partyName, votes]) => {
+      // İttifakta olan partileri hariç tut
+      const allianceId = getAllianceIdForParty(partyName, alliances);
+      if (allianceId !== null) return false;
+      
+      // Baraj kontrolü
+      return applyThreshold(parseInt(votes) || 0, totalVotes, thresholdPercent);
+    })
+    .map(([partyName, votes]) => ({
+      name: partyName,
+      votes: parseInt(votes) || 0
+    }));
+
+  // 5. Aşama 1: İttifaklar arası D'Hondt
+  const firstStageEntities = {};
+  
+  // İttifakları ekle
+  passedAlliances.forEach(alliance => {
+    firstStageEntities[`alliance_${alliance.id}`] = allianceVotes[alliance.id] || 0;
+  });
+  
+  // Solo partileri ekle
+  soloParties.forEach(party => {
+    firstStageEntities[party.name] = party.votes;
+  });
+
+  // İlk aşama D'Hondt
+  const firstStageResult = calculateDHondt(firstStageEntities, totalSeats);
+  
+  // 6. Aşama 2: İttifak içi D'Hondt
+  const finalPartySeats = {};
+  const allianceSeats = {};
+  
+  // İttifaklar için iç dağıtım
+  passedAlliances.forEach(alliance => {
+    const allianceSeatCount = firstStageResult[`alliance_${alliance.id}`] || 0;
+    allianceSeats[alliance.id] = allianceSeatCount;
+    
+    if (allianceSeatCount > 0) {
+      // İttifak içi parti oyları
+      const alliancePartyVotes = {};
+      const partyIds = alliance.party_ids || alliance.partyIds || [];
+      
+      partyIds.forEach(partyId => {
+        const partyName = typeof partyId === 'string' ? partyId : (partyId.name || String(partyId));
+        const votes = partyVotes[partyName] || 0;
+        if (votes > 0) {
+          alliancePartyVotes[partyName] = votes;
+        }
+      });
+      
+      // İttifak içi D'Hondt
+      if (Object.keys(alliancePartyVotes).length > 0) {
+        const internalDistribution = calculateDHondt(alliancePartyVotes, allianceSeatCount);
+        
+        Object.entries(internalDistribution).forEach(([party, seats]) => {
+          finalPartySeats[party] = (finalPartySeats[party] || 0) + seats;
+        });
+      }
+    }
+  });
+  
+  // Solo partiler için sandalye sayısını ekle
+  soloParties.forEach(party => {
+    const seats = firstStageResult[party.name] || 0;
+    if (seats > 0) {
+      finalPartySeats[party.name] = (finalPartySeats[party.name] || 0) + seats;
+    }
+  });
+
+  // 7. Chart data oluştur
+  const chartData = Object.entries(finalPartySeats)
+    .map(([party, seats]) => ({
+      party,
+      seats,
+      votes: partyVotes[party] || 0
+    }))
+    .sort((a, b) => b.seats - a.seats);
+
+  // 8. Audit log
+  const auditLog = {
+    totalVotes,
+    threshold: (totalVotes * thresholdPercent) / 100,
+    thresholdPercent,
+    passedAlliances: passedAlliances.map(a => ({ id: a.id, name: a.name, votes: allianceVotes[a.id] })),
+    soloParties: soloParties.map(p => ({ name: p.name, votes: p.votes })),
+    firstStage: firstStageResult,
+    allianceSeats,
+    finalDistribution: finalPartySeats
+  };
+
+  return {
+    distribution: finalPartySeats,
+    allianceSeats,
+    auditLog,
+    chartData,
+    totalSeats
+  };
+};
+
+/**
+ * İttifaklı D'Hondt - Detaylı versiyon (calculateDHondtDetailed benzeri)
+ * @param {Object} partyVotes - Parti oyları
+ * @param {number} totalSeats - Toplam sandalye
+ * @param {Array} alliances - İttifaklar
+ * @param {number} thresholdPercent - Baraj yüzdesi
+ * @param {Array} parties - Parti listesi
+ * @returns {Object} - Detaylı sonuç
+ */
+export const calculateDHondtWithAlliancesDetailed = (
+  partyVotes,
+  totalSeats,
+  alliances = [],
+  thresholdPercent = 7.0,
+  parties = []
+) => {
+  const result = calculateDHondtWithAlliances(
+    partyVotes,
+    totalSeats,
+    alliances,
+    thresholdPercent,
+    parties
+  );
+
+  // Detaylı bilgi ekle
+  const details = Object.entries(result.distribution).map(([party, seats]) => ({
+    party,
+    votes: partyVotes[party] || 0,
+    seats,
+    allianceId: getAllianceIdForParty(party, alliances)
+  }));
+
+  return {
+    ...result,
+    details
+  };
+};
+
