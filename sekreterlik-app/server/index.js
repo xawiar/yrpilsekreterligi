@@ -130,61 +130,9 @@ const PORT = process.env.PORT || 5000;
 
 console.log('Starting server setup');
 
-// Initialize database models and MongoDB
-const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
-const Notification = require('./models/Notification');
-const ApiKey = require('./models/ApiKey');
-Promise.all([
-  Admin.init(),
-  MemberUser.init(),
-  PersonalDocument.init(),
-  PositionPermission.init(),
-  MemberDashboardAnalytics.init(),
-  Notification.init(),
-  ApiKey.initTable(),
-  connectToMongoDB()
-]).then(() => {
-  console.log('All models and MongoDB initialized');
-  
-  // Delete expired notifications on startup and then every 24 hours
-  Notification.deleteExpired().catch(err => {
-    console.warn('Error deleting expired notifications on startup:', err);
-  });
-  
-  setInterval(() => {
-    Notification.deleteExpired().catch(err => {
-      console.warn('Error deleting expired notifications:', err);
-    });
-  }, 24 * 60 * 60 * 1000); // Every 24 hours
-
-  // Scheduled notification service for planned meetings and events
-  const ScheduledNotificationService = require('./services/scheduledNotificationService');
-  
-  // Check scheduled notifications on startup
-  ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
-    console.warn('Error checking scheduled notifications on startup:', err);
-  });
-  
-  // Check scheduled notifications every 5 minutes
-  setInterval(() => {
-    ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
-      console.warn('Error checking scheduled notifications:', err);
-    });
-  }, 5 * 60 * 1000); // Every 5 minutes
-}).catch((err) => {
-  console.error('Error initializing models:', err);
-});
-
-// Middleware
-// Sentry init (optional)
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
-    tracesSampleRate: 0.1,
-  });
-  app.use(Sentry.Handlers.requestHandler());
-}
+// ============================================
+// CORS MIDDLEWARE - EN ÜSTTE (TÜM MIDDLEWARE'LERDEN ÖNCE)
+// ============================================
 // CORS - allow only known dev origins by default, fallback to * if not matched
 const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const defaultOrigins = [
@@ -310,6 +258,62 @@ app.options('*', (req, res) => {
   }
   res.status(200).end();
 });
+
+// Initialize database models and MongoDB
+const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
+const Notification = require('./models/Notification');
+const ApiKey = require('./models/ApiKey');
+Promise.all([
+  Admin.init(),
+  MemberUser.init(),
+  PersonalDocument.init(),
+  PositionPermission.init(),
+  MemberDashboardAnalytics.init(),
+  Notification.init(),
+  ApiKey.initTable(),
+  connectToMongoDB()
+]).then(() => {
+  console.log('All models and MongoDB initialized');
+  
+  // Delete expired notifications on startup and then every 24 hours
+  Notification.deleteExpired().catch(err => {
+    console.warn('Error deleting expired notifications on startup:', err);
+  });
+  
+  setInterval(() => {
+    Notification.deleteExpired().catch(err => {
+      console.warn('Error deleting expired notifications:', err);
+    });
+  }, 24 * 60 * 60 * 1000); // Every 24 hours
+
+  // Scheduled notification service for planned meetings and events
+  const ScheduledNotificationService = require('./services/scheduledNotificationService');
+  
+  // Check scheduled notifications on startup
+  ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
+    console.warn('Error checking scheduled notifications on startup:', err);
+  });
+  
+  // Check scheduled notifications every 5 minutes
+  setInterval(() => {
+    ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
+      console.warn('Error checking scheduled notifications:', err);
+    });
+  }, 5 * 60 * 1000); // Every 5 minutes
+}).catch((err) => {
+  console.error('Error initializing models:', err);
+});
+
+// Middleware
+// Sentry init (optional) - CORS'tan SONRA
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.1,
+  });
+  app.use(Sentry.Handlers.requestHandler());
+}
 
 // Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
 app.use(helmet({
