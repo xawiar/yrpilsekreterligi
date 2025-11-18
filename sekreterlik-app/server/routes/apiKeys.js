@@ -1,11 +1,12 @@
 const express = require('express');
 const ApiKeyController = require('../controllers/ApiKeyController');
-const { authenticateAdmin } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 // All routes require admin authentication
-router.use(authenticateAdmin);
+router.use(authenticateToken);
+router.use(requireAdmin);
 
 // Create new API key
 router.post('/', ApiKeyController.create);
