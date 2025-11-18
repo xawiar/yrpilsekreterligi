@@ -753,7 +753,7 @@ const MemberUsersSettings = () => {
 
   // Üye kullanıcılarını Firebase Auth'a kaydet
   const handleSyncToFirebaseAuth = async () => {
-    if (!window.confirm('Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Auth\'da olan ama Firestore\'da olmayan kullanıcıları siler\n- Email ve displayName bilgilerini günceller\n\nDevam etmek istiyor musunuz?')) {
+    if (!window.confirm('Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Email ve displayName bilgilerini günceller\n\nNot: Firebase Auth\'dan kullanıcı silme işlemi backend servisi gerektirir. Bu işlem sadece kullanıcı oluşturma ve güncelleme yapar.\n\nDevam etmek istiyor musunuz?')) {
       return;
     }
 
@@ -762,95 +762,192 @@ const MemberUsersSettings = () => {
       setMessage('');
       setSyncProgress({ current: 0, total: 0 });
 
-      // Backend endpoint'ini kullan
-      // ApiService.js'deki gibi aynı mantıkla URL belirle
+      // Önce backend'i dene
+      let useBackend = false;
       let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
       
       if (!API_BASE_URL) {
-        // Production'da mevcut hostname'i kullanarak backend URL'ini belirle
         if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-          // Render.com'da backend servisi genellikle farklı bir URL'de
-          // Backend servis adı: sekreterlik-backend
-          // Frontend: yrpilsekreterligi.onrender.com
-          // Backend: sekreterlik-backend.onrender.com (veya benzer)
           const hostname = window.location.hostname;
-          // Frontend hostname'inden backend hostname'ini tahmin et
-          // Eğer frontend 'yrpilsekreterligi.onrender.com' ise, backend 'sekreterlik-backend.onrender.com' olabilir
           const backendHostname = hostname.replace('yrpilsekreterligi', 'sekreterlik-backend');
           API_BASE_URL = `https://${backendHostname}/api`;
-          
-          // Alternatif: Eğer backend aynı domain'de ise
-          // API_BASE_URL = `https://${hostname}/api`;
         } else {
-          // Development
           API_BASE_URL = 'http://localhost:5000/api';
         }
       }
       
-      console.log('🔄 Syncing with API:', API_BASE_URL, {
-        hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
-        env: import.meta.env.VITE_API_BASE_URL,
-        mode: import.meta.env.MODE
-      });
-      
-      const response = await fetch(`${API_BASE_URL}/auth/sync-member-users-with-auth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('📥 Response status:', response.status, response.statusText);
-      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
-
-      // Response body'yi text olarak oku (JSON parse hatası için)
-      const responseText = await response.text();
-      console.log('📥 Response text:', responseText.substring(0, 500)); // İlk 500 karakter
-
-      if (!response.ok) {
-        // Hata durumunda
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          // JSON parse edilemezse, text'i kullan
-          if (responseText) {
-            errorMessage = responseText.substring(0, 200);
+      // Backend'i dene (5 saniye timeout)
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(`${API_BASE_URL}/auth/sync-member-users-with-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const responseText = await response.text();
+          if (responseText && responseText.trim() !== '') {
+            const result = JSON.parse(responseText);
+            setMessage(result.message || 'Senkronizasyon tamamlandı (Backend)');
+            setMessageType('success');
+            
+            if (result.results) {
+              const details = `Oluşturulan: ${result.results.created}\nSilinen: ${result.results.deleted}\nGüncellenen: ${result.results.updated}\nHata: ${result.results.errors}`;
+              if (result.results.errors > 0) {
+                setMessageType('warning');
+                setMessage(`${result.message}\n\n${details}`);
+              }
+            }
+            
+            await fetchMemberUsers();
+            return; // Backend başarılı, çık
           }
         }
-        throw new Error(errorMessage);
+      } catch (backendError) {
+        console.warn('⚠️ Backend servisi kullanılamıyor, client-side senkronizasyon kullanılıyor:', backendError.message);
       }
 
-      // Başarılı response
-      if (!responseText || responseText.trim() === '') {
-        throw new Error('Backend\'den boş yanıt alındı');
-      }
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('❌ JSON parse error:', parseError);
-        console.error('Response text:', responseText);
-        throw new Error(`Backend yanıtı geçersiz JSON: ${parseError.message}`);
-      }
-
-      setMessage(result.message || 'Senkronizasyon tamamlandı');
-      setMessageType('success');
+      // Backend başarısız, client-side senkronizasyon kullan
+      console.log('🔄 Using client-side synchronization...');
       
-      // Detayları göster
-      if (result.results) {
-        const details = `Oluşturulan: ${result.results.created}\nSilinen: ${result.results.deleted}\nGüncellenen: ${result.results.updated}\nHata: ${result.results.errors}`;
-        console.log('✅ Senkronizasyon detayları:', result.results.details);
-        if (result.results.errors > 0) {
-          setMessageType('warning');
-          setMessage(`${result.message}\n\n${details}`);
+      // Mevcut admin kullanıcısını koru
+      const currentUser = auth.currentUser;
+      const currentUserEmail = currentUser ? currentUser.email : null;
+      const currentUserUid = currentUser ? currentUser.uid : null;
+      
+      // Admin bilgilerini al (Firestore'dan)
+      let adminEmail = 'admin@ilsekreterlik.local';
+      let adminPassword = 'admin123';
+      try {
+        const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+        const adminDoc = await FirebaseService.getById(FirebaseApiService.COLLECTIONS.ADMIN, 'main');
+        if (adminDoc && adminDoc.email) {
+          adminEmail = adminDoc.email;
+        }
+      } catch (error) {
+        console.warn('Admin bilgileri alınamadı, varsayılan kullanılıyor');
+      }
+      
+      // Tüm üye kullanıcılarını al
+      const allMemberUsers = memberUsers.filter(user => user.isActive !== false);
+      setSyncProgress({ current: 0, total: allMemberUsers.length });
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
+      for (let i = 0; i < allMemberUsers.length; i++) {
+        const user = allMemberUsers[i];
+        setSyncProgress({ current: i + 1, total: allMemberUsers.length });
+        
+        try {
+          // Şifreyi decrypt et
+          let password = user.password || '';
+          if (password && typeof password === 'string' && password.startsWith('U2FsdGVkX1')) {
+            password = decryptData(password);
+          }
+          
+          // Şifreyi normalize et (sadece rakamlar)
+          password = (password || '').toString().replace(/\D/g, '');
+          
+          if (!password) {
+            errors.push(`${user.username}: Şifre bulunamadı`);
+            errorCount++;
+            continue;
+          }
+          
+          // Firebase Auth minimum 6 karakter şifre ister
+          if (password.length < 6) {
+            password = password.padStart(6, '0');
+          }
+          
+          // Email formatına çevir
+          const email = user.username.includes('@') ? user.username : `${user.username}@ilsekreterlik.local`;
+          
+          // Eğer zaten authUid varsa, kullanıcı zaten Firebase Auth'da var
+          if (user.authUid) {
+            console.log(`ℹ️ User ${user.username} already has authUid: ${user.authUid}`);
+            successCount++;
+            continue;
+          }
+          
+          // Firebase Auth'da kullanıcı oluştur
+          try {
+            const authUser = await createUserWithEmailAndPassword(auth, email, password);
+            console.log(`✅ Firebase Auth user created: ${user.username} -> ${authUser.user.uid}`);
+            
+            // Firestore'da authUid'yi güncelle
+            const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+            await FirebaseService.update(FirebaseApiService.COLLECTIONS.MEMBER_USERS, user.id, {
+              authUid: authUser.user.uid
+            }, false);
+            
+            successCount++;
+            
+            // Admin kullanıcısını geri yükle (eğer farklıysa)
+            if (currentUserUid && currentUserUid !== authUser.user.uid && currentUserEmail === adminEmail) {
+              try {
+                await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+                console.log('✅ Admin user re-authenticated');
+              } catch (signInError) {
+                console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
+                errors.push(`Admin kullanıcısı tekrar giriş yapılamadı: ${signInError.message}`);
+              }
+            }
+          } catch (authError) {
+            if (authError.code === 'auth/email-already-in-use') {
+              console.warn(`⚠️ Email already in use: ${email}`);
+              successCount++;
+            } else {
+              const errorMsg = `${user.username}: ${authError.code || 'Unknown error'} - ${authError.message || 'Firebase Auth error'}`;
+              errors.push(errorMsg);
+              errorCount++;
+              console.error(`❌ Error creating Firebase Auth user for ${user.username}:`, authError);
+            }
+          }
+        } catch (error) {
+          errors.push(`${user.username}: ${error.message}`);
+          errorCount++;
+          console.error(`❌ Error processing user ${user.username}:`, error);
         }
       }
       
-      // Listeyi yenile
+      // Tüm kullanıcılar oluşturulduktan sonra admin kullanıcısını tekrar sign-in et
+      if (currentUserEmail === adminEmail) {
+        try {
+          await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+          console.log('✅ Admin user re-authenticated after all users created');
+        } catch (signInError) {
+          console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
+        }
+      }
+      
+      // Sonuç mesajı
+      let message = `Firebase Auth'a aktarım tamamlandı! (Client-side)\n`;
+      message += `• Başarılı: ${successCount} kullanıcı\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount} kullanıcı\n`;
+        message += `\nHatalar:\n${errors.slice(0, 10).join('\n')}`;
+        if (errors.length > 10) {
+          message += `\n... ve ${errors.length - 10} hata daha`;
+        }
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      
+      // Kullanıcı listesini yenile
       await fetchMemberUsers();
+      
     } catch (error) {
       console.error('Error syncing to Firebase Auth:', error);
       setMessage('Senkronizasyon sırasında hata oluştu: ' + error.message);
