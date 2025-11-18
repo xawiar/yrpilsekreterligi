@@ -19,6 +19,29 @@ class NeighborhoodController {
     }
   }
 
+  // Get neighborhood by ID
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      const neighborhood = await db.get(`
+        SELECT n.*, d.name as district_name, t.name as town_name 
+        FROM neighborhoods n 
+        LEFT JOIN districts d ON n.district_id = d.id 
+        LEFT JOIN towns t ON n.town_id = t.id 
+        WHERE n.id = ?
+      `, [parseInt(id)]);
+      
+      if (!neighborhood) {
+        return res.status(404).json({ message: 'Mahalle bulunamadı' });
+      }
+      
+      res.json(neighborhood);
+    } catch (error) {
+      console.error('Error getting neighborhood by ID:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Get neighborhoods by district
   static async getByDistrict(req, res) {
     try {

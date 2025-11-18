@@ -12,6 +12,23 @@ class STKController {
     }
   }
 
+  // Get STK by ID
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      const stk = await db.get('SELECT * FROM stks WHERE id = ?', [parseInt(id)]);
+      
+      if (!stk) {
+        return res.status(404).json({ message: 'STK bulunamadı' });
+      }
+      
+      res.json(stk);
+    } catch (error) {
+      console.error('Error getting STK by ID:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Create new STK
   static async create(req, res) {
     try {

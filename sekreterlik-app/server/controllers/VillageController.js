@@ -19,6 +19,29 @@ class VillageController {
     }
   }
 
+  // Get village by ID
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      const village = await db.get(`
+        SELECT v.*, d.name as district_name, t.name as town_name 
+        FROM villages v 
+        LEFT JOIN districts d ON v.district_id = d.id 
+        LEFT JOIN towns t ON v.town_id = t.id 
+        WHERE v.id = ?
+      `, [parseInt(id)]);
+      
+      if (!village) {
+        return res.status(404).json({ message: 'Köy bulunamadı' });
+      }
+      
+      res.json(village);
+    } catch (error) {
+      console.error('Error getting village by ID:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Get villages by district
   static async getByDistrict(req, res) {
     try {

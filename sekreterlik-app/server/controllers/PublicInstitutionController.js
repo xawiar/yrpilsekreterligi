@@ -12,6 +12,23 @@ class PublicInstitutionController {
     }
   }
 
+  // Get Public Institution by ID
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      const publicInstitution = await db.get('SELECT * FROM public_institutions WHERE id = ?', [parseInt(id)]);
+      
+      if (!publicInstitution) {
+        return res.status(404).json({ message: 'Kamu kurumu bulunamadı' });
+      }
+      
+      res.json(publicInstitution);
+    } catch (error) {
+      console.error('Error getting Public Institution by ID:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Create new Public Institution
   static async create(req, res) {
     try {

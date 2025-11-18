@@ -24,6 +24,35 @@ class MosqueController {
     }
   }
 
+  // Get mosque by ID
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      const mosque = await db.get(`
+        SELECT m.*, 
+               d.name as district_name,
+               t.name as town_name,
+               n.name as neighborhood_name,
+               v.name as village_name
+        FROM mosques m 
+        LEFT JOIN districts d ON m.district_id = d.id 
+        LEFT JOIN towns t ON m.town_id = t.id 
+        LEFT JOIN neighborhoods n ON m.neighborhood_id = n.id 
+        LEFT JOIN villages v ON m.village_id = v.id 
+        WHERE m.id = ?
+      `, [parseInt(id)]);
+      
+      if (!mosque) {
+        return res.status(404).json({ message: 'Cami bulunamadı' });
+      }
+      
+      res.json(mosque);
+    } catch (error) {
+      console.error('Error getting mosque by ID:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Get mosques by district
   static async getByDistrict(req, res) {
     try {

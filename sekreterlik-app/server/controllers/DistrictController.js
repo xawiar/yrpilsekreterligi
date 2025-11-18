@@ -15,6 +15,23 @@ class DistrictController {
     }
   }
 
+  // Get district by ID
+  static async getById(req, res) {
+    try {
+      const { id } = req.params;
+      const district = await db.get('SELECT * FROM districts WHERE id = ?', [parseInt(id)]);
+      
+      if (!district) {
+        return res.status(404).json({ message: 'İlçe bulunamadı' });
+      }
+      
+      res.json(district);
+    } catch (error) {
+      console.error('Error getting district by ID:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
   // Create new district
   static async create(req, res) {
     try {
