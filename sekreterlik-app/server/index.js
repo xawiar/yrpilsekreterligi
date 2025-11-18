@@ -178,8 +178,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
 }));
 
-// Preflight için explicit handler
-app.options('*', cors());
+// Preflight için explicit handler - Express'te wildcard desteklenmediği için tüm route'lar için çalışır
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.status(200).end();
+  }
+  res.status(200).end();
+});
 
 // Initialize database models and MongoDB
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
