@@ -1118,10 +1118,14 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
     
     // Firebase Auth'daki tüm kullanıcıları al
     let allAuthUsers = [];
-    let nextPageToken = null;
+    let nextPageToken = undefined;
     
     do {
-      const listUsersResult = await firebaseAdmin.auth().listUsers(1000, nextPageToken);
+      // listUsers ilk çağrıda pageToken parametresi olmamalı veya undefined olmalı
+      const listUsersResult = nextPageToken 
+        ? await firebaseAdmin.auth().listUsers(1000, nextPageToken)
+        : await firebaseAdmin.auth().listUsers(1000);
+      
       allAuthUsers = allAuthUsers.concat(listUsersResult.users);
       nextPageToken = listUsersResult.pageToken;
     } while (nextPageToken);
@@ -1279,10 +1283,14 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
     
     // Get all Firebase Auth users
     let allAuthUsers = [];
-    let nextPageToken = null;
+    let nextPageToken = undefined;
     
     do {
-      const listUsersResult = await firebaseAdmin.auth().listUsers(1000, nextPageToken);
+      // listUsers ilk çağrıda pageToken parametresi olmamalı veya undefined olmalı
+      const listUsersResult = nextPageToken 
+        ? await firebaseAdmin.auth().listUsers(1000, nextPageToken)
+        : await firebaseAdmin.auth().listUsers(1000);
+      
       allAuthUsers = allAuthUsers.concat(listUsersResult.users);
       nextPageToken = listUsersResult.pageToken;
     } while (nextPageToken);
