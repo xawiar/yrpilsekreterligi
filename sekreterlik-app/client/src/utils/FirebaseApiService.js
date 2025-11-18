@@ -4466,11 +4466,102 @@ class FirebaseApiService {
 
   static async deleteBallotBoxObserver(id) {
     try {
+      // Önce müşahit bilgilerini al
+      const observer = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOX_OBSERVERS, id);
+      
+      if (!observer) {
+        throw new Error('Müşahit bulunamadı');
+      }
+      
+      // Müşahite ait member_user kayıtlarını bul (userType='musahit' ve observerId ile)
+      try {
+        // observerId ile eşleşen member_user kayıtlarını bul
+        const memberUsers = await FirebaseService.findByField(
+          this.COLLECTIONS.MEMBER_USERS,
+          'observerId',
+          id
+        );
+        
+        // Username ile de kontrol et (observerId yoksa)
+        let memberUsersByUsername = [];
+        if (!memberUsers || memberUsers.length === 0) {
+          // TC'yi decrypt et
+          let tc = observer.tc || '';
+          try {
+            if (tc && tc.startsWith('U2FsdGVkX1')) {
+              const { decryptData } = await import('../utils/crypto');
+              tc = decryptData(tc);
+            }
+          } catch (e) {
+            console.error('TC decrypt hatası:', e);
+          }
+          
+          // Sandık numarasını bul (username olarak kullanılıyor)
+          let username = tc; // Varsayılan olarak TC
+          if (observer.ballot_box_id) {
+            const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, observer.ballot_box_id);
+            if (ballotBox && ballotBox.ballot_number) {
+              username = String(ballotBox.ballot_number);
+            }
+          }
+          
+          // Username ile eşleşen member_user kayıtlarını bul
+          const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
+          memberUsersByUsername = (allMemberUsers || []).filter(u => 
+            u.userType === 'musahit' && u.username === username
+          );
+        }
+        
+        // Tüm müşahit kullanıcılarını birleştir
+        const allMusahitUsers = [
+          ...(memberUsers || []),
+          ...memberUsersByUsername
+        ];
+        
+        // Her kullanıcı için Firebase Auth kullanıcısını sil ve member_user'ı sil
+        for (const memberUser of allMusahitUsers) {
+          try {
+            // Firebase Auth kullanıcısını sil (eğer varsa) - Backend üzerinden
+            if (memberUser.authUid) {
+              try {
+                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+                
+                if (response.ok) {
+                  console.log('✅ Firebase Auth user deleted via backend for observer:', memberUser.authUid);
+                } else {
+                  const errorData = await response.json().catch(() => ({}));
+                  console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
+                }
+              } catch (authError) {
+                console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
+              }
+            }
+            
+            // Firestore'dan member_user'ı sil
+            await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, memberUser.id);
+            console.log('✅ Member user deleted from Firestore for observer:', memberUser.id);
+          } catch (userError) {
+            console.error('❌ Error deleting member user for observer:', userError);
+            // Devam et, diğer kullanıcıları da silmeyi dene
+          }
+        }
+      } catch (userError) {
+        console.error('❌ Error deleting member users for observer:', userError);
+        // Devam et, müşahit silme işlemini tamamla
+      }
+      
+      // Müşahiti sil
       await FirebaseService.delete(this.COLLECTIONS.BALLOT_BOX_OBSERVERS, id);
       return { success: true, message: 'Sandık gözlemcisi silindi' };
     } catch (error) {
       console.error('Delete ballot box observer error:', error);
-      throw new Error('Sandık gözlemcisi silinirken hata oluştu');
+      throw new Error('Sandık gözlemcisi silinirken hata oluştu: ' + error.message);
     }
   }
 

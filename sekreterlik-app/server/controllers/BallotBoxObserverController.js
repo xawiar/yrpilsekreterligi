@@ -322,6 +322,72 @@ class BallotBoxObserverController {
     try {
       const { id } = req.params;
       
+      // Önce müşahit bilgilerini al (Firebase Auth kullanıcısını silmek için)
+      const observer = await db.get('SELECT * FROM ballot_box_observers WHERE id = ?', [id]);
+      
+      if (!observer) {
+        return res.status(404).json({ message: 'Müşahit bulunamadı' });
+      }
+      
+      // Müşahite ait member_user kayıtlarını bul ve sil (userType='musahit' ve observerId ile)
+      // SQLite'da observerId kolonu yok, bu yüzden username ile eşleştirme yapacağız
+      try {
+        // TC'yi decrypt et
+        const tc = decryptField(observer.tc) || observer.tc;
+        
+        // Sandık numarasını bul (username olarak kullanılıyor)
+        let username = tc; // Varsayılan olarak TC
+        if (observer.ballot_box_id) {
+          const ballotBox = await db.get('SELECT * FROM ballot_boxes WHERE id = ?', [observer.ballot_box_id]);
+          if (ballotBox && ballotBox.ballot_number) {
+            username = String(ballotBox.ballot_number);
+          }
+        }
+        
+        // Username ile eşleşen member_user kayıtlarını bul
+        const usersByUsername = await new Promise((resolve, reject) => {
+          db.all('SELECT * FROM member_users WHERE username = ?', [username], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        });
+        
+        // Her kullanıcı için Firebase Auth kullanıcısını sil ve member_user'ı sil
+        for (const user of usersByUsername) {
+          try {
+            // Firebase Auth kullanıcısını sil (eğer varsa)
+            if (user.auth_uid || user.authUid) {
+              const authUid = user.auth_uid || user.authUid;
+              try {
+                const { getAdmin } = require('../config/firebaseAdmin');
+                const firebaseAdmin = getAdmin();
+                if (firebaseAdmin) {
+                  await firebaseAdmin.auth().deleteUser(authUid);
+                  console.log(`✅ Firebase Auth user deleted for observer ID ${id} (authUid: ${authUid})`);
+                }
+              } catch (authError) {
+                if (authError.code !== 'auth/user-not-found') {
+                  console.error(`⚠️ Error deleting Firebase Auth user for observer ID ${id}:`, authError.message);
+                } else {
+                  console.log(`ℹ️ Firebase Auth user already deleted for observer ID ${id}`);
+                }
+              }
+            }
+            
+            // member_user'ı sil
+            await MemberUser.deleteUser(user.id);
+            console.log(`✅ Member user deleted for observer ID ${id} (user ID: ${user.id}, username: ${username})`);
+          } catch (userError) {
+            console.error(`❌ Error deleting member user ${user.id} for observer ID ${id}:`, userError);
+            // Devam et, diğer kullanıcıları da silmeyi dene
+          }
+        }
+      } catch (userError) {
+        console.error(`❌ Error deleting member users for observer ID ${id}:`, userError);
+        // Devam et, müşahit silme işlemini tamamla
+      }
+      
+      // Müşahiti sil
       const sql = 'DELETE FROM ballot_box_observers WHERE id = ?';
       await db.run(sql, [id]);
       

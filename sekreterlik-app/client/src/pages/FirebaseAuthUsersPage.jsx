@@ -37,7 +37,10 @@ const FirebaseAuthUsersPage = () => {
               authUid: memberUser.authUid,
               username: memberUser.username,
               memberId: memberUser.memberId,
-              isActive: memberUser.isActive
+              observerId: memberUser.observerId,
+              userType: memberUser.userType,
+              isActive: memberUser.isActive,
+              memberUserId: memberUser.id // member_user ID'si (silme için)
             });
           }
         });
@@ -50,6 +53,58 @@ const FirebaseAuthUsersPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteAuthUser = async (authUid, memberUserId, username) => {
+    if (!window.confirm(`Bu Firebase Auth kullanıcısını silmek istediğinize emin misiniz?\n\nUsername: ${username}\nAuth UID: ${authUid}`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      // Backend üzerinden Firebase Auth kullanıcısını sil
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${authUid}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Eğer member_user varsa, onu da sil
+        if (memberUserId) {
+          try {
+            await FirebaseService.delete('member_users', memberUserId);
+            console.log('✅ Member user deleted from Firestore:', memberUserId);
+          } catch (memberUserError) {
+            console.warn('⚠️ Member user deletion failed (non-critical):', memberUserError);
+          }
+        }
+
+        alert('Firebase Auth kullanıcısı başarıyla silindi');
+        fetchAuthUsers(); // Listeyi yenile
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Firebase Auth kullanıcısı silinemedi');
+      }
+    } catch (err) {
+      console.error('Error deleting auth user:', err);
+      setError('Kullanıcı silinirken hata oluştu: ' + err.message);
+      alert('Hata: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCleanupOrphanedAuthUsers = async () => {
+    if (!window.confirm('Firestore\'da olmayan ama Firebase Auth\'da olan kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem sadece Firestore\'da authUid olmayan kullanıcıları etkilemez. Firebase Console\'dan manuel kontrol etmeniz gerekir.')) {
+      return;
+    }
+
+    alert('Bu özellik şu anda kullanılamıyor. Firebase Console\'dan manuel olarak kontrol edip silmeniz gerekiyor.\n\nBackend\'de bir cleanup endpoint\'i eklenebilir.');
   };
 
   const getMemberInfo = (memberId) => {
@@ -80,12 +135,20 @@ const FirebaseAuthUsersPage = () => {
                 Firestore'daki authUid'lere göre Firebase Auth'daki kullanıcılar (Admin hariç)
               </p>
             </div>
-            <button
-              onClick={fetchAuthUsers}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-            >
-              Yenile
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCleanupOrphanedAuthUsers}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+              >
+                Temizle (Orphaned)
+              </button>
+              <button
+                onClick={fetchAuthUsers}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              >
+                Yenile
+              </button>
+            </div>
           </div>
         </div>
 
@@ -131,7 +194,13 @@ const FirebaseAuthUsersPage = () => {
                       Member ID
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      User Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Durum
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      İşlemler
                     </th>
                   </tr>
                 </thead>
@@ -145,7 +214,12 @@ const FirebaseAuthUsersPage = () => {
                         {user.username || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {user.memberId || '-'}
+                        {user.memberId || user.observerId || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {user.userType || 'member'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -155,6 +229,17 @@ const FirebaseAuthUsersPage = () => {
                         }`}>
                           {user.isActive ? 'Aktif' : 'Pasif'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => handleDeleteAuthUser(user.authUid, user.memberUserId, user.username)}
+                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                          title="Firebase Auth kullanıcısını sil"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   ))}
