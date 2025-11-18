@@ -753,7 +753,7 @@ const MemberUsersSettings = () => {
 
   // Üye kullanıcılarını Firebase Auth'a kaydet
   const handleSyncToFirebaseAuth = async () => {
-    if (!window.confirm('Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Email ve displayName bilgilerini günceller\n\nNot: Firebase Auth\'dan kullanıcı silme işlemi backend servisi gerektirir. Bu işlem sadece kullanıcı oluşturma ve güncelleme yapar.\n\nDevam etmek istiyor musunuz?')) {
+    if (!window.confirm('Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Email ve displayName bilgilerini günceller\n- Backend servisi varsa: Firestore\'da olmayan ama Auth\'da olan kullanıcıları siler\n\nNot: Firebase Auth\'dan kullanıcı silme işlemi backend servisi gerektirir. Backend yoksa sadece kullanıcı oluşturma ve güncelleme yapılır.\n\nDevam etmek istiyor musunuz?')) {
       return;
     }
 
@@ -800,10 +800,15 @@ const MemberUsersSettings = () => {
             
             if (result.results) {
               const details = `Oluşturulan: ${result.results.created}\nSilinen: ${result.results.deleted}\nGüncellenen: ${result.results.updated}\nHata: ${result.results.errors}`;
+              let message = result.message || 'Senkronizasyon tamamlandı (Backend)';
+              if (result.results.deleted > 0) {
+                message += `\n\n${details}`;
+              }
               if (result.results.errors > 0) {
                 setMessageType('warning');
-                setMessage(`${result.message}\n\n${details}`);
+                message += `\n\nHatalar:\n${result.results.details?.slice(0, 500) || 'Detaylar konsolda'}`;
               }
+              setMessage(message);
             }
             
             await fetchMemberUsers();
