@@ -529,7 +529,7 @@ const SeçimEkleSettings = () => {
     setMunicipalCouncilCandidateInputs({});
   };
 
-  const handleEdit = (election) => {
+  const handleEdit = async (election) => {
     setEditingElection(election);
     let dateValue = '';
     if (election.date) {
