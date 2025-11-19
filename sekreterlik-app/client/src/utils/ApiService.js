@@ -1752,6 +1752,56 @@ class ApiService {
     return response.json();
   }
 
+  // Election Coordinators API
+  static async getElectionCoordinators() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getElectionCoordinators();
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-coordinators`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async createElectionCoordinator(coordinatorData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createElectionCoordinator(coordinatorData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-coordinators`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(coordinatorData),
+    });
+    return response.json();
+  }
+
+  // Election Regions API
+  static async getElectionRegions() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getElectionRegions();
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-regions`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  static async createElectionRegion(regionData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createElectionRegion(regionData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-regions`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(regionData),
+    });
+    return response.json();
+  }
+
   static async createElection(electionData) {
     if (USE_FIREBASE) {
       return FirebaseApiService.createElection(electionData);
