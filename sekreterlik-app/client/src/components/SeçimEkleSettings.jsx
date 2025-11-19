@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 
-const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) => {
+const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose, showFormInitially = false }) => {
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(showFormInitially);
   const [editingElection, setEditingElection] = useState(null);
   
   // Form data structure for new election system
@@ -736,39 +736,21 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seçim Yönetimi</h2>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Genel seçim, yerel seçim ve referandum ekleyebilirsiniz
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setShowForm(!showForm);
-            setEditingElection(null);
-            resetForm();
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          {showForm ? 'İptal' : '+ Yeni Seçim Ekle'}
-        </button>
-      </div>
+  // Modal içinde kullanıldığında sadece formu göster
+  if (showFormInitially && onClose) {
+    return (
+      <div className="space-y-4">
+        {message && (
+          <div className={`p-4 rounded-lg ${
+            messageType === 'success' 
+              ? 'bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200' 
+              : 'bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200'
+          }`}>
+            {message}
+          </div>
+        )}
 
-      {message && (
-        <div className={`p-4 rounded-lg ${
-          messageType === 'success' 
-            ? 'bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200' 
-            : 'bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200'
-        }`}>
-          {message}
-        </div>
-      )}
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Seçim Adı *
@@ -1726,9 +1708,161 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
             <button
               type="button"
               onClick={() => {
-                setShowForm(false);
-                setEditingElection(null);
-                resetForm();
+                if (onClose) {
+                  onClose();
+                } else {
+                  setShowForm(false);
+                  setEditingElection(null);
+                  resetForm();
+                }
+              }}
+              className="bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              İptal
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seçim Yönetimi</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Genel seçim, yerel seçim ve referandum ekleyebilirsiniz
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setShowForm(!showForm);
+            setEditingElection(null);
+            resetForm();
+          }}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          {showForm ? 'İptal' : '+ Yeni Seçim Ekle'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={`p-4 rounded-lg ${
+          messageType === 'success' 
+            ? 'bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200' 
+            : 'bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Seçim Adı *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Seçim Tarihi *
+            </label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Seçim Tipi *
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                required
+              >
+                <option value="genel">Genel Seçim (CB + MV)</option>
+                <option value="yerel">Yerel Seçim</option>
+                <option value="referandum">Referandum</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Durum *
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
+                required
+              >
+                <option value="draft">Taslak</option>
+                <option value="active">Aktif</option>
+                <option value="closed">Kapalı</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Modal içinde kullanıldığında detaylı form yerine yönlendirme mesajı */}
+          {(formData.type === 'genel' || formData.type === 'yerel') && showFormInitially && (
+            <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>💡 Not:</strong> Detaylı seçim bilgilerini (partiler, adaylar, D'Hondt parametreleri) eklemek için 
+                  <strong> Ayarlar &gt; Seçim Ekle</strong> sayfasını kullanın. Bu modal sadece temel bilgileri kaydetmek içindir.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Referandum Formu */}
+          {formData.type === 'referandum' && (
+            <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Referandum Bilgileri</h3>
+              <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Referandum için otomatik olarak "Evet" ve "Hayır" seçenekleri oluşturulacaktır.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="submit"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              {editingElection ? 'Güncelle' : 'Kaydet'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  setShowForm(false);
+                  setEditingElection(null);
+                  resetForm();
+                }
               }}
               className="bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg text-sm font-medium transition-colors"
             >

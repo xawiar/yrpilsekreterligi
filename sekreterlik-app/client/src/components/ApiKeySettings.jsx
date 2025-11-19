@@ -420,17 +420,45 @@ const ApiKeySettings = () => {
       {/* API Usage Info */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">API Kullanımı</h3>
-        <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-          <p><strong>Endpoint:</strong> <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">/api/public/*</code></p>
-          <p><strong>Header:</strong> <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">X-API-Key: YOUR_API_KEY</code></p>
-          <p><strong>Örnek:</strong></p>
-          <pre className="bg-blue-100 dark:bg-blue-900 p-3 rounded text-xs overflow-x-auto">
-{`fetch('https://your-site.com/api/public/members', {
+        <div className="space-y-4 text-sm text-blue-800 dark:text-blue-200">
+          <div>
+            <p className="font-semibold mb-2">📍 Kendi API Key'inizi Kullanma:</p>
+            <p><strong>Endpoint:</strong> <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">/api/public/*</code></p>
+            <p><strong>Header:</strong> <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">X-API-Key: YOUR_API_KEY</code></p>
+            <p><strong>Örnek:</strong></p>
+            <pre className="bg-blue-100 dark:bg-blue-900 p-3 rounded text-xs overflow-x-auto mt-2">
+{`fetch('https://sekreterlik-backend.onrender.com/api/public/members', {
   headers: {
     'X-API-Key': 'YOUR_API_KEY'
   }
 })`}
-          </pre>
+            </pre>
+          </div>
+          
+          <div className="border-t border-blue-300 dark:border-blue-700 pt-4 mt-4">
+            <p className="font-semibold mb-2">🌐 Başka Bir Sitenin API Key'ini Kullanma:</p>
+            <p className="mb-2">Başka bir sitenin API key'ini kullanmak için:</p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li>O siteden API key'i alın (Ayarlar &gt; API Key Yönetimi)</li>
+              <li>O sitenin backend URL'ini öğrenin (örn: <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">https://site-a-backend.onrender.com</code>)</li>
+              <li>Kendi kodunuzda bu API key'i kullanın:</li>
+            </ol>
+            <pre className="bg-blue-100 dark:bg-blue-900 p-3 rounded text-xs overflow-x-auto mt-2">
+{`// Başka bir sitenin API key'i
+const OTHER_SITE_API_KEY = 'abc123...'; // O siteden aldığınız key
+const OTHER_SITE_URL = 'https://site-a-backend.onrender.com/api/public';
+
+// Veri çekme
+fetch(\`\${OTHER_SITE_URL}/members\`, {
+  headers: {
+    'X-API-Key': OTHER_SITE_API_KEY
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));`}
+            </pre>
+            <p className="mt-2 text-xs italic">💡 Not: API key'ler sınırsız erişim sağlar. Başka bir sitenin API key'ini kullanarak o siteden veri çekebilirsiniz.</p>
+          </div>
         </div>
       </div>
     </div>
