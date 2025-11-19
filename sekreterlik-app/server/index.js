@@ -306,6 +306,9 @@ app.use((req, res, next) => {
 
 console.log('Middleware configured');
 
+// Public news/information page - MUST BE BEFORE API routes to avoid conflicts
+app.use('/public', require('./routes/public'));
+
 // Register API routes
 console.log('Registering API routes');
 
@@ -373,9 +376,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   etag: true,
   maxAge: '7d',
 }));
-
-// Public news/information page (before main API route)
-app.use('/public', require('./routes/public'));
 
 // Main page route (API info)
 app.get('/', (req, res) => {
