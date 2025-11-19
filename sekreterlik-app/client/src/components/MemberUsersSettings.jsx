@@ -23,10 +23,8 @@ const MemberUsersSettings = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSyncingToAuth, setIsSyncingToAuth] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
-  const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [isProcessingAll, setIsProcessingAll] = useState(false);
-  const [isClearingAuthUids, setIsClearingAuthUids] = useState(false);
-  const [isCleaningOrphaned, setIsCleaningOrphaned] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -1815,6 +1813,80 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Tüm üye kullanıcılarını sil
+  const handleDeleteAllMemberUsers = async () => {
+    if (!window.confirm('⚠️ DİKKAT: Üye kullanıcıları sayfasındaki TÜM kullanıcıları silmek istediğinize emin misiniz?\n\nBu işlem:\n- Tüm member_users koleksiyonundaki kullanıcıları siler\n- Backend servisi varsa Firebase Auth\'daki kullanıcıları da siler\n- Admin kullanıcısını korur\n\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    if (!window.confirm('Son bir kez daha onaylayın: TÜM kullanıcıları silmek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    try {
+      setIsDeletingAll(true);
+      setMessage('');
+      setMessageType('info');
+
+      const allMemberUsers = await ApiService.getMemberUsers();
+      const memberUsersList = allMemberUsers.users || allMemberUsers || [];
+      
+      if (memberUsersList.length === 0) {
+        setMessage('Silinecek kullanıcı bulunamadı.');
+        setMessageType('info');
+        return;
+      }
+
+      setMessage(`${memberUsersList.length} kullanıcı siliniyor...`);
+      
+      let deletedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const user of memberUsersList) {
+        try {
+          const response = await ApiService.deleteMemberUser(user.id);
+          if (response.success) {
+            deletedCount++;
+            setMessage(`${deletedCount}/${memberUsersList.length} kullanıcı silindi...`);
+          } else {
+            errorCount++;
+            errors.push(`${user.username || user.id}: ${response.message || 'Silme hatası'}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${user.username || user.id}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error(`Error deleting user ${user.id}:`, error);
+        }
+      }
+
+      // Sonuç mesajı
+      let message = `✅ Tüm kullanıcılar silindi!\n\n`;
+      message += `• Toplam: ${memberUsersList.length} kullanıcı\n`;
+      message += `• Silinen: ${deletedCount} kullanıcı\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount} kullanıcı\n`;
+        message += `\nHatalar:\n${errors.slice(0, 10).join('\n')}`;
+        if (errors.length > 10) {
+          message += `\n... ve ${errors.length - 10} hata daha`;
+        }
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+
+      setMessage(message);
+      await fetchMemberUsers();
+
+    } catch (error) {
+      console.error('Error deleting all member users:', error);
+      setMessage('Tüm kullanıcıları silme sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -1856,7 +1928,7 @@ const MemberUsersSettings = () => {
               onClick={handleProcessAllUsers}
               disabled={isProcessingAll || isUpdating}
               className="bg-gradient-to-r from-blue-600 via-green-600 to-purple-600 hover:from-blue-700 hover:via-green-700 hover:to-purple-700 disabled:from-gray-400 disabled:via-gray-400 disabled:to-gray-400 text-white px-6 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center shadow-lg"
-              title="Tüm kullanıcıları oluştur: İlçe Başkanı + Belde Başkanı + Müşahit (Silme yapmaz)"
+              title="Tüm kullanıcıları oluştur: Üye + İlçe Başkanı + Belde Başkanı + Müşahit"
             >
               {isProcessingAll || isUpdating ? (
                 <>
@@ -1873,22 +1945,22 @@ const MemberUsersSettings = () => {
               )}
             </button>
             <button
-              onClick={handleClearAuthUids}
-              disabled={isClearingAuthUids}
-              className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
-              title="Firestore'daki authUid field'larını temizle (Firebase Auth'daki kullanıcıları silmez)"
+              onClick={handleDeleteAllMemberUsers}
+              disabled={isDeletingAll}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+              title="⚠️ DİKKAT: Üye kullanıcıları sayfasındaki TÜM kullanıcıları siler"
             >
-              {isClearingAuthUids ? (
+              {isDeletingAll ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Temizleniyor...
+                  Siliniyor...
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  AuthUid'leri Temizle
+                  Tüm Üye Kullanıcılarını Sil
                 </>
               )}
             </button>
@@ -1896,7 +1968,7 @@ const MemberUsersSettings = () => {
               onClick={handleSyncToFirebaseAuth}
               disabled={isSyncingToAuth}
               className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
-              title="Firestore'daki kullanıcıları Firebase Auth'a senkronize et (Eksikleri ekler)"
+              title="member_users'daki kullanıcıları Firebase Auth'a ekle/güncelle"
             >
               {isSyncingToAuth ? (
                 <>
@@ -1908,47 +1980,7 @@ const MemberUsersSettings = () => {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Firebase Auth'a Senkronize Et
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleCleanupOrphanedMemberUsers}
-              disabled={isCleaningOrphaned}
-              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
-              title="Silinmiş/arşivlenmiş üyelere ait geçersiz kullanıcıları bul ve temizle"
-            >
-              {isCleaningOrphaned ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Temizleniyor...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Geçersiz Kullanıcıları Bul ve Temizle
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleCleanupOrphanedAuthUsers}
-              disabled={isCleaningUp}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
-              title="⚠️ DİKKAT: Firestore'da olmayan Firebase Auth kullanıcılarını siler"
-            >
-              {isCleaningUp ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Temizleniyor...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Gereksiz Auth Kullanıcılarını Temizle
+                  Firebase Senkronizasyon
                 </>
               )}
             </button>
