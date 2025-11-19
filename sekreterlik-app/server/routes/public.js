@@ -193,6 +193,7 @@ router.get('/', externalApiCache, async (req, res) => {
           municipal_council_parties: election.municipal_council_parties ? (typeof election.municipal_council_parties === 'string' ? JSON.parse(election.municipal_council_parties) : election.municipal_council_parties) : [],
           baraj_percent: election.baraj_percent || 7.0
         }));
+      }
     } catch (err) {
       console.error('Error fetching elections:', err);
     }
