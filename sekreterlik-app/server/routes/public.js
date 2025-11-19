@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { cache } = require('../middleware/cache');
+const { calculateDHondtDetailed } = require('../utils/dhondt');
 
 // Cache for external API calls (5 minutes)
 const externalApiCache = cache(300);
@@ -68,6 +69,112 @@ function getWeatherDescription(code) {
     99: 'Şiddetli fırtına (dolu)'
   };
   return weatherCodes[code] || 'Bilinmeyen';
+}
+
+// Helper function to calculate election results with D'Hondt
+function calculateElectionResults(election, results) {
+  if (!election || !results || results.length === 0) return null;
+  
+  const calculated = {
+    totalBallotBoxes: results.length,
+    totalVotes: 0,
+    validVotes: 0,
+    invalidVotes: 0,
+    categories: {}
+  };
+  
+  // Aggregate votes by category
+  results.forEach(result => {
+    calculated.totalVotes += parseInt(result.used_votes) || 0;
+    calculated.validVotes += parseInt(result.valid_votes) || 0;
+    calculated.invalidVotes += parseInt(result.invalid_votes) || 0;
+    
+    // CB votes
+    if (result.cb_votes && typeof result.cb_votes === 'object') {
+      if (!calculated.categories.cb) {
+        calculated.categories.cb = {};
+      }
+      Object.entries(result.cb_votes).forEach(([candidate, votes]) => {
+        calculated.categories.cb[candidate] = (calculated.categories.cb[candidate] || 0) + (parseInt(votes) || 0);
+      });
+    }
+    
+    // MV votes
+    if (result.mv_votes && typeof result.mv_votes === 'object') {
+      if (!calculated.categories.mv) {
+        calculated.categories.mv = {};
+      }
+      Object.entries(result.mv_votes).forEach(([party, votes]) => {
+        calculated.categories.mv[party] = (calculated.categories.mv[party] || 0) + (parseInt(votes) || 0);
+      });
+    }
+    
+    // Mayor votes
+    if (result.mayor_votes && typeof result.mayor_votes === 'object') {
+      if (!calculated.categories.mayor) {
+        calculated.categories.mayor = {};
+      }
+      Object.entries(result.mayor_votes).forEach(([candidate, votes]) => {
+        calculated.categories.mayor[candidate] = (calculated.categories.mayor[candidate] || 0) + (parseInt(votes) || 0);
+      });
+    }
+  });
+  
+  // Calculate D'Hondt for MV if it's a general election
+  if (election.type === 'genel' && calculated.categories.mv && election.mv_total_seats) {
+    const totalSeats = parseInt(election.mv_total_seats) || 10;
+    calculated.dhondtMV = calculateDHondtDetailed(calculated.categories.mv, totalSeats);
+    
+    // Calculate winning candidates
+    if (calculated.dhondtMV && calculated.dhondtMV.chartData) {
+      calculated.winningCandidatesMV = [];
+      calculated.dhondtMV.chartData.forEach(item => {
+        const party = election.parties?.find(p => {
+          const pName = typeof p === 'string' ? p : (p?.name || String(p));
+          return pName === item.party;
+        });
+        
+        if (party && typeof party === 'object' && party.mv_candidates && Array.isArray(party.mv_candidates)) {
+          const seats = item.seats || 0;
+          for (let i = 0; i < Math.min(seats, party.mv_candidates.length); i++) {
+            calculated.winningCandidatesMV.push({
+              name: party.mv_candidates[i],
+              party: item.party,
+              votes: item.votes,
+              percentage: item.percentage,
+              order: i + 1
+            });
+          }
+        }
+      });
+      // Sort by votes (highest to lowest)
+      calculated.winningCandidatesMV.sort((a, b) => b.votes - a.votes);
+    }
+  }
+  
+  // Calculate CB results (sort by votes)
+  if (calculated.categories.cb) {
+    calculated.cbResults = Object.entries(calculated.categories.cb)
+      .map(([candidate, votes]) => ({
+        candidate,
+        votes: parseInt(votes) || 0,
+        percentage: calculated.validVotes > 0 ? ((parseInt(votes) || 0) / calculated.validVotes * 100).toFixed(2) : 0
+      }))
+      .sort((a, b) => b.votes - a.votes);
+  }
+  
+  // Calculate Mayor results (sort by votes)
+  if (calculated.categories.mayor) {
+    calculated.mayorResults = Object.entries(calculated.categories.mayor)
+      .map(([candidate, votes]) => ({
+        candidate,
+        votes: parseInt(votes) || 0,
+        percentage: calculated.validVotes > 0 ? ((parseInt(votes) || 0) / calculated.validVotes * 100).toFixed(2) : 0
+      }))
+      .sort((a, b) => b.votes - a.votes);
+  }
+  
+  return calculated;
 }
 
 // Helper function to fetch news from our database
@@ -204,22 +311,28 @@ router.get('/', externalApiCache, async (req, res) => {
       getFinancialData()
     ]);
 
-    // Get latest election results
+    // Get latest election results and calculate D'Hondt
     let latestElection = null;
     let electionResults = [];
+    let calculatedResults = null;
+    
     if (elections && elections.length > 0) {
       latestElection = elections[0]; // Most recent election
       if (latestElection && latestElection.id) {
         try {
           let results = [];
           if (USE_FIREBASE) {
-            // Firebase implementation
-            const { collections } = require('../config/database');
-            const resultsSnapshot = await collections.election_results
-              .where('election_id', '==', String(latestElection.id))
-              .orderBy('created_at', 'desc')
-              .get();
-            results = resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Firebase implementation using Admin SDK
+            const { getAdmin } = require('../config/firebaseAdmin');
+            const admin = getAdmin();
+            if (admin) {
+              const firestore = admin.firestore();
+              const resultsSnapshot = await firestore.collection('election_results')
+                .where('election_id', '==', String(latestElection.id))
+                .orderBy('created_at', 'desc')
+                .get();
+              results = resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            }
           } else {
             // SQLite implementation
             const db = require('../config/database');
@@ -237,6 +350,11 @@ router.get('/', externalApiCache, async (req, res) => {
             provincial_assembly_votes: result.provincial_assembly_votes ? (typeof result.provincial_assembly_votes === 'string' ? JSON.parse(result.provincial_assembly_votes) : result.provincial_assembly_votes) : {},
             municipal_council_votes: result.municipal_council_votes ? (typeof result.municipal_council_votes === 'string' ? JSON.parse(result.municipal_council_votes) : result.municipal_council_votes) : {}
           }));
+          
+          // Calculate D'Hondt results if we have election results
+          if (electionResults.length > 0) {
+            calculatedResults = calculateElectionResults(latestElection, electionResults);
+          }
         } catch (err) {
           console.error('Error fetching election results:', err);
         }
@@ -248,6 +366,7 @@ router.get('/', externalApiCache, async (req, res) => {
       elections: elections || [],
       latestElection,
       electionResults,
+      calculatedResults,
       weather,
       news: news || [],
       financial
@@ -281,9 +400,9 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Public route is working!', path: '/public/test' });
 });
 
-// Helper function to generate HTML
+// Helper function to generate HTML - News site style with red theme
 function generatePublicPageHTML(data) {
-  const { elections, latestElection, electionResults, weather, news, financial } = data;
+  const { elections, latestElection, electionResults, calculatedResults, weather, news, financial } = data;
 
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -306,132 +425,271 @@ function generatePublicPageHTML(data) {
     }
     
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
       color: white;
-      padding: 2rem 1rem;
+      padding: 1.5rem 1rem;
       text-align: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      border-bottom: 3px solid #b91c1c;
     }
     
     .header h1 {
-      font-size: 2rem;
+      font-size: 1.8rem;
       margin-bottom: 0.5rem;
+      font-weight: bold;
     }
     
     .header p {
-      opacity: 0.9;
-      font-size: 1.1rem;
+      opacity: 0.95;
+      font-size: 1rem;
     }
     
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 2rem 1rem;
+      padding: 1rem;
     }
     
-    .grid {
+    /* Top bar - Weather and Financial (small, compact) */
+    .top-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .top-bar-card {
+      background: white;
+      border-radius: 8px;
+      padding: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 3px solid #dc2626;
+    }
+    
+    .top-bar-card h3 {
+      font-size: 0.85rem;
+      color: #dc2626;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    
+    .top-bar-content {
+      font-size: 0.9rem;
+      color: #333;
+    }
+    
+    /* Main content grid - News site style */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
       gap: 1.5rem;
       margin-bottom: 2rem;
     }
     
-    .card {
+    @media (max-width: 968px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Election Results - Main content */
+    .election-section {
       background: white;
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 1.5rem;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
+      border-top: 4px solid #dc2626;
     }
     
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    .card h2 {
-      color: #667eea;
-      margin-bottom: 1rem;
+    .election-section h2 {
+      color: #dc2626;
       font-size: 1.5rem;
-      border-bottom: 2px solid #667eea;
+      margin-bottom: 1rem;
       padding-bottom: 0.5rem;
+      border-bottom: 2px solid #fee2e2;
     }
     
-    .weather-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    
-    .weather-card h2 {
-      color: white;
-      border-bottom-color: rgba(255,255,255,0.3);
-    }
-    
-    .weather-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 1rem;
-    }
-    
-    .temp-large {
-      font-size: 3rem;
-      font-weight: bold;
-    }
-    
-    .temp-details {
-      text-align: right;
-    }
-    
-    .financial-grid {
+    .election-stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 1rem;
-      margin-top: 1rem;
-    }
-    
-    .financial-item {
-      text-align: center;
+      margin-bottom: 1.5rem;
       padding: 1rem;
-      background: rgba(255,255,255,0.1);
-      border-radius: 8px;
+      background: #fef2f2;
+      border-radius: 6px;
     }
     
-    .financial-item.positive {
-      color: #10b981;
+    .stat-item {
+      text-align: center;
     }
     
-    .financial-item.negative {
-      color: #ef4444;
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #dc2626;
     }
     
-    .election-results {
+    .stat-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 0.25rem;
+    }
+    
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
       margin-top: 1rem;
     }
     
-    .result-item {
+    .results-table th {
+      background: #dc2626;
+      color: white;
+      padding: 0.75rem;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    
+    .results-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .results-table tr:hover {
+      background: #fef2f2;
+    }
+    
+    .party-name {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .vote-count {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    .percentage {
+      font-weight: bold;
+      color: #dc2626;
+      font-size: 1.1rem;
+    }
+    
+    .seats {
+      font-weight: bold;
+      color: #dc2626;
+      background: #fee2e2;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    
+    .winning-candidates {
+      margin-top: 1.5rem;
+    }
+    
+    .winning-candidates h3 {
+      color: #dc2626;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #fee2e2;
+    }
+    
+    .candidate-item {
       padding: 0.75rem;
       margin: 0.5rem 0;
-      background: #f8f9fa;
+      background: #fef2f2;
       border-radius: 6px;
-      border-left: 4px solid #667eea;
+      border-left: 3px solid #dc2626;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .candidate-name {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .candidate-party {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 0.25rem;
+    }
+    
+    .candidate-votes {
+      text-align: right;
+    }
+    
+    /* Sidebar - News */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .news-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-top: 4px solid #dc2626;
+    }
+    
+    .news-card h2 {
+      color: #dc2626;
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #fee2e2;
     }
     
     .news-item {
-      padding: 1rem;
-      margin: 0.5rem 0;
-      border-left: 4px solid #667eea;
-      background: #f8f9fa;
-      border-radius: 6px;
+      padding: 1rem 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .news-item:last-child {
+      border-bottom: none;
     }
     
     .news-item h3 {
-      color: #667eea;
+      color: #dc2626;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+    
+    .news-item h3:hover {
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    
+    .news-item p {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+    
+    .news-item img {
+      width: 100%;
+      max-height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
       margin-bottom: 0.5rem;
     }
     
+    .news-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #999;
+    }
+    
     .footer {
-      background: #333;
+      background: #1f1f1f;
       color: white;
       text-align: center;
       padding: 2rem 1rem;
@@ -443,12 +701,16 @@ function generatePublicPageHTML(data) {
         font-size: 1.5rem;
       }
       
-      .grid {
+      .top-bar {
         grid-template-columns: 1fr;
       }
       
-      .temp-large {
-        font-size: 2rem;
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .election-stats {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   </style>
@@ -456,97 +718,203 @@ function generatePublicPageHTML(data) {
 <body>
   <div class="header">
     <h1>Yeniden Refah Partisi Elazığ</h1>
-    <p>Seçim Sonuçları ve Güncel Bilgiler</p>
+    <p>Seçim Sonuçları ve Güncel Haberler</p>
   </div>
   
   <div class="container">
-    <div class="grid">
+    <!-- Top Bar - Weather and Financial (Small) -->
+    <div class="top-bar">
       ${weather ? `
-      <div class="card weather-card">
-        <h2>🌤️ Hava Durumu</h2>
-        <div class="weather-info">
-          <div>
-            <div class="temp-large">${weather.current.temperature}°C</div>
-            <div>${getWeatherDescription(weather.current.weatherCode)}</div>
-          </div>
-          <div class="temp-details">
-            <div>Max: ${weather.today.max}°C</div>
-            <div>Min: ${weather.today.min}°C</div>
-            <div>Rüzgar: ${weather.current.windSpeed} km/h</div>
-          </div>
+      <div class="top-bar-card">
+        <h3>🌤️ Hava Durumu</h3>
+        <div class="top-bar-content">
+          <div style="font-size: 1.2rem; font-weight: bold; color: #dc2626;">${weather.current.temperature}°C</div>
+          <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">${getWeatherDescription(weather.current.weatherCode)}</div>
+          <div style="font-size: 0.75rem; color: #999; margin-top: 0.25rem;">Max: ${weather.today.max}°C / Min: ${weather.today.min}°C</div>
         </div>
       </div>
       ` : ''}
       
       ${financial ? `
-      <div class="card weather-card">
-        <h2>💰 Finansal Veriler</h2>
-        <div class="financial-grid">
-          <div class="financial-item">
-            <div style="font-size: 0.9rem; opacity: 0.9;">Altın (Alış)</div>
-            <div style="font-size: 1.2rem; font-weight: bold;">${financial.gold.buy} ₺</div>
-            <div class="financial-item ${financial.gold.change.startsWith('+') ? 'positive' : 'negative'}">
-              ${financial.gold.change} (${financial.gold.changePercent})
-            </div>
-          </div>
-          <div class="financial-item">
-            <div style="font-size: 0.9rem; opacity: 0.9;">USD/TRY</div>
-            <div style="font-size: 1.2rem; font-weight: bold;">${financial.usd.buy} ₺</div>
-            <div class="financial-item ${financial.usd.change.startsWith('+') ? 'positive' : 'negative'}">
-              ${financial.usd.change} (${financial.usd.changePercent})
-            </div>
-          </div>
-          <div class="financial-item">
-            <div style="font-size: 0.9rem; opacity: 0.9;">EUR/TRY</div>
-            <div style="font-size: 1.2rem; font-weight: bold;">${financial.eur.buy} ₺</div>
-            <div class="financial-item ${financial.eur.change.startsWith('+') ? 'positive' : 'negative'}">
-              ${financial.eur.change} (${financial.eur.changePercent})
-            </div>
-          </div>
-          <div class="financial-item">
-            <div style="font-size: 0.9rem; opacity: 0.9;">Borsa İstanbul</div>
-            <div style="font-size: 1.2rem; font-weight: bold;">${financial.borsaIstanbul.index}</div>
-            <div class="financial-item positive">
-              ${financial.borsaIstanbul.change} (${financial.borsaIstanbul.changePercent})
-            </div>
+      <div class="top-bar-card">
+        <h3>💰 Altın</h3>
+        <div class="top-bar-content">
+          <div style="font-size: 1.1rem; font-weight: bold; color: #dc2626;">${financial.gold.buy} ₺</div>
+          <div style="font-size: 0.75rem; color: ${financial.gold.change.startsWith('+') ? '#10b981' : '#ef4444'}; margin-top: 0.25rem;">
+            ${financial.gold.change} (${financial.gold.changePercent})
           </div>
         </div>
-        <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">
-          Son Güncelleme: ${financial.lastUpdate}
+      </div>
+      <div class="top-bar-card">
+        <h3>💵 Döviz</h3>
+        <div class="top-bar-content">
+          <div style="font-size: 0.9rem; margin-bottom: 0.25rem;"><strong>USD:</strong> ${financial.usd.buy} ₺</div>
+          <div style="font-size: 0.9rem;"><strong>EUR:</strong> ${financial.eur.buy} ₺</div>
         </div>
       </div>
       ` : ''}
-      
-      ${latestElection ? `
-      <div class="card">
-        <h2>🗳️ Seçim Sonuçları</h2>
-        <h3 style="margin-bottom: 1rem; color: #667eea;">${latestElection.name || 'Seçim'}</h3>
-        ${latestElection.date ? `<p style="margin-bottom: 1rem; color: #666;">Tarih: ${new Date(latestElection.date).toLocaleDateString('tr-TR')}</p>` : ''}
-        ${electionResults.length > 0 ? `
-        <div class="election-results">
-          <p style="margin-bottom: 0.5rem;"><strong>Girilen Sandık Sayısı:</strong> ${electionResults.length}</p>
-          <p style="color: #666; font-size: 0.9rem;">Detaylı sonuçlar için admin paneline giriş yapın.</p>
-        </div>
-        ` : '<p style="color: #666;">Henüz seçim sonucu girilmemiş.</p>'}
-      </div>
-      ` : '<div class="card"><h2>🗳️ Seçim Sonuçları</h2><p>Henüz seçim kaydı bulunmamaktadır.</p></div>'}
-      
-      ${news.length > 0 ? `
-      <div class="card">
-        <h2>📰 Güncel Haberler</h2>
-        ${news.map(item => `
-        <div class="news-item">
-          ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">` : ''}
-          <h3>${item.title}</h3>
-          <p>${item.summary || item.content?.substring(0, 150) + '...' || ''}</p>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-            <small style="color: #666;">${item.author || 'Admin'} - ${new Date(item.publishedAt).toLocaleDateString('tr-TR')}</small>
-            ${item.views ? `<small style="color: #666;">👁️ ${item.views}</small>` : ''}
+    </div>
+    
+    <!-- Main Content Grid -->
+    <div class="main-grid">
+      <!-- Election Results - Main Column -->
+      <div class="election-section">
+        ${latestElection ? `
+        <h2>🗳️ ${latestElection.name || 'Seçim Sonuçları'}</h2>
+        ${latestElection.date ? `<p style="color: #666; margin-bottom: 1rem;">Tarih: ${new Date(latestElection.date).toLocaleDateString('tr-TR')}</p>` : ''}
+        
+        ${calculatedResults ? `
+        <div class="election-stats">
+          <div class="stat-item">
+            <div class="stat-value">${calculatedResults.totalBallotBoxes}</div>
+            <div class="stat-label">Sandık</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${calculatedResults.totalVotes.toLocaleString('tr-TR')}</div>
+            <div class="stat-label">Toplam Oy</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${calculatedResults.validVotes.toLocaleString('tr-TR')}</div>
+            <div class="stat-label">Geçerli Oy</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${calculatedResults.invalidVotes.toLocaleString('tr-TR')}</div>
+            <div class="stat-label">Geçersiz Oy</div>
           </div>
         </div>
-        `).join('')}
+        
+        ${calculatedResults.dhondtMV ? `
+        <h3 style="color: #dc2626; font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #fee2e2;">
+          Milletvekili Seçimi - D'Hondt Sonuçları
+        </h3>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Parti</th>
+              <th>Oy</th>
+              <th>Oran</th>
+              <th>Milletvekili</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${calculatedResults.dhondtMV.chartData.map(item => `
+            <tr>
+              <td>
+                <div class="party-name">${item.party}</div>
+              </td>
+              <td>
+                <div class="vote-count">${item.votes.toLocaleString('tr-TR')} oy</div>
+              </td>
+              <td>
+                <div class="percentage">%${item.percentage}</div>
+              </td>
+              <td>
+                <span class="seats">${item.seats} MV</span>
+              </td>
+            </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ` : ''}
+        
+        ${calculatedResults.winningCandidatesMV && calculatedResults.winningCandidatesMV.length > 0 ? `
+        <div class="winning-candidates">
+          <h3>Kazanan Milletvekili Adayları (Oy Sırasına Göre)</h3>
+          ${calculatedResults.winningCandidatesMV.map(candidate => `
+          <div class="candidate-item">
+            <div>
+              <div class="candidate-name">${candidate.name}</div>
+              <div class="candidate-party">${candidate.party}</div>
+            </div>
+            <div class="candidate-votes">
+              <div class="percentage">%${candidate.percentage}</div>
+              <div class="vote-count">${candidate.votes.toLocaleString('tr-TR')} oy</div>
+            </div>
+          </div>
+          `).join('')}
+        </div>
+        ` : ''}
+        
+        ${calculatedResults.cbResults && calculatedResults.cbResults.length > 0 ? `
+        <h3 style="color: #dc2626; font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #fee2e2;">
+          Cumhurbaşkanı Seçimi
+        </h3>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Aday</th>
+              <th>Oy</th>
+              <th>Oran</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${calculatedResults.cbResults.map(item => `
+            <tr>
+              <td><div class="party-name">${item.candidate}</div></td>
+              <td><div class="vote-count">${item.votes.toLocaleString('tr-TR')} oy</div></td>
+              <td><div class="percentage">%${item.percentage}</div></td>
+            </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ` : ''}
+        
+        ${calculatedResults.mayorResults && calculatedResults.mayorResults.length > 0 ? `
+        <h3 style="color: #dc2626; font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #fee2e2;">
+          Belediye Başkanı Seçimi
+        </h3>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Aday</th>
+              <th>Oy</th>
+              <th>Oran</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${calculatedResults.mayorResults.map(item => `
+            <tr>
+              <td><div class="party-name">${item.candidate}</div></td>
+              <td><div class="vote-count">${item.votes.toLocaleString('tr-TR')} oy</div></td>
+              <td><div class="percentage">%${item.percentage}</div></td>
+            </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ` : ''}
+        ` : electionResults.length > 0 ? `
+        <p style="color: #666; padding: 1rem; background: #fef2f2; border-radius: 6px;">
+          <strong>Girilen Sandık Sayısı:</strong> ${electionResults.length}<br>
+          <small>Sonuçlar hesaplanıyor...</small>
+        </p>
+        ` : '<p style="color: #666;">Henüz seçim sonucu girilmemiş.</p>'}
+        ` : '<h2>🗳️ Seçim Sonuçları</h2><p style="color: #666;">Henüz seçim kaydı bulunmamaktadır.</p>'}
       </div>
-      ` : '<div class="card"><h2>📰 Güncel Haberler</h2><p style="color: #666;">Henüz haber eklenmemiş.</p></div>'}
+      
+      <!-- Sidebar - News -->
+      <div class="sidebar">
+        ${news.length > 0 ? `
+        <div class="news-card">
+          <h2>📰 Güncel Haberler</h2>
+          ${news.map(item => `
+          <div class="news-item">
+            ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}">` : ''}
+            <h3>${item.title}</h3>
+            <p>${item.summary || item.content?.substring(0, 120) + '...' || ''}</p>
+            <div class="news-meta">
+              <span>${item.author || 'Admin'} - ${new Date(item.publishedAt).toLocaleDateString('tr-TR')}</span>
+              ${item.views ? `<span>👁️ ${item.views}</span>` : ''}
+            </div>
+          </div>
+          `).join('')}
+        </div>
+        ` : `
+        <div class="news-card">
+          <h2>📰 Güncel Haberler</h2>
+          <p style="color: #666; padding: 1rem;">Henüz haber eklenmemiş.</p>
+        </div>
+        `}
+      </div>
     </div>
   </div>
   
