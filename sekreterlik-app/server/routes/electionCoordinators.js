@@ -1,23 +1,23 @@
 const express = require('express');
 const ElectionCoordinatorController = require('../controllers/ElectionCoordinatorController');
-const { authenticate } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Get all coordinators
-router.get('/', authenticate, ElectionCoordinatorController.getAll);
+router.get('/', authenticateToken, ElectionCoordinatorController.getAll);
 
 // Get coordinator by ID
-router.get('/:id', authenticate, ElectionCoordinatorController.getById);
+router.get('/:id', authenticateToken, ElectionCoordinatorController.getById);
 
 // Create new coordinator
-router.post('/', authenticate, ElectionCoordinatorController.create);
+router.post('/', authenticateToken, ElectionCoordinatorController.create);
 
 // Update coordinator
-router.put('/:id', authenticate, ElectionCoordinatorController.update);
+router.put('/:id', authenticateToken, ElectionCoordinatorController.update);
 
 // Delete coordinator
-router.delete('/:id', authenticate, ElectionCoordinatorController.delete);
+router.delete('/:id', authenticateToken, ElectionCoordinatorController.delete);
 
 module.exports = router;
 
