@@ -80,6 +80,7 @@ const CoordinatorsPage = () => {
 // Sorumlular Listesi Sayfası
 const CoordinatorsListPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingCoordinator, setEditingCoordinator] = useState(null);
   const [coordinators, setCoordinators] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -176,12 +177,18 @@ const CoordinatorsListPage = () => {
         district_id: formData.district_id || null
       };
 
-      const response = await ApiService.createElectionCoordinator(coordinatorData);
+      let response;
+      if (editingCoordinator) {
+        response = await ApiService.updateElectionCoordinator(editingCoordinator.id, coordinatorData);
+      } else {
+        response = await ApiService.createElectionCoordinator(coordinatorData);
+      }
       
       if (response.success) {
-        setMessage('Sorumlu başarıyla oluşturuldu');
+        setMessage(editingCoordinator ? 'Sorumlu başarıyla güncellendi' : 'Sorumlu başarıyla oluşturuldu');
         setMessageType('success');
         setShowCreateModal(false);
+        setEditingCoordinator(null);
         setFormData({
           name: '',
           tc: '',
@@ -192,12 +199,50 @@ const CoordinatorsListPage = () => {
         });
         loadData(); // Listeyi yenile
       } else {
-        setMessage(response.message || 'Sorumlu oluşturulurken hata oluştu');
+        setMessage(response.message || 'Sorumlu işlemi sırasında hata oluştu');
         setMessageType('error');
       }
     } catch (error) {
-      console.error('Error creating coordinator:', error);
-      setMessage('Sorumlu oluşturulurken hata oluştu: ' + error.message);
+      console.error('Error saving coordinator:', error);
+      setMessage('Sorumlu işlemi sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCoordinator = (coordinator) => {
+    setEditingCoordinator(coordinator);
+    setFormData({
+      name: coordinator.name || '',
+      tc: coordinator.tc || '',
+      phone: coordinator.phone || '',
+      role: coordinator.role || 'provincial_coordinator',
+      parent_coordinator_id: coordinator.parent_coordinator_id || null,
+      district_id: coordinator.district_id || null
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleDeleteCoordinator = async (id) => {
+    if (!window.confirm('Bu sorumluyu silmek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await ApiService.deleteElectionCoordinator(id);
+      if (response.success) {
+        setMessage('Sorumlu başarıyla silindi');
+        setMessageType('success');
+        loadData();
+      } else {
+        setMessage(response.message || 'Sorumlu silinirken hata oluştu');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error deleting coordinator:', error);
+      setMessage('Sorumlu silinirken hata oluştu: ' + error.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -255,6 +300,9 @@ const CoordinatorsListPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Üst Sorumlu
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    İşlemler
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -265,7 +313,7 @@ const CoordinatorsListPage = () => {
                     region_supervisor: 'Bölge Sorumlusu'
                   };
                   const parentCoordinator = coordinator.parent_coordinator_id 
-                    ? coordinators.find(c => c.id === coordinator.parent_coordinator_id)
+                    ? coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id))
                     : null;
                   
                   return (
@@ -291,6 +339,28 @@ const CoordinatorsListPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {parentCoordinator ? parentCoordinator.name : '-'}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditCoordinator(coordinator)}
+                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            title="Düzenle"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCoordinator(coordinator.id)}
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            title="Sil"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -306,10 +376,13 @@ const CoordinatorsListPage = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Yeni Sorumlu Ekle</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {editingCoordinator ? 'Sorumlu Düzenle' : 'Yeni Sorumlu Ekle'}
+                </h3>
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
+                    setEditingCoordinator(null);
                     setFormData({
                       name: '',
                       tc: '',
@@ -353,14 +426,14 @@ const CoordinatorsListPage = () => {
                       İl Genel Sorumlusu *
                     </label>
                     <select
-                      value={formData.parent_coordinator_id || ''}
-                      onChange={(e) => setFormData({ ...formData, parent_coordinator_id: e.target.value ? parseInt(e.target.value) : null })}
+                      value={formData.parent_coordinator_id ? String(formData.parent_coordinator_id) : ''}
+                      onChange={(e) => setFormData({ ...formData, parent_coordinator_id: e.target.value ? (Number(e.target.value) || null) : null })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       required
                     >
                       <option value="">Seçiniz...</option>
                       {parentCoordinators.map((coordinator) => (
-                        <option key={coordinator.id} value={coordinator.id}>
+                        <option key={coordinator.id} value={String(coordinator.id)}>
                           {coordinator.name}
                         </option>
                       ))}
@@ -374,14 +447,14 @@ const CoordinatorsListPage = () => {
                       İlçe Sorumlusu *
                     </label>
                     <select
-                      value={formData.parent_coordinator_id || ''}
-                      onChange={(e) => setFormData({ ...formData, parent_coordinator_id: e.target.value ? parseInt(e.target.value) : null })}
+                      value={formData.parent_coordinator_id ? String(formData.parent_coordinator_id) : ''}
+                      onChange={(e) => setFormData({ ...formData, parent_coordinator_id: e.target.value ? (Number(e.target.value) || null) : null })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       required
                     >
                       <option value="">Seçiniz...</option>
                       {parentCoordinators.map((coordinator) => (
-                        <option key={coordinator.id} value={coordinator.id}>
+                        <option key={coordinator.id} value={String(coordinator.id)}>
                           {coordinator.name}
                         </option>
                       ))}
@@ -438,6 +511,7 @@ const CoordinatorsListPage = () => {
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
+                    setEditingCoordinator(null);
                     setFormData({
                       name: '',
                       tc: '',
@@ -471,6 +545,7 @@ const CoordinatorsListPage = () => {
 // Bölgeler Listesi Sayfası
 const RegionsListPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingRegion, setEditingRegion] = useState(null);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
   const [ballotBoxes, setBallotBoxes] = useState([]);
@@ -573,24 +648,65 @@ const RegionsListPage = () => {
                      villages.find(v => selectedVillages.includes(v.id))?.district_id || null
       };
 
-      const response = await ApiService.createElectionRegion(regionData);
+      let response;
+      if (editingRegion) {
+        response = await ApiService.updateElectionRegion(editingRegion.id, regionData);
+      } else {
+        response = await ApiService.createElectionRegion(regionData);
+      }
       
       if (response.success || response.id) {
-        setMessage('Bölge başarıyla oluşturuldu');
+        setMessage(editingRegion ? 'Bölge başarıyla güncellendi' : 'Bölge başarıyla oluşturuldu');
         setMessageType('success');
         setShowCreateModal(false);
+        setEditingRegion(null);
         setRegionName('');
         setSelectedNeighborhoods([]);
         setSelectedVillages([]);
         setSelectedSupervisorId('');
         loadRegions(); // Listeyi yenile
       } else {
-        setMessage(response.message || 'Bölge oluşturulurken hata oluştu');
+        setMessage(response.message || 'Bölge işlemi sırasında hata oluştu');
         setMessageType('error');
       }
     } catch (error) {
-      console.error('Error creating region:', error);
-      setMessage('Bölge oluşturulurken hata oluştu: ' + error.message);
+      console.error('Error saving region:', error);
+      setMessage('Bölge işlemi sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditRegion = async (region) => {
+    setEditingRegion(region);
+    setRegionName(region.name || '');
+    setSelectedNeighborhoods(region.neighborhood_ids || []);
+    setSelectedVillages(region.village_ids || []);
+    setSelectedSupervisorId(region.supervisor_id ? String(region.supervisor_id) : '');
+    await loadData(); // Verileri yükle
+    setShowCreateModal(true);
+  };
+
+  const handleDeleteRegion = async (id) => {
+    if (!window.confirm('Bu bölgeyi silmek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await ApiService.deleteElectionRegion(id);
+      if (response.success) {
+        setMessage('Bölge başarıyla silindi');
+        setMessageType('success');
+        loadRegions();
+      } else {
+        setMessage(response.message || 'Bölge silinirken hata oluştu');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error deleting region:', error);
+      setMessage('Bölge silinirken hata oluştu: ' + error.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -657,11 +773,14 @@ const RegionsListPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Köyler
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    İşlemler
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {regions.map((region) => {
-                  const supervisor = regionSupervisors.find(s => s.id === region.supervisor_id);
+                  const supervisor = regionSupervisors.find(s => String(s.id) === String(region.supervisor_id));
                   const regionNeighborhoods = neighborhoods.filter(n => 
                     (region.neighborhood_ids || []).includes(n.id)
                   );
@@ -689,6 +808,28 @@ const RegionsListPage = () => {
                           : '-'
                         }
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditRegion(region)}
+                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            title="Düzenle"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRegion(region.id)}
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            title="Sil"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -704,10 +845,13 @@ const RegionsListPage = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Yeni Bölge Oluştur</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {editingRegion ? 'Bölge Düzenle' : 'Yeni Bölge Oluştur'}
+                </h3>
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
+                    setEditingRegion(null);
                     setRegionName('');
                     setSelectedNeighborhoods([]);
                     setSelectedVillages([]);
@@ -857,6 +1001,7 @@ const RegionsListPage = () => {
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
+                    setEditingRegion(null);
                     setRegionName('');
                     setSelectedNeighborhoods([]);
                     setSelectedVillages([]);

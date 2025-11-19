@@ -1777,6 +1777,31 @@ class ApiService {
     return response.json();
   }
 
+  static async updateElectionCoordinator(id, coordinatorData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updateElectionCoordinator(id, coordinatorData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-coordinators/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(coordinatorData),
+    });
+    return response.json();
+  }
+
+  static async deleteElectionCoordinator(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deleteElectionCoordinator(id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-coordinators/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   // Election Regions API
   static async getElectionRegions() {
     if (USE_FIREBASE) {
@@ -1798,6 +1823,31 @@ class ApiService {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(regionData),
+    });
+    return response.json();
+  }
+
+  static async updateElectionRegion(id, regionData) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.updateElectionRegion(id, regionData);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-regions/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(regionData),
+    });
+    return response.json();
+  }
+
+  static async deleteElectionRegion(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.deleteElectionRegion(id);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/election-regions/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
     });
     return response.json();
   }

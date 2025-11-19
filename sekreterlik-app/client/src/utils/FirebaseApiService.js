@@ -3950,6 +3950,34 @@ class FirebaseApiService {
     }
   }
 
+  static async updateElectionCoordinator(id, coordinatorData) {
+    try {
+      await FirebaseService.update(
+        'election_coordinators',
+        id,
+        {
+          ...coordinatorData,
+          updated_at: new Date().toISOString()
+        },
+        false
+      );
+      return { success: true, message: 'Sorumlu başarıyla güncellendi', coordinator: { id, ...coordinatorData } };
+    } catch (error) {
+      console.error('Update election coordinator error:', error);
+      throw new Error('Sorumlu güncellenirken hata oluştu');
+    }
+  }
+
+  static async deleteElectionCoordinator(id) {
+    try {
+      await FirebaseService.delete('election_coordinators', id);
+      return { success: true, message: 'Sorumlu başarıyla silindi' };
+    } catch (error) {
+      console.error('Delete election coordinator error:', error);
+      throw new Error('Sorumlu silinirken hata oluştu');
+    }
+  }
+
   // Election Regions API
   static async getElectionRegions() {
     try {
@@ -3992,6 +4020,40 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Create election region error:', error);
       throw new Error('Bölge oluşturulurken hata oluştu');
+    }
+  }
+
+  static async updateElectionRegion(id, regionData) {
+    try {
+      await FirebaseService.update(
+        'election_regions',
+        id,
+        {
+          ...regionData,
+          neighborhood_ids: Array.isArray(regionData.neighborhood_ids) 
+            ? regionData.neighborhood_ids 
+            : [],
+          village_ids: Array.isArray(regionData.village_ids)
+            ? regionData.village_ids
+            : [],
+          updated_at: new Date().toISOString()
+        },
+        false
+      );
+      return { success: true, message: 'Bölge başarıyla güncellendi', region: { id, ...regionData } };
+    } catch (error) {
+      console.error('Update election region error:', error);
+      throw new Error('Bölge güncellenirken hata oluştu');
+    }
+  }
+
+  static async deleteElectionRegion(id) {
+    try {
+      await FirebaseService.delete('election_regions', id);
+      return { success: true, message: 'Bölge başarıyla silindi' };
+    } catch (error) {
+      console.error('Delete election region error:', error);
+      throw new Error('Bölge silinirken hata oluştu');
     }
   }
 
