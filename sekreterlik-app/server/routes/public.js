@@ -164,14 +164,18 @@ router.get('/', externalApiCache, async (req, res) => {
     let elections = [];
     try {
       if (USE_FIREBASE) {
-        // Firebase implementation
-        const { collections } = require('../config/database');
-        const electionsSnapshot = await collections.elections
-          .orderBy('date', 'desc')
-          .orderBy('created_at', 'desc')
-          .limit(10)
-          .get();
-        elections = electionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Firebase implementation using Admin SDK
+        const { getAdmin } = require('../config/firebaseAdmin');
+        const admin = getAdmin();
+        if (admin) {
+          const firestore = admin.firestore();
+          const electionsSnapshot = await firestore.collection('elections')
+            .orderBy('date', 'desc')
+            .orderBy('created_at', 'desc')
+            .limit(10)
+            .get();
+          elections = electionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
       } else {
         // SQLite implementation
         const db = require('../config/database');
@@ -252,6 +256,7 @@ router.get('/', externalApiCache, async (req, res) => {
     res.send(html);
   } catch (error) {
     console.error('Error rendering public page:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).send(`
       <!DOCTYPE html>
       <html>
@@ -263,10 +268,16 @@ router.get('/', externalApiCache, async (req, res) => {
       <body>
         <h1>Sayfa yüklenirken hata oluştu</h1>
         <p>Lütfen daha sonra tekrar deneyin.</p>
+        <pre>${error.message}</pre>
       </body>
       </html>
     `);
   }
+});
+
+// Test route to verify router is working
+router.get('/test', (req, res) => {
+  res.json({ message: 'Public route is working!', path: '/public/test' });
 });
 
 // Helper function to generate HTML
