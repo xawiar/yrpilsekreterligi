@@ -355,6 +355,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/api-keys', apiKeysRouter);
 app.use('/api/public', publicApiRouter);
+app.use('/api/public/visitors', require('./routes/visitors'));
 
 console.log('API routes registered');
 

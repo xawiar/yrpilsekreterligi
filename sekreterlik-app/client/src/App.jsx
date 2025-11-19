@@ -49,6 +49,7 @@ const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
 const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
 const ElectionResultEditPage = lazy(() => import('./pages/ElectionResultEditPage'));
+const PublicElectionResultsPage = lazy(() => import('./pages/PublicElectionResultsPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
@@ -216,6 +217,12 @@ function RouterContent() {
                 <Navigate to="/login?type=chief-observer" replace />
               </PublicRoute>
             } 
+          />
+          
+          {/* Public Election Results - No authentication required */}
+          <Route 
+            path="/public/election-results/:electionId" 
+            element={<PublicElectionResultsPage />} 
           />
           
           {/* Admin Routes */}

@@ -7,9 +7,18 @@ const MemberDashboardAnalyticsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('summary'); // 'summary' or 'detailed'
+  const [visitorCounts, setVisitorCounts] = useState({ total: 0, byElection: {} });
 
   useEffect(() => {
     fetchAnalytics();
+    fetchVisitorCounts();
+    
+    // Update visitor counts every 10 seconds
+    const interval = setInterval(() => {
+      fetchVisitorCounts();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAnalytics = async () => {
@@ -34,6 +43,24 @@ const MemberDashboardAnalyticsPage = () => {
       setError('Analytics verileri yüklenirken hata oluştu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVisitorCounts = async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      const response = await fetch(`${API_BASE_URL}/public/visitors/all-counts`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setVisitorCounts({
+            total: data.totalCount || 0,
+            byElection: data.counts || {}
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching visitor counts:', err);
     }
   };
 
@@ -96,6 +123,32 @@ const MemberDashboardAnalyticsPage = () => {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Üye Dashboard Analytics</h1>
           <p className="text-gray-600 text-sm">Üyelerin dashboard sayfası kullanım istatistikleri</p>
+        </div>
+
+        {/* Visitor Count Card */}
+        <div className="mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold mb-1">Anlık Seçim Sonuçları İzleyicileri</h2>
+              <p className="text-indigo-100 text-sm">Public seçim sonuçları sayfasını izleyen kişi sayısı</p>
+            </div>
+            <div className="text-right">
+              <div className="text-4xl font-bold">{visitorCounts.total}</div>
+              <div className="text-indigo-100 text-sm">aktif izleyici</div>
+            </div>
+          </div>
+          {Object.keys(visitorCounts.byElection).length > 0 && (
+            <div className="mt-4 pt-4 border-t border-indigo-400/30">
+              <p className="text-sm font-medium mb-2">Seçim Bazında:</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(visitorCounts.byElection).map(([electionId, count]) => (
+                  <div key={electionId} className="bg-white/20 rounded-lg px-3 py-1 text-sm">
+                    Seçim {electionId}: <span className="font-bold">{count}</span> kişi
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* View Mode Toggle */}
