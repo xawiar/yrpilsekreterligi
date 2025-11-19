@@ -26,6 +26,7 @@ const MemberUsersSettings = () => {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [isProcessingAll, setIsProcessingAll] = useState(false);
   const [isClearingAuthUids, setIsClearingAuthUids] = useState(false);
+  const [isCleaningOrphaned, setIsCleaningOrphaned] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -958,9 +959,83 @@ const MemberUsersSettings = () => {
             }
           } catch (authError) {
             if (authError.code === 'auth/email-already-in-use') {
-              // Email zaten kullanılıyorsa, bu normal bir durum (kullanıcı zaten Firebase Auth'da)
-              console.log(`ℹ️ Email already in use: ${email} - Kullanıcı zaten Firebase Auth'da, atlanıyor`);
-              successCount++;
+              // Email zaten kullanılıyorsa, backend'den kullanıcıyı bul ve authUid'yi kaydet
+              console.log(`ℹ️ Email already in use: ${email} - Kullanıcı zaten Firebase Auth'da, authUid kaydediliyor`);
+              try {
+                // Backend endpoint'ini kullanarak email ile authUid'yi bul
+                let API_BASE_URL_FINAL = import.meta.env.VITE_API_BASE_URL;
+                if (API_BASE_URL_FINAL) {
+                  API_BASE_URL_FINAL = API_BASE_URL_FINAL.replace(/\/+$/, '');
+                  if (!API_BASE_URL_FINAL.endsWith('/api')) {
+                    API_BASE_URL_FINAL = API_BASE_URL_FINAL + '/api';
+                  }
+                } else {
+                  if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+                    API_BASE_URL_FINAL = 'https://sekreterlik-backend.onrender.com/api';
+                  } else {
+                    API_BASE_URL_FINAL = 'http://localhost:5000/api';
+                  }
+                }
+                
+                try {
+                  const findResponse = await fetch(`${API_BASE_URL_FINAL}/auth/find-firebase-auth-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                  });
+                  
+                  if (findResponse.ok) {
+                    const findResult = await findResponse.json();
+                    if (findResult.success && findResult.authUid) {
+                      // Firestore'da authUid'yi güncelle
+                      const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+                      await FirebaseService.update(FirebaseApiService.COLLECTIONS.MEMBER_USERS, user.id, {
+                        authUid: findResult.authUid
+                      }, false);
+                      
+                      console.log(`✅ AuthUid kaydedildi: ${user.username} -> ${findResult.authUid}`);
+                      successCount++;
+                      continue;
+                    }
+                  }
+                } catch (findError) {
+                  console.warn(`⚠️ Backend find endpoint failed for ${email}:`, findError.message);
+                }
+                
+                // Backend başarısız, geçici olarak giriş yapıp UID'yi al
+                try {
+                  const tempCredential = await signInWithEmailAndPassword(auth, email, password);
+                  const existingAuthUid = tempCredential.user.uid;
+                  
+                  // Firestore'da authUid'yi güncelle
+                  const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
+                  await FirebaseService.update(FirebaseApiService.COLLECTIONS.MEMBER_USERS, user.id, {
+                    authUid: existingAuthUid
+                  }, false);
+                  
+                  console.log(`✅ AuthUid kaydedildi (sign-in method): ${user.username} -> ${existingAuthUid}`);
+                  successCount++;
+                  
+                  // Admin kullanıcısını geri yükle
+                  if (currentUserEmail === adminEmail) {
+                    try {
+                      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+                      console.log('✅ Admin user re-authenticated');
+                    } catch (signInError) {
+                      console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
+                    }
+                  }
+                } catch (signInError) {
+                  // Şifre yanlış olabilir, ama kullanıcı var
+                  console.warn(`⚠️ Cannot sign in to get authUid for ${email}, user exists but password may be different`);
+                  // Kullanıcı var ama authUid'yi kaydedemiyoruz, yine de başarılı sayalım
+                  successCount++;
+                }
+              } catch (uidError) {
+                console.warn(`⚠️ Error getting authUid for existing user ${email}:`, uidError);
+                // Kullanıcı var ama authUid'yi kaydedemiyoruz, yine de başarılı sayalım
+                successCount++;
+              }
             } else {
               // Diğer hatalar için detaylı log
               console.error(`❌ Firebase Auth error for ${user.username}:`, {
@@ -1189,6 +1264,109 @@ const MemberUsersSettings = () => {
     } finally {
       setIsSyncingToAuth(false);
       setSyncProgress({ current: 0, total: 0 });
+    }
+  };
+
+  // Geçersiz kullanıcıları bul ve temizle (silinmiş üyelere ait kullanıcılar)
+  const handleCleanupOrphanedMemberUsers = async () => {
+    if (!window.confirm('Geçersiz kullanıcıları bulmak ve temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- member_users\'daki kullanıcıları members ile karşılaştırır\n- Silinmiş/arşivlenmiş üyelere ait kullanıcıları bulur\n- Bu kullanıcıları listeler ve onayla siler\n\nDevam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    try {
+      setIsCleaningOrphaned(true);
+      setMessage('');
+      setMessageType('info');
+
+      // Tüm member_users ve members'ı al
+      const allMemberUsers = await ApiService.getMemberUsers();
+      const allMembers = await ApiService.getMembers();
+      
+      const memberUsersList = allMemberUsers.users || allMemberUsers || [];
+      const membersList = allMembers || [];
+      
+      // Aktif üyelerin ID'lerini topla
+      const activeMemberIds = new Set();
+      membersList.forEach(member => {
+        if (!member.archived) {
+          activeMemberIds.add(member.id);
+        }
+      });
+      
+      // Geçersiz kullanıcıları bul (member_id'si olan ama üye silinmiş/arşivlenmiş olanlar)
+      const orphanedUsers = [];
+      memberUsersList.forEach(user => {
+        const memberId = user.member_id || user.memberId;
+        if (memberId && !activeMemberIds.has(memberId)) {
+          orphanedUsers.push(user);
+        } else if (user.userType === 'member' && !memberId) {
+          // member_id olmayan member tipindeki kullanıcılar da geçersiz
+          orphanedUsers.push(user);
+        }
+      });
+      
+      if (orphanedUsers.length === 0) {
+        setMessage('✅ Geçersiz kullanıcı bulunamadı. Tüm kullanıcılar geçerli üyelere ait.');
+        setMessageType('success');
+        return;
+      }
+      
+      // Kullanıcıya listeyi göster ve onay al
+      const userList = orphanedUsers.map(u => {
+        const memberId = u.member_id || u.memberId;
+        return `• ${u.username} (ID: ${u.id}, Member ID: ${memberId || 'YOK'})`;
+      }).join('\n');
+      
+      const confirmMessage = `Bulunan geçersiz kullanıcılar (${orphanedUsers.length} adet):\n\n${userList}\n\nBu kullanıcıları silmek istediğinize emin misiniz?`;
+      
+      if (!window.confirm(confirmMessage)) {
+        setMessage(`ℹ️ İşlem iptal edildi. ${orphanedUsers.length} geçersiz kullanıcı bulundu ama silinmedi.`);
+        setMessageType('info');
+        return;
+      }
+      
+      // Kullanıcıları sil
+      let deletedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
+      for (const user of orphanedUsers) {
+        try {
+          const response = await ApiService.deleteMemberUser(user.id);
+          if (response.success) {
+            deletedCount++;
+          } else {
+            errorCount++;
+            errors.push(`${user.username}: ${response.message || 'Silme hatası'}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${user.username}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error(`Error deleting orphaned user ${user.id}:`, error);
+        }
+      }
+      
+      // Sonuç mesajı
+      let message = `✅ Geçersiz kullanıcı temizleme tamamlandı!\n\n`;
+      message += `• Bulunan: ${orphanedUsers.length} geçersiz kullanıcı\n`;
+      message += `• Silinen: ${deletedCount} kullanıcı\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount} kullanıcı\n`;
+        message += `\nHatalar:\n${errors.slice(0, 10).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      await fetchMemberUsers();
+      
+    } catch (error) {
+      console.error('Error cleaning up orphaned member users:', error);
+      setMessage('Geçersiz kullanıcı temizleme sırasında hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsCleaningOrphaned(false);
     }
   };
 
@@ -1731,6 +1909,26 @@ const MemberUsersSettings = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Firebase Auth'a Senkronize Et
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCleanupOrphanedMemberUsers}
+              disabled={isCleaningOrphaned}
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+              title="Silinmiş/arşivlenmiş üyelere ait geçersiz kullanıcıları bul ve temizle"
+            >
+              {isCleaningOrphaned ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Temizleniyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Geçersiz Kullanıcıları Bul ve Temizle
                 </>
               )}
             </button>

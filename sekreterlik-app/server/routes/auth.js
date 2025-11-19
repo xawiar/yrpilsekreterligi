@@ -1233,6 +1233,7 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
     let memberUsers = [];
     
     // SQLite'dan al (sadece USE_FIREBASE false ise)
+    // TÜM user type'ları al (member, district_president, town_president, musahit, coordinator)
     if (!USE_FIREBASE) {
       try {
         memberUsers = await new Promise((resolve, reject) => {
@@ -1240,14 +1241,13 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
             SELECT mu.*, m.name as member_name, m.tc as member_tc, m.phone as member_phone
             FROM member_users mu
             LEFT JOIN members m ON mu.member_id = m.id
-            WHERE mu.user_type = 'member' OR mu.user_type IS NULL
           `, (err, rows) => {
             if (err) reject(err);
             else resolve(rows || []);
           });
         });
         
-        console.log(`📊 Found ${memberUsers.length} member_users in SQLite database`);
+        console.log(`📊 Found ${memberUsers.length} member_users in SQLite database (all types)`);
       } catch (sqliteError) {
         console.warn('⚠️ SQLite query failed (normal if using Firebase only):', sqliteError.message);
         memberUsers = [];
@@ -1257,20 +1257,19 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
     }
     
     // If Firebase is used, also get from Firestore
+    // TÜM user type'ları al (member, district_president, town_president, musahit, coordinator)
     let firestoreMemberUsers = [];
     if (USE_FIREBASE) {
       try {
         const firestore = firebaseAdmin.firestore();
-        const memberUsersSnapshot = await firestore.collection('member_users')
-          .where('userType', '==', 'member')
-          .get();
+        const memberUsersSnapshot = await firestore.collection('member_users').get();
         
         firestoreMemberUsers = memberUsersSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         
-        console.log(`📊 Found ${firestoreMemberUsers.length} member_users in Firestore`);
+        console.log(`📊 Found ${firestoreMemberUsers.length} member_users in Firestore (all types)`);
       } catch (firestoreError) {
         console.error('❌ Error reading from Firestore:', firestoreError);
       }
