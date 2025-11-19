@@ -6,6 +6,7 @@ import RepresentativesPage from './RepresentativesPage';
 import NeighborhoodsPage from './NeighborhoodsPage';
 import VillagesPage from './VillagesPage';
 import GroupsPage from './GroupsPage';
+import CoordinatorsPage from './CoordinatorsPage';
 
 const ElectionPreparationPage = () => {
   const location = useLocation();
@@ -20,6 +21,7 @@ const ElectionPreparationPage = () => {
     if (path.includes('/neighborhoods')) return 'neighborhoods';
     if (path.includes('/villages')) return 'villages';
     if (path.includes('/groups')) return 'groups';
+    if (path.includes('/coordinators')) return 'coordinators';
     return 'ballot-boxes'; // Default
   };
 
@@ -97,6 +99,17 @@ const ElectionPreparationPage = () => {
       ),
       color: 'pink',
       path: '/election-preparation/groups'
+    },
+    {
+      id: 'coordinators',
+      name: 'Sorumlular',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      color: 'blue',
+      path: '/election-preparation/coordinators'
     }
   ];
 
@@ -136,6 +149,11 @@ const ElectionPreparationPage = () => {
         bg: isActive ? 'bg-pink-600' : 'bg-pink-100 hover:bg-pink-200',
         text: isActive ? 'text-white' : 'text-pink-700',
         border: isActive ? 'border-pink-600' : 'border-pink-200'
+      },
+      blue: {
+        bg: isActive ? 'bg-blue-600' : 'bg-blue-100 hover:bg-blue-200',
+        text: isActive ? 'text-white' : 'text-blue-700',
+        border: isActive ? 'border-blue-600' : 'border-blue-200'
       }
     };
     return colors[color] || colors.indigo;
@@ -190,6 +208,7 @@ const ElectionPreparationPage = () => {
             <Route path="neighborhoods" element={<NeighborhoodsPage />} />
             <Route path="villages" element={<VillagesPage />} />
             <Route path="groups" element={<GroupsPage />} />
+            <Route path="coordinators/*" element={<CoordinatorsPage />} />
           </Routes>
         </div>
       </div>
