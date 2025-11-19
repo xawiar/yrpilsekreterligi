@@ -760,8 +760,7 @@ const collections = {
   village_visits: [],
   stk_visits: [],
   mosque_visits: [],
-  event_visits: [],
-  news: [] // News collection
+  event_visits: []
 };
 
 // Load data from SQLite to in-memory collections - Skip if using Firebase
@@ -909,10 +908,6 @@ db.all('SELECT * FROM mosque_visits', [], (err, rows) => {
 
 db.all('SELECT * FROM event_visits', [], (err, rows) => {
   if (!err) collections.event_visits = rows;
-});
-
-db.all('SELECT * FROM news', [], (err, rows) => {
-  if (!err) collections.news = rows;
 });
 
   console.log('✅ SQLite data loaded into in-memory collections');
