@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import PublicApiService from '../utils/PublicApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -234,9 +235,12 @@ const ElectionResultsPage = ({ readOnly = false }) => {
   const fetchData = async () => {
     try {
       if (import.meta.env.DEV) {
-      console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId);
+      console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId, 'readOnly:', readOnly);
       }
       setLoading(true);
+      
+      // Public sayfa için PublicApiService kullan, aksi halde normal ApiService
+      const apiService = readOnly ? PublicApiService : ApiService;
       
       const [
         electionsData,
@@ -248,14 +252,14 @@ const ElectionResultsPage = ({ readOnly = false }) => {
         villagesData,
         observersData
       ] = await Promise.all([
-        ApiService.getElections(),
-        ApiService.getElectionResults(electionId, null),
-        ApiService.getBallotBoxes(),
-        ApiService.getDistricts(),
-        ApiService.getTowns(),
-        ApiService.getNeighborhoods(),
-        ApiService.getVillages(),
-        ApiService.getBallotBoxObservers()
+        apiService.getElections(),
+        apiService.getElectionResults(electionId, null),
+        apiService.getBallotBoxes(),
+        apiService.getDistricts(),
+        apiService.getTowns(),
+        apiService.getNeighborhoods(),
+        apiService.getVillages(),
+        apiService.getBallotBoxObservers()
       ]);
 
       const selectedElection = electionsData.find(e => String(e.id) === String(electionId));

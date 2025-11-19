@@ -354,8 +354,12 @@ app.use('/api/member-dashboard-analytics', memberDashboardAnalyticsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/api-keys', apiKeysRouter);
-app.use('/api/public', publicApiRouter);
+// Public election results routes - NO AUTHENTICATION REQUIRED
+app.use('/api/public/election-results', require('./routes/publicElectionResults'));
+
+// Visitors route must be registered BEFORE publicApiRouter to avoid conflicts
 app.use('/api/public/visitors', require('./routes/visitors'));
+app.use('/api/public', publicApiRouter);
 
 console.log('API routes registered');
 
