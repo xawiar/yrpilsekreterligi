@@ -703,6 +703,35 @@ db.serialize(() => {
     UNIQUE(election_id, ballot_box_id)
   )`);
 
+  // Create election_coordinators table
+  db.run(`CREATE TABLE IF NOT EXISTS election_coordinators (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    tc TEXT NOT NULL UNIQUE,
+    phone TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('provincial_coordinator', 'district_supervisor', 'region_supervisor')),
+    parent_coordinator_id INTEGER,
+    district_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_coordinator_id) REFERENCES election_coordinators (id) ON DELETE SET NULL,
+    FOREIGN KEY (district_id) REFERENCES districts (id) ON DELETE SET NULL
+  )`);
+
+  // Create election_regions table
+  db.run(`CREATE TABLE IF NOT EXISTS election_regions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    supervisor_id INTEGER,
+    neighborhood_ids TEXT, -- JSON array: [1, 2, 3]
+    village_ids TEXT, -- JSON array: [1, 2, 3]
+    district_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (supervisor_id) REFERENCES election_coordinators (id) ON DELETE SET NULL,
+    FOREIGN KEY (district_id) REFERENCES districts (id) ON DELETE SET NULL
+  )`);
+
   // Create audit_logs table for security
   db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -117,10 +117,12 @@ const CoordinatorsListPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [districtsData] = await Promise.all([
-        ApiService.getDistricts()
+      const [districtsData, coordinatorsData] = await Promise.all([
+        ApiService.getDistricts(),
+        ApiService.getElectionCoordinators()
       ]);
       setDistricts(districtsData || []);
+      setCoordinators(coordinatorsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       setMessage('Veriler yüklenirken hata oluştu: ' + error.message);
@@ -174,11 +176,7 @@ const CoordinatorsListPage = () => {
         district_id: formData.district_id || null
       };
 
-      // TODO: API endpoint'i oluşturulacak
-      // const response = await ApiService.createElectionCoordinator(coordinatorData);
-      
-      // Şimdilik mock response
-      const response = { success: true, message: 'Sorumlu başarıyla oluşturuldu' };
+      const response = await ApiService.createElectionCoordinator(coordinatorData);
       
       if (response.success) {
         setMessage('Sorumlu başarıyla oluşturuldu');
@@ -192,7 +190,7 @@ const CoordinatorsListPage = () => {
           parent_coordinator_id: null,
           district_id: null
         });
-        // loadCoordinators(); // Listeyi yenile
+        loadData(); // Listeyi yenile
       } else {
         setMessage(response.message || 'Sorumlu oluşturulurken hata oluştu');
         setMessageType('error');
@@ -233,7 +231,73 @@ const CoordinatorsListPage = () => {
 
       {/* Sorumlu Listesi */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <p className="text-gray-600 dark:text-gray-400">Sorumlular listesi burada görüntülenecek.</p>
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
+        ) : coordinators.length === 0 ? (
+          <p className="text-gray-600 dark:text-gray-400 text-center py-8">Henüz sorumlu eklenmemiş.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Ad Soyad
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    TC
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Telefon
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Rol
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Üst Sorumlu
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {coordinators.map((coordinator) => {
+                  const roleNames = {
+                    provincial_coordinator: 'İl Genel Sorumlusu',
+                    district_supervisor: 'İlçe Sorumlusu',
+                    region_supervisor: 'Bölge Sorumlusu'
+                  };
+                  const parentCoordinator = coordinator.parent_coordinator_id 
+                    ? coordinators.find(c => c.id === coordinator.parent_coordinator_id)
+                    : null;
+                  
+                  return (
+                    <tr key={coordinator.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {coordinator.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {coordinator.tc}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {coordinator.phone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          coordinator.role === 'provincial_coordinator' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
+                          coordinator.role === 'district_supervisor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                          'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        }`}>
+                          {roleNames[coordinator.role] || coordinator.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {parentCoordinator ? parentCoordinator.name : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Sorumlu Ekle Modal */}
@@ -429,12 +493,29 @@ const RegionsListPage = () => {
     return 0;
   };
 
+  const [regions, setRegions] = useState([]);
+
   // Verileri yükle
   useEffect(() => {
+    loadRegions();
     if (showCreateModal) {
       loadData();
     }
   }, [showCreateModal]);
+
+  const loadRegions = async () => {
+    try {
+      setLoading(true);
+      const regionsData = await ApiService.getElectionRegions();
+      setRegions(regionsData || []);
+    } catch (error) {
+      console.error('Error loading regions:', error);
+      setMessage('Bölgeler yüklenirken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -443,9 +524,7 @@ const RegionsListPage = () => {
         ApiService.getNeighborhoods(),
         ApiService.getVillages(),
         ApiService.getBallotBoxes(),
-        // TODO: API endpoint'i oluşturulacak
-        // ApiService.getElectionCoordinators({ role: 'region_supervisor' })
-        Promise.resolve([]) // Şimdilik boş array
+        ApiService.getElectionCoordinators()
       ]);
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
@@ -494,7 +573,7 @@ const RegionsListPage = () => {
                      villages.find(v => selectedVillages.includes(v.id))?.district_id || null
       };
 
-      const response = await ApiService.createRegion(regionData);
+      const response = await ApiService.createElectionRegion(regionData);
       
       if (response.success || response.id) {
         setMessage('Bölge başarıyla oluşturuldu');
@@ -504,6 +583,7 @@ const RegionsListPage = () => {
         setSelectedNeighborhoods([]);
         setSelectedVillages([]);
         setSelectedSupervisorId('');
+        loadRegions(); // Listeyi yenile
       } else {
         setMessage(response.message || 'Bölge oluşturulurken hata oluştu');
         setMessageType('error');
@@ -553,6 +633,70 @@ const RegionsListPage = () => {
           {message}
         </div>
       )}
+
+      {/* Bölge Listesi */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
+        ) : regions.length === 0 ? (
+          <p className="text-gray-600 dark:text-gray-400 text-center py-8">Henüz bölge eklenmemiş.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bölge Adı
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Sorumlu
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Mahalleler
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Köyler
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {regions.map((region) => {
+                  const supervisor = regionSupervisors.find(s => s.id === region.supervisor_id);
+                  const regionNeighborhoods = neighborhoods.filter(n => 
+                    (region.neighborhood_ids || []).includes(n.id)
+                  );
+                  const regionVillages = villages.filter(v => 
+                    (region.village_ids || []).includes(v.id)
+                  );
+                  
+                  return (
+                    <tr key={region.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {region.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {supervisor ? supervisor.name : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {regionNeighborhoods.length > 0 
+                          ? regionNeighborhoods.map(n => n.name).join(', ')
+                          : '-'
+                        }
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {regionVillages.length > 0 
+                          ? regionVillages.map(v => v.name).join(', ')
+                          : '-'
+                        }
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Bölge Oluştur Modal */}
       {showCreateModal && (
