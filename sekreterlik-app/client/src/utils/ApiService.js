@@ -1818,68 +1818,6 @@ class ApiService {
     return response.json();
   }
 
-  // News API
-  static async getNews(filters = {}) {
-    if (USE_FIREBASE) {
-      // Firebase implementation will be added to FirebaseApiService if needed
-      // For now, use backend API
-    }
-
-    const params = new URLSearchParams();
-    if (filters.status) params.append('status', filters.status);
-    if (filters.category) params.append('category', filters.category);
-    if (filters.limit) params.append('limit', filters.limit);
-
-    const response = await fetch(`${API_BASE_URL}/news?${params}`);
-    return response.json();
-  }
-
-  static async getNewsById(id) {
-    if (USE_FIREBASE) {
-      // Firebase implementation will be added if needed
-    }
-
-    const response = await fetch(`${API_BASE_URL}/news/${id}`);
-    return response.json();
-  }
-
-  static async createNews(newsData) {
-    if (USE_FIREBASE) {
-      // Firebase implementation will be added if needed
-    }
-
-    const response = await fetch(`${API_BASE_URL}/news`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(newsData),
-    });
-    return response.json();
-  }
-
-  static async updateNews(id, newsData) {
-    if (USE_FIREBASE) {
-      // Firebase implementation will be added if needed
-    }
-
-    const response = await fetch(`${API_BASE_URL}/news/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(newsData),
-    });
-    return response.json();
-  }
-
-  static async deleteNews(id) {
-    if (USE_FIREBASE) {
-      // Firebase implementation will be added if needed
-    }
-
-    const response = await fetch(`${API_BASE_URL}/news/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-    return response.json();
-  }
 
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {

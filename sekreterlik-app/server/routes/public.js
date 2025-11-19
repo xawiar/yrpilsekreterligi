@@ -7,11 +7,10 @@ const { calculateDHondtDetailed } = require('../utils/dhondt');
 const externalApiCache = cache(300);
 
 /**
- * Public News/Information Page
- * Herkese açık haber sitesi benzeri sayfa
+ * Public Information Page
+ * Herkese açık bilgi sayfası
  * - Seçim sonuçları
  * - Hava durumu
- * - Haberler
  * - Borsa/Altın bilgileri
  */
 
@@ -177,51 +176,6 @@ function calculateElectionResults(election, results) {
   return calculated;
 }
 
-// Helper function to fetch news from our database
-async function getNews() {
-  try {
-    const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
-    
-    let news = [];
-    
-    if (USE_FIREBASE) {
-      // Firebase implementation using Admin SDK
-      const { getAdmin } = require('../config/firebaseAdmin');
-      const admin = getAdmin();
-      if (admin) {
-        const firestore = admin.firestore();
-        const newsSnapshot = await firestore.collection('news')
-          .where('status', '==', 'published')
-          .orderBy('published_at', 'desc')
-          .orderBy('created_at', 'desc')
-          .limit(10)
-          .get();
-        news = newsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      }
-    } else {
-      // SQLite implementation
-      const db = require('../config/database');
-      news = await db.all(
-        'SELECT * FROM news WHERE status = ? ORDER BY published_at DESC, created_at DESC LIMIT 10',
-        ['published']
-      );
-    }
-    
-    return news.map(item => ({
-      title: item.title,
-      content: item.content,
-      summary: item.summary || item.content?.substring(0, 150) + '...',
-      image_url: item.image_url,
-      author: item.author || 'Admin',
-      category: item.category || 'general',
-      publishedAt: item.published_at || item.created_at,
-      views: item.views || 0
-    }));
-  } catch (error) {
-    console.error('Error fetching news:', error);
-  }
-  return [];
-}
 
 // Helper function to fetch stock/gold prices
 async function getFinancialData() {
@@ -305,9 +259,8 @@ router.get('/', externalApiCache, async (req, res) => {
       console.error('Error fetching elections:', err);
     }
 
-    const [weather, news, financial] = await Promise.all([
+    const [weather, financial] = await Promise.all([
       getWeatherData(),
-      getNews(),
       getFinancialData()
     ]);
 
@@ -368,7 +321,6 @@ router.get('/', externalApiCache, async (req, res) => {
       electionResults,
       calculatedResults,
       weather,
-      news: news || [],
       financial
     });
 
@@ -400,9 +352,9 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Public route is working!', path: '/public/test' });
 });
 
-// Helper function to generate HTML - News site style with red theme
+// Helper function to generate HTML - Information page with red theme
 function generatePublicPageHTML(data) {
-  const { elections, latestElection, electionResults, calculatedResults, weather, news, financial } = data;
+  const { elections, latestElection, electionResults, calculatedResults, weather, financial } = data;
 
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -478,18 +430,12 @@ function generatePublicPageHTML(data) {
       color: #333;
     }
     
-    /* Main content grid - News site style */
+    /* Main content grid */
     .main-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 1fr;
       gap: 1.5rem;
       margin-bottom: 2rem;
-    }
-    
-    @media (max-width: 968px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-      }
     }
     
     /* Election Results - Main content */
@@ -621,72 +567,6 @@ function generatePublicPageHTML(data) {
       text-align: right;
     }
     
-    /* Sidebar - News */
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    
-    .news-card {
-      background: white;
-      border-radius: 8px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      border-top: 4px solid #dc2626;
-    }
-    
-    .news-card h2 {
-      color: #dc2626;
-      font-size: 1.3rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid #fee2e2;
-    }
-    
-    .news-item {
-      padding: 1rem 0;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .news-item:last-child {
-      border-bottom: none;
-    }
-    
-    .news-item h3 {
-      color: #dc2626;
-      font-size: 1rem;
-      margin-bottom: 0.5rem;
-      line-height: 1.4;
-    }
-    
-    .news-item h3:hover {
-      text-decoration: underline;
-      cursor: pointer;
-    }
-    
-    .news-item p {
-      color: #666;
-      font-size: 0.9rem;
-      margin-bottom: 0.5rem;
-      line-height: 1.5;
-    }
-    
-    .news-item img {
-      width: 100%;
-      max-height: 150px;
-      object-fit: cover;
-      border-radius: 6px;
-      margin-bottom: 0.5rem;
-    }
-    
-    .news-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.8rem;
-      color: #999;
-    }
     
     .footer {
       background: #1f1f1f;
@@ -718,7 +598,7 @@ function generatePublicPageHTML(data) {
 <body>
   <div class="header">
     <h1>Yeniden Refah Partisi Elazığ</h1>
-    <p>Seçim Sonuçları ve Güncel Haberler</p>
+    <p>Seçim Sonuçları</p>
   </div>
   
   <div class="container">
@@ -889,31 +769,6 @@ function generatePublicPageHTML(data) {
         </p>
         ` : '<p style="color: #666;">Henüz seçim sonucu girilmemiş.</p>'}
         ` : '<h2>🗳️ Seçim Sonuçları</h2><p style="color: #666;">Henüz seçim kaydı bulunmamaktadır.</p>'}
-      </div>
-      
-      <!-- Sidebar - News -->
-      <div class="sidebar">
-        ${news.length > 0 ? `
-        <div class="news-card">
-          <h2>📰 Güncel Haberler</h2>
-          ${news.map(item => `
-          <div class="news-item">
-            ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}">` : ''}
-            <h3>${item.title}</h3>
-            <p>${item.summary || item.content?.substring(0, 120) + '...' || ''}</p>
-            <div class="news-meta">
-              <span>${item.author || 'Admin'} - ${new Date(item.publishedAt).toLocaleDateString('tr-TR')}</span>
-              ${item.views ? `<span>👁️ ${item.views}</span>` : ''}
-            </div>
-          </div>
-          `).join('')}
-        </div>
-        ` : `
-        <div class="news-card">
-          <h2>📰 Güncel Haberler</h2>
-          <p style="color: #666; padding: 1rem;">Henüz haber eklenmemiş.</p>
-        </div>
-        `}
       </div>
     </div>
   </div>
