@@ -79,9 +79,10 @@ class GroqService {
 3. Site bilgileri ve tüzük dışında bilgi verme
 4. Bilgi yoksa "Bulamadım başkanım" de
 5. Türkçe, kısa ve öz cevap ver
-6. Sayısal sorular için context'teki verileri kullan
-7. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri, SEÇİMLER, SEÇİM SONUÇLARI, BAŞMÜŞAHİTLER, SANDIK TUTANAKLARI vb.)
-8. Seçim sonuçları hakkında sorular sorulduğunda, context'teki "SEÇİMLER" ve "SEÇİM SONUÇLARI" bölümlerindeki bilgileri kullan. Her seçim için sandık bazında oy sayıları, başmüşahit bilgileri ve tutanak durumları context'te mevcuttur.
+6. Sayısal sorular için context'teki verileri kullan - ÖNEMLİ: Context'te "GERÇEK KATILIM" veya "Katıldığı Toplantı Sayısı" gibi açıkça belirtilen sayıları kullan. "Toplam Davet Edildiği Toplantı Sayısı" ile "Katıldığı Toplantı Sayısı" farklıdır!
+7. Toplantı/etkinlik katılım sorularında: Context'te "Katıldığı Toplantı Sayısı: X (GERÇEK KATILIM)" şeklinde belirtilen sayıyı kullan. "Toplam Davet Edildiği Toplantı Sayısı" değil, "Katıldığı Toplantı Sayısı" cevabı ver.
+8. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri, SEÇİMLER, SEÇİM SONUÇLARI, BAŞMÜŞAHİTLER, SANDIK TUTANAKLARI vb.)
+9. Seçim sonuçları hakkında sorular sorulduğunda, context'teki "SEÇİMLER" ve "SEÇİM SONUÇLARI" bölümlerindeki bilgileri kullan. Her seçim için sandık bazında oy sayıları, başmüşahit bilgileri ve tutanak durumları context'te mevcuttur.
 
 CONTEXT:
 ${contextText}`;
@@ -1159,7 +1160,7 @@ ${contextText}`;
           if (election.independent_cb_candidates && election.independent_cb_candidates.length > 0) {
             info.push(`Bağımsız CB Adayları: ${election.independent_cb_candidates.join(', ')}`);
           }
-          if (election.parties && election.parties.length > 0) {
+        if (election.parties && election.parties.length > 0) {
             const partyNames = election.parties.map(p => typeof p === 'string' ? p : (p.name || p));
             info.push(`MV Partileri: ${partyNames.join(', ')}`);
           }
@@ -1565,7 +1566,7 @@ ${contextText}`;
           context.push(basicInfo.join(' | '));
         }
         
-        // Toplantı Yoklama Bilgisi
+        // Toplantı Yoklama Bilgisi (DETAYLI)
         if (meetings && meetings.length > 0) {
           const memberMeetings = meetings.filter(m => {
             if (!m.attendees) return false;
@@ -1573,46 +1574,83 @@ ${contextText}`;
           });
           
           if (memberMeetings.length > 0) {
-            const attended = memberMeetings.filter(m => {
+            // Detaylı analiz
+            const attendedMeetings = [];
+            const notAttendedMeetings = [];
+            const excusedMeetings = [];
+            
+            memberMeetings.forEach(m => {
               const attendee = m.attendees.find(a => String(a.memberId) === memberId);
-              return attendee && attendee.attended === true;
-            }).length;
-            const notAttended = memberMeetings.length - attended;
-            const attendanceRate = Math.round((attended / memberMeetings.length) * 100);
+              if (!attendee) {
+                notAttendedMeetings.push(m);
+              } else if (attendee.attended === true) {
+                attendedMeetings.push(m);
+              } else if (attendee.excuse && attendee.excuse.hasExcuse === true) {
+                excusedMeetings.push(m);
+              } else {
+                notAttendedMeetings.push(m);
+              }
+            });
             
-            context.push(`Toplantı İstatistikleri: ${attended} toplantıya katıldı, ${notAttended} toplantıya katılmadı (Katılım Oranı: %${attendanceRate})`);
+            const attendedCount = attendedMeetings.length;
+            const notAttendedCount = notAttendedMeetings.length;
+            const excusedCount = excusedMeetings.length;
+            const totalInvited = memberMeetings.length;
+            const attendanceRate = totalInvited > 0 ? Math.round((attendedCount / totalInvited) * 100) : 0;
             
-            // Katıldığı toplantılar
-            if (attended > 0) {
-              const attendedMeetings = memberMeetings
-                .filter(m => {
-                  const attendee = m.attendees.find(a => String(a.memberId) === memberId);
-                  return attendee && attendee.attended === true;
-                })
-                .map(m => `${m.name || 'İsimsiz'} (${m.date || 'Tarih yok'})`)
-                .slice(0, 5)
-                .join(', ');
-              context.push(`Katıldığı toplantılar: ${attendedMeetings}${attended > 5 ? ' ve diğerleri...' : ''}`);
+            // ÖNEMLİ: Sayısal bilgileri açıkça belirt
+            context.push(`\n=== TOPLANTI KATILIM BİLGİLERİ ===`);
+            context.push(`Toplam Davet Edildiği Toplantı Sayısı: ${totalInvited}`);
+            context.push(`Katıldığı Toplantı Sayısı: ${attendedCount} (GERÇEK KATILIM)`);
+            context.push(`Katılmadığı Toplantı Sayısı: ${notAttendedCount}`);
+            context.push(`Mazeretli Toplantı Sayısı: ${excusedCount}`);
+            context.push(`Katılım Oranı: %${attendanceRate}`);
+            
+            // Katıldığı toplantılar (TÜM LİSTE)
+            if (attendedCount > 0) {
+              context.push(`\n--- Katıldığı Toplantılar (${attendedCount} adet) ---`);
+              attendedMeetings.forEach(m => {
+                const meetingInfo = [];
+                meetingInfo.push(`Toplantı: ${m.name || 'İsimsiz'}`);
+                if (m.date) meetingInfo.push(`Tarih: ${m.date}`);
+                if (m.location) meetingInfo.push(`Yer: ${m.location}`);
+                context.push(meetingInfo.join(' | '));
+              });
             }
             
-            // Katılmadığı toplantılar
-            if (notAttended > 0) {
-              const notAttendedMeetings = memberMeetings
-                .filter(m => {
+            // Katılmadığı toplantılar (TÜM LİSTE)
+            if (notAttendedCount > 0) {
+              context.push(`\n--- Katılmadığı Toplantılar (${notAttendedCount} adet) ---`);
+              notAttendedMeetings.forEach(m => {
+                const meetingInfo = [];
+                meetingInfo.push(`Toplantı: ${m.name || 'İsimsiz'}`);
+                if (m.date) meetingInfo.push(`Tarih: ${m.date}`);
+                if (m.location) meetingInfo.push(`Yer: ${m.location}`);
+                context.push(meetingInfo.join(' | '));
+              });
+            }
+            
+            // Mazeretli toplantılar (TÜM LİSTE)
+            if (excusedCount > 0) {
+              context.push(`\n--- Mazeretli Toplantılar (${excusedCount} adet) ---`);
+              excusedMeetings.forEach(m => {
                   const attendee = m.attendees.find(a => String(a.memberId) === memberId);
-                  return !attendee || attendee.attended !== true;
-                })
-                .map(m => `${m.name || 'İsimsiz'} (${m.date || 'Tarih yok'})`)
-                .slice(0, 5)
-                .join(', ');
-              context.push(`Katılmadığı toplantılar: ${notAttendedMeetings}${notAttended > 5 ? ' ve diğerleri...' : ''}`);
+                const meetingInfo = [];
+                meetingInfo.push(`Toplantı: ${m.name || 'İsimsiz'}`);
+                if (m.date) meetingInfo.push(`Tarih: ${m.date}`);
+                if (attendee.excuse && attendee.excuse.reason) {
+                  meetingInfo.push(`Mazeret: ${attendee.excuse.reason}`);
+                }
+                context.push(meetingInfo.join(' | '));
+              });
             }
           } else {
-            context.push(`Toplantı İstatistikleri: Bu üye henüz hiçbir toplantıya katılmamış.`);
+            context.push(`\n=== TOPLANTI KATILIM BİLGİLERİ ===`);
+            context.push(`Bu üye henüz hiçbir toplantıya davet edilmemiş veya katılmamış.`);
           }
         }
         
-        // Etkinlik Katılım Bilgisi
+        // Etkinlik Katılım Bilgisi (DETAYLI)
         const events = siteData.events || [];
         if (events && events.length > 0) {
           const memberEvents = events.filter(e => {
@@ -1621,11 +1659,59 @@ ${contextText}`;
           });
           
           if (memberEvents.length > 0) {
-            const attendedEvents = memberEvents.filter(e => {
+            // Detaylı analiz
+            const attendedEvents = [];
+            const notAttendedEvents = [];
+            
+            memberEvents.forEach(e => {
               const attendee = e.attendees.find(a => String(a.memberId) === memberId);
-              return attendee && attendee.attended === true;
-            }).length;
-            context.push(`Etkinlik İstatistikleri: ${attendedEvents} etkinliğe katıldı (Toplam ${memberEvents.length} etkinlikte yer aldı)`);
+              if (attendee && attendee.attended === true) {
+                attendedEvents.push(e);
+              } else {
+                notAttendedEvents.push(e);
+              }
+            });
+            
+            const attendedCount = attendedEvents.length;
+            const notAttendedCount = notAttendedEvents.length;
+            const totalInvited = memberEvents.length;
+            const attendanceRate = totalInvited > 0 ? Math.round((attendedCount / totalInvited) * 100) : 0;
+            
+            // ÖNEMLİ: Sayısal bilgileri açıkça belirt
+            context.push(`\n=== ETKİNLİK KATILIM BİLGİLERİ ===`);
+            context.push(`Toplam Davet Edildiği Etkinlik Sayısı: ${totalInvited}`);
+            context.push(`Katıldığı Etkinlik Sayısı: ${attendedCount} (GERÇEK KATILIM)`);
+            context.push(`Katılmadığı Etkinlik Sayısı: ${notAttendedCount}`);
+            context.push(`Katılım Oranı: %${attendanceRate}`);
+            
+            // Katıldığı etkinlikler (TÜM LİSTE)
+            if (attendedCount > 0) {
+              context.push(`\n--- Katıldığı Etkinlikler (${attendedCount} adet) ---`);
+              attendedEvents.forEach(e => {
+                const eventInfo = [];
+                eventInfo.push(`Etkinlik: ${e.name || 'İsimsiz'}`);
+                if (e.date) eventInfo.push(`Tarih: ${e.date}`);
+                if (e.location) eventInfo.push(`Yer: ${e.location}`);
+                const category = siteData.eventCategories?.find(c => String(c.id) === String(e.category));
+                if (category) eventInfo.push(`Kategori: ${category.name}`);
+                context.push(eventInfo.join(' | '));
+              });
+            }
+            
+            // Katılmadığı etkinlikler (TÜM LİSTE)
+            if (notAttendedCount > 0) {
+              context.push(`\n--- Katılmadığı Etkinlikler (${notAttendedCount} adet) ---`);
+              notAttendedEvents.forEach(e => {
+                const eventInfo = [];
+                eventInfo.push(`Etkinlik: ${e.name || 'İsimsiz'}`);
+                if (e.date) eventInfo.push(`Tarih: ${e.date}`);
+                if (e.location) eventInfo.push(`Yer: ${e.location}`);
+                context.push(eventInfo.join(' | '));
+              });
+            }
+          } else {
+            context.push(`\n=== ETKİNLİK KATILIM BİLGİLERİ ===`);
+            context.push(`Bu üye henüz hiçbir etkinliğe davet edilmemiş veya katılmamış.`);
           }
         }
         
