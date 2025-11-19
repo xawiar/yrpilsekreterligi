@@ -1,19 +1,27 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useParams } from 'react-router-dom';
 
-// Lazy load ElectionResultsPage
-const ElectionResultsPage = lazy(() => import('./ElectionResultsPage'));
+// Lazy load ElectionResultsPage content component
+const ElectionResultsContent = lazy(() => import('./ElectionResultsPage').then(module => ({
+  default: () => {
+    // ElectionResultsPage'i readOnly modda render et
+    const ElectionResultsPage = module.default;
+    return <ElectionResultsPage readOnly={true} />;
+  }
+})));
 
 /**
  * Public Election Results Page
  * Herkesin erişebileceği, read-only seçim sonuçları sayfası
  * Visitor tracking ile anlık izleyen kişi sayısı takip edilir
+ * TAMAMEN BAĞIMSIZ - Hiçbir admin panel layout'u yok
  */
 const PublicElectionResultsPage = () => {
   const { electionId } = useParams();
   const [visitorCount, setVisitorCount] = useState(0);
   const visitorIdRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
+  const countIntervalRef = useRef(null);
   const isUnmountingRef = useRef(false);
 
   useEffect(() => {
@@ -34,6 +42,9 @@ const PublicElectionResultsPage = () => {
       isUnmountingRef.current = true;
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
+      }
+      if (countIntervalRef.current) {
+        clearInterval(countIntervalRef.current);
       }
       unregisterVisitor();
     };
@@ -116,7 +127,7 @@ const PublicElectionResultsPage = () => {
     }, 30000); // Her 30 saniyede bir heartbeat gönder
 
     // Visitor count'u periyodik olarak güncelle
-    const countInterval = setInterval(async () => {
+    countIntervalRef.current = setInterval(async () => {
       if (isUnmountingRef.current) return;
 
       try {
@@ -135,7 +146,7 @@ const PublicElectionResultsPage = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Visitor Count Badge */}
       <div className="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,13 +156,16 @@ const PublicElectionResultsPage = () => {
         <span className="font-semibold">{visitorCount} kişi izliyor</span>
       </div>
 
-      {/* Read-only Election Results Page */}
-      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}>
-        <ElectionResultsPage readOnly={true} />
+      {/* Read-only Election Results Content - No layout, no sidebar, no header */}
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      }>
+        <ElectionResultsContent />
       </Suspense>
     </div>
   );
 };
 
 export default PublicElectionResultsPage;
-

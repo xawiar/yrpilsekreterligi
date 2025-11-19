@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -82,13 +82,28 @@ const LoadingSpinner = () => (
   </div>
 );
 
+// Public Election Results - Standalone page without any layout
+function PublicElectionResultsWrapper() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PublicElectionResultsPage />
+    </Suspense>
+  );
+}
+
 // Router içinde kullanılacak component - useNavigate burada güvenli
 function RouterContent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isLoggedIn, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
+
+  // Public route ise layout gösterme
+  if (location.pathname.startsWith('/public/election-results/')) {
+    return <PublicElectionResultsWrapper />;
+  }
 
   const handleQuickActionClose = () => {
     setQuickActionModal({ open: false, type: null });
@@ -217,12 +232,6 @@ function RouterContent() {
                 <Navigate to="/login?type=chief-observer" replace />
               </PublicRoute>
             } 
-          />
-          
-          {/* Public Election Results - No authentication required */}
-          <Route 
-            path="/public/election-results/:electionId" 
-            element={<PublicElectionResultsPage />} 
           />
           
           {/* Admin Routes */}
