@@ -70,20 +70,46 @@ function getWeatherDescription(code) {
   return weatherCodes[code] || 'Bilinmeyen';
 }
 
-// Helper function to fetch news
+// Helper function to fetch news from our database
 async function getNews() {
   try {
-    // NewsAPI yerine alternatif: RSS feed veya başka ücretsiz API
-    // Şimdilik örnek haberler döndürelim
-    // Gerçek API için NewsAPI key gerekir (ücretsiz plan: 100 req/gün)
-    return [
-      {
-        title: 'Yerel Haberler',
-        source: 'Yerel Basın',
-        publishedAt: new Date().toISOString(),
-        description: 'Yerel haberler burada görüntülenecek.'
+    const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+    
+    let news = [];
+    
+    if (USE_FIREBASE) {
+      // Firebase implementation using Admin SDK
+      const { getAdmin } = require('../config/firebaseAdmin');
+      const admin = getAdmin();
+      if (admin) {
+        const firestore = admin.firestore();
+        const newsSnapshot = await firestore.collection('news')
+          .where('status', '==', 'published')
+          .orderBy('published_at', 'desc')
+          .orderBy('created_at', 'desc')
+          .limit(10)
+          .get();
+        news = newsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       }
-    ];
+    } else {
+      // SQLite implementation
+      const db = require('../config/database');
+      news = await db.all(
+        'SELECT * FROM news WHERE status = ? ORDER BY published_at DESC, created_at DESC LIMIT 10',
+        ['published']
+      );
+    }
+    
+    return news.map(item => ({
+      title: item.title,
+      content: item.content,
+      summary: item.summary || item.content?.substring(0, 150) + '...',
+      image_url: item.image_url,
+      author: item.author || 'Admin',
+      category: item.category || 'general',
+      publishedAt: item.published_at || item.created_at,
+      views: item.views || 0
+    }));
   } catch (error) {
     console.error('Error fetching news:', error);
   }
@@ -498,13 +524,17 @@ function generatePublicPageHTML(data) {
         <h2>📰 Güncel Haberler</h2>
         ${news.map(item => `
         <div class="news-item">
+          ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">` : ''}
           <h3>${item.title}</h3>
-          <p>${item.description || ''}</p>
-          <small style="color: #666;">${item.source} - ${new Date(item.publishedAt).toLocaleDateString('tr-TR')}</small>
+          <p>${item.summary || item.content?.substring(0, 150) + '...' || ''}</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <small style="color: #666;">${item.author || 'Admin'} - ${new Date(item.publishedAt).toLocaleDateString('tr-TR')}</small>
+            ${item.views ? `<small style="color: #666;">👁️ ${item.views}</small>` : ''}
+          </div>
         </div>
         `).join('')}
       </div>
-      ` : ''}
+      ` : '<div class="card"><h2>📰 Güncel Haberler</h2><p style="color: #666;">Henüz haber eklenmemiş.</p></div>'}
     </div>
   </div>
   

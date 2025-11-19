@@ -27,6 +27,7 @@ import AppBrandingSettings from '../components/AppBrandingSettings';
 import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
 import SeçimEkleSettings from '../components/SeçimEkleSettings';
 import ApiKeySettings from '../components/ApiKeySettings';
+import NewsSettings from '../components/NewsSettings';
 import { 
   SettingsHeader, 
   SettingsSummaryCards, 
@@ -74,6 +75,7 @@ const SettingsPage = ({ tab }) => {
       'member-dashboard-analytics': grantedPermissions.includes('access_member_dashboard_analytics'),
       'app-branding': grantedPermissions.includes('manage_app_branding'),
       'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
+      'news': isAdmin || grantedPermissions.includes('manage_news'),
     };
 
     return permissionMap[tabName] || false;
@@ -214,6 +216,7 @@ const SettingsPage = ({ tab }) => {
                 {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
                 {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                 {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
+                {activeTab === 'news' && hasPermission('news') && <NewsSettings />}
               </>
             )}
           </div>

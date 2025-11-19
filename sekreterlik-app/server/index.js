@@ -104,6 +104,8 @@ const notificationsRouter = require('./routes/notifications');
 console.log('Notifications router imported');
 const apiKeysRouter = require('./routes/apiKeys');
 console.log('API keys router imported');
+const newsRouter = require('./routes/news');
+console.log('News router imported');
 const publicApiRouter = require('./routes/publicApi');
 console.log('Public API router imported');
 const PollController = require('./controllers/PollController');
@@ -179,6 +181,7 @@ app.use(cors({
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
 const Notification = require('./models/Notification');
 const ApiKey = require('./models/ApiKey');
+const News = require('./models/News');
 Promise.all([
   Admin.init(),
   MemberUser.init(),
@@ -187,6 +190,7 @@ Promise.all([
   MemberDashboardAnalytics.init(),
   Notification.init(),
   ApiKey.initTable(),
+  News.init(),
   connectToMongoDB()
 ]).then(() => {
   console.log('All models and MongoDB initialized');
@@ -354,6 +358,7 @@ app.use('/api/member-dashboard-analytics', memberDashboardAnalyticsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/api-keys', apiKeysRouter);
+app.use('/api/news', cache(60), newsRouter); // Cache news for 60 seconds
 // Public election results routes - NO AUTHENTICATION REQUIRED
 app.use('/api/public/election-results', require('./routes/publicElectionResults'));
 
