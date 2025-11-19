@@ -53,7 +53,11 @@ const PublicElectionResultsPage = () => {
   // Visitor'ı kaydet
   const registerVisitor = async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      // Ensure API_BASE_URL always ends with /api
+      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      if (!API_BASE_URL.endsWith('/api')) {
+        API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
+      }
       const response = await fetch(`${API_BASE_URL}/public/visitors/register`, {
         method: 'POST',
         headers: {
@@ -80,7 +84,11 @@ const PublicElectionResultsPage = () => {
   // Visitor'ı kaldır
   const unregisterVisitor = async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      // Ensure API_BASE_URL always ends with /api
+      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      if (!API_BASE_URL.endsWith('/api')) {
+        API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
+      }
       await fetch(`${API_BASE_URL}/public/visitors/unregister`, {
         method: 'POST',
         headers: {
@@ -102,7 +110,11 @@ const PublicElectionResultsPage = () => {
       if (isUnmountingRef.current) return;
 
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+        // Ensure API_BASE_URL always ends with /api
+        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+        if (!API_BASE_URL.endsWith('/api')) {
+          API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
+        }
         const response = await fetch(`${API_BASE_URL}/public/visitors/heartbeat`, {
           method: 'POST',
           headers: {
@@ -131,7 +143,11 @@ const PublicElectionResultsPage = () => {
       if (isUnmountingRef.current) return;
 
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+        // Ensure API_BASE_URL always ends with /api
+        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+        if (!API_BASE_URL.endsWith('/api')) {
+          API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
+        }
         const response = await fetch(`${API_BASE_URL}/public/visitors/count?electionId=${electionId}`);
         if (response.ok) {
           const data = await response.json();
