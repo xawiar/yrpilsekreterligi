@@ -369,11 +369,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: '7d',
 }));
 
-// Main page route
+// Public news/information page (before main API route)
+app.use('/public', require('./routes/public'));
+
+// Main page route (API info)
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Sekreterlik Uygulaması API Server',
     version: '1.0.0',
+    publicPage: '/public',
     endpoints: {
       health: '/api/health',
       test: '/api/test',
