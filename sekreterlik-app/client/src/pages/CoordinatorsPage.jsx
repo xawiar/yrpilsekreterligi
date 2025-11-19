@@ -79,10 +79,327 @@ const CoordinatorsPage = () => {
 
 // Sorumlular Listesi Sayfası
 const CoordinatorsListPage = () => {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [coordinators, setCoordinators] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    tc: '',
+    phone: '',
+    role: 'provincial_coordinator', // provincial_coordinator, district_supervisor, region_supervisor
+    parent_coordinator_id: null,
+    district_id: null
+  });
+  const [districts, setDistricts] = useState([]);
+  const [parentCoordinators, setParentCoordinators] = useState([]);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
+
+  // Verileri yükle
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (formData.role === 'district_supervisor') {
+      // İlçe sorumlusu için parent olarak il genel sorumlularını getir
+      const provincialCoordinators = coordinators.filter(c => c.role === 'provincial_coordinator');
+      setParentCoordinators(provincialCoordinators);
+    } else if (formData.role === 'region_supervisor') {
+      // Bölge sorumlusu için parent olarak ilçe sorumlularını getir
+      const districtSupervisors = coordinators.filter(c => c.role === 'district_supervisor');
+      setParentCoordinators(districtSupervisors);
+    } else {
+      setParentCoordinators([]);
+    }
+  }, [formData.role, coordinators]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [districtsData] = await Promise.all([
+        ApiService.getDistricts()
+      ]);
+      setDistricts(districtsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setMessage('Veriler yüklenirken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCoordinator = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      setMessage('Ad soyad zorunludur');
+      setMessageType('error');
+      return;
+    }
+
+    if (!formData.tc || formData.tc.length !== 11) {
+      setMessage('TC kimlik numarası 11 haneli olmalıdır');
+      setMessageType('error');
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      setMessage('Telefon numarası zorunludur');
+      setMessageType('error');
+      return;
+    }
+
+    if (formData.role === 'district_supervisor' && !formData.parent_coordinator_id) {
+      setMessage('İl genel sorumlusu seçmelisiniz');
+      setMessageType('error');
+      return;
+    }
+
+    if (formData.role === 'region_supervisor' && !formData.parent_coordinator_id) {
+      setMessage('İlçe sorumlusu seçmelisiniz');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const coordinatorData = {
+        name: formData.name,
+        tc: formData.tc,
+        phone: formData.phone,
+        role: formData.role,
+        parent_coordinator_id: formData.parent_coordinator_id || null,
+        district_id: formData.district_id || null
+      };
+
+      // TODO: API endpoint'i oluşturulacak
+      // const response = await ApiService.createElectionCoordinator(coordinatorData);
+      
+      // Şimdilik mock response
+      const response = { success: true, message: 'Sorumlu başarıyla oluşturuldu' };
+      
+      if (response.success) {
+        setMessage('Sorumlu başarıyla oluşturuldu');
+        setMessageType('success');
+        setShowCreateModal(false);
+        setFormData({
+          name: '',
+          tc: '',
+          phone: '',
+          role: 'provincial_coordinator',
+          parent_coordinator_id: null,
+          district_id: null
+        });
+        // loadCoordinators(); // Listeyi yenile
+      } else {
+        setMessage(response.message || 'Sorumlu oluşturulurken hata oluştu');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error creating coordinator:', error);
+      setMessage('Sorumlu oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Sorumlular</h2>
-      <p className="text-gray-600 dark:text-gray-400">Sorumlular listesi burada görüntülenecek.</p>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sorumlular</h2>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Sorumlu Ekle
+        </button>
+      </div>
+
+      {message && (
+        <div className={`mb-4 p-4 rounded-lg ${
+          messageType === 'error' ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+          messageType === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+          'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      {/* Sorumlu Listesi */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <p className="text-gray-600 dark:text-gray-400">Sorumlular listesi burada görüntülenecek.</p>
+      </div>
+
+      {/* Sorumlu Ekle Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Yeni Sorumlu Ekle</h3>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setFormData({
+                      name: '',
+                      tc: '',
+                      phone: '',
+                      role: 'provincial_coordinator',
+                      parent_coordinator_id: null,
+                      district_id: null
+                    });
+                    setMessage('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateCoordinator} className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Sorumluluk Türü *
+                  </label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value, parent_coordinator_id: null })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  >
+                    <option value="provincial_coordinator">İl Genel Sorumlusu</option>
+                    <option value="district_supervisor">İlçe Sorumlusu</option>
+                    <option value="region_supervisor">Bölge Sorumlusu</option>
+                  </select>
+                </div>
+
+                {formData.role === 'district_supervisor' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      İl Genel Sorumlusu *
+                    </label>
+                    <select
+                      value={formData.parent_coordinator_id || ''}
+                      onChange={(e) => setFormData({ ...formData, parent_coordinator_id: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Seçiniz...</option>
+                      {parentCoordinators.map((coordinator) => (
+                        <option key={coordinator.id} value={coordinator.id}>
+                          {coordinator.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {formData.role === 'region_supervisor' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      İlçe Sorumlusu *
+                    </label>
+                    <select
+                      value={formData.parent_coordinator_id || ''}
+                      onChange={(e) => setFormData({ ...formData, parent_coordinator_id: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Seçiniz...</option>
+                      {parentCoordinators.map((coordinator) => (
+                        <option key={coordinator.id} value={coordinator.id}>
+                          {coordinator.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ad Soyad *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Ad Soyad"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    TC Kimlik No *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tc}
+                    onChange={(e) => setFormData({ ...formData, tc: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="11 haneli TC kimlik numarası"
+                    maxLength={11}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Telefon *
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Telefon numarası"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setFormData({
+                      name: '',
+                      tc: '',
+                      phone: '',
+                      role: 'provincial_coordinator',
+                      parent_coordinator_id: null,
+                      district_id: null
+                    });
+                    setMessage('');
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {loading ? 'Oluşturuluyor...' : 'Oluştur'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -93,9 +410,11 @@ const RegionsListPage = () => {
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
   const [ballotBoxes, setBallotBoxes] = useState([]);
+  const [regionSupervisors, setRegionSupervisors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState([]);
   const [selectedVillages, setSelectedVillages] = useState([]);
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState('');
   const [regionName, setRegionName] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
@@ -120,14 +439,20 @@ const RegionsListPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [neighborhoodsData, villagesData, ballotBoxesData] = await Promise.all([
+      const [neighborhoodsData, villagesData, ballotBoxesData, coordinatorsData] = await Promise.all([
         ApiService.getNeighborhoods(),
         ApiService.getVillages(),
-        ApiService.getBallotBoxes()
+        ApiService.getBallotBoxes(),
+        // TODO: API endpoint'i oluşturulacak
+        // ApiService.getElectionCoordinators({ role: 'region_supervisor' })
+        Promise.resolve([]) // Şimdilik boş array
       ]);
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
       setBallotBoxes(ballotBoxesData || []);
+      // Bölge sorumlularını filtrele (region_supervisor role'üne sahip olanlar)
+      const supervisors = coordinatorsData.filter(c => c.role === 'region_supervisor') || [];
+      setRegionSupervisors(supervisors);
     } catch (error) {
       console.error('Error loading data:', error);
       setMessage('Veriler yüklenirken hata oluştu: ' + error.message);
@@ -152,12 +477,19 @@ const RegionsListPage = () => {
       return;
     }
 
+    if (!selectedSupervisorId) {
+      setMessage('Bölge sorumlusu seçmelisiniz');
+      setMessageType('error');
+      return;
+    }
+
     try {
       setLoading(true);
       const regionData = {
         name: regionName,
         neighborhood_ids: selectedNeighborhoods,
         village_ids: selectedVillages,
+        supervisor_id: selectedSupervisorId ? parseInt(selectedSupervisorId) : null,
         district_id: neighborhoods.find(n => selectedNeighborhoods.includes(n.id))?.district_id || 
                      villages.find(v => selectedVillages.includes(v.id))?.district_id || null
       };
@@ -171,6 +503,7 @@ const RegionsListPage = () => {
         setRegionName('');
         setSelectedNeighborhoods([]);
         setSelectedVillages([]);
+        setSelectedSupervisorId('');
       } else {
         setMessage(response.message || 'Bölge oluşturulurken hata oluştu');
         setMessageType('error');
@@ -234,6 +567,7 @@ const RegionsListPage = () => {
                     setRegionName('');
                     setSelectedNeighborhoods([]);
                     setSelectedVillages([]);
+                    setSelectedSupervisorId('');
                     setMessage('');
                   }}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -258,6 +592,30 @@ const RegionsListPage = () => {
                   placeholder="Örn: 1. Bölge"
                   required
                 />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Bölge Sorumlusu *
+                </label>
+                <select
+                  value={selectedSupervisorId}
+                  onChange={(e) => setSelectedSupervisorId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">Seçiniz...</option>
+                  {regionSupervisors.map((supervisor) => (
+                    <option key={supervisor.id} value={supervisor.id}>
+                      {supervisor.name} {supervisor.tc ? `(${supervisor.tc})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {regionSupervisors.length === 0 && (
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Henüz bölge sorumlusu eklenmemiş. Önce "Sorumlular" sayfasından bölge sorumlusu ekleyin.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -358,6 +716,7 @@ const RegionsListPage = () => {
                     setRegionName('');
                     setSelectedNeighborhoods([]);
                     setSelectedVillages([]);
+                    setSelectedSupervisorId('');
                     setMessage('');
                   }}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
