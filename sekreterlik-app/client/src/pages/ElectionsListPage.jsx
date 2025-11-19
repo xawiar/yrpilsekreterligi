@@ -191,7 +191,6 @@ const ElectionsListPage = () => {
           size="xl"
         >
           <SeçimEkleSettings 
-            showFormInitially={true}
             onElectionCreated={() => {
               setShowAddModal(false);
               fetchElections();
@@ -200,7 +199,6 @@ const ElectionsListPage = () => {
               setShowAddModal(false);
               fetchElections();
             }}
-            onClose={() => setShowAddModal(false)}
           />
         </Modal>
       </div>

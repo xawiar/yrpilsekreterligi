@@ -175,7 +175,27 @@ const Chatbot = ({ isOpen, onClose }) => {
               ApiService.getElectionResults(election.id, null).catch(() => [])
             )
           ).then(results => results.flat());
-        }).catch(() => [])
+        }).catch(() => []),
+        // Tüm seçimler için ittifakları al
+        ApiService.getElections().then(elections => {
+          if (!elections || elections.length === 0) return [];
+          return Promise.all(
+            elections.map(election => 
+              ApiService.getAlliances(election.id).catch(() => [])
+            )
+          ).then(alliances => {
+            // Her ittifakı election_id ile eşleştir
+            const alliancesByElection = {};
+            alliances.forEach(alliance => {
+              const electionId = String(alliance.election_id || alliance.electionId);
+              if (!alliancesByElection[electionId]) {
+                alliancesByElection[electionId] = [];
+              }
+              alliancesByElection[electionId].push(alliance);
+            });
+            return alliancesByElection;
+          });
+        }).catch(() => ({}))
       ]).then(([
         ballotBoxes,
         observers,
@@ -205,7 +225,8 @@ const Chatbot = ({ isOpen, onClose }) => {
         archivedMeetings,
         archivedEvents,
         elections,
-        electionResults
+        electionResults,
+        alliancesByElection
       ]) => {
         // Performans puanlarını hesapla (üye yıldızları için)
         // Async IIFE kullanarak await kullanabiliriz
@@ -274,6 +295,7 @@ const Chatbot = ({ isOpen, onClose }) => {
             archivedEvents,
             elections: elections || [],
             electionResults: electionResults || [],
+            alliancesByElection: alliancesByElection || {},
             performanceScores
           }));
         })();

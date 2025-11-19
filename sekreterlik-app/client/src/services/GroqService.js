@@ -1127,7 +1127,7 @@ ${contextText}`;
       }
     }
     
-    // SEÇİMLER
+    // SEÇİMLER (DETAYLI - YENİ SİSTEM)
     if (siteData.elections && siteData.elections.length > 0) {
       context.push(`\n=== SEÇİMLER ===`);
       context.push(`Toplam ${siteData.elections.length} seçim kayıtlı.`);
@@ -1143,17 +1143,80 @@ ${contextText}`;
           const typeLabels = {
             'yerel': 'Yerel Seçim',
             'genel': 'Genel Seçim',
-            'cb': 'Cumhurbaşkanlığı Seçimi'
+            'cb': 'Cumhurbaşkanlığı Seçimi',
+            'referandum': 'Referandum'
           };
           info.push(`Tip: ${typeLabels[election.type] || election.type}`);
         }
         if (election.voter_count) info.push(`Seçmen Sayısı: ${election.voter_count.toLocaleString('tr-TR')}`);
-        if (election.parties && election.parties.length > 0) {
-          info.push(`Partiler: ${election.parties.join(', ')}`);
+        if (election.baraj_percent) info.push(`Baraj: %${election.baraj_percent}`);
+        
+        // Genel Seçim Detayları
+        if (election.type === 'genel') {
+          if (election.cb_candidates && election.cb_candidates.length > 0) {
+            info.push(`CB Adayları: ${election.cb_candidates.join(', ')}`);
+          }
+          if (election.independent_cb_candidates && election.independent_cb_candidates.length > 0) {
+            info.push(`Bağımsız CB Adayları: ${election.independent_cb_candidates.join(', ')}`);
+          }
+          if (election.parties && election.parties.length > 0) {
+            const partyNames = election.parties.map(p => typeof p === 'string' ? p : (p.name || p));
+            info.push(`MV Partileri: ${partyNames.join(', ')}`);
+          }
+          if (election.independent_mv_candidates && election.independent_mv_candidates.length > 0) {
+            info.push(`Bağımsız MV Adayları: ${election.independent_mv_candidates.join(', ')}`);
+          }
+          if (election.mv_total_seats) info.push(`Toplam MV Sandalye: ${election.mv_total_seats}`);
         }
-        if (election.candidates && election.candidates.length > 0) {
+        
+        // Yerel Seçim Detayları
+        if (election.type === 'yerel') {
+          if (election.mayor_candidates && election.mayor_candidates.length > 0) {
+            info.push(`Belediye Başkanı Adayları: ${election.mayor_candidates.join(', ')}`);
+          }
+          if (election.parties && election.parties.length > 0) {
+            const partyNames = election.parties.map(p => typeof p === 'string' ? p : (p.name || p));
+            info.push(`Partiler: ${partyNames.join(', ')}`);
+          }
+          if (election.municipal_council_total_seats) info.push(`Belediye Meclisi Toplam Sandalye: ${election.municipal_council_total_seats}`);
+          if (election.population) info.push(`Nüfus: ${election.population.toLocaleString('tr-TR')}`);
+          if (election.provincial_assembly_district_seats) {
+            const districtSeats = typeof election.provincial_assembly_district_seats === 'string' 
+              ? JSON.parse(election.provincial_assembly_district_seats)
+              : election.provincial_assembly_district_seats;
+            if (typeof districtSeats === 'object' && districtSeats !== null) {
+              const seatsList = Object.entries(districtSeats)
+                .map(([district, seats]) => `${district}: ${seats} sandalye`)
+                .join(', ');
+              info.push(`İl Genel Meclisi İlçe Sandalyeleri: ${seatsList}`);
+            }
+          }
+        }
+        
+        // İttifak Bilgileri
+        const alliances = siteData.alliancesByElection?.[String(election.id)] || [];
+        if (alliances.length > 0) {
+          info.push(`İttifaklar: ${alliances.length} adet`);
+          alliances.forEach(alliance => {
+            const partyIds = alliance.party_ids || alliance.partyIds || [];
+            const partyNames = partyIds.map(pid => {
+              if (typeof pid === 'string') return pid;
+              if (typeof pid === 'object' && pid.name) return pid.name;
+              return String(pid);
+            }).join(', ');
+            context.push(`  - ${alliance.name || 'İttifak'}: ${partyNames}`);
+          });
+        }
+        
+        // Legacy support
+        if (election.parties && election.parties.length > 0 && !info.some(i => i.includes('Partiler:'))) {
+          const partyNames = election.parties.map(p => typeof p === 'string' ? p : (p.name || p));
+          info.push(`Partiler: ${partyNames.join(', ')}`);
+        }
+        if (election.candidates && election.candidates.length > 0 && !info.some(i => i.includes('Adaylar:'))) {
           info.push(`Adaylar: ${election.candidates.join(', ')}`);
         }
+        
         context.push(info.join(' | '));
       });
     }
@@ -1229,13 +1292,49 @@ ${contextText}`;
               info.push(`Geçerli Oy: ${result.valid_votes || result.validVotes}`);
             }
             
-            // Parti/Aday oyları
-            if (election.type === 'cb' && result.candidate_votes) {
+            // Parti/Aday oyları (YENİ SİSTEM DETAYLI)
+            if (election.type === 'genel') {
+              // Genel Seçim: CB ve MV oyları ayrı
+              if (result.cb_votes) {
+                const cbVotes = Object.entries(result.cb_votes)
+                  .map(([candidate, votes]) => `${candidate}: ${votes} oy`)
+                  .join(', ');
+                if (cbVotes) info.push(`CB Oyları: ${cbVotes}`);
+              }
+              if (result.mv_votes) {
+                const mvVotes = Object.entries(result.mv_votes)
+                  .map(([party, votes]) => `${party}: ${votes} oy`)
+                  .join(', ');
+                if (mvVotes) info.push(`MV Oyları: ${mvVotes}`);
+              }
+            } else if (election.type === 'yerel') {
+              // Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi
+              if (result.mayor_votes) {
+                const mayorVotes = Object.entries(result.mayor_votes)
+                  .map(([candidate, votes]) => `${candidate}: ${votes} oy`)
+                  .join(', ');
+                if (mayorVotes) info.push(`Belediye Başkanı Oyları: ${mayorVotes}`);
+              }
+              if (result.provincial_assembly_votes) {
+                const provincialVotes = Object.entries(result.provincial_assembly_votes)
+                  .map(([party, votes]) => `${party}: ${votes} oy`)
+                  .join(', ');
+                if (provincialVotes) info.push(`İl Genel Meclisi Oyları: ${provincialVotes}`);
+              }
+              if (result.municipal_council_votes) {
+                const municipalVotes = Object.entries(result.municipal_council_votes)
+                  .map(([party, votes]) => `${party}: ${votes} oy`)
+                  .join(', ');
+                if (municipalVotes) info.push(`Belediye Meclisi Oyları: ${municipalVotes}`);
+              }
+            } else if (election.type === 'cb' && result.candidate_votes) {
+              // Legacy CB seçimi
               const candidateVotes = Object.entries(result.candidate_votes)
                 .map(([candidate, votes]) => `${candidate}: ${votes} oy`)
                 .join(', ');
               if (candidateVotes) info.push(`Aday Oyları: ${candidateVotes}`);
-            } else if ((election.type === 'yerel' || election.type === 'genel') && result.party_votes) {
+            } else if (result.party_votes) {
+              // Legacy parti oyları
               const partyVotes = Object.entries(result.party_votes)
                 .map(([party, votes]) => `${party}: ${votes} oy`)
                 .join(', ');
@@ -1256,6 +1355,146 @@ ${contextText}`;
               context.push(info.join(' | '));
             }
           });
+          
+          // MAHALLE/KÖY BAZINDA SEÇİM SONUÇLARI TOPLAMLARI
+          // Mahalle bazında toplam oylar
+          const neighborhoodTotals = {};
+          const villageTotals = {};
+          
+          results.forEach(result => {
+            const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(result.ballot_box_id || result.ballotBoxId));
+            if (!ballotBox) return;
+            
+            // Konum bilgisi
+            let locationKey = '';
+            let locationName = '';
+            let locationType = '';
+            
+            if (ballotBox.neighborhood_id) {
+              const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+              if (neighborhood) {
+                locationKey = `neighborhood_${neighborhood.id}`;
+                locationName = neighborhood.name;
+                locationType = 'Mahalle';
+              }
+            } else if (ballotBox.village_id) {
+              const village = siteData.villages?.find(v => String(v.id) === String(ballotBox.village_id));
+              if (village) {
+                locationKey = `village_${village.id}`;
+                locationName = village.name;
+                locationType = 'Köy';
+              }
+            }
+            
+            if (!locationKey) return;
+            
+            const totals = locationType === 'Mahalle' ? neighborhoodTotals : villageTotals;
+            
+            if (!totals[locationKey]) {
+              totals[locationKey] = {
+                name: locationName,
+                type: locationType,
+                ballotBoxCount: 0,
+                usedVotes: 0,
+                validVotes: 0,
+                invalidVotes: 0,
+                categoryVotes: {}
+              };
+            }
+            
+            totals[locationKey].ballotBoxCount++;
+            totals[locationKey].usedVotes += parseInt(result.used_votes || result.usedVotes || 0);
+            totals[locationKey].validVotes += parseInt(result.valid_votes || result.validVotes || 0);
+            totals[locationKey].invalidVotes += parseInt(result.invalid_votes || result.invalidVotes || 0);
+            
+            // Kategori bazında oyları topla
+            if (election.type === 'genel') {
+              if (result.cb_votes) {
+                Object.entries(result.cb_votes).forEach(([candidate, votes]) => {
+                  const key = `CB_${candidate}`;
+                  totals[locationKey].categoryVotes[key] = (totals[locationKey].categoryVotes[key] || 0) + (parseInt(votes) || 0);
+                });
+              }
+              if (result.mv_votes) {
+                Object.entries(result.mv_votes).forEach(([party, votes]) => {
+                  const key = `MV_${party}`;
+                  totals[locationKey].categoryVotes[key] = (totals[locationKey].categoryVotes[key] || 0) + (parseInt(votes) || 0);
+                });
+              }
+            } else if (election.type === 'yerel') {
+              if (result.mayor_votes) {
+                Object.entries(result.mayor_votes).forEach(([candidate, votes]) => {
+                  const key = `BelediyeBaşkanı_${candidate}`;
+                  totals[locationKey].categoryVotes[key] = (totals[locationKey].categoryVotes[key] || 0) + (parseInt(votes) || 0);
+                });
+              }
+              if (result.provincial_assembly_votes) {
+                Object.entries(result.provincial_assembly_votes).forEach(([party, votes]) => {
+                  const key = `İlGenelMeclisi_${party}`;
+                  totals[locationKey].categoryVotes[key] = (totals[locationKey].categoryVotes[key] || 0) + (parseInt(votes) || 0);
+                });
+              }
+              if (result.municipal_council_votes) {
+                Object.entries(result.municipal_council_votes).forEach(([party, votes]) => {
+                  const key = `BelediyeMeclisi_${party}`;
+                  totals[locationKey].categoryVotes[key] = (totals[locationKey].categoryVotes[key] || 0) + (parseInt(votes) || 0);
+                });
+              }
+            }
+          });
+          
+          // Mahalle bazında toplamları context'e ekle
+          if (Object.keys(neighborhoodTotals).length > 0) {
+            context.push(`\n--- ${election.name} - Mahalle Bazında Toplam Oylar ---`);
+            Object.values(neighborhoodTotals).forEach(total => {
+              const info = [];
+              info.push(`Mahalle: ${total.name}`);
+              info.push(`Sandık Sayısı: ${total.ballotBoxCount}`);
+              info.push(`Kullanılan Oy: ${total.usedVotes}`);
+              info.push(`Geçerli Oy: ${total.validVotes}`);
+              info.push(`Geçersiz Oy: ${total.invalidVotes}`);
+              
+              // En yüksek oy alan parti/aday
+              if (Object.keys(total.categoryVotes).length > 0) {
+                const sortedVotes = Object.entries(total.categoryVotes)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 3);
+                const topVotes = sortedVotes.map(([key, votes]) => {
+                  const [category, name] = key.split('_');
+                  return `${name}: ${votes} oy`;
+                }).join(', ');
+                info.push(`En Yüksek Oylar: ${topVotes}`);
+              }
+              
+              context.push(info.join(' | '));
+            });
+          }
+          
+          // Köy bazında toplamları context'e ekle
+          if (Object.keys(villageTotals).length > 0) {
+            context.push(`\n--- ${election.name} - Köy Bazında Toplam Oylar ---`);
+            Object.values(villageTotals).forEach(total => {
+              const info = [];
+              info.push(`Köy: ${total.name}`);
+              info.push(`Sandık Sayısı: ${total.ballotBoxCount}`);
+              info.push(`Kullanılan Oy: ${total.usedVotes}`);
+              info.push(`Geçerli Oy: ${total.validVotes}`);
+              info.push(`Geçersiz Oy: ${total.invalidVotes}`);
+              
+              if (Object.keys(total.categoryVotes).length > 0) {
+                const sortedVotes = Object.entries(total.categoryVotes)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 3);
+                const topVotes = sortedVotes.map(([key, votes]) => {
+                  const [category, name] = key.split('_');
+                  return `${name}: ${votes} oy`;
+                }).join(', ');
+                info.push(`En Yüksek Oylar: ${topVotes}`);
+              }
+              
+              context.push(info.join(' | '));
+            });
+          }
         }
       });
     }
