@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
+import ApiService from '../utils/ApiService';
 
 const CoordinatorsPage = () => {
   const location = useLocation();
@@ -88,10 +89,293 @@ const CoordinatorsListPage = () => {
 
 // Bölgeler Listesi Sayfası
 const RegionsListPage = () => {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [villages, setVillages] = useState([]);
+  const [ballotBoxes, setBallotBoxes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedNeighborhoods, setSelectedNeighborhoods] = useState([]);
+  const [selectedVillages, setSelectedVillages] = useState([]);
+  const [regionName, setRegionName] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
+
+  // Sandık sayılarını hesapla
+  const getBallotBoxCount = (locationId, type) => {
+    if (type === 'neighborhood') {
+      return ballotBoxes.filter(bb => bb.neighborhood_id === locationId || String(bb.neighborhood_id) === String(locationId)).length;
+    } else if (type === 'village') {
+      return ballotBoxes.filter(bb => bb.village_id === locationId || String(bb.village_id) === String(locationId)).length;
+    }
+    return 0;
+  };
+
+  // Verileri yükle
+  useEffect(() => {
+    if (showCreateModal) {
+      loadData();
+    }
+  }, [showCreateModal]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [neighborhoodsData, villagesData, ballotBoxesData] = await Promise.all([
+        ApiService.getNeighborhoods(),
+        ApiService.getVillages(),
+        ApiService.getBallotBoxes()
+      ]);
+      setNeighborhoods(neighborhoodsData || []);
+      setVillages(villagesData || []);
+      setBallotBoxes(ballotBoxesData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setMessage('Veriler yüklenirken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateRegion = async (e) => {
+    e.preventDefault();
+    
+    if (!regionName.trim()) {
+      setMessage('Bölge adı zorunludur');
+      setMessageType('error');
+      return;
+    }
+
+    if (selectedNeighborhoods.length === 0 && selectedVillages.length === 0) {
+      setMessage('En az bir mahalle veya köy seçmelisiniz');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const regionData = {
+        name: regionName,
+        neighborhood_ids: selectedNeighborhoods,
+        village_ids: selectedVillages,
+        district_id: neighborhoods.find(n => selectedNeighborhoods.includes(n.id))?.district_id || 
+                     villages.find(v => selectedVillages.includes(v.id))?.district_id || null
+      };
+
+      const response = await ApiService.createRegion(regionData);
+      
+      if (response.success || response.id) {
+        setMessage('Bölge başarıyla oluşturuldu');
+        setMessageType('success');
+        setShowCreateModal(false);
+        setRegionName('');
+        setSelectedNeighborhoods([]);
+        setSelectedVillages([]);
+      } else {
+        setMessage(response.message || 'Bölge oluşturulurken hata oluştu');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error creating region:', error);
+      setMessage('Bölge oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleNeighborhood = (id) => {
+    setSelectedNeighborhoods(prev => 
+      prev.includes(id) ? prev.filter(n => n !== id) : [...prev, id]
+    );
+  };
+
+  const toggleVillage = (id) => {
+    setSelectedVillages(prev => 
+      prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Bölgeler</h2>
-      <p className="text-gray-600 dark:text-gray-400">Bölgeler listesi burada görüntülenecek.</p>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bölgeler</h2>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Bölge Oluştur
+        </button>
+      </div>
+
+      {message && (
+        <div className={`mb-4 p-4 rounded-lg ${
+          messageType === 'error' ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+          messageType === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+          'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      {/* Bölge Oluştur Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Yeni Bölge Oluştur</h3>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setRegionName('');
+                    setSelectedNeighborhoods([]);
+                    setSelectedVillages([]);
+                    setMessage('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateRegion} className="flex-1 overflow-y-auto p-6">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Bölge Adı *
+                </label>
+                <input
+                  type="text"
+                  value={regionName}
+                  onChange={(e) => setRegionName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Örn: 1. Bölge"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Mahalleler */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Mahalleler</h4>
+                  {loading ? (
+                    <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
+                  ) : (
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      {neighborhoods.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">Mahalle bulunamadı</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {neighborhoods.map((neighborhood) => {
+                            const ballotCount = getBallotBoxCount(neighborhood.id, 'neighborhood');
+                            const isSelected = selectedNeighborhoods.includes(neighborhood.id);
+                            return (
+                              <label
+                                key={neighborhood.id}
+                                className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+                                  isSelected
+                                    ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500'
+                                    : 'bg-gray-50 dark:bg-gray-700/50 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleNeighborhood(neighborhood.id)}
+                                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                                />
+                                <span className="ml-3 flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {neighborhood.name}
+                                  <span className="text-gray-500 dark:text-gray-400 ml-2">
+                                    ({ballotCount} sandık)
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Köyler */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Köyler</h4>
+                  {loading ? (
+                    <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
+                  ) : (
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      {villages.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">Köy bulunamadı</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {villages.map((village) => {
+                            const ballotCount = getBallotBoxCount(village.id, 'village');
+                            const isSelected = selectedVillages.includes(village.id);
+                            return (
+                              <label
+                                key={village.id}
+                                className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+                                  isSelected
+                                    ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500'
+                                    : 'bg-gray-50 dark:bg-gray-700/50 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleVillage(village.id)}
+                                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                                />
+                                <span className="ml-3 flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {village.name}
+                                  <span className="text-gray-500 dark:text-gray-400 ml-2">
+                                    ({ballotCount} sandık)
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setRegionName('');
+                    setSelectedNeighborhoods([]);
+                    setSelectedVillages([]);
+                    setMessage('');
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {loading ? 'Oluşturuluyor...' : 'Oluştur'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
