@@ -3921,6 +3921,80 @@ class FirebaseApiService {
     }
   }
 
+  // Election Coordinators API
+  static async getElectionCoordinators() {
+    try {
+      return await FirebaseService.getAll('election_coordinators', {}, false);
+    } catch (error) {
+      console.error('Get election coordinators error:', error);
+      return [];
+    }
+  }
+
+  static async createElectionCoordinator(coordinatorData) {
+    try {
+      const docId = await FirebaseService.create(
+        'election_coordinators',
+        null,
+        {
+          ...coordinatorData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        false
+      );
+      return { success: true, message: 'Sorumlu başarıyla oluşturuldu', coordinator: { id: docId, ...coordinatorData } };
+    } catch (error) {
+      console.error('Create election coordinator error:', error);
+      throw new Error('Sorumlu oluşturulurken hata oluştu');
+    }
+  }
+
+  // Election Regions API
+  static async getElectionRegions() {
+    try {
+      const regions = await FirebaseService.getAll('election_regions', {}, false);
+      // Parse JSON fields if they exist as strings
+      return (regions || []).map(region => ({
+        ...region,
+        neighborhood_ids: typeof region.neighborhood_ids === 'string' 
+          ? JSON.parse(region.neighborhood_ids) 
+          : (region.neighborhood_ids || []),
+        village_ids: typeof region.village_ids === 'string'
+          ? JSON.parse(region.village_ids)
+          : (region.village_ids || [])
+      }));
+    } catch (error) {
+      console.error('Get election regions error:', error);
+      return [];
+    }
+  }
+
+  static async createElectionRegion(regionData) {
+    try {
+      const docId = await FirebaseService.create(
+        'election_regions',
+        null,
+        {
+          ...regionData,
+          neighborhood_ids: Array.isArray(regionData.neighborhood_ids) 
+            ? regionData.neighborhood_ids 
+            : [],
+          village_ids: Array.isArray(regionData.village_ids)
+            ? regionData.village_ids
+            : [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        false
+      );
+      return { success: true, message: 'Bölge başarıyla oluşturuldu', region: { id: docId, ...regionData } };
+    } catch (error) {
+      console.error('Create election region error:', error);
+      throw new Error('Bölge oluşturulurken hata oluştu');
+    }
+  }
+
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {
     try {
