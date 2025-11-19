@@ -42,7 +42,8 @@ const PublicElectionResultsPage = () => {
   // Visitor'ı kaydet
   const registerVisitor = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api'}/public/visitors/register`, {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      const response = await fetch(`${API_BASE_URL}/public/visitors/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +69,8 @@ const PublicElectionResultsPage = () => {
   // Visitor'ı kaldır
   const unregisterVisitor = async () => {
     try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api'}/public/visitors/unregister`, {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+      await fetch(`${API_BASE_URL}/public/visitors/unregister`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +91,8 @@ const PublicElectionResultsPage = () => {
       if (isUnmountingRef.current) return;
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api'}/public/visitors/heartbeat`, {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+        const response = await fetch(`${API_BASE_URL}/public/visitors/heartbeat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -117,7 +120,8 @@ const PublicElectionResultsPage = () => {
       if (isUnmountingRef.current) return;
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api'}/public/visitors/count?electionId=${electionId}`);
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+        const response = await fetch(`${API_BASE_URL}/public/visitors/count?electionId=${electionId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.count !== undefined) {
