@@ -42,6 +42,65 @@ const MemberDashboardPage = () => {
   const [error, setError] = useState('');
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'public-institution-management', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
   const [grantedPermissions, setGrantedPermissions] = useState([]);
+
+  // View-permission mapping: Her view için hangi permission gerektiğini tanımla
+  const viewPermissionMap = {
+    'dashboard': ['access_dashboard'], // Dashboard her zaman erişilebilir
+    'stk-management': ['manage_stk', 'add_stk'],
+    'stk-events': ['create_event'],
+    'public-institution-management': ['add_public_institution'],
+    'add-member': ['add_member'],
+    'create-meeting': ['create_meeting'],
+    'ballot-boxes': ['access_ballot_boxes', 'add_ballot_box'],
+    'observers': ['access_observers', 'add_observer'],
+    'members-page': ['access_members_page'],
+    'meetings-page': ['access_meetings_page'],
+    'events-page': ['access_events_page'],
+    'calendar-page': ['access_calendar_page'],
+    'districts-page': ['access_districts_page'],
+    'archive-page': ['access_archive_page'],
+    'management-chart-page': ['access_management_chart_page'],
+    'election-preparation-page': ['access_election_preparation_page'],
+    'representatives-page': ['access_representatives_page'],
+    'neighborhoods-page': ['access_neighborhoods_page'],
+    'villages-page': ['access_villages_page'],
+    'groups-page': ['access_groups_page'],
+  };
+
+  // Yetki kontrolü yapan wrapper fonksiyon
+  const setViewWithPermission = React.useCallback((view) => {
+    // Dashboard her zaman erişilebilir
+    if (view === 'dashboard') {
+      setCurrentView('dashboard');
+      return;
+    }
+
+    // View için gerekli permission'ları kontrol et
+    const requiredPermissions = viewPermissionMap[view] || [];
+    
+    // Eğer permission tanımlı değilse, erişime izin ver (geriye dönük uyumluluk)
+    if (requiredPermissions.length === 0) {
+      console.warn(`View '${view}' için permission tanımı bulunamadı`);
+      setCurrentView(view);
+      return;
+    }
+
+    // Kullanıcının en az bir permission'ı var mı kontrol et
+    const hasPermission = requiredPermissions.some(perm => 
+      grantedPermissions.includes(perm)
+    );
+
+    if (hasPermission) {
+      setCurrentView(view);
+    } else {
+      // Yetki yoksa dashboard'a dön ve uyarı göster
+      console.warn(`Kullanıcının '${view}' view'ine erişim yetkisi yok`);
+      setCurrentView('dashboard');
+      setError(`Bu sayfaya erişim yetkiniz bulunmamaktadır.`);
+      // 3 saniye sonra hatayı temizle
+      setTimeout(() => setError(''), 3000);
+    }
+  }, [grantedPermissions]);
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
   const [isWomenBranchPresident, setIsWomenBranchPresident] = useState(false);
@@ -72,16 +131,16 @@ const MemberDashboardPage = () => {
       const { action } = event.detail;
       switch (action) {
         case 'add-member':
-          setCurrentView('add-member');
+          setViewWithPermission('add-member');
           break;
         case 'create-meeting':
-          setCurrentView('create-meeting');
+          setViewWithPermission('create-meeting');
           break;
         case 'add-stk':
-          setCurrentView('stk-management');
+          setViewWithPermission('stk-management');
           break;
         case 'add-public-institution':
-          setCurrentView('public-institution-management');
+          setViewWithPermission('public-institution-management');
           break;
         default:
           break;
@@ -333,6 +392,12 @@ const MemberDashboardPage = () => {
 
   // STK Management view
   if (currentView === 'stk-management') {
+    // Yetki kontrolü
+    if (!hasViewPermission('stk-management')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -344,7 +409,7 @@ const MemberDashboardPage = () => {
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">STK ekleme, düzenleme ve silme işlemleri</p>
                 </div>
                 <button
-                  onClick={() => setCurrentView('dashboard')}
+                  onClick={() => setViewWithPermission('dashboard')}
                   className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                 >
                   Geri Dön
@@ -362,6 +427,10 @@ const MemberDashboardPage = () => {
 
   // Public Institution Management view
   if (currentView === 'public-institution-management') {
+    if (!hasViewPermission('public-institution-management')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -373,7 +442,7 @@ const MemberDashboardPage = () => {
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Kamu kurumu ekleme, düzenleme ve silme işlemleri</p>
                 </div>
                 <button
-                  onClick={() => setCurrentView('dashboard')}
+                  onClick={() => setViewWithPermission('dashboard')}
                   className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                 >
                   Dashboard'a Dön
@@ -391,6 +460,10 @@ const MemberDashboardPage = () => {
 
   // STK Events view
   if (currentView === 'stk-events') {
+    if (!hasViewPermission('stk-events')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -402,7 +475,7 @@ const MemberDashboardPage = () => {
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Etkinlik oluşturma ve yönetimi</p>
                 </div>
                 <button
-                  onClick={() => setCurrentView('dashboard')}
+                  onClick={() => setViewWithPermission('dashboard')}
                   className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                 >
                   Geri Dön
@@ -420,6 +493,10 @@ const MemberDashboardPage = () => {
 
   // Add Member view
   if (currentView === 'add-member') {
+    if (!hasViewPermission('add-member')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -431,7 +508,7 @@ const MemberDashboardPage = () => {
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Yeni üye kaydı oluşturun</p>
                 </div>
                 <button
-                  onClick={() => setCurrentView('dashboard')}
+                  onClick={() => setViewWithPermission('dashboard')}
                   className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                 >
                   Geri Dön
@@ -445,8 +522,8 @@ const MemberDashboardPage = () => {
             <MemberForm
               regions={regions.map(r => r.name)}
               positions={positions.map(p => p.name)}
-              onClose={() => setCurrentView('dashboard')}
-              onMemberSaved={() => setCurrentView('dashboard')}
+              onClose={() => setViewWithPermission('dashboard')}
+              onMemberSaved={() => setViewWithPermission('dashboard')}
             />
           </div>
         </div>
@@ -456,6 +533,10 @@ const MemberDashboardPage = () => {
 
   // Create Meeting view
   if (currentView === 'create-meeting') {
+    if (!hasViewPermission('create-meeting')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -467,7 +548,7 @@ const MemberDashboardPage = () => {
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Seçili bölgelere toplantı planlayın</p>
                 </div>
                 <button
-                  onClick={() => setCurrentView('dashboard')}
+                  onClick={() => setViewWithPermission('dashboard')}
                   className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                 >
                   Geri Dön
@@ -480,8 +561,8 @@ const MemberDashboardPage = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
             <CreateMeetingForm
               regions={regions}
-              onClose={() => setCurrentView('dashboard')}
-              onMeetingCreated={() => setCurrentView('dashboard')}
+              onClose={() => setViewWithPermission('dashboard')}
+              onMeetingCreated={() => setViewWithPermission('dashboard')}
             />
           </div>
         </div>
@@ -497,7 +578,7 @@ const MemberDashboardPage = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Üyeler</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -508,13 +589,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'meetings-page') {
+    if (!hasViewPermission('meetings-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Toplantılar</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -525,13 +610,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'calendar-page') {
+    if (!hasViewPermission('calendar-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Takvim</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -542,13 +631,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'districts-page') {
+    if (!hasViewPermission('districts-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">İlçeler</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -559,13 +652,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'events-page') {
+    if (!hasViewPermission('events-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Etkinlikler</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -576,13 +673,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'archive-page') {
+    if (!hasViewPermission('archive-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Arşiv</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -593,13 +694,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'management-chart-page') {
+    if (!hasViewPermission('management-chart-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yönetim Şeması</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -610,13 +715,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'election-preparation-page') {
+    if (!hasViewPermission('election-preparation-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Seçim Hazırlık</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -627,13 +736,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'representatives-page') {
+    if (!hasViewPermission('representatives-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Temsilciler</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -644,13 +757,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'neighborhoods-page') {
+    if (!hasViewPermission('neighborhoods-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mahalleler</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -661,13 +778,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'villages-page') {
+    if (!hasViewPermission('villages-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Köyler</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -678,13 +799,17 @@ const MemberDashboardPage = () => {
     );
   }
   if (currentView === 'groups-page') {
+    if (!hasViewPermission('groups-page')) {
+      setViewWithPermission('dashboard');
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6 lg:py-8 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Gruplar</h1>
-              <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
+              <button onClick={() => setViewWithPermission('dashboard')} className="px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600">Geri Dön</button>
             </div>
           </div>
         </div>
@@ -745,7 +870,7 @@ const MemberDashboardPage = () => {
         {currentView !== 'dashboard' && (
           <div className="mb-6">
             <button
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => setViewWithPermission('dashboard')}
               className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors duration-200"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -821,7 +946,7 @@ const MemberDashboardPage = () => {
                   <button
                     onClick={() => {
                       console.log('STK Ekleme butonuna tıklandı');
-                      setCurrentView('stk-management');
+                      setViewWithPermission('stk-management');
                     }}
                     className="group p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-lg sm:rounded-xl border border-green-200 dark:border-green-700 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800 dark:hover:to-green-700 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
                   >
@@ -843,7 +968,7 @@ const MemberDashboardPage = () => {
                   <button
                     onClick={() => {
                       console.log('Etkinlik Oluşturma butonuna tıklandı');
-                      setCurrentView('stk-events');
+                      setViewWithPermission('stk-events');
                     }}
                     className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
                   >
@@ -883,7 +1008,7 @@ const MemberDashboardPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                   {(grantedPermissions.includes('access_ballot_boxes') || grantedPermissions.includes('add_ballot_box')) && (
                     <button
-                      onClick={() => setCurrentView('ballot-boxes')}
+                      onClick={() => setViewWithPermission('ballot-boxes')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-700 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-800 dark:hover:to-amber-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -902,7 +1027,7 @@ const MemberDashboardPage = () => {
 
                   {(grantedPermissions.includes('access_observers') || grantedPermissions.includes('add_observer')) && (
                     <button
-                      onClick={() => setCurrentView('observers')}
+                      onClick={() => setViewWithPermission('observers')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-lg sm:rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -939,7 +1064,7 @@ const MemberDashboardPage = () => {
                 <button
                   onClick={() => {
                     console.log('Kamu Kurumu Ekleme butonuna tıklandı');
-                    setCurrentView('public-institution-management');
+                      setViewWithPermission('public-institution-management');
                   }}
                   className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md w-full active:scale-[0.98]"
                 >
@@ -975,7 +1100,7 @@ const MemberDashboardPage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {grantedPermissions.includes('add_member') && (
                     <button
-                      onClick={() => setCurrentView('add-member')}
+                      onClick={() => setViewWithPermission('add-member')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-lg sm:rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -993,7 +1118,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('create_meeting') && (
                     <button
-                      onClick={() => setCurrentView('create-meeting')}
+                      onClick={() => setViewWithPermission('create-meeting')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-lg sm:rounded-xl border border-purple-200 dark:border-purple-700 hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800 dark:hover:to-purple-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -1011,7 +1136,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('add_stk') && (
                     <button
-                      onClick={() => setCurrentView('stk-management')}
+                      onClick={() => setViewWithPermission('stk-management')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -1029,7 +1154,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('add_public_institution') && (
                     <button
-                      onClick={() => setCurrentView('public-institution-management')}
+                      onClick={() => setViewWithPermission('public-institution-management')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -1079,7 +1204,7 @@ const MemberDashboardPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {grantedPermissions.includes('access_members_page') && (
                     <button 
-                      onClick={() => setCurrentView('members-page')} 
+                      onClick={() => setViewWithPermission('members-page')} 
                       className="group p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1094,7 +1219,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_meetings_page') && (
                     <button 
-                      onClick={() => setCurrentView('meetings-page')} 
+                      onClick={() => setViewWithPermission('meetings-page')} 
                       className="group p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-xl border border-purple-200 dark:border-purple-700 hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800 dark:hover:to-purple-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1109,7 +1234,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_events_page') && (
                     <button 
-                      onClick={() => setCurrentView('events-page')} 
+                      onClick={() => setViewWithPermission('events-page')} 
                       className="group p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 rounded-xl border border-pink-200 dark:border-pink-700 hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800 dark:hover:to-pink-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1124,7 +1249,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_calendar_page') && (
                     <button 
-                      onClick={() => setCurrentView('calendar-page')} 
+                      onClick={() => setViewWithPermission('calendar-page')} 
                       className="group p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-xl border border-green-200 dark:border-green-700 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800 dark:hover:to-green-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1139,7 +1264,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_districts_page') && (
                     <button 
-                      onClick={() => setCurrentView('districts-page')} 
+                      onClick={() => setViewWithPermission('districts-page')} 
                       className="group p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-xl border border-orange-200 dark:border-orange-700 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800 dark:hover:to-orange-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1154,7 +1279,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_archive_page') && (
                     <button 
-                      onClick={() => setCurrentView('archive-page')} 
+                      onClick={() => setViewWithPermission('archive-page')} 
                       className="group p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1169,7 +1294,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_management_chart_page') && (
                     <button 
-                      onClick={() => setCurrentView('management-chart-page')} 
+                      onClick={() => setViewWithPermission('management-chart-page')} 
                       className="group p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1184,7 +1309,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_election_preparation_page') && (
                     <button 
-                      onClick={() => setCurrentView('election-preparation-page')} 
+                      onClick={() => setViewWithPermission('election-preparation-page')} 
                       className="group p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 rounded-xl border border-yellow-200 dark:border-yellow-700 hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800 dark:hover:to-yellow-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1199,7 +1324,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_representatives_page') && (
                     <button 
-                      onClick={() => setCurrentView('representatives-page')} 
+                      onClick={() => setViewWithPermission('representatives-page')} 
                       className="group p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1214,7 +1339,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_neighborhoods_page') && (
                     <button 
-                      onClick={() => setCurrentView('neighborhoods-page')} 
+                      onClick={() => setViewWithPermission('neighborhoods-page')} 
                       className="group p-4 bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900 dark:to-cyan-800 rounded-xl border border-cyan-200 dark:border-cyan-700 hover:from-cyan-100 hover:to-cyan-200 dark:hover:from-cyan-800 dark:hover:to-cyan-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1229,7 +1354,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_villages_page') && (
                     <button 
-                      onClick={() => setCurrentView('villages-page')} 
+                      onClick={() => setViewWithPermission('villages-page')} 
                       className="group p-4 bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-900 dark:to-lime-800 rounded-xl border border-lime-200 dark:border-lime-700 hover:from-lime-100 hover:to-lime-200 dark:hover:from-lime-800 dark:hover:to-lime-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1244,7 +1369,7 @@ const MemberDashboardPage = () => {
                   )}
                   {grantedPermissions.includes('access_groups_page') && (
                     <button 
-                      onClick={() => setCurrentView('groups-page')} 
+                      onClick={() => setViewWithPermission('groups-page')} 
                       className="group p-4 bg-gradient-to-r from-violet-50 to-violet-100 dark:from-violet-900 dark:to-violet-800 rounded-xl border border-violet-200 dark:border-violet-700 hover:from-violet-100 hover:to-violet-200 dark:hover:from-violet-800 dark:hover:to-violet-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
