@@ -229,7 +229,8 @@ const CoordinatorsListPage = () => {
           phone: '',
           role: 'provincial_coordinator',
           parent_coordinator_id: null,
-          district_id: null
+          district_id: null,
+          institution_name: null
         });
         loadData(); // Listeyi yenile
       } else {
@@ -632,13 +633,14 @@ const CoordinatorsListPage = () => {
                   </label>
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value, parent_coordinator_id: null })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value, parent_coordinator_id: null, institution_name: null })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   >
                     <option value="provincial_coordinator">İl Genel Sorumlusu</option>
                     <option value="district_supervisor">İlçe Sorumlusu</option>
                     <option value="region_supervisor">Bölge Sorumlusu</option>
+                    <option value="institution_supervisor">Kurum Sorumlusu</option>
                   </select>
                 </div>
 
@@ -743,6 +745,93 @@ const CoordinatorsListPage = () => {
                         Kurum seçildiğinde, kurumun bulunduğu bölgenin sorumlusuna otomatik bağlanacaktır.
                       </p>
                     </div>
+
+                    {/* Kurum bilgileri (bölge ve sandıklar) */}
+                    {formData.institution_name && (() => {
+                      // Seçilen kurumun sandıklarını bul
+                      const institutionBallotBoxes = ballotBoxes.filter(bb => 
+                        bb.institution_name === formData.institution_name
+                      );
+                      
+                      // Kurumun bulunduğu bölgeyi bul
+                      let institutionRegion = null;
+                      if (institutionBallotBoxes.length > 0) {
+                        const firstBox = institutionBallotBoxes[0];
+                        const neighborhoodId = firstBox.neighborhood_id;
+                        const villageId = firstBox.village_id;
+                        
+                        // Bölgeyi bul
+                        for (const region of regions) {
+                          const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
+                            ? region.neighborhood_ids
+                            : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                          const regionVillageIds = Array.isArray(region.village_ids)
+                            ? region.village_ids
+                            : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                          
+                          if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
+                              (villageId && regionVillageIds.includes(villageId))) {
+                            institutionRegion = region;
+                            break;
+                          }
+                        }
+                      }
+                      
+                      return (
+                        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                            Kurum Bilgileri
+                          </h4>
+                          
+                          {institutionRegion ? (
+                            <div className="mb-3">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                <span className="font-medium">Bölge:</span> {institutionRegion.name}
+                              </p>
+                              {institutionRegion.supervisor_id && (() => {
+                                const regionSupervisor = coordinators.find(c => 
+                                  String(c.id) === String(institutionRegion.supervisor_id)
+                                );
+                                return regionSupervisor ? (
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    <span className="font-medium">Bölge Sorumlusu:</span> {regionSupervisor.name}
+                                  </p>
+                                ) : null;
+                              })()}
+                            </div>
+                          ) : (
+                            <div className="mb-3">
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                                ⚠️ Bu kurum henüz bir bölgeye atanmamış. Sandıkların mahalle/köy bilgilerini kontrol edin.
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                              <span className="font-medium">Sandık Sayısı:</span> {institutionBallotBoxes.length}
+                            </p>
+                            {institutionBallotBoxes.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Sandık Numaraları:
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {institutionBallotBoxes.map((bb, idx) => (
+                                    <span 
+                                      key={idx}
+                                      className="px-2 py-1 text-xs rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                    >
+                                      {bb.ballot_number}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
 
