@@ -208,6 +208,11 @@ const CoordinatorDashboardPage = () => {
   const [parentCoordinators, setParentCoordinators] = useState([]);
   const [electionResults, setElectionResults] = useState([]);
   const [elections, setElections] = useState([]);
+  const [observers, setObservers] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [towns, setTowns] = useState([]);
+  const [modalPhoto, setModalPhoto] = useState(null);
+  const [modalTitle, setModalTitle] = useState('');
 
   // Coordinator rolleri
   const coordinatorRoles = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
@@ -245,6 +250,20 @@ const CoordinatorDashboardPage = () => {
         // Seçimleri de yükle
         const allElections = await ApiService.getElections();
         setElections(allElections || []);
+        
+        // Observers, districts, towns yükle (seçim sonuçları kartları için)
+        try {
+          const [observersData, districtsData, townsData] = await Promise.all([
+            ApiService.getObservers(),
+            ApiService.getDistricts(),
+            ApiService.getTowns()
+          ]);
+          setObservers(observersData || []);
+          setDistricts(districtsData || []);
+          setTowns(townsData || []);
+        } catch (err) {
+          console.error('Error fetching location data:', err);
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         if (isMounted) {
@@ -293,6 +312,40 @@ const CoordinatorDashboardPage = () => {
       'institution_supervisor': 'from-green-500 to-green-600'
     };
     return colors[role] || 'from-gray-500 to-gray-600';
+  }, []);
+
+  // Get chief observer for a ballot box
+  const getChiefObserver = useCallback((ballotBoxId) => {
+    const chiefObserver = observers.find(obs => 
+      String(obs.ballot_box_id) === String(ballotBoxId) && 
+      (obs.is_chief_observer === true || obs.is_chief_observer === 1)
+    );
+    return chiefObserver || null;
+  }, [observers]);
+
+  // Handle photo click
+  const handlePhotoClick = useCallback((photoUrl, title) => {
+    setModalPhoto(photoUrl);
+    setModalTitle(title);
+  }, []);
+
+  // Check if result has data (votes)
+  const hasData = useCallback((result) => {
+    return !!(result.used_votes || result.valid_votes || result.invalid_votes || 
+      (result.cb_votes && Object.keys(result.cb_votes).length > 0) ||
+      (result.mv_votes && Object.keys(result.mv_votes).length > 0) ||
+      (result.mayor_votes && Object.keys(result.mayor_votes).length > 0) ||
+      (result.provincial_assembly_votes && Object.keys(result.provincial_assembly_votes).length > 0) ||
+      (result.municipal_council_votes && Object.keys(result.municipal_council_votes).length > 0) ||
+      (result.referendum_votes && Object.keys(result.referendum_votes).length > 0) ||
+      (result.candidate_votes && Object.keys(result.candidate_votes).length > 0) ||
+      (result.party_votes && Object.keys(result.party_votes).length > 0));
+  }, []);
+
+  // Check if result has protocol photo
+  const hasProtocol = useCallback((result) => {
+    return !!(result.signed_protocol_photo || result.signedProtocolPhoto || 
+      result.objection_protocol_photo || result.objectionProtocolPhoto);
   }, []);
 
   if (!user || !coordinatorRoles.includes(userRole)) {
