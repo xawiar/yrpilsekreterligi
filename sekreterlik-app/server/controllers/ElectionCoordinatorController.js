@@ -150,6 +150,62 @@ class ElectionCoordinatorController {
   static async delete(req, res) {
     try {
       const { id } = req.params;
+      
+      // Önce coordinator'ı bul
+      const coordinator = await ElectionCoordinator.getById(id);
+      if (!coordinator) {
+        return res.status(404).json({ message: 'Sorumlu bulunamadı' });
+      }
+      
+      // Coordinator'a bağlı member_user'ları bul ve sil
+      const MemberUser = require('../models/MemberUser');
+      const db = require('../config/database');
+      
+      try {
+        // coordinator_id ile member_user'ları bul
+        const memberUsers = await new Promise((resolve, reject) => {
+          db.all('SELECT * FROM member_users WHERE coordinator_id = ?', [id], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        
+        // Her member_user için Firebase Auth kullanıcısını sil ve member_user'ı sil
+        for (const memberUser of memberUsers) {
+          try {
+            // Firebase Auth kullanıcısını sil (eğer varsa)
+            if (memberUser.auth_uid || memberUser.authUid) {
+              const authUid = memberUser.auth_uid || memberUser.authUid;
+              try {
+                const { getAdmin } = require('../config/firebaseAdmin');
+                const firebaseAdmin = getAdmin();
+                if (firebaseAdmin) {
+                  await firebaseAdmin.auth().deleteUser(authUid);
+                  console.log(`✅ Firebase Auth user deleted for coordinator ID ${id} (authUid: ${authUid})`);
+                }
+              } catch (authError) {
+                if (authError.code !== 'auth/user-not-found') {
+                  console.error(`⚠️ Error deleting Firebase Auth user for coordinator ID ${id}:`, authError.message);
+                } else {
+                  console.log(`ℹ️ Firebase Auth user already deleted for coordinator ID ${id}`);
+                }
+              }
+            }
+            
+            // member_user'ı sil
+            await MemberUser.deleteUser(memberUser.id);
+            console.log(`✅ Member user deleted for coordinator ID ${id} (user ID: ${memberUser.id}, username: ${memberUser.username})`);
+          } catch (userError) {
+            console.error(`❌ Error deleting member user ${memberUser.id} for coordinator ID ${id}:`, userError);
+            // Devam et, diğer kullanıcıları da silmeyi dene
+          }
+        }
+      } catch (userError) {
+        console.error(`❌ Error deleting member users for coordinator ID ${id}:`, userError);
+        // Devam et, coordinator silme işlemini tamamla
+      }
+      
+      // Coordinator'ı sil
       const result = await ElectionCoordinator.delete(id);
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Sorumlu bulunamadı' });
