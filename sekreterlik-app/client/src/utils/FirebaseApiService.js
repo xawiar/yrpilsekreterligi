@@ -456,13 +456,17 @@ class FirebaseApiService {
       const tcStr = String(tc).trim();
       const phoneStr = String(phone).replace(/\D/g, ''); // Normalize phone
       
+      console.log('[DEBUG] Coordinator login attempt:', { tc: tcStr, phone: phoneStr });
+      
       // Tüm kullanıcıları al ve userType='coordinator' olanları filtrele
       const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
       
       // Coordinator kullanıcılarını bul
       const coordinatorUsers = allUsers.filter(u => 
-        u.userType === 'coordinator' && u.coordinatorId
+        u.userType === 'coordinator' && (u.coordinatorId || u.coordinator_id)
       );
+      
+      console.log('[DEBUG] Coordinator users found:', coordinatorUsers.length);
       
       if (!coordinatorUsers || coordinatorUsers.length === 0) {
         throw new Error('Sorumlu kullanıcısı bulunamadı.');
@@ -471,27 +475,49 @@ class FirebaseApiService {
       // Coordinator bilgilerini al
       const coordinators = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_COORDINATORS);
       
+      console.log('[DEBUG] Coordinators found:', coordinators.length);
+      
       // TC ve telefon ile eşleşen coordinator'ı bul
       let matchedCoordinator = null;
       let matchedUser = null;
       
       for (const coordinatorUser of coordinatorUsers) {
-        const coordinator = coordinators.find(c => String(c.id) === String(coordinatorUser.coordinatorId));
+        const coordinatorId = coordinatorUser.coordinatorId || coordinatorUser.coordinator_id;
+        const coordinator = coordinators.find(c => String(c.id) === String(coordinatorId));
+        
         if (coordinator) {
           // Coordinator'ın telefon numarasını da normalize et
           const coordinatorPhoneNormalized = String(coordinator.phone || '').replace(/\D/g, '');
           const coordinatorTcNormalized = String(coordinator.tc || '').trim();
           
+          console.log('[DEBUG] Comparing:', {
+            inputTc: tcStr,
+            inputPhone: phoneStr,
+            coordinatorTc: coordinatorTcNormalized,
+            coordinatorPhone: coordinatorPhoneNormalized,
+            coordinatorName: coordinator.name,
+            tcMatch: coordinatorTcNormalized === tcStr,
+            phoneMatch: coordinatorPhoneNormalized === phoneStr
+          });
+          
           // TC ve normalize edilmiş telefon numarası ile karşılaştır
           if (coordinatorTcNormalized === tcStr && coordinatorPhoneNormalized === phoneStr) {
             matchedCoordinator = coordinator;
             matchedUser = coordinatorUser;
+            console.log('[DEBUG] Match found!', { coordinatorName: coordinator.name });
             break;
           }
         }
       }
       
       if (!matchedCoordinator || !matchedUser) {
+        console.error('[DEBUG] No match found. Available coordinators:', coordinators.map(c => ({
+          id: c.id,
+          name: c.name,
+          tc: c.tc,
+          phone: c.phone,
+          phoneNormalized: String(c.phone || '').replace(/\D/g, '')
+        })));
         throw new Error('Geçersiz TC kimlik numarası veya telefon numarası');
       }
       
