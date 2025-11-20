@@ -82,6 +82,29 @@ router.post('/login', async (req, res) => {
           townName: memberUser.town_name,
           chairmanName: memberUser.chairman_name
         };
+      } else if (memberUser.user_type === 'coordinator' && memberUser.coordinator_id) {
+        // Coordinator login - coordinator bilgilerini getir
+        const ElectionCoordinator = require('../models/ElectionCoordinator');
+        try {
+          const coordinator = await ElectionCoordinator.getById(memberUser.coordinator_id);
+          if (coordinator) {
+            userRole = coordinator.role; // provincial_coordinator, district_supervisor, region_supervisor, institution_supervisor
+            userData = {
+              username,
+              name: coordinator.name,
+              role: userRole,
+              coordinatorId: coordinator.id,
+              tc: coordinator.tc,
+              phone: coordinator.phone,
+              parentCoordinatorId: coordinator.parent_coordinator_id,
+              districtId: coordinator.district_id,
+              institutionName: coordinator.institution_name
+            };
+          }
+        } catch (coordError) {
+          console.error('Error fetching coordinator:', coordError);
+          // Coordinator bulunamazsa normal member olarak devam et
+        }
       }
       
       res.json({
@@ -103,6 +126,237 @@ router.post('/login', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Giriş sırasında bir hata oluştu'
+    });
+  }
+});
+
+// Coordinator Login endpoint (TC and phone)
+router.post('/login-coordinator', async (req, res) => {
+  const { tc, phone } = req.body;
+  
+  console.log('Coordinator login attempt:', { tc, phone });
+  
+  try {
+    if (!tc || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'TC kimlik numarası ve telefon numarası zorunludur'
+      });
+    }
+
+    // Normalize phone: remove all non-digit characters
+    const normalizedPhone = phone.replace(/\D/g, '');
+    
+    // Get coordinator user by credentials
+    const memberUser = await MemberUser.getCoordinatorUserByCredentials(tc, normalizedPhone);
+    
+    if (memberUser) {
+      // Get coordinator details
+      const ElectionCoordinator = require('../models/ElectionCoordinator');
+      const coordinator = await ElectionCoordinator.getById(memberUser.coordinator_id);
+      
+      if (!coordinator) {
+        return res.status(404).json({
+          success: false,
+          message: 'Sorumlu bulunamadı'
+        });
+      }
+
+      // Generate a simple token
+      const token = 'simple-auth-token';
+      
+      res.json({
+        success: true,
+        token,
+        user: {
+          username: memberUser.username,
+          name: coordinator.name,
+          role: coordinator.role, // provincial_coordinator, district_supervisor, region_supervisor, institution_supervisor
+          coordinatorId: coordinator.id,
+          tc: coordinator.tc,
+          phone: coordinator.phone,
+          parentCoordinatorId: coordinator.parent_coordinator_id,
+          districtId: coordinator.district_id,
+          institutionName: coordinator.institution_name
+        }
+      });
+      return;
+    }
+
+    // Coordinator not found
+    console.log('Coordinator login failed - invalid credentials');
+    res.status(401).json({
+      success: false,
+      message: 'Geçersiz TC kimlik numarası veya telefon numarası'
+    });
+  } catch (error) {
+    console.error('Coordinator login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Giriş sırasında bir hata oluştu'
+    });
+  }
+});
+
+// Coordinator Dashboard endpoint - Get ballot boxes for coordinator
+router.get('/coordinator-dashboard/:coordinatorId', async (req, res) => {
+  try {
+    const { coordinatorId } = req.params;
+    const ElectionCoordinator = require('../models/ElectionCoordinator');
+    const ElectionRegion = require('../models/ElectionRegion');
+    
+    // Get coordinator
+    const coordinator = await ElectionCoordinator.getById(coordinatorId);
+    if (!coordinator) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sorumlu bulunamadı'
+      });
+    }
+
+    let ballotBoxes = [];
+    
+    if (coordinator.role === 'provincial_coordinator') {
+      // İl Genel Sorumlusu: Tüm sandıklar
+      ballotBoxes = await new Promise((resolve, reject) => {
+        db.all('SELECT * FROM ballot_boxes ORDER BY ballot_number', [], (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        });
+      });
+    } else if (coordinator.role === 'district_supervisor') {
+      // İlçe Sorumlusu: Bağlı bölge sorumlularının bölgelerindeki sandıklar
+      // Önce bu ilçe sorumlusuna bağlı bölge sorumlularını bul
+      const allCoordinators = await ElectionCoordinator.getAll();
+      const regionSupervisors = allCoordinators.filter(c => 
+        c.role === 'region_supervisor' && 
+        String(c.parent_coordinator_id) === String(coordinator.id)
+      );
+      
+      // Her bölge sorumlusunun bölgesini bul
+      const allRegions = await ElectionRegion.getAll();
+      const ballotBoxIds = new Set();
+      
+      for (const regionSupervisor of regionSupervisors) {
+        const region = allRegions.find(r => 
+          String(r.supervisor_id) === String(regionSupervisor.id)
+        );
+        if (region) {
+          const neighborhoodIds = Array.isArray(region.neighborhood_ids) 
+            ? region.neighborhood_ids 
+            : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+          const villageIds = Array.isArray(region.village_ids)
+            ? region.village_ids
+            : (region.village_ids ? JSON.parse(region.village_ids) : []);
+          
+          // Bu bölgedeki sandıkları bul
+          if (neighborhoodIds.length > 0 || villageIds.length > 0) {
+            let query = 'SELECT * FROM ballot_boxes WHERE ';
+            const conditions = [];
+            const params = [];
+            
+            if (neighborhoodIds.length > 0) {
+              conditions.push(`neighborhood_id IN (${neighborhoodIds.map(() => '?').join(',')})`);
+              params.push(...neighborhoodIds);
+            }
+            if (villageIds.length > 0) {
+              if (conditions.length > 0) conditions.push('OR');
+              conditions.push(`village_id IN (${villageIds.map(() => '?').join(',')})`);
+              params.push(...villageIds);
+            }
+            
+            if (conditions.length > 0) {
+              query += conditions.join(' ');
+              const regionBallotBoxes = await new Promise((resolve, reject) => {
+                db.all(query, params, (err, rows) => {
+                  if (err) reject(err);
+                  else resolve(rows || []);
+                });
+              });
+              
+              regionBallotBoxes.forEach(bb => ballotBoxIds.add(bb.id));
+            }
+          }
+        }
+      }
+      
+      // Unique sandıkları getir
+      if (ballotBoxIds.size > 0) {
+        const idsArray = Array.from(ballotBoxIds);
+        ballotBoxes = await new Promise((resolve, reject) => {
+          db.all(`SELECT * FROM ballot_boxes WHERE id IN (${idsArray.map(() => '?').join(',')}) ORDER BY ballot_number`, 
+            idsArray, (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows || []);
+            });
+        });
+      }
+    } else if (coordinator.role === 'region_supervisor') {
+      // Bölge Sorumlusu: Kendi bölgesindeki sandıklar
+      const allRegions = await ElectionRegion.getAll();
+      const region = allRegions.find(r => 
+        String(r.supervisor_id) === String(coordinator.id)
+      );
+      
+      if (region) {
+        const neighborhoodIds = Array.isArray(region.neighborhood_ids)
+          ? region.neighborhood_ids
+          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+        const villageIds = Array.isArray(region.village_ids)
+          ? region.village_ids
+          : (region.village_ids ? JSON.parse(region.village_ids) : []);
+        
+        let query = 'SELECT * FROM ballot_boxes WHERE ';
+        const conditions = [];
+        const params = [];
+        
+        if (neighborhoodIds.length > 0) {
+          conditions.push(`neighborhood_id IN (${neighborhoodIds.map(() => '?').join(',')})`);
+          params.push(...neighborhoodIds);
+        }
+        if (villageIds.length > 0) {
+          if (conditions.length > 0) conditions.push('OR');
+          conditions.push(`village_id IN (${villageIds.map(() => '?').join(',')})`);
+          params.push(...villageIds);
+        }
+        
+        if (conditions.length > 0) {
+          query += conditions.join(' ') + ' ORDER BY ballot_number';
+          ballotBoxes = await new Promise((resolve, reject) => {
+            db.all(query, params, (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows || []);
+            });
+          });
+        }
+      }
+    } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
+      // Kurum Sorumlusu: Kendi kurumundaki sandıklar
+      ballotBoxes = await new Promise((resolve, reject) => {
+        db.all('SELECT * FROM ballot_boxes WHERE institution_name = ? ORDER BY ballot_number', 
+          [coordinator.institution_name], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+      });
+    }
+    
+    res.json({
+      success: true,
+      coordinator: {
+        id: coordinator.id,
+        name: coordinator.name,
+        role: coordinator.role,
+        institutionName: coordinator.institution_name
+      },
+      ballotBoxes: ballotBoxes || []
+    });
+  } catch (error) {
+    console.error('Coordinator dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Dashboard verileri alınırken hata oluştu',
+      error: error.message
     });
   }
 });

@@ -317,6 +317,30 @@ class MemberUser {
     });
   }
 
+  // Get coordinator user by credentials (TC and phone)
+  static getCoordinatorUserByCredentials(tc, phone) {
+    return new Promise((resolve, reject) => {
+      // Normalize phone: remove all non-digit characters
+      const normalizedPhone = phone.replace(/\D/g, '');
+      
+      db.get(`
+        SELECT mu.*, 
+               ec.name, ec.role, ec.parent_coordinator_id, ec.district_id, ec.institution_name
+        FROM member_users mu 
+        INNER JOIN election_coordinators ec ON mu.coordinator_id = ec.id
+        WHERE ec.tc = ? AND ec.phone = ? AND mu.is_active = 1
+      `, [tc, normalizedPhone], (err, row) => {
+        if (err) {
+          reject(err);
+        } else if (row) {
+          resolve(row);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
   // Update district president user credentials when district info changes
   static updateDistrictPresidentUser(districtId, districtName, chairmanName, chairmanPhone) {
     return new Promise((resolve, reject) => {

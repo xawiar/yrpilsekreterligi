@@ -55,6 +55,8 @@ const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresid
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
 const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
+const CoordinatorLoginPage = lazy(() => import('./pages/CoordinatorLoginPage'));
+const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage'));
 
 // Debug pages
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
@@ -230,6 +232,22 @@ function RouterContent() {
             element={
               <PublicRoute>
                 <Navigate to="/login?type=chief-observer" replace />
+              </PublicRoute>
+            } 
+          />
+
+          {/* Coordinator Routes */}
+          <Route 
+            path="/coordinator-dashboard" 
+            element={<CoordinatorDashboardPage />} 
+          />
+          
+          {/* Coordinator Login */}
+          <Route 
+            path="/coordinator-login" 
+            element={
+              <PublicRoute>
+                <CoordinatorLoginPage />
               </PublicRoute>
             } 
           />

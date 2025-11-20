@@ -1924,6 +1924,38 @@ class ApiService {
     return response.json();
   }
 
+  // Coordinator Login API (TC and phone)
+  static async loginCoordinator(tc, phone) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.loginCoordinator(tc, phone);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/login-coordinator`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tc, phone }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  // Coordinator Dashboard API
+  static async getCoordinatorDashboard(coordinatorId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getCoordinatorDashboard(coordinatorId);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/coordinator-dashboard/${coordinatorId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
 
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {

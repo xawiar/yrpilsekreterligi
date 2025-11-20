@@ -450,6 +450,157 @@ class FirebaseApiService {
     }
   }
 
+  // Coordinator Login (TC and phone)
+  static async loginCoordinator(tc, phone) {
+    try {
+      const tcStr = String(tc).trim();
+      const phoneStr = String(phone).replace(/\D/g, ''); // Normalize phone
+      
+      // Tüm kullanıcıları al ve userType='coordinator' olanları filtrele
+      const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
+      
+      // Coordinator kullanıcılarını bul
+      const coordinatorUsers = allUsers.filter(u => 
+        u.userType === 'coordinator' && u.coordinatorId
+      );
+      
+      if (!coordinatorUsers || coordinatorUsers.length === 0) {
+        throw new Error('Sorumlu kullanıcısı bulunamadı.');
+      }
+      
+      // Coordinator bilgilerini al
+      const coordinators = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_COORDINATORS);
+      
+      // TC ve telefon ile eşleşen coordinator'ı bul
+      let matchedCoordinator = null;
+      let matchedUser = null;
+      
+      for (const coordinatorUser of coordinatorUsers) {
+        const coordinator = coordinators.find(c => String(c.id) === String(coordinatorUser.coordinatorId));
+        if (coordinator && coordinator.tc === tcStr && coordinator.phone === phoneStr) {
+          matchedCoordinator = coordinator;
+          matchedUser = coordinatorUser;
+          break;
+        }
+      }
+      
+      if (!matchedCoordinator || !matchedUser) {
+        throw new Error('Geçersiz TC kimlik numarası veya telefon numarası');
+      }
+      
+      return {
+        success: true,
+        user: {
+          username: matchedUser.username,
+          name: matchedCoordinator.name,
+          role: matchedCoordinator.role,
+          coordinatorId: matchedCoordinator.id,
+          tc: matchedCoordinator.tc,
+          phone: matchedCoordinator.phone,
+          parentCoordinatorId: matchedCoordinator.parent_coordinator_id,
+          districtId: matchedCoordinator.district_id,
+          institutionName: matchedCoordinator.institution_name
+        }
+      };
+    } catch (error) {
+      console.error('Coordinator login error:', error);
+      return {
+        success: false,
+        message: error.message || 'Giriş sırasında bir hata oluştu'
+      };
+    }
+  }
+
+  // Coordinator Dashboard
+  static async getCoordinatorDashboard(coordinatorId) {
+    try {
+      const coordinators = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_COORDINATORS);
+      const coordinator = coordinators.find(c => String(c.id) === String(coordinatorId));
+      
+      if (!coordinator) {
+        throw new Error('Sorumlu bulunamadı');
+      }
+      
+      const allBallotBoxes = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOXES);
+      const allRegions = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_REGIONS);
+      
+      let ballotBoxes = [];
+      
+      if (coordinator.role === 'provincial_coordinator') {
+        // İl Genel Sorumlusu: Tüm sandıklar
+        ballotBoxes = allBallotBoxes;
+      } else if (coordinator.role === 'district_supervisor') {
+        // İlçe Sorumlusu: Bağlı bölge sorumlularının bölgelerindeki sandıklar
+        const regionSupervisors = coordinators.filter(c => 
+          c.role === 'region_supervisor' && 
+          String(c.parent_coordinator_id) === String(coordinator.id)
+        );
+        
+        const ballotBoxIds = new Set();
+        for (const regionSupervisor of regionSupervisors) {
+          const region = allRegions.find(r => 
+            String(r.supervisor_id) === String(regionSupervisor.id)
+          );
+          if (region) {
+            const neighborhoodIds = Array.isArray(region.neighborhood_ids) 
+              ? region.neighborhood_ids 
+              : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+            const villageIds = Array.isArray(region.village_ids)
+              ? region.village_ids
+              : (region.village_ids ? JSON.parse(region.village_ids) : []);
+            
+            allBallotBoxes.forEach(bb => {
+              if ((neighborhoodIds.length > 0 && neighborhoodIds.includes(bb.neighborhood_id)) ||
+                  (villageIds.length > 0 && villageIds.includes(bb.village_id))) {
+                ballotBoxIds.add(bb.id);
+              }
+            });
+          }
+        }
+        
+        ballotBoxes = allBallotBoxes.filter(bb => ballotBoxIds.has(bb.id));
+      } else if (coordinator.role === 'region_supervisor') {
+        // Bölge Sorumlusu: Kendi bölgesindeki sandıklar
+        const region = allRegions.find(r => 
+          String(r.supervisor_id) === String(coordinator.id)
+        );
+        
+        if (region) {
+          const neighborhoodIds = Array.isArray(region.neighborhood_ids)
+            ? region.neighborhood_ids
+            : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+          const villageIds = Array.isArray(region.village_ids)
+            ? region.village_ids
+            : (region.village_ids ? JSON.parse(region.village_ids) : []);
+          
+          ballotBoxes = allBallotBoxes.filter(bb => 
+            (neighborhoodIds.length > 0 && neighborhoodIds.includes(bb.neighborhood_id)) ||
+            (villageIds.length > 0 && villageIds.includes(bb.village_id))
+          );
+        }
+      } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
+        // Kurum Sorumlusu: Kendi kurumundaki sandıklar
+        ballotBoxes = allBallotBoxes.filter(bb => 
+          bb.institution_name === coordinator.institution_name
+        );
+      }
+      
+      return {
+        success: true,
+        coordinator: {
+          id: coordinator.id,
+          name: coordinator.name,
+          role: coordinator.role,
+          institutionName: coordinator.institution_name
+        },
+        ballotBoxes: ballotBoxes || []
+      };
+    } catch (error) {
+      console.error('Coordinator dashboard error:', error);
+      throw error;
+    }
+  }
+
   // Chief Observer Login
   static async loginChiefObserver(ballotNumber, tc) {
     try {
