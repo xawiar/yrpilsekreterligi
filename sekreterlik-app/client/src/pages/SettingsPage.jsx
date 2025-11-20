@@ -220,21 +220,23 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'villages' && hasPermission('villages') && <VillagesSettings />}
                     {activeTab === 'stks' && hasPermission('stks') && <STKSettings />}
                     {activeTab === 'public-institutions' && hasPermission('public-institutions') && <PublicInstitutionSettings />}
-                {activeTab === 'mosques' && hasPermission('mosques') && <MosquesSettings />}
-                {activeTab === 'event-categories' && hasPermission('event-categories') && <EventCategoriesSettings />}
-                {activeTab === 'authorization' && hasPermission('authorization') && <AuthorizationSettings />}
-                {activeTab === 'bylaws' && hasPermission('bylaws') && <BylawsSettings />}
-                {activeTab === 'groq-api' && hasPermission('groq-api') && <GroqApiSettings />}
-                {activeTab === 'firebase-config' && hasPermission('firebase-config') && <FirebaseConfigSettings />}
-                {activeTab === 'deployment-config' && hasPermission('deployment-config') && <DeploymentConfigSettings />}
-                {activeTab === 'sms-config' && hasPermission('sms-config') && <SmsSettings />}
-                {activeTab === 'firebase-sync' && hasPermission('firebase-sync') && <SyncToFirebasePage />}
-                {activeTab === 'polls' && hasPermission('polls') && <PollsPage />}
-                {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
-                {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
-                {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
-                {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
-                {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
+                    {activeTab === 'mosques' && hasPermission('mosques') && <MosquesSettings />}
+                    {activeTab === 'event-categories' && hasPermission('event-categories') && <EventCategoriesSettings />}
+                    {activeTab === 'authorization' && hasPermission('authorization') && <AuthorizationSettings />}
+                    {activeTab === 'bylaws' && hasPermission('bylaws') && <BylawsSettings />}
+                    {activeTab === 'groq-api' && hasPermission('groq-api') && <GroqApiSettings />}
+                    {activeTab === 'firebase-config' && hasPermission('firebase-config') && <FirebaseConfigSettings />}
+                    {activeTab === 'deployment-config' && hasPermission('deployment-config') && <DeploymentConfigSettings />}
+                    {activeTab === 'sms-config' && hasPermission('sms-config') && <SmsSettings />}
+                    {activeTab === 'firebase-sync' && hasPermission('firebase-sync') && <SyncToFirebasePage />}
+                    {activeTab === 'polls' && hasPermission('polls') && <PollsPage />}
+                    {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
+                    {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
+                    {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
+                    {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
+                    {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
+                  </>
+                )}
               </>
             )}
           </div>
