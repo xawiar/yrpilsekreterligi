@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
  */
 const ChiefObserverDashboardPage = () => {
   const navigate = useNavigate();
-  const { isLoggedIn, userRole, user, logout } = useAuth();
+  const { isLoggedIn, userRole, user, logout, loading: authLoading } = useAuth();
   
   // State management
   const [elections, setElections] = useState([]);
@@ -175,7 +175,7 @@ const ChiefObserverDashboardPage = () => {
   }, []);
 
   // Auth kontrolü tamamlanmamışsa loading göster
-  if (!authChecked) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -189,7 +189,7 @@ const ChiefObserverDashboardPage = () => {
     );
   }
 
-  if (!user) {
+  if (!user || !isLoggedIn || userRole !== 'chief_observer') {
     return null;
   }
 
