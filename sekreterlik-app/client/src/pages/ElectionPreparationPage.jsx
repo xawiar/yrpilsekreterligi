@@ -115,7 +115,13 @@ const ElectionPreparationPage = () => {
 
   const handleTabClick = (tab) => {
     setActiveTab(tab.id);
-    navigate(tab.path);
+    // Eğer route-based navigation mümkünse navigate et, değilse sadece state'i güncelle
+    try {
+      navigate(tab.path);
+    } catch (e) {
+      // Route-based navigation çalışmıyorsa sadece state'i güncelle
+      console.log('Route navigation not available, using state-based navigation');
+    }
   };
 
   const getColorClasses = (color, isActive) => {
@@ -200,16 +206,28 @@ const ElectionPreparationPage = () => {
 
         {/* Content Area - Alt sayfalar burada render edilecek */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[500px]">
-          <Routes>
-            <Route index element={<Navigate to="/election-preparation/ballot-boxes" replace />} />
-            <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
-            <Route path="observers" element={<ObserversPage />} />
-            <Route path="representatives" element={<RepresentativesPage />} />
-            <Route path="neighborhoods" element={<NeighborhoodsPage />} />
-            <Route path="villages" element={<VillagesPage />} />
-            <Route path="groups" element={<GroupsPage />} />
-            <Route path="coordinators/*" element={<CoordinatorsPage />} />
-          </Routes>
+          {/* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */}
+          {activeTab === 'ballot-boxes' && <BallotBoxesPage />}
+          {activeTab === 'observers' && <ObserversPage />}
+          {activeTab === 'representatives' && <RepresentativesPage />}
+          {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
+          {activeTab === 'villages' && <VillagesPage />}
+          {activeTab === 'groups' && <GroupsPage />}
+          {activeTab === 'coordinators' && <CoordinatorsPage />}
+          
+          {/* Route-based navigation - Standalone route olarak kullanıldığında çalışır */}
+          {location.pathname.startsWith('/election-preparation') && (
+            <Routes>
+              <Route index element={<Navigate to="/election-preparation/ballot-boxes" replace />} />
+              <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
+              <Route path="observers" element={<ObserversPage />} />
+              <Route path="representatives" element={<RepresentativesPage />} />
+              <Route path="neighborhoods" element={<NeighborhoodsPage />} />
+              <Route path="villages" element={<VillagesPage />} />
+              <Route path="groups" element={<GroupsPage />} />
+              <Route path="coordinators/*" element={<CoordinatorsPage />} />
+            </Routes>
+          )}
         </div>
       </div>
     </div>
