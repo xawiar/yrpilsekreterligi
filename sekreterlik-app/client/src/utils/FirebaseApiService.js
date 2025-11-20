@@ -585,6 +585,77 @@ class FirebaseApiService {
         );
       }
       
+      // Bölge, mahalle, köy bilgilerini topla
+      let regionInfo = null;
+      let neighborhoods = [];
+      let villages = [];
+      let parentCoordinators = [];
+      
+      if (coordinator.role === 'region_supervisor') {
+        const region = allRegions.find(r => String(r.supervisor_id) === String(coordinator.id));
+        if (region) {
+          regionInfo = {
+            id: region.id,
+            name: region.name
+          };
+          
+          const neighborhoodIds = Array.isArray(region.neighborhood_ids)
+            ? region.neighborhood_ids
+            : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+          const villageIds = Array.isArray(region.village_ids)
+            ? region.village_ids
+            : (region.village_ids ? JSON.parse(region.village_ids) : []);
+          
+          if (neighborhoodIds.length > 0) {
+            const allNeighborhoods = await FirebaseService.getAll(this.COLLECTIONS.NEIGHBORHOODS);
+            neighborhoods = allNeighborhoods.filter(n => neighborhoodIds.includes(n.id));
+          }
+          
+          if (villageIds.length > 0) {
+            const allVillages = await FirebaseService.getAll(this.COLLECTIONS.VILLAGES);
+            villages = allVillages.filter(v => villageIds.includes(v.id));
+          }
+        }
+      } else if (coordinator.role === 'institution_supervisor' && ballotBoxes.length > 0) {
+        // Kurum sorumlusu için sandıklardan mahalle/köy bilgisi al
+        const firstBox = ballotBoxes[0];
+        if (firstBox.neighborhood_id) {
+          const allNeighborhoods = await FirebaseService.getAll(this.COLLECTIONS.NEIGHBORHOODS);
+          const neighborhood = allNeighborhoods.find(n => String(n.id) === String(firstBox.neighborhood_id));
+          if (neighborhood) neighborhoods = [neighborhood];
+        }
+        if (firstBox.village_id) {
+          const allVillages = await FirebaseService.getAll(this.COLLECTIONS.VILLAGES);
+          const village = allVillages.find(v => String(v.id) === String(firstBox.village_id));
+          if (village) villages = [village];
+        }
+      }
+      
+      // Üst sorumluları bul
+      if (coordinator.parent_coordinator_id) {
+        let currentParentId = coordinator.parent_coordinator_id;
+        while (currentParentId) {
+          const parent = coordinators.find(c => String(c.id) === String(currentParentId));
+          if (parent) {
+            parentCoordinators.push({
+              id: parent.id,
+              name: parent.name,
+              role: parent.role
+            });
+            currentParentId = parent.parent_coordinator_id;
+          } else {
+            break;
+          }
+        }
+      }
+      
+      // Seçim sonuçlarını al
+      const allElectionResults = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS);
+      const electionResults = allElectionResults.filter(result => {
+        const ballotBoxId = result.ballot_box_id || result.ballotBoxId;
+        return ballotBoxes.some(bb => String(bb.id) === String(ballotBoxId));
+      });
+      
       return {
         success: true,
         coordinator: {
@@ -593,7 +664,12 @@ class FirebaseApiService {
           role: coordinator.role,
           institutionName: coordinator.institution_name
         },
-        ballotBoxes: ballotBoxes || []
+        ballotBoxes: ballotBoxes || [],
+        regionInfo,
+        neighborhoods,
+        villages,
+        parentCoordinators,
+        electionResults: electionResults || []
       };
     } catch (error) {
       console.error('Coordinator dashboard error:', error);
