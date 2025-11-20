@@ -1017,7 +1017,7 @@ const RegionsListPage = () => {
                   disabled={loading}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
                 >
-                  {loading ? 'Oluşturuluyor...' : 'Oluştur'}
+                  {loading ? (editingRegion ? 'Güncelleniyor...' : 'Oluşturuluyor...') : (editingRegion ? 'Güncelle' : 'Oluştur')}
                 </button>
               </div>
             </form>
