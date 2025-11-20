@@ -82,6 +82,10 @@ const CoordinatorsListPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCoordinator, setEditingCoordinator] = useState(null);
   const [coordinators, setCoordinators] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [ballotBoxes, setBallotBoxes] = useState([]);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [villages, setVillages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -118,12 +122,20 @@ const CoordinatorsListPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [districtsData, coordinatorsData] = await Promise.all([
+      const [districtsData, coordinatorsData, regionsData, ballotBoxesData, neighborhoodsData, villagesData] = await Promise.all([
         ApiService.getDistricts(),
-        ApiService.getElectionCoordinators()
+        ApiService.getElectionCoordinators(),
+        ApiService.getElectionRegions().catch(err => { console.error('Error loading regions:', err); return []; }),
+        ApiService.getBallotBoxes().catch(err => { console.error('Error loading ballot boxes:', err); return []; }),
+        ApiService.getNeighborhoods().catch(err => { console.error('Error loading neighborhoods:', err); return []; }),
+        ApiService.getVillages().catch(err => { console.error('Error loading villages:', err); return []; })
       ]);
       setDistricts(districtsData || []);
       setCoordinators(coordinatorsData || []);
+      setRegions(regionsData || []);
+      setBallotBoxes(ballotBoxesData || []);
+      setNeighborhoods(neighborhoodsData || []);
+      setVillages(villagesData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       setMessage('Veriler yüklenirken hata oluştu: ' + error.message);
@@ -301,6 +313,12 @@ const CoordinatorsListPage = () => {
                     Üst Sorumlu
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bölge
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Toplam Sandık
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     İşlemler
                   </th>
                 </tr>
@@ -315,6 +333,44 @@ const CoordinatorsListPage = () => {
                   const parentCoordinator = coordinator.parent_coordinator_id 
                     ? coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id))
                     : null;
+                  
+                  // Bölge sorumlusu için bölge bilgisini bul
+                  let coordinatorRegion = null;
+                  let totalBallotBoxes = 0;
+                  
+                  if (coordinator.role === 'region_supervisor') {
+                    // Bu sorumlunun sorumlu olduğu bölgeyi bul
+                    coordinatorRegion = regions.find(r => {
+                      const rSupervisorId = String(r.supervisor_id || '');
+                      const cId = String(coordinator.id);
+                      return rSupervisorId === cId;
+                    });
+                    
+                    // Bölge bulunduysa, o bölgedeki toplam sandık sayısını hesapla
+                    if (coordinatorRegion) {
+                      // neighborhood_ids ve village_ids parse et
+                      const regionNeighborhoodIds = Array.isArray(coordinatorRegion.neighborhood_ids)
+                        ? coordinatorRegion.neighborhood_ids
+                        : (coordinatorRegion.neighborhood_ids ? JSON.parse(coordinatorRegion.neighborhood_ids) : []);
+                      const regionVillageIds = Array.isArray(coordinatorRegion.village_ids)
+                        ? coordinatorRegion.village_ids
+                        : (coordinatorRegion.village_ids ? JSON.parse(coordinatorRegion.village_ids) : []);
+                      
+                      // Mahallelerdeki sandıkları say
+                      const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
+                        regionNeighborhoodIds.includes(bb.neighborhood_id) || 
+                        regionNeighborhoodIds.includes(String(bb.neighborhood_id))
+                      ).length;
+                      
+                      // Köylerdeki sandıkları say
+                      const villageBallotBoxes = ballotBoxes.filter(bb => 
+                        regionVillageIds.includes(bb.village_id) || 
+                        regionVillageIds.includes(String(bb.village_id))
+                      ).length;
+                      
+                      totalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
+                    }
+                  }
                   
                   return (
                     <tr key={coordinator.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -338,6 +394,12 @@ const CoordinatorsListPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {parentCoordinator ? parentCoordinator.name : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {coordinatorRegion ? coordinatorRegion.name : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {totalBallotBoxes > 0 ? totalBallotBoxes : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
@@ -906,6 +968,9 @@ const RegionsListPage = () => {
                     Köyler
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Toplam Sandık
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     İşlemler
                   </th>
                 </tr>
@@ -934,6 +999,19 @@ const RegionsListPage = () => {
                     regionVillageIds.includes(v.id) || regionVillageIds.includes(String(v.id))
                   );
                   
+                  // Toplam sandık sayısını hesapla
+                  const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
+                    regionNeighborhoodIds.includes(bb.neighborhood_id) || 
+                    regionNeighborhoodIds.includes(String(bb.neighborhood_id))
+                  ).length;
+                  
+                  const villageBallotBoxes = ballotBoxes.filter(bb => 
+                    regionVillageIds.includes(bb.village_id) || 
+                    regionVillageIds.includes(String(bb.village_id))
+                  ).length;
+                  
+                  const totalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
+                  
                   return (
                     <tr key={region.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -953,6 +1031,11 @@ const RegionsListPage = () => {
                           ? regionVillages.map(v => v.name).join(', ')
                           : '-'
                         }
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+                          {totalBallotBoxes} sandık
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
