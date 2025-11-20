@@ -6,8 +6,11 @@ class ElectionCoordinator {
     if (!data.name || !data.name.trim()) errors.push('Ad soyad zorunludur');
     if (!data.tc || data.tc.length !== 11) errors.push('TC kimlik numarası 11 haneli olmalıdır');
     if (!data.phone || !data.phone.trim()) errors.push('Telefon numarası zorunludur');
-    if (!data.role || !['provincial_coordinator', 'district_supervisor', 'region_supervisor'].includes(data.role)) {
+    if (!data.role || !['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(data.role)) {
       errors.push('Geçerli bir rol seçilmelidir');
+    }
+    if (data.role === 'institution_supervisor' && !data.institution_name) {
+      errors.push('Kurum sorumlusu için kurum adı zorunludur');
     }
     return errors;
   }
@@ -33,15 +36,16 @@ class ElectionCoordinator {
   static async create(data) {
     return new Promise((resolve, reject) => {
       const sql = `INSERT INTO election_coordinators 
-                   (name, tc, phone, role, parent_coordinator_id, district_id) 
-                   VALUES (?, ?, ?, ?, ?, ?)`;
+                   (name, tc, phone, role, parent_coordinator_id, district_id, institution_name) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?)`;
       const params = [
         data.name,
         data.tc,
         data.phone,
         data.role,
         data.parent_coordinator_id || null,
-        data.district_id || null
+        data.district_id || null,
+        data.institution_name || null
       ];
       db.run(sql, params, function(err) {
         if (err) reject(err);
@@ -60,6 +64,7 @@ class ElectionCoordinator {
       const sql = `UPDATE election_coordinators 
                    SET name = ?, tc = ?, phone = ?, role = ?, 
                        parent_coordinator_id = ?, district_id = ?, 
+                       institution_name = ?,
                        updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?`;
       const params = [
@@ -69,6 +74,7 @@ class ElectionCoordinator {
         data.role,
         data.parent_coordinator_id || null,
         data.district_id || null,
+        data.institution_name || null,
         id
       ];
       db.run(sql, params, function(err) {

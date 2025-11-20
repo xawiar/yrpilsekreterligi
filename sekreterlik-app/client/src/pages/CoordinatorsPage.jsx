@@ -91,9 +91,10 @@ const CoordinatorsListPage = () => {
     name: '',
     tc: '',
     phone: '',
-    role: 'provincial_coordinator', // provincial_coordinator, district_supervisor, region_supervisor
+    role: 'provincial_coordinator', // provincial_coordinator, district_supervisor, region_supervisor, institution_supervisor
     parent_coordinator_id: null,
-    district_id: null
+    district_id: null,
+    institution_name: null
   });
   const [districts, setDistricts] = useState([]);
   const [parentCoordinators, setParentCoordinators] = useState([]);
@@ -105,6 +106,8 @@ const CoordinatorsListPage = () => {
     loadData();
   }, []);
 
+  const [institutions, setInstitutions] = useState([]);
+
   useEffect(() => {
     if (formData.role === 'district_supervisor') {
       // İlçe sorumlusu için parent olarak il genel sorumlularını getir
@@ -114,10 +117,22 @@ const CoordinatorsListPage = () => {
       // Bölge sorumlusu için parent olarak ilçe sorumlularını getir
       const districtSupervisors = coordinators.filter(c => c.role === 'district_supervisor');
       setParentCoordinators(districtSupervisors);
+    } else if (formData.role === 'institution_supervisor') {
+      // Kurum sorumlusu için parent olarak bölge sorumlularını getir
+      const regionSupervisors = coordinators.filter(c => c.role === 'region_supervisor');
+      setParentCoordinators(regionSupervisors);
     } else {
       setParentCoordinators([]);
     }
   }, [formData.role, coordinators]);
+
+  // Kurum listesini yükle (ballot_boxes'tan unique institution_name'leri al)
+  useEffect(() => {
+    if (ballotBoxes.length > 0) {
+      const uniqueInstitutions = [...new Set(ballotBoxes.map(bb => bb.institution_name).filter(Boolean))].sort();
+      setInstitutions(uniqueInstitutions);
+    }
+  }, [ballotBoxes]);
 
   const loadData = async () => {
     try {
@@ -178,6 +193,12 @@ const CoordinatorsListPage = () => {
       return;
     }
 
+    if (formData.role === 'institution_supervisor' && !formData.institution_name) {
+      setMessage('Kurum seçmelisiniz');
+      setMessageType('error');
+      return;
+    }
+
     try {
       setLoading(true);
       const coordinatorData = {
@@ -186,7 +207,8 @@ const CoordinatorsListPage = () => {
         phone: formData.phone,
         role: formData.role,
         parent_coordinator_id: formData.parent_coordinator_id || null,
-        district_id: formData.district_id || null
+        district_id: formData.district_id || null,
+        institution_name: formData.institution_name || null
       };
 
       let response;
@@ -328,7 +350,8 @@ const CoordinatorsListPage = () => {
                   const roleNames = {
                     provincial_coordinator: 'İl Genel Sorumlusu',
                     district_supervisor: 'İlçe Sorumlusu',
-                    region_supervisor: 'Bölge Sorumlusu'
+                    region_supervisor: 'Bölge Sorumlusu',
+                    institution_supervisor: 'Kurum Sorumlusu'
                   };
                   const parentCoordinator = coordinator.parent_coordinator_id 
                     ? coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id))
@@ -419,6 +442,47 @@ const CoordinatorsListPage = () => {
                         });
                       }
                     });
+                  } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
+                    // Kurum sorumlusu için kurumdaki sandık sayısını hesapla
+                    const institutionBallotBoxes = ballotBoxes.filter(bb => 
+                      bb.institution_name === coordinator.institution_name
+                    );
+                    
+                    // Kurumun bulunduğu bölgeyi bul
+                    if (institutionBallotBoxes.length > 0) {
+                      const firstBox = institutionBallotBoxes[0];
+                      const neighborhoodId = firstBox.neighborhood_id;
+                      const villageId = firstBox.village_id;
+                      
+                      // Bölgeyi bul
+                      for (const region of regions) {
+                        const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
+                          ? region.neighborhood_ids
+                          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                        const regionVillageIds = Array.isArray(region.village_ids)
+                          ? region.village_ids
+                          : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                        
+                        if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
+                            (villageId && regionVillageIds.includes(villageId))) {
+                          institutionSupervisorInfo = {
+                            institutionName: coordinator.institution_name,
+                            regionName: region.name,
+                            ballotBoxCount: institutionBallotBoxes.length
+                          };
+                          break;
+                        }
+                      }
+                      
+                      // Bölge bulunamadıysa sadece kurum bilgisini göster
+                      if (!institutionSupervisorInfo) {
+                        institutionSupervisorInfo = {
+                          institutionName: coordinator.institution_name,
+                          regionName: null,
+                          ballotBoxCount: institutionBallotBoxes.length
+                        };
+                      }
+                    }
                   }
                   
                   return (
@@ -436,7 +500,8 @@ const CoordinatorsListPage = () => {
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           coordinator.role === 'provincial_coordinator' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
                           coordinator.role === 'district_supervisor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                          'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          coordinator.role === 'region_supervisor' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                         }`}>
                           {roleNames[coordinator.role] || coordinator.role}
                         </span>
@@ -454,6 +519,15 @@ const CoordinatorsListPage = () => {
                                 {region.name}
                               </div>
                             ))}
+                          </div>
+                        ) : coordinator.role === 'institution_supervisor' && institutionSupervisorInfo ? (
+                          <div className="text-xs">
+                            <div className="font-medium">{institutionSupervisorInfo.institutionName}</div>
+                            {institutionSupervisorInfo.regionName && (
+                              <div className="text-gray-500 dark:text-gray-400 mt-1">
+                                Bölge: {institutionSupervisorInfo.regionName}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           '-'
@@ -479,6 +553,10 @@ const CoordinatorsListPage = () => {
                               </div>
                             )}
                           </div>
+                        ) : coordinator.role === 'institution_supervisor' && institutionSupervisorInfo ? (
+                          <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+                            {institutionSupervisorInfo.ballotBoxCount} sandık
+                          </span>
                         ) : (
                           '-'
                         )}
@@ -626,7 +704,7 @@ const CoordinatorsListPage = () => {
                     >
                       <option value="">Seçiniz...</option>
                       {parentCoordinators.length === 0 ? (
-                        <option disabled>Henüz {formData.role === 'district_supervisor' ? 'il genel sorumlusu' : 'ilçe sorumlusu'} eklenmemiş</option>
+                        <option disabled>Henüz ilçe sorumlusu eklenmemiş</option>
                       ) : (
                         parentCoordinators.map((coordinator) => (
                           <option key={coordinator.id} value={String(coordinator.id)}>
@@ -636,6 +714,36 @@ const CoordinatorsListPage = () => {
                       )}
                     </select>
                   </div>
+                )}
+
+                {formData.role === 'institution_supervisor' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Kurum *
+                      </label>
+                      <select
+                        value={formData.institution_name || ''}
+                        onChange={(e) => setFormData({ ...formData, institution_name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      >
+                        <option value="">Seçiniz...</option>
+                        {institutions.length === 0 ? (
+                          <option disabled>Henüz kurum eklenmemiş (sandık ekleyerek kurum oluşturun)</option>
+                        ) : (
+                          institutions.map((institution, idx) => (
+                            <option key={idx} value={institution}>
+                              {institution}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Kurum seçildiğinde, kurumun bulunduğu bölgenin sorumlusuna otomatik bağlanacaktır.
+                      </p>
+                    </div>
+                  </>
                 )}
 
                 <div>

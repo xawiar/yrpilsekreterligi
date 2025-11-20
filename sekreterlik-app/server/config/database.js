@@ -709,14 +709,22 @@ db.serialize(() => {
     name TEXT NOT NULL,
     tc TEXT NOT NULL UNIQUE,
     phone TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('provincial_coordinator', 'district_supervisor', 'region_supervisor')),
+    role TEXT NOT NULL CHECK(role IN ('provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor')),
     parent_coordinator_id INTEGER,
     district_id INTEGER,
+    institution_name TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_coordinator_id) REFERENCES election_coordinators (id) ON DELETE SET NULL,
     FOREIGN KEY (district_id) REFERENCES districts (id) ON DELETE SET NULL
   )`);
+  
+  // Add institution_name column if it doesn't exist (for existing databases)
+  db.run(`ALTER TABLE election_coordinators ADD COLUMN institution_name TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding institution_name column to election_coordinators:', err);
+    }
+  });
 
   // Create election_regions table
   db.run(`CREATE TABLE IF NOT EXISTS election_regions (
