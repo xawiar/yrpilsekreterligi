@@ -64,6 +64,8 @@ class FirebaseApiService {
     AUDIT_LOGS: 'audit_logs',
     ELECTIONS: 'elections',
     ELECTION_RESULTS: 'election_results',
+    ELECTION_COORDINATORS: 'election_coordinators',
+    ELECTION_REGIONS: 'election_regions',
     // Visit counts collections
     DISTRICT_VISITS: 'district_visits',
     TOWN_VISITS: 'town_visits',
