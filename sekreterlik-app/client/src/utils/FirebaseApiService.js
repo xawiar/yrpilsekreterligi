@@ -477,10 +477,17 @@ class FirebaseApiService {
       
       for (const coordinatorUser of coordinatorUsers) {
         const coordinator = coordinators.find(c => String(c.id) === String(coordinatorUser.coordinatorId));
-        if (coordinator && coordinator.tc === tcStr && coordinator.phone === phoneStr) {
-          matchedCoordinator = coordinator;
-          matchedUser = coordinatorUser;
-          break;
+        if (coordinator) {
+          // Coordinator'ın telefon numarasını da normalize et
+          const coordinatorPhoneNormalized = String(coordinator.phone || '').replace(/\D/g, '');
+          const coordinatorTcNormalized = String(coordinator.tc || '').trim();
+          
+          // TC ve normalize edilmiş telefon numarası ile karşılaştır
+          if (coordinatorTcNormalized === tcStr && coordinatorPhoneNormalized === phoneStr) {
+            matchedCoordinator = coordinator;
+            matchedUser = coordinatorUser;
+            break;
+          }
         }
       }
       
