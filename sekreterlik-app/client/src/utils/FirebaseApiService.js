@@ -493,8 +493,11 @@ class FirebaseApiService {
         const coordinator = coordinators.find(c => String(c.id) === String(coordinatorId));
         
         if (coordinator) {
-          // Coordinator'ın telefon numarasını da normalize et
-          const coordinatorPhoneNormalized = String(coordinator.phone || '').replace(/\D/g, '');
+          // Coordinator'ın telefon numarasını da normalize et ve padStart ile uzat
+          let coordinatorPhoneNormalized = String(coordinator.phone || '').replace(/\D/g, '');
+          if (coordinatorPhoneNormalized.length < 6) {
+            coordinatorPhoneNormalized = coordinatorPhoneNormalized.padStart(6, '0');
+          }
           const coordinatorTcNormalized = String(coordinator.tc || '').trim();
           
           console.log('[DEBUG] Comparing:', {
@@ -502,6 +505,7 @@ class FirebaseApiService {
             inputPhone: phoneStr,
             coordinatorTc: coordinatorTcNormalized,
             coordinatorPhone: coordinatorPhoneNormalized,
+            coordinatorPhoneOriginal: coordinator.phone,
             coordinatorName: coordinator.name,
             tcMatch: coordinatorTcNormalized === tcStr,
             phoneMatch: coordinatorPhoneNormalized === phoneStr
