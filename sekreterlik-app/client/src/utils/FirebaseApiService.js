@@ -456,9 +456,14 @@ class FirebaseApiService {
   static async loginCoordinator(tc, phone) {
     try {
       const tcStr = String(tc).trim();
-      const phoneStr = String(phone).replace(/\D/g, ''); // Normalize phone
+      let phoneStr = String(phone).replace(/\D/g, ''); // Normalize phone
       
-      console.log('[DEBUG] Coordinator login attempt:', { tc: tcStr, phone: phoneStr });
+      // Firebase Auth minimum 6 karakter şifre ister - padStart ile uzat (kullanıcı oluştururken de aynı yapılıyor)
+      if (phoneStr.length < 6) {
+        phoneStr = phoneStr.padStart(6, '0');
+      }
+      
+      console.log('[DEBUG] Coordinator login attempt:', { tc: tcStr, phone: phoneStr, originalPhone: phone });
       
       // Tüm kullanıcıları al ve userType='coordinator' olanları filtrele
       const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
