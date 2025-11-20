@@ -25,6 +25,12 @@ export const AdminRoute = ({ children }) => {
     return <Navigate to="/chief-observer-dashboard" replace />;
   }
   
+  // Coordinator kullanıcılarını kendi dashboard'ına yönlendir
+  const coordinatorRoles = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
+  if (coordinatorRoles.includes(userRole)) {
+    return <Navigate to="/coordinator-dashboard" replace />;
+  }
+  
   if (user?.role !== 'admin') return <Navigate to="/member-dashboard" />;
   return children;
 };
