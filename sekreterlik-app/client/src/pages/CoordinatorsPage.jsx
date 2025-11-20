@@ -613,12 +613,26 @@ const RegionsListPage = () => {
   const loadRegions = async () => {
     try {
       setLoading(true);
-      const regionsData = await ApiService.getElectionRegions();
+      const regionsData = await ApiService.getElectionRegions().catch(err => {
+        console.error('Error loading regions:', err);
+        // 404 hatası ise sessizce devam et
+        if (err.message && err.message.includes('404')) {
+          console.warn('Election regions endpoint not found, returning empty array');
+          return [];
+        }
+        throw err;
+      });
       setRegions(regionsData || []);
     } catch (error) {
       console.error('Error loading regions:', error);
-      setMessage('Bölgeler yüklenirken hata oluştu: ' + error.message);
-      setMessageType('error');
+      // 404 hatası ise sessizce devam et
+      if (error.message && error.message.includes('404')) {
+        console.warn('Election regions endpoint not found, continuing with empty data');
+        setRegions([]);
+      } else {
+        setMessage('Bölgeler yüklenirken hata oluştu: ' + error.message);
+        setMessageType('error');
+      }
     } finally {
       setLoading(false);
     }
@@ -628,10 +642,18 @@ const RegionsListPage = () => {
     try {
       setLoading(true);
       const [neighborhoodsData, villagesData, ballotBoxesData, coordinatorsData] = await Promise.all([
-        ApiService.getNeighborhoods(),
-        ApiService.getVillages(),
-        ApiService.getBallotBoxes(),
-        ApiService.getElectionCoordinators()
+        ApiService.getNeighborhoods().catch(err => { console.error('Error loading neighborhoods:', err); return []; }),
+        ApiService.getVillages().catch(err => { console.error('Error loading villages:', err); return []; }),
+        ApiService.getBallotBoxes().catch(err => { console.error('Error loading ballot boxes:', err); return []; }),
+        ApiService.getElectionCoordinators().catch(err => {
+          console.error('Error loading coordinators:', err);
+          // 404 hatası ise sessizce devam et
+          if (err.message && err.message.includes('404')) {
+            console.warn('Election coordinators endpoint not found, returning empty array');
+            return [];
+          }
+          return [];
+        })
       ]);
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);

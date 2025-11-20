@@ -1761,6 +1761,9 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/election-coordinators`, {
       headers: this.getAuthHeaders(),
     });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     return response.json();
   }
 
@@ -1811,6 +1814,9 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/election-regions`, {
       headers: this.getAuthHeaders(),
     });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     return response.json();
   }
 
