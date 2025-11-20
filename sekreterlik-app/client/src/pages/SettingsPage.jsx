@@ -110,18 +110,26 @@ const SettingsPage = ({ tab }) => {
   useEffect(() => {
     if (loadingPermissions) return;
 
+    // Eğer tab prop'u geçilmişse ve yetki varsa, o tab'ı aç
+    if (tab) {
+      if (tab === 'stks' && hasPermission('stks')) {
+        setActiveTab('stks');
+        return;
+      }
+      if (tab === 'public-institutions' && hasPermission('public-institutions')) {
+        setActiveTab('public-institutions');
+        return;
+      }
+    }
+
+    // URL params kontrolü (geriye dönük uyumluluk)
     if (isSTKManagement && hasPermission('stks')) {
       setActiveTab('stks');
     } else if (isPublicInstitutionManagement && hasPermission('public-institutions')) {
       setActiveTab('public-institutions');
-    } else if (isSTKManagement && !hasPermission('stks')) {
-      // If user doesn't have permission for STK, redirect to admin tab
-      setActiveTab('admin');
-    } else if (isPublicInstitutionManagement && !hasPermission('public-institutions')) {
-      // If user doesn't have permission for public institutions, redirect to admin tab
-      setActiveTab('admin');
     }
-  }, [isSTKManagement, isPublicInstitutionManagement, loadingPermissions, hasPermission]);
+    // Eğer yetki yoksa admin tab'ına yönlendirme yapma - MemberDashboardPage zaten kontrol ediyor
+  }, [tab, isSTKManagement, isPublicInstitutionManagement, loadingPermissions, hasPermission]);
 
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
