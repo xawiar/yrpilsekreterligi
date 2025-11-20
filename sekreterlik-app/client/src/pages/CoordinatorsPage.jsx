@@ -354,9 +354,51 @@ const CoordinatorsListPage = () => {
                     region_supervisor: 'Bölge Sorumlusu',
                     institution_supervisor: 'Kurum Sorumlusu'
                   };
-                  const parentCoordinator = coordinator.parent_coordinator_id 
-                    ? coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id))
-                    : null;
+                  // Üst sorumluyu bul (parent_coordinator_id ile)
+                  let parentCoordinator = null;
+                  if (coordinator.parent_coordinator_id !== null && coordinator.parent_coordinator_id !== undefined) {
+                    parentCoordinator = coordinators.find(c => {
+                      const cId = String(c.id);
+                      const pId = String(coordinator.parent_coordinator_id);
+                      return cId === pId;
+                    });
+                  }
+                  
+                  // Kurum sorumlusu için, eğer parent_coordinator_id yoksa ama institution_name varsa,
+                  // kurumun bulunduğu bölgenin sorumlusunu bul
+                  if (coordinator.role === 'institution_supervisor' && !parentCoordinator && coordinator.institution_name) {
+                    // Kurumun sandıklarını bul
+                    const institutionBallotBoxes = ballotBoxes.filter(bb => 
+                      bb.institution_name === coordinator.institution_name
+                    );
+                    
+                    if (institutionBallotBoxes.length > 0) {
+                      const firstBox = institutionBallotBoxes[0];
+                      const neighborhoodId = firstBox.neighborhood_id;
+                      const villageId = firstBox.village_id;
+                      
+                      // Bölgeyi bul
+                      for (const region of regions) {
+                        const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
+                          ? region.neighborhood_ids
+                          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                        const regionVillageIds = Array.isArray(region.village_ids)
+                          ? region.village_ids
+                          : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                        
+                        if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
+                            (villageId && regionVillageIds.includes(villageId))) {
+                          // Bölgenin sorumlusunu bul
+                          if (region.supervisor_id) {
+                            parentCoordinator = coordinators.find(c => 
+                              String(c.id) === String(region.supervisor_id)
+                            );
+                          }
+                          break;
+                        }
+                      }
+                    }
+                  }
                   
                   // Bölge sorumlusu için bölge bilgisini bul
                   let coordinatorRegion = null;
