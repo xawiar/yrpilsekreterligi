@@ -1011,7 +1011,7 @@ const RegionsListPage = () => {
                 >
                   <option value="">Seçiniz...</option>
                   {regionSupervisors.map((supervisor) => (
-                    <option key={supervisor.id} value={supervisor.id}>
+                    <option key={supervisor.id} value={String(supervisor.id)}>
                       {supervisor.name} {supervisor.tc ? `(${supervisor.tc})` : ''}
                     </option>
                   ))}
