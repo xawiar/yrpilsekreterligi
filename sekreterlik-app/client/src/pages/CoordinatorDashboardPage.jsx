@@ -251,16 +251,20 @@ const CoordinatorDashboardPage = () => {
         const allElections = await ApiService.getElections();
         setElections(allElections || []);
         
-        // Observers, districts, towns yükle (seçim sonuçları kartları için)
+        // Observers, districts, towns, neighborhoods, villages yükle (seçim sonuçları kartları için)
         try {
-          const [observersData, districtsData, townsData] = await Promise.all([
+          const [observersData, districtsData, townsData, neighborhoodsData, villagesData] = await Promise.all([
             ApiService.getBallotBoxObservers(),
             ApiService.getDistricts(),
-            ApiService.getTowns()
+            ApiService.getTowns(),
+            ApiService.getNeighborhoods(),
+            ApiService.getVillages()
           ]);
           setObservers(observersData || []);
           setDistricts(districtsData || []);
           setTowns(townsData || []);
+          setNeighborhoodsList(neighborhoodsData || []);
+          setVillagesList(villagesData || []);
         } catch (err) {
           console.error('Error fetching location data:', err);
         }
@@ -592,17 +596,19 @@ const CoordinatorDashboardPage = () => {
                     if (town) locationParts.push({ type: 'Belde', name: town.name });
                   }
                   if (ballotBox.neighborhood_id) {
-                    const neighborhood = neighborhoods.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+                    const neighborhood = neighborhoodsList.find(n => String(n.id) === String(ballotBox.neighborhood_id));
                     if (neighborhood) locationParts.push({ type: 'Mahalle', name: neighborhood.name });
                   }
                   if (ballotBox.village_id) {
-                    const village = villages.find(v => String(v.id) === String(ballotBox.village_id));
+                    const village = villagesList.find(v => String(v.id) === String(ballotBox.village_id));
                     if (village) locationParts.push({ type: 'Köy', name: village.name });
                   }
                 }
                 
                 // Veri kontrolü: sadece tutanak var mı, sadece veri var mı?
-                const hasProtocol = result.protocol_photo || result.protocol_photos?.length > 0;
+                const hasProtocol = result.protocol_photo || result.protocol_photos?.length > 0 || 
+                  result.signed_protocol_photo || result.signedProtocolPhoto || 
+                  result.objection_protocol_photo || result.objectionProtocolPhoto;
                 const hasData = result.used_votes > 0 || result.valid_votes > 0 || 
                   (result.cb_votes && Object.keys(result.cb_votes).length > 0) ||
                   (result.mv_votes && Object.keys(result.mv_votes).length > 0) ||
