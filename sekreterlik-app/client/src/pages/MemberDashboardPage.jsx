@@ -1107,8 +1107,29 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
-          {/* Hızlı İşlemler - görev bazlı */}
-          {(grantedPermissions.includes('add_member') || grantedPermissions.includes('create_meeting') || grantedPermissions.includes('add_stk') || grantedPermissions.includes('add_public_institution')) && (
+          {/* Hızlı İşlemler - Tüm yetkiler tek bir bölümde */}
+          {(grantedPermissions.includes('add_member') || 
+            grantedPermissions.includes('create_meeting') || 
+            grantedPermissions.includes('add_stk') || 
+            grantedPermissions.includes('manage_stk') ||
+            grantedPermissions.includes('add_public_institution') ||
+            grantedPermissions.includes('create_event') ||
+            grantedPermissions.includes('add_ballot_box') ||
+            grantedPermissions.includes('add_observer') ||
+            grantedPermissions.includes('access_ballot_boxes') ||
+            grantedPermissions.includes('access_observers') ||
+            grantedPermissions.includes('access_members_page') ||
+            grantedPermissions.includes('access_meetings_page') ||
+            grantedPermissions.includes('access_events_page') ||
+            grantedPermissions.includes('access_calendar_page') ||
+            grantedPermissions.includes('access_districts_page') ||
+            grantedPermissions.includes('access_archive_page') ||
+            grantedPermissions.includes('access_management_chart_page') ||
+            grantedPermissions.includes('access_election_preparation_page') ||
+            grantedPermissions.includes('access_representatives_page') ||
+            grantedPermissions.includes('access_neighborhoods_page') ||
+            grantedPermissions.includes('access_villages_page') ||
+            grantedPermissions.includes('access_groups_page')) && (
             <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -1117,7 +1138,7 @@ const MemberDashboardPage = () => {
                   </svg>
                   Hızlı İşlemler
                 </h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Yetkilendirildiğiniz işlemler</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Yetkilendirildiğiniz işlemler ve sayfalar</p>
               </div>
               <div className="p-3 sm:p-4 md:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
@@ -1157,7 +1178,7 @@ const MemberDashboardPage = () => {
                       </div>
                     </button>
                   )}
-                  {grantedPermissions.includes('add_stk') && (
+                  {(grantedPermissions.includes('add_stk') || grantedPermissions.includes('manage_stk')) && (
                     <button
                       onClick={() => setViewWithPermission('stk-management')}
                       className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
