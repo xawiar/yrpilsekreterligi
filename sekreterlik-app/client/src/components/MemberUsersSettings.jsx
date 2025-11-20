@@ -1706,9 +1706,98 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Sorumlular için kullanıcı oluştur
+  const handleCreateCoordinatorUsers = async () => {
+    try {
+      setIsUpdating(true);
+      setMessage('');
+      
+      // Tüm sorumluları al
+      const coordinators = await ApiService.getElectionCoordinators();
+      
+      if (coordinators.length === 0) {
+        setMessage('Sorumlu bulunamadı');
+        setMessageType('error');
+        return;
+      }
+
+      // Mevcut kullanıcıları al
+      const existingUsers = await ApiService.getMemberUsers();
+      const existingUsernames = new Set(existingUsers.users?.map(u => u.username) || []);
+      
+      let createdCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const coordinator of coordinators) {
+        try {
+          // TC ve telefon kontrolü
+          if (!coordinator.tc || !coordinator.phone) {
+            continue;
+          }
+
+          const username = coordinator.tc;
+          const password = coordinator.phone.replace(/\D/g, ''); // Sadece rakamlar
+
+          // Mevcut kullanıcıyı kontrol et
+          const existingUser = (existingUsers.users || []).find(u => 
+            u.coordinator_id === coordinator.id || 
+            (u.userType === 'coordinator' && u.username === username)
+          );
+
+          if (existingUser) {
+            // Güncelle
+            await ApiService.updateMemberUser(existingUser.id, {
+              username,
+              password,
+              coordinator_id: coordinator.id,
+              userType: 'coordinator'
+            });
+            updatedCount++;
+          } else {
+            // Yeni oluştur
+            await ApiService.createMemberUser({
+              username,
+              password,
+              coordinator_id: coordinator.id,
+              userType: 'coordinator'
+            });
+            createdCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${coordinator.name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error('Sorumlu kullanıcısı oluşturma hatası:', error);
+        }
+      }
+
+      // Sonuç mesajı
+      let message = `Sorumlu kullanıcıları oluşturuldu!\n`;
+      message += `• Yeni oluşturulan: ${createdCount}\n`;
+      message += `• Güncellenen: ${updatedCount}\n`;
+      if (errorCount > 0) {
+        message += `• Hata: ${errorCount}\n`;
+        message += `\nHatalar:\n${errors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      
+      setMessage(message);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error creating coordinator users:', error);
+      setMessage('Sorumlu kullanıcıları oluşturulurken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Tüm kullanıcıları oluştur (Temizlik YAPMA)
   const handleProcessAllUsers = async () => {
-    if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. Üye kullanıcılarını oluşturur/günceller (TC ve telefon ile)\n2. İlçe Başkanı kullanıcılarını oluşturur/günceller\n3. Belde Başkanı kullanıcılarını oluşturur/günceller\n4. Müşahit kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
+    if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. Üye kullanıcılarını oluşturur/günceller (TC ve telefon ile)\n2. İlçe Başkanı kullanıcılarını oluşturur/günceller\n3. Belde Başkanı kullanıcılarını oluşturur/günceller\n4. Müşahit kullanıcılarını oluşturur/günceller\n5. Sorumlu kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
       return;
     }
 
@@ -1721,7 +1810,8 @@ const MemberUsersSettings = () => {
         members: { created: 0, updated: 0, errors: 0 },
         districtPresidents: { created: 0, updated: 0, errors: 0 },
         townPresidents: { created: 0, updated: 0, errors: 0 },
-        observers: { created: 0, updated: 0, deleted: 0, errors: 0 }
+        observers: { created: 0, updated: 0, deleted: 0, errors: 0 },
+        coordinators: { created: 0, updated: 0, errors: 0 }
       };
 
       // 1. Üye Kullanıcıları
@@ -1767,6 +1857,16 @@ const MemberUsersSettings = () => {
         results.observers.errors++;
       }
 
+      // 5. Sorumlu Kullanıcıları
+      setMessage('Sorumlu kullanıcıları oluşturuluyor...');
+      try {
+        await handleCreateCoordinatorUsers();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error('Sorumlu kullanıcıları hatası:', error);
+        results.coordinators.errors++;
+      }
+
         // Sonuç mesajı
         let finalMessage = '✅ Tüm kullanıcılar oluşturuldu!\n\n';
         finalMessage += `• Üye: ${results.members.created} oluşturuldu, ${results.members.updated} güncellendi`;
@@ -1789,10 +1889,15 @@ const MemberUsersSettings = () => {
           finalMessage += `, ${results.observers.errors} hata`;
         }
         finalMessage += `\n`;
+        finalMessage += `• Sorumlu: ${results.coordinators.created} oluşturuldu, ${results.coordinators.updated} güncellendi`;
+        if (results.coordinators.errors > 0) {
+          finalMessage += `, ${results.coordinators.errors} hata`;
+        }
+        finalMessage += `\n`;
 
         // Hata varsa warning, yoksa success
         const totalErrors = results.members.errors + results.districtPresidents.errors + 
-                           results.townPresidents.errors + results.observers.errors;
+                           results.townPresidents.errors + results.observers.errors + results.coordinators.errors;
         if (totalErrors > 0) {
           setMessageType('warning');
         } else {
@@ -1900,11 +2005,12 @@ const MemberUsersSettings = () => {
 
   // Kullanıcıları tipine göre ayır
   const memberTypeUsers = memberUsers.filter(u => 
-    !u.userType || u.userType === 'member' || (u.userType !== 'musahit' && u.userType !== 'district_president' && u.userType !== 'town_president')
+    !u.userType || u.userType === 'member' || (u.userType !== 'musahit' && u.userType !== 'district_president' && u.userType !== 'town_president' && u.userType !== 'coordinator')
   );
   const districtPresidentUsers = memberUsers.filter(u => u.userType === 'district_president');
   const townPresidentUsers = memberUsers.filter(u => u.userType === 'town_president');
   const observerTypeUsers = memberUsers.filter(u => u.userType === 'musahit');
+  const coordinatorUsers = memberUsers.filter(u => u.userType === 'coordinator');
 
   return (
     <div className="space-y-6">
@@ -2462,6 +2568,97 @@ const MemberUsersSettings = () => {
                         <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           <span className="inline-flex px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
                             Başmüşahit
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{user.username}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                        {getDecryptedPassword(user) || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        user.is_active || user.isActive
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                      }`}>
+                        {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Sorumlu Kullanıcıları Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+        <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+          <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          Sorumlu Kullanıcıları ({coordinatorUsers.length})
+        </h4>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Sorumlu Bilgileri
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Kullanıcı Adı (TC)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Şifre (Telefon)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Durum
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {(() => {
+                // Filter COORDINATOR users based on search term
+                const filteredCoordinators = coordinatorUsers.filter((user) => {
+                  if (!searchTerm) return true;
+                  
+                  const searchLower = searchTerm.toLowerCase();
+                  const username = (user.username || '').toLowerCase();
+                  const password = (getDecryptedPassword(user) || '').toLowerCase();
+                  const name = (user.name || '').toLowerCase();
+                  
+                  return (
+                    name.includes(searchLower) ||
+                    username.includes(searchLower) ||
+                    password.includes(searchLower)
+                  );
+                });
+                
+                if (filteredCoordinators.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz sorumlu kullanıcısı bulunmuyor'}
+                      </td>
+                    </tr>
+                  );
+                }
+                
+                return filteredCoordinators.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name || 'Bilinmeyen'}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          <span className="inline-flex px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
+                            Sorumlu
                           </span>
                         </div>
                       </div>

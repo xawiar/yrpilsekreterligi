@@ -341,6 +341,123 @@ router.get('/coordinator-dashboard/:coordinatorId', async (req, res) => {
       });
     }
     
+    // Bölge, mahalle, köy bilgilerini topla
+    let regionInfo = null;
+    let neighborhoods = [];
+    let villages = [];
+    let parentCoordinators = [];
+    
+    if (coordinator.role === 'region_supervisor') {
+      // Bölge bilgisi
+      const allRegions = await ElectionRegion.getAll();
+      const region = allRegions.find(r => String(r.supervisor_id) === String(coordinator.id));
+      if (region) {
+        regionInfo = {
+          id: region.id,
+          name: region.name
+        };
+        
+        // Mahalle ve köy bilgilerini al
+        const neighborhoodIds = Array.isArray(region.neighborhood_ids)
+          ? region.neighborhood_ids
+          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+        const villageIds = Array.isArray(region.village_ids)
+          ? region.village_ids
+          : (region.village_ids ? JSON.parse(region.village_ids) : []);
+        
+        if (neighborhoodIds.length > 0) {
+          const neighborhoodQuery = `SELECT * FROM neighborhoods WHERE id IN (${neighborhoodIds.map(() => '?').join(',')})`;
+          neighborhoods = await new Promise((resolve, reject) => {
+            db.all(neighborhoodQuery, neighborhoodIds, (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows || []);
+            });
+          });
+        }
+        
+        if (villageIds.length > 0) {
+          const villageQuery = `SELECT * FROM villages WHERE id IN (${villageIds.map(() => '?').join(',')})`;
+          villages = await new Promise((resolve, reject) => {
+            db.all(villageQuery, villageIds, (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows || []);
+            });
+          });
+        }
+      }
+    } else if (coordinator.role === 'institution_supervisor' && ballotBoxes.length > 0) {
+      // Kurum sorumlusu için sandıklardan mahalle/köy bilgisi al
+      const firstBox = ballotBoxes[0];
+      if (firstBox.neighborhood_id) {
+        const neighborhood = await new Promise((resolve, reject) => {
+          db.get('SELECT * FROM neighborhoods WHERE id = ?', [firstBox.neighborhood_id], (err, row) => {
+            if (err) reject(err);
+            else resolve(row || null);
+          });
+        });
+        if (neighborhood) neighborhoods = [neighborhood];
+      }
+      if (firstBox.village_id) {
+        const village = await new Promise((resolve, reject) => {
+          db.get('SELECT * FROM villages WHERE id = ?', [firstBox.village_id], (err, row) => {
+            if (err) reject(err);
+            else resolve(row || null);
+          });
+        });
+        if (village) villages = [village];
+      }
+    }
+    
+    // Üst sorumluları bul
+    if (coordinator.parent_coordinator_id) {
+      const allCoordinators = await ElectionCoordinator.getAll();
+      let currentParentId = coordinator.parent_coordinator_id;
+      while (currentParentId) {
+        const parent = allCoordinators.find(c => String(c.id) === String(currentParentId));
+        if (parent) {
+          parentCoordinators.push({
+            id: parent.id,
+            name: parent.name,
+            role: parent.role
+          });
+          currentParentId = parent.parent_coordinator_id;
+        } else {
+          break;
+        }
+      }
+    }
+    
+    // Seçim sonuçlarını al (sorumlu olduğu sandıklar için)
+    const electionResults = [];
+    if (ballotBoxes.length > 0) {
+      const ballotBoxIds = ballotBoxes.map(bb => bb.id);
+      const results = await new Promise((resolve, reject) => {
+        db.all(`
+          SELECT er.*, e.name as election_name, e.type as election_type, e.date as election_date
+          FROM election_results er
+          LEFT JOIN elections e ON er.election_id = e.id
+          WHERE er.ballot_box_id IN (${ballotBoxIds.map(() => '?').join(',')})
+          ORDER BY e.date DESC, er.ballot_box_id
+        `, ballotBoxIds, (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        });
+      });
+      
+      // Parse JSON fields
+      electionResults.push(...results.map(result => ({
+        ...result,
+        cb_votes: result.cb_votes ? JSON.parse(result.cb_votes) : {},
+        mv_votes: result.mv_votes ? JSON.parse(result.mv_votes) : {},
+        mayor_votes: result.mayor_votes ? JSON.parse(result.mayor_votes) : {},
+        provincial_assembly_votes: result.provincial_assembly_votes ? JSON.parse(result.provincial_assembly_votes) : {},
+        municipal_council_votes: result.municipal_council_votes ? JSON.parse(result.municipal_council_votes) : {},
+        referendum_votes: result.referendum_votes ? JSON.parse(result.referendum_votes) : {},
+        party_votes: result.party_votes ? JSON.parse(result.party_votes) : {},
+        candidate_votes: result.candidate_votes ? JSON.parse(result.candidate_votes) : {}
+      })));
+    }
+    
     res.json({
       success: true,
       coordinator: {
@@ -349,7 +466,12 @@ router.get('/coordinator-dashboard/:coordinatorId', async (req, res) => {
         role: coordinator.role,
         institutionName: coordinator.institution_name
       },
-      ballotBoxes: ballotBoxes || []
+      ballotBoxes: ballotBoxes || [],
+      regionInfo,
+      neighborhoods,
+      villages,
+      parentCoordinators,
+      electionResults
     });
   } catch (error) {
     console.error('Coordinator dashboard error:', error);

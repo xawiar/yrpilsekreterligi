@@ -19,6 +19,12 @@ const CoordinatorDashboardPage = () => {
   const [coordinator, setCoordinator] = useState(null);
   const [selectedBallotBox, setSelectedBallotBox] = useState(null);
   const [showResultForm, setShowResultForm] = useState(false);
+  const [regionInfo, setRegionInfo] = useState(null);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [villages, setVillages] = useState([]);
+  const [parentCoordinators, setParentCoordinators] = useState([]);
+  const [electionResults, setElectionResults] = useState([]);
+  const [elections, setElections] = useState([]);
 
   // Coordinator rolleri
   const coordinatorRoles = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
@@ -47,6 +53,15 @@ const CoordinatorDashboardPage = () => {
 
         setCoordinator(dashboardData.coordinator);
         setBallotBoxes(dashboardData.ballotBoxes || []);
+        setRegionInfo(dashboardData.regionInfo || null);
+        setNeighborhoods(dashboardData.neighborhoods || []);
+        setVillages(dashboardData.villages || []);
+        setParentCoordinators(dashboardData.parentCoordinators || []);
+        setElectionResults(dashboardData.electionResults || []);
+        
+        // Seçimleri de yükle
+        const allElections = await ApiService.getElections();
+        setElections(allElections || []);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         if (isMounted) {
@@ -185,20 +200,186 @@ const CoordinatorDashboardPage = () => {
           </div>
         </div>
 
-        {/* Statistics Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Sorumlu Olduğunuz Sandıklar</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{ballotBoxes.length}</p>
-            </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Sorumlu Olduğunuz Sandıklar</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{ballotBoxes.length}</p>
+              </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
             </div>
           </div>
+          
+          {regionInfo && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Bölge</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{regionInfo.name}</p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M15 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0h1.5M21 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0H21m-1.5 0H18" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {electionResults.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Girilen Seçim Sonuçları</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{electionResults.length}</p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Bölge, Mahalle, Köy Bilgileri */}
+        {(regionInfo || neighborhoods.length > 0 || villages.length > 0) && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+              Sorumluluk Bilgileri
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {regionInfo && (
+                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Bölge</h3>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{regionInfo.name}</p>
+                </div>
+              )}
+              
+              {neighborhoods.length > 0 && (
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Mahalleler ({neighborhoods.length})</h3>
+                  <div className="space-y-1">
+                    {neighborhoods.slice(0, 3).map((neighborhood) => (
+                      <p key={neighborhood.id} className="text-sm text-gray-900 dark:text-gray-100">
+                        • {neighborhood.name}
+                      </p>
+                    ))}
+                    {neighborhoods.length > 3 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        +{neighborhoods.length - 3} mahalle daha
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {villages.length > 0 && (
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Köyler ({villages.length})</h3>
+                  <div className="space-y-1">
+                    {villages.slice(0, 3).map((village) => (
+                      <p key={village.id} className="text-sm text-gray-900 dark:text-gray-100">
+                        • {village.name}
+                      </p>
+                    ))}
+                    {villages.length > 3 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        +{villages.length - 3} köy daha
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Üst Sorumlular */}
+        {parentCoordinators.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+              Üst Sorumlular
+            </h2>
+            
+            <div className="space-y-3">
+              {parentCoordinators.map((parent, index) => (
+                <div key={parent.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{parent.name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {getRoleLabel(parent.role)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Seçim Sonuçları */}
+        {electionResults.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+              Seçim Sonuçları
+            </h2>
+            
+            <div className="space-y-4">
+              {electionResults.map((result) => {
+                const election = elections.find(e => String(e.id) === String(result.election_id));
+                const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+                
+                return (
+                  <div key={result.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                          {election?.name || `Seçim #${result.election_id}`}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Sandık: {ballotBox?.ballot_number || result.ballot_box_id}
+                          {ballotBox?.institution_name && ` - ${ballotBox.institution_name}`}
+                        </p>
+                        {election?.date && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            {new Date(election.date).toLocaleDateString('tr-TR')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-full text-xs font-semibold">
+                        Sonuç Girildi
+                      </span>
+                    </div>
+                    
+                    <button
+                      onClick={() => navigate(`/ballot-boxes/${result.ballot_box_id}?election=${result.election_id}`)}
+                      className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center gap-2"
+                    >
+                      Sonuçları Görüntüle
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Ballot Boxes List */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
