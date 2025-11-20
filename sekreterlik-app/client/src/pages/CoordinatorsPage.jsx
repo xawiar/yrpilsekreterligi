@@ -366,6 +366,9 @@ const CoordinatorsListPage = () => {
                   let districtSupervisorRegions = [];
                   let districtSupervisorTotalBallotBoxes = 0;
                   
+                  // Kurum sorumlusu için kurum bilgisi ve sandık sayısı
+                  let institutionSupervisorInfo = null;
+                  
                   if (coordinator.role === 'region_supervisor') {
                     // Bu sorumlunun sorumlu olduğu bölgeyi bul
                     coordinatorRegion = regions.find(r => {
