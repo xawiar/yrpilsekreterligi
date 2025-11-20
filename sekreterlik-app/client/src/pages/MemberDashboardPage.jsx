@@ -101,6 +101,29 @@ const MemberDashboardPage = () => {
       setTimeout(() => setError(''), 3000);
     }
   }, [grantedPermissions]);
+
+  // Helper fonksiyon: View için yetki kontrolü
+  const hasViewPermission = React.useCallback((view) => {
+    // Dashboard her zaman erişilebilir
+    if (view === 'dashboard') {
+      return true;
+    }
+
+    // View için gerekli permission'ları kontrol et
+    const requiredPermissions = viewPermissionMap[view] || [];
+    
+    // Eğer permission tanımlı değilse, erişime izin ver (geriye dönük uyumluluk)
+    if (requiredPermissions.length === 0) {
+      console.warn(`View '${view}' için permission tanımı bulunamadı`);
+      return true;
+    }
+
+    // Kullanıcının en az bir permission'ı var mı kontrol et
+    return requiredPermissions.some(perm => 
+      grantedPermissions.includes(perm)
+    );
+  }, [grantedPermissions]);
+
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
   const [isWomenBranchPresident, setIsWomenBranchPresident] = useState(false);
