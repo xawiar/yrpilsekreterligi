@@ -1738,7 +1738,17 @@ const MemberUsersSettings = () => {
           }
 
           const username = coordinator.tc;
-          const password = coordinator.phone.replace(/\D/g, ''); // Sadece rakamlar
+          let password = coordinator.phone.replace(/\D/g, ''); // Sadece rakamlar
+
+          // Firebase Auth minimum 6 karakter şifre ister
+          if (!password || password.length < 6) {
+            if (!password) {
+              errors.push(`${coordinator.name || 'Bilinmeyen'}: Geçerli telefon numarası yok`);
+              errorCount++;
+              continue;
+            }
+            password = password.padStart(6, '0');
+          }
 
           // Mevcut kullanıcıyı kontrol et
           const existingUser = (existingUsers.users || []).find(u => 
