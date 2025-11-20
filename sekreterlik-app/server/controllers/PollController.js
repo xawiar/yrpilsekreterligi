@@ -382,13 +382,38 @@ class PollController {
   // Check and end expired polls (background job)
   static async checkAndEndExpiredPolls() {
     try {
+      // Check if polls table exists first
+      const tableCheck = await new Promise((resolve, reject) => {
+        db.get(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='polls'",
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+          }
+        );
+      });
+      
+      if (!tableCheck) {
+        // Table doesn't exist yet, skip silently
+        return;
+      }
+      
       const now = new Date().toISOString();
       const sql = `UPDATE polls 
                    SET status = 'ended', updated_at = CURRENT_TIMESTAMP 
                    WHERE status = 'active' AND end_date <= ?`;
-      await db.run(sql, [now]);
+      await new Promise((resolve, reject) => {
+        db.run(sql, [now], (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
     } catch (error) {
-      console.error('Error checking expired polls:', error);
+      // Only log if it's not a "table doesn't exist" error
+      if (!error.message || !error.message.includes('no such table')) {
+        console.error('Error checking expired polls:', error);
+      }
+      // Silently ignore "table doesn't exist" errors
     }
   }
 }
