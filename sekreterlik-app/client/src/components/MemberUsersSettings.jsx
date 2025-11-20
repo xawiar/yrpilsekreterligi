@@ -1748,18 +1748,15 @@ const MemberUsersSettings = () => {
 
           if (existingUser) {
             // Güncelle
-            await ApiService.updateMemberUser(existingUser.id, {
-              username,
-              password,
+            await ApiService.updateMemberUser(existingUser.id, username, password, {
               coordinator_id: coordinator.id,
               userType: 'coordinator'
             });
             updatedCount++;
           } else {
             // Yeni oluştur
-            await ApiService.createMemberUser({
-              username,
-              password,
+            // coordinator_id için memberId yerine null gönder, coordinator_id'yi extraData'da gönder
+            await ApiService.createMemberUser(null, username, password, {
               coordinator_id: coordinator.id,
               userType: 'coordinator'
             });

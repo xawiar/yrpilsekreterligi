@@ -179,26 +179,60 @@ class ApiService {
     return response.json();
   }
 
-  static async createMemberUser(memberId, username, password) {
+  static async createMemberUser(memberIdOrData, username, password) {
+    // Support both old signature (memberId, username, password) and new signature (data object)
+    let data;
+    if (typeof memberIdOrData === 'object' && memberIdOrData !== null) {
+      // New signature: object with all fields
+      data = memberIdOrData;
+    } else {
+      // Old signature: separate parameters
+      data = { memberId: memberIdOrData, username, password };
+    }
+
     if (USE_FIREBASE) {
-      return FirebaseApiService.createMemberUser(memberId, username, password);
+      // FirebaseApiService expects (memberId, username, password) or can handle data object
+      if (typeof memberIdOrData === 'object') {
+        // Extract memberId, coordinator_id, observer_id, etc.
+        const memberId = data.memberId || data.coordinator_id || data.observer_id || null;
+        const username = data.username;
+        const password = data.password;
+        return FirebaseApiService.createMemberUser(memberId, username, password, data);
+      }
+      return FirebaseApiService.createMemberUser(memberIdOrData, username, password);
     }
     const response = await fetch(`${API_BASE_URL}/auth/member-users`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ memberId, username, password }),
+      body: JSON.stringify(data),
     });
     return response.json();
   }
 
-  static async updateMemberUser(id, username, password) {
+  static async updateMemberUser(id, usernameOrData, password) {
+    // Support both old signature (id, username, password) and new signature (id, data object)
+    let data;
+    if (typeof usernameOrData === 'object' && usernameOrData !== null) {
+      // New signature: object with all fields
+      data = usernameOrData;
+    } else {
+      // Old signature: separate parameters
+      data = { username: usernameOrData, password };
+    }
+
     if (USE_FIREBASE) {
-      return FirebaseApiService.updateMemberUser(id, username, password);
+      // FirebaseApiService expects (id, username, password) or can handle data object
+      if (typeof usernameOrData === 'object') {
+        const username = data.username;
+        const password = data.password;
+        return FirebaseApiService.updateMemberUser(id, username, password, data);
+      }
+      return FirebaseApiService.updateMemberUser(id, usernameOrData, password);
     }
     const response = await fetch(`${API_BASE_URL}/auth/member-users/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(data),
     });
     return response.json();
   }

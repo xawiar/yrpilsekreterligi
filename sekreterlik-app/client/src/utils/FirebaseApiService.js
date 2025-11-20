@@ -929,28 +929,49 @@ class FirebaseApiService {
     }
   }
 
-  static async createMemberUser(memberId, username, password) {
+  static async createMemberUser(memberId, username, password, extraData = {}) {
     try {
-      console.error('[DEBUG] 🔵 createMemberUser çağrıldı:', { memberId, username, password: '***' });
+      console.error('[DEBUG] 🔵 createMemberUser çağrıldı:', { memberId, username, password: '***', extraData });
       // Mevcut kullanıcıyı koru - sadece yeni kullanıcı oluştur
       const currentUser = auth.currentUser;
       const currentUserUid = currentUser ? currentUser.uid : null;
       console.error('[DEBUG] 🔵 Mevcut kullanıcı:', { uid: currentUserUid });
       
-      // Önce bu memberId için zaten kullanıcı var mı kontrol et
-      const existingUsers = await FirebaseService.findByField(
-        this.COLLECTIONS.MEMBER_USERS,
-        'memberId',
-        memberId
-      );
+      // memberId, coordinator_id veya observer_id'ye göre kontrol et
+      const searchField = extraData.coordinator_id ? 'coordinatorId' : (extraData.observer_id ? 'observerId' : 'memberId');
+      const searchValue = extraData.coordinator_id || extraData.observer_id || memberId;
+      
+      // Önce bu ID için zaten kullanıcı var mı kontrol et
+      let existingUsers = [];
+      if (searchValue) {
+        existingUsers = await FirebaseService.findByField(
+          this.COLLECTIONS.MEMBER_USERS,
+          searchField,
+          searchValue
+        );
+      }
+      // Ayrıca username'e göre de kontrol et
+      if (!existingUsers || existingUsers.length === 0) {
+        const usersByUsername = await FirebaseService.findByField(
+          this.COLLECTIONS.MEMBER_USERS,
+          'username',
+          username
+        );
+        if (usersByUsername && usersByUsername.length > 0) {
+          existingUsers = usersByUsername;
+        }
+      }
       console.error('[DEBUG] 🔵 Mevcut kullanıcılar:', existingUsers);
       
       if (existingUsers && existingUsers.length > 0) {
-        console.error('[DEBUG] ℹ️ User already exists for member:', memberId, existingUsers[0]);
+        console.error('[DEBUG] ℹ️ User already exists:', existingUsers[0]);
         return { success: true, id: existingUsers[0].id, message: 'Kullanıcı zaten mevcut' };
       }
       
       // Firebase Auth'da kullanıcı oluştur
+      if (!username || typeof username !== 'string') {
+        throw new Error('Username is required and must be a string');
+      }
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
       console.error('[DEBUG] 🔵 Firebase Auth email:', email);
       
@@ -982,10 +1003,12 @@ class FirebaseApiService {
 
       // Firestore'a kaydet
       const userData = {
-        memberId,
+        memberId: extraData.coordinator_id ? null : (extraData.observer_id ? null : memberId),
+        coordinatorId: extraData.coordinator_id || null,
+        observerId: extraData.observer_id || null,
         username,
         password: password, // Artık şifreleme yapılmıyor
-        userType: 'member',
+        userType: extraData.userType || 'member',
         isActive: true,
         authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
       };
@@ -1025,10 +1048,16 @@ class FirebaseApiService {
         username,
         passwordLength: password?.length,
         memberUserAuthUid: memberUser.authUid,
-        memberUserUsername: memberUser.username
+        memberUserUsername: memberUser.username,
+        extraData
       });
 
-      const updateData = { username };
+      const updateData = { 
+        username,
+        ...(extraData.coordinator_id !== undefined && { coordinatorId: extraData.coordinator_id }),
+        ...(extraData.observer_id !== undefined && { observerId: extraData.observer_id }),
+        ...(extraData.userType && { userType: extraData.userType })
+      };
       const oldUsername = memberUser.username;
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
       const oldEmail = oldUsername.includes('@') ? oldUsername : `${oldUsername}@ilsekreterlik.local`;
