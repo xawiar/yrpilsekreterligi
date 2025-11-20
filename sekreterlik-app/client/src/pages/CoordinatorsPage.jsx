@@ -338,6 +338,10 @@ const CoordinatorsListPage = () => {
                   let coordinatorRegion = null;
                   let totalBallotBoxes = 0;
                   
+                  // İlçe sorumlusu için bağlı bölge sorumlularının bölgelerini bul
+                  let districtSupervisorRegions = [];
+                  let districtSupervisorTotalBallotBoxes = 0;
+                  
                   if (coordinator.role === 'region_supervisor') {
                     // Bu sorumlunun sorumlu olduğu bölgeyi bul
                     coordinatorRegion = regions.find(r => {
@@ -370,6 +374,51 @@ const CoordinatorsListPage = () => {
                       
                       totalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
                     }
+                  } else if (coordinator.role === 'district_supervisor') {
+                    // Bu ilçe sorumlusuna bağlı bölge sorumlularını bul
+                    const regionSupervisors = coordinators.filter(c => 
+                      c.role === 'region_supervisor' && 
+                      String(c.parent_coordinator_id) === String(coordinator.id)
+                    );
+                    
+                    // Her bölge sorumlusunun bölgesini bul ve sandık sayısını hesapla
+                    regionSupervisors.forEach(regionSupervisor => {
+                      const region = regions.find(r => {
+                        const rSupervisorId = String(r.supervisor_id || '');
+                        const rsId = String(regionSupervisor.id);
+                        return rSupervisorId === rsId;
+                      });
+                      
+                      if (region) {
+                        // neighborhood_ids ve village_ids parse et
+                        const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
+                          ? region.neighborhood_ids
+                          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                        const regionVillageIds = Array.isArray(region.village_ids)
+                          ? region.village_ids
+                          : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                        
+                        // Mahallelerdeki sandıkları say
+                        const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
+                          regionNeighborhoodIds.includes(bb.neighborhood_id) || 
+                          regionNeighborhoodIds.includes(String(bb.neighborhood_id))
+                        ).length;
+                        
+                        // Köylerdeki sandıkları say
+                        const villageBallotBoxes = ballotBoxes.filter(bb => 
+                          regionVillageIds.includes(bb.village_id) || 
+                          regionVillageIds.includes(String(bb.village_id))
+                        ).length;
+                        
+                        const regionTotalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
+                        districtSupervisorTotalBallotBoxes += regionTotalBallotBoxes;
+                        
+                        districtSupervisorRegions.push({
+                          name: region.name,
+                          ballotBoxes: regionTotalBallotBoxes
+                        });
+                      }
+                    });
                   }
                   
                   return (
@@ -395,11 +444,44 @@ const CoordinatorsListPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {parentCoordinator ? parentCoordinator.name : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {coordinatorRegion ? coordinatorRegion.name : '-'}
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {coordinator.role === 'region_supervisor' && coordinatorRegion ? (
+                          coordinatorRegion.name
+                        ) : coordinator.role === 'district_supervisor' && districtSupervisorRegions.length > 0 ? (
+                          <div className="space-y-1">
+                            {districtSupervisorRegions.map((region, idx) => (
+                              <div key={idx} className="text-xs">
+                                {region.name}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {totalBallotBoxes > 0 ? totalBallotBoxes : '-'}
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {coordinator.role === 'region_supervisor' && totalBallotBoxes > 0 ? (
+                          <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+                            {totalBallotBoxes} sandık
+                          </span>
+                        ) : coordinator.role === 'district_supervisor' && districtSupervisorRegions.length > 0 ? (
+                          <div className="space-y-1">
+                            {districtSupervisorRegions.map((region, idx) => (
+                              <div key={idx} className="text-xs">
+                                <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+                                  {region.ballotBoxes} sandık
+                                </span>
+                              </div>
+                            ))}
+                            {districtSupervisorTotalBallotBoxes > 0 && (
+                              <div className="text-xs font-semibold mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
+                                Toplam: {districtSupervisorTotalBallotBoxes} sandık
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
