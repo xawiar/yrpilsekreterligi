@@ -612,7 +612,8 @@ const CoordinatorsListPage = () => {
                       phone: '',
                       role: 'provincial_coordinator',
                       parent_coordinator_id: null,
-                      district_id: null
+                      district_id: null,
+                      institution_name: null
                     });
                     setMessage('');
                   }}
@@ -891,7 +892,8 @@ const CoordinatorsListPage = () => {
                       phone: '',
                       role: 'provincial_coordinator',
                       parent_coordinator_id: null,
-                      district_id: null
+                      district_id: null,
+                      institution_name: null
                     });
                     setMessage('');
                   }}
