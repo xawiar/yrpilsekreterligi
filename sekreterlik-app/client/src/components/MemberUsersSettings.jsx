@@ -1742,24 +1742,52 @@ const MemberUsersSettings = () => {
 
           // Mevcut kullanıcıyı kontrol et
           const existingUser = (existingUsers.users || []).find(u => 
+            u.coordinatorId === coordinator.id || 
             u.coordinator_id === coordinator.id || 
             (u.userType === 'coordinator' && u.username === username)
           );
 
           if (existingUser) {
-            // Güncelle
-            await ApiService.updateMemberUser(existingUser.id, username, password, {
-              coordinator_id: coordinator.id,
-              userType: 'coordinator'
-            });
+            // Kullanıcı varsa güncelle (coordinatorId ve userType ekle/güncelle)
+            const updateData = {
+              userType: 'coordinator',
+              coordinatorId: coordinator.id,
+              coordinator_id: coordinator.id
+            };
+            
+            if (existingUser.password !== password) {
+              updateData.password = password;
+            }
+
+            await FirebaseService.update('member_users', existingUser.id, updateData, false);
             updatedCount++;
           } else {
-            // Yeni oluştur
-            // coordinator_id için memberId yerine null gönder, coordinator_id'yi extraData'da gönder
-            await ApiService.createMemberUser(null, username, password, {
+            // Yeni kullanıcı oluştur - userType='coordinator', coordinatorId ile
+            const email = `${username}@ilsekreterlik.local`;
+            let authUser = null;
+            try {
+              authUser = await createUserWithEmailAndPassword(auth, email, password);
+            } catch (authError) {
+              if (authError.code !== 'auth/email-already-in-use') {
+                throw authError;
+              }
+            }
+
+            const userData = {
+              username,
+              password,
+              userType: 'coordinator',
+              coordinatorId: coordinator.id,
               coordinator_id: coordinator.id,
-              userType: 'coordinator'
-            });
+              isActive: true,
+              name: coordinator.name,
+              tc: coordinator.tc,
+              phone: coordinator.phone,
+              authUid: authUser?.user?.uid || null
+            };
+
+            // Firestore'a kaydet
+            await FirebaseService.create('member_users', null, userData, false);
             createdCount++;
           }
         } catch (error) {
