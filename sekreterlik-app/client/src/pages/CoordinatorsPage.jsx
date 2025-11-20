@@ -604,11 +604,40 @@ const RegionsListPage = () => {
 
   // Verileri yükle
   useEffect(() => {
-    loadRegions();
+    loadAllData();
+  }, []);
+
+  useEffect(() => {
     if (showCreateModal) {
       loadData();
     }
   }, [showCreateModal]);
+
+  const loadAllData = async () => {
+    await Promise.all([
+      loadRegions(),
+      loadSupervisors()
+    ]);
+  };
+
+  const loadSupervisors = async () => {
+    try {
+      const coordinatorsData = await ApiService.getElectionCoordinators().catch(err => {
+        console.error('Error loading coordinators:', err);
+        if (err.message && err.message.includes('404')) {
+          console.warn('Election coordinators endpoint not found, returning empty array');
+          return [];
+        }
+        return [];
+      });
+      // Bölge sorumlularını filtrele (region_supervisor role'üne sahip olanlar)
+      const supervisors = (coordinatorsData || []).filter(c => c.role === 'region_supervisor');
+      setRegionSupervisors(supervisors);
+    } catch (error) {
+      console.error('Error loading supervisors:', error);
+      setRegionSupervisors([]);
+    }
+  };
 
   const loadRegions = async () => {
     try {
@@ -659,7 +688,7 @@ const RegionsListPage = () => {
       setVillages(villagesData || []);
       setBallotBoxes(ballotBoxesData || []);
       // Bölge sorumlularını filtrele (region_supervisor role'üne sahip olanlar)
-      const supervisors = coordinatorsData.filter(c => c.role === 'region_supervisor') || [];
+      const supervisors = (coordinatorsData || []).filter(c => c.role === 'region_supervisor');
       setRegionSupervisors(supervisors);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -718,7 +747,7 @@ const RegionsListPage = () => {
         setSelectedNeighborhoods([]);
         setSelectedVillages([]);
         setSelectedSupervisorId('');
-        loadRegions(); // Listeyi yenile
+        await loadAllData(); // Tüm verileri yenile (regions + supervisors)
       } else {
         setMessage(response.message || 'Bölge işlemi sırasında hata oluştu');
         setMessageType('error');
@@ -733,12 +762,32 @@ const RegionsListPage = () => {
   };
 
   const handleEditRegion = async (region) => {
+    console.log('Editing region:', region);
+    // Önce verileri yükle
+    await loadData();
+    // Sonra form verilerini set et
     setEditingRegion(region);
     setRegionName(region.name || '');
-    setSelectedNeighborhoods(region.neighborhood_ids || []);
-    setSelectedVillages(region.village_ids || []);
-    setSelectedSupervisorId(region.supervisor_id ? String(region.supervisor_id) : '');
-    await loadData(); // Verileri yükle
+    
+    // neighborhood_ids ve village_ids array olarak gelmeli
+    const neighborhoodIds = Array.isArray(region.neighborhood_ids) 
+      ? region.neighborhood_ids 
+      : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+    const villageIds = Array.isArray(region.village_ids)
+      ? region.village_ids
+      : (region.village_ids ? JSON.parse(region.village_ids) : []);
+    
+    setSelectedNeighborhoods(neighborhoodIds);
+    setSelectedVillages(villageIds);
+    
+    // supervisor_id'yi string'e çevir
+    const supervisorId = region.supervisor_id !== null && region.supervisor_id !== undefined 
+      ? String(region.supervisor_id) 
+      : '';
+    console.log('Setting supervisor_id to:', supervisorId, 'from region:', region.supervisor_id);
+    setSelectedSupervisorId(supervisorId);
+    
+    // Modal'ı aç
     setShowCreateModal(true);
   };
 
@@ -834,12 +883,26 @@ const RegionsListPage = () => {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {regions.map((region) => {
-                  const supervisor = regionSupervisors.find(s => String(s.id) === String(region.supervisor_id));
+                  // supervisor_id karşılaştırması - string/number desteği
+                  const supervisor = regionSupervisors.find(s => {
+                    const sId = String(s.id);
+                    const rId = String(region.supervisor_id || '');
+                    return sId === rId;
+                  });
+                  
+                  // neighborhood_ids ve village_ids parse et
+                  const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
+                    ? region.neighborhood_ids
+                    : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                  const regionVillageIds = Array.isArray(region.village_ids)
+                    ? region.village_ids
+                    : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                  
                   const regionNeighborhoods = neighborhoods.filter(n => 
-                    (region.neighborhood_ids || []).includes(n.id)
+                    regionNeighborhoodIds.includes(n.id) || regionNeighborhoodIds.includes(String(n.id))
                   );
                   const regionVillages = villages.filter(v => 
-                    (region.village_ids || []).includes(v.id)
+                    regionVillageIds.includes(v.id) || regionVillageIds.includes(String(v.id))
                   );
                   
                   return (
