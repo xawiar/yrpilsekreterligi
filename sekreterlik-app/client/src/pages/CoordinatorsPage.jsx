@@ -608,7 +608,8 @@ const RegionsListPage = () => {
   }, []);
 
   useEffect(() => {
-    if (showCreateModal) {
+    if (showCreateModal && !editingRegion) {
+      // Yeni bölge oluştururken verileri yükle
       loadData();
     }
   }, [showCreateModal]);
@@ -726,7 +727,7 @@ const RegionsListPage = () => {
         name: regionName,
         neighborhood_ids: selectedNeighborhoods,
         village_ids: selectedVillages,
-        supervisor_id: selectedSupervisorId ? parseInt(selectedSupervisorId) : null,
+        supervisor_id: selectedSupervisorId ? (isNaN(Number(selectedSupervisorId)) ? selectedSupervisorId : Number(selectedSupervisorId)) : null,
         district_id: neighborhoods.find(n => selectedNeighborhoods.includes(n.id))?.district_id || 
                      villages.find(v => selectedVillages.includes(v.id))?.district_id || null
       };
@@ -763,28 +764,56 @@ const RegionsListPage = () => {
 
   const handleEditRegion = async (region) => {
     console.log('Editing region:', region);
-    // Önce verileri yükle
+    
+    // Önce tüm verileri yükle (neighborhoods, villages, supervisors)
     await loadData();
+    
+    // Biraz bekle ki state'ler güncellensin
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     // Sonra form verilerini set et
     setEditingRegion(region);
     setRegionName(region.name || '');
     
     // neighborhood_ids ve village_ids array olarak gelmeli
-    const neighborhoodIds = Array.isArray(region.neighborhood_ids) 
-      ? region.neighborhood_ids 
-      : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-    const villageIds = Array.isArray(region.village_ids)
-      ? region.village_ids
-      : (region.village_ids ? JSON.parse(region.village_ids) : []);
+    let neighborhoodIds = [];
+    let villageIds = [];
     
+    if (Array.isArray(region.neighborhood_ids)) {
+      neighborhoodIds = region.neighborhood_ids;
+    } else if (typeof region.neighborhood_ids === 'string' && region.neighborhood_ids) {
+      try {
+        neighborhoodIds = JSON.parse(region.neighborhood_ids);
+      } catch (e) {
+        console.error('Error parsing neighborhood_ids:', e);
+        neighborhoodIds = [];
+      }
+    }
+    
+    if (Array.isArray(region.village_ids)) {
+      villageIds = region.village_ids;
+    } else if (typeof region.village_ids === 'string' && region.village_ids) {
+      try {
+        villageIds = JSON.parse(region.village_ids);
+      } catch (e) {
+        console.error('Error parsing village_ids:', e);
+        villageIds = [];
+      }
+    }
+    
+    console.log('Setting neighborhoods:', neighborhoodIds, 'villages:', villageIds);
     setSelectedNeighborhoods(neighborhoodIds);
     setSelectedVillages(villageIds);
     
-    // supervisor_id'yi string'e çevir
+    // supervisor_id'yi string'e çevir - regionSupervisors state'i güncellenmiş olmalı
     const supervisorId = region.supervisor_id !== null && region.supervisor_id !== undefined 
       ? String(region.supervisor_id) 
       : '';
-    console.log('Setting supervisor_id to:', supervisorId, 'from region:', region.supervisor_id);
+    
+    // regionSupervisors state'ini kontrol et
+    console.log('Setting supervisor_id to:', supervisorId, 'from region.supervisor_id:', region.supervisor_id);
+    console.log('Available supervisors:', regionSupervisors.map(s => ({ id: String(s.id), name: s.name })));
+    
     setSelectedSupervisorId(supervisorId);
     
     // Modal'ı aç
