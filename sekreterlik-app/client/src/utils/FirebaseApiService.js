@@ -1035,7 +1035,7 @@ class FirebaseApiService {
     }
   }
 
-  static async updateMemberUser(id, username, password) {
+  static async updateMemberUser(id, username, password, extraData = {}) {
     try {
       // Önce mevcut kullanıcıyı al
       const memberUser = await FirebaseService.getById(this.COLLECTIONS.MEMBER_USERS, id);
