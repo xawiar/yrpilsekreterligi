@@ -242,14 +242,14 @@ function RouterContent() {
             element={<CoordinatorDashboardPage />} 
           />
           
-          {/* Coordinator Login */}
+          {/* Coordinator Login - Artık /login?type=coordinator olarak yönlendirilecek */}
           <Route 
             path="/coordinator-login" 
             element={
               <PublicRoute>
-                <CoordinatorLoginPage />
+                <Navigate to="/login?type=coordinator" replace />
               </PublicRoute>
-            } 
+            }
           />
           
           {/* Admin Routes */}

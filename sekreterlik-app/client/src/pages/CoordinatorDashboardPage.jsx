@@ -32,7 +32,7 @@ const CoordinatorDashboardPage = () => {
   // Authentication kontrolü
   useEffect(() => {
     if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user) {
-      navigate('/coordinator-login', { replace: true });
+      navigate('/login?type=coordinator', { replace: true });
     }
   }, [isLoggedIn, userRole, user, navigate]);
 
