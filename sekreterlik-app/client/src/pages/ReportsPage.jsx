@@ -1570,6 +1570,8 @@ const ReportsPage = () => {
               </table>
             </div>
           </div>
+            );
+          })()}
         </div>
 
         {/* Kamu Kurumu İstatistikleri */}
