@@ -54,7 +54,12 @@ export const isMobile = () => {
     return true;
   }
   if (typeof window === 'undefined') return false;
-  return window.innerWidth < 1024; // lg breakpoint
+  // Check both window.innerWidth and matchMedia for better reliability
+  const width = window.innerWidth || (window.screen && window.screen.width) || 0;
+  const isMobileWidth = width < 1024; // lg breakpoint
+  // Also check user agent as fallback
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  return isMobileWidth || (isMobileUA && width < 1280); // More lenient for mobile browsers
 };
 
 /**

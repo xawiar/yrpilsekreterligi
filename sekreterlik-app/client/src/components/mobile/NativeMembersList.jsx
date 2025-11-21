@@ -59,11 +59,16 @@ const NativeMembersList = ({
             className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
           >
             <option value="">Tüm Bölgeler</option>
-            {regions.map((region) => (
-              <option key={region} value={region}>
-                {region}
-              </option>
-            ))}
+            {regions.map((region) => {
+              // Handle both string and object formats
+              const regionValue = typeof region === 'string' ? region : (region.name || region.id || '');
+              const regionKey = typeof region === 'string' ? region : (region.id || region.name || '');
+              return (
+                <option key={regionKey} value={regionValue}>
+                  {regionValue}
+                </option>
+              );
+            })}
           </select>
         </div>
       )}
