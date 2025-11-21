@@ -50,24 +50,47 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   // Native mobile görünümü
   if (mobileView) {
+    // Modal açıldığında scroll pozisyonunu kaydet ve sabitle
+    useEffect(() => {
+      if (isOpen) {
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        
+        return () => {
+          document.body.style.position = '';
+          document.body.style.top = '';
+          document.body.style.width = '';
+          window.scrollTo(0, scrollY);
+        };
+      }
+    }, [isOpen]);
+
     return (
       <div 
-        className="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 flex items-end justify-center z-50"
+        className="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 flex items-center justify-center z-[9999]"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             onClose();
           }
         }}
         style={{
-          overscrollBehavior: 'contain'
+          overscrollBehavior: 'contain',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
         }}
       >
         <div 
-          className="bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-slide-up"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
           style={{
-            animation: 'slideUp 0.3s ease-out',
-            maxHeight: '85vh'
+            maxHeight: '90vh',
+            position: 'relative',
+            zIndex: 10000
           }}
         >
           {/* Header - Native mobile style */}
@@ -83,7 +106,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
               </svg>
             </button>
           </div>
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch', maxHeight: 'calc(90vh - 80px)' }}>
             {children}
           </div>
         </div>
