@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
 import AdminSettings from '../components/AdminSettings';
 import RegionsSettings from '../components/RegionsSettings';
 import PositionsSettings from '../components/PositionsSettings';
@@ -32,6 +33,7 @@ import {
   SettingsSummaryCards, 
   SettingsTabs 
 } from '../components/Settings';
+import NativeSettingsList from '../components/mobile/NativeSettingsList';
 
 const SettingsPage = ({ tab }) => {
   const { user } = useAuth();
@@ -138,6 +140,116 @@ const SettingsPage = ({ tab }) => {
     }
   }, [tab, isSTKManagement, isPublicInstitutionManagement, loadingPermissions]);
 
+  const mobileView = isMobile();
+
+  // Tab listesi oluştur (native görünüm için)
+  const getTabsList = () => {
+    const tabs = [
+      { id: 'admin', name: 'Kullanıcı Bilgileri', description: 'Mevcut admin bilgileri', permission: '*' },
+      { id: 'regions', name: 'Bölge Ekle', description: 'Bölge tanımlama', permission: 'add_region' },
+      { id: 'positions', name: 'Görev Ekle', description: 'Görev tanımlama', permission: 'add_position' },
+      { id: 'member-users', name: 'Üye Kullanıcıları', description: 'Üye kullanıcı yönetimi', permission: 'manage_member_users' },
+      { id: 'districts', name: 'İlçe Ekle', description: 'İlçe tanımlama', permission: 'add_district' },
+      { id: 'towns', name: 'Belde Ekle', description: 'Belde tanımlama', permission: 'add_town' },
+      { id: 'neighborhoods', name: 'Mahalle Ekle', description: 'Mahalle tanımlama', permission: 'add_neighborhood' },
+      { id: 'villages', name: 'Köy Ekle', description: 'Köy tanımlama', permission: 'add_village' },
+      { id: 'stks', name: 'STK Ekle', description: 'STK yönetimi', permission: 'manage_stk' },
+      { id: 'public-institutions', name: 'Kamu Kurumu Ekle', description: 'Kamu kurumu yönetimi', permission: 'add_public_institution' },
+      { id: 'mosques', name: 'Cami Ekle', description: 'Cami tanımlama', permission: 'add_mosque' },
+      { id: 'event-categories', name: 'Etkinlik Kategorileri', description: 'Etkinlik kategorisi yönetimi', permission: 'manage_event_categories' },
+      { id: 'authorization', name: 'Yetkilendirme', description: 'Kullanıcı yetkilendirme', permission: false },
+      { id: 'bylaws', name: 'Tüzük Yönetimi', description: 'Tüzük düzenleme', permission: 'manage_bylaws' },
+      { id: 'polls', name: 'Anketler', description: 'Anket yönetimi', permission: 'manage_polls' },
+      { id: 'member-dashboard-analytics', name: 'Üye Dashboard Analitik', description: 'Dashboard analitikleri', permission: 'access_member_dashboard_analytics' },
+      { id: 'app-branding', name: 'Uygulama Markası', description: 'Uygulama marka ayarları', permission: 'manage_app_branding' },
+      { id: 'seçim-ekle', name: 'Seçim Ekle', description: 'Seçim yönetimi', permission: 'manage_elections' },
+    ];
+
+    // Admin-only tabs
+    if (isAdmin) {
+      tabs.push(
+        { id: 'groq-api', name: 'Groq API', description: 'Groq API ayarları', permission: false },
+        { id: 'firebase-config', name: 'Firebase Config', description: 'Firebase yapılandırması', permission: false },
+        { id: 'deployment-config', name: 'Deployment Config', description: 'Deployment ayarları', permission: false },
+        { id: 'sms-config', name: 'SMS Config', description: 'SMS ayarları', permission: false },
+        { id: 'firebase-sync', name: 'Firebase Sync', description: 'Firebase senkronizasyonu', permission: false },
+        { id: 'performance-score', name: 'Performance Score', description: 'Performans skoru ayarları', permission: false },
+        { id: 'api-keys', name: 'API Keys', description: 'API anahtarları', permission: false }
+      );
+    }
+
+    return tabs;
+  };
+
+  // Native mobile görünümü için
+  if (mobileView && !tab && !isSTKManagement && !isPublicInstitutionManagement) {
+    return (
+      <>
+        <NativeSettingsList
+          tabs={getTabsList()}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          grantedPermissions={grantedPermissions}
+          isAdmin={isAdmin}
+        />
+
+        {/* Tab Content */}
+        {loadingPermissions ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+            <div className="p-6 flex justify-center items-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+            <div className="p-6">
+              {!hasPermission(activeTab) ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Yetki Gerekli</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Bu sayfaya erişmek için gerekli yetkiniz bulunmamaktadır.</p>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'admin' && <AdminSettings />}
+                  {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
+                  {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
+                  {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}
+                  {activeTab === 'districts' && hasPermission('districts') && <DistrictsSettings />}
+                  {activeTab === 'towns' && hasPermission('towns') && <TownsSettings />}
+                  {activeTab === 'neighborhoods' && hasPermission('neighborhoods') && <NeighborhoodsSettings />}
+                  {activeTab === 'villages' && hasPermission('villages') && <VillagesSettings />}
+                  {activeTab === 'stks' && hasPermission('stks') && <STKSettings />}
+                  {activeTab === 'public-institutions' && hasPermission('public-institutions') && <PublicInstitutionSettings />}
+                  {activeTab === 'mosques' && hasPermission('mosques') && <MosquesSettings />}
+                  {activeTab === 'event-categories' && hasPermission('event-categories') && <EventCategoriesSettings />}
+                  {activeTab === 'authorization' && hasPermission('authorization') && <AuthorizationSettings />}
+                  {activeTab === 'bylaws' && hasPermission('bylaws') && <BylawsSettings />}
+                  {activeTab === 'groq-api' && hasPermission('groq-api') && <GroqApiSettings />}
+                  {activeTab === 'firebase-config' && hasPermission('firebase-config') && <FirebaseConfigSettings />}
+                  {activeTab === 'deployment-config' && hasPermission('deployment-config') && <DeploymentConfigSettings />}
+                  {activeTab === 'sms-config' && hasPermission('sms-config') && <SmsSettings />}
+                  {activeTab === 'firebase-sync' && hasPermission('firebase-sync') && <SyncToFirebasePage />}
+                  {activeTab === 'polls' && hasPermission('polls') && <PollsPage />}
+                  {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
+                  {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
+                  {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
+                  {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
+                  {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Desktop görünümü (mevcut)
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       {/* Header Section */}
