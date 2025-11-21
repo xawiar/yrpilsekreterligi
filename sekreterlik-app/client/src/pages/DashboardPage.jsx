@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
 import { 
   DashboardHeader, 
   DashboardStatsCards, 
@@ -99,14 +100,17 @@ const DashboardPage = () => {
     );
   }
 
+  const mobileView = isMobile();
+
   return (
-    <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
+    <div className={`py-2 sm:py-4 md:py-6 w-full overflow-x-hidden ${mobileView ? 'pb-24' : 'lg:pb-6'}`}>
       <DashboardHeader />
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Mobilde tek kolon, desktop'ta çoklu kolon */}
       <DashboardStatsCards stats={stats} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      {/* Mobil: Dikey stack, Desktop: Yatay grid */}
+      <div className={`grid ${mobileView ? 'grid-cols-1 gap-4' : 'grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6'}`}>
         {/* Top Registrars */}
         <TopRegistrarsTable topRegistrars={topRegistrars} />
 
@@ -114,15 +118,15 @@ const DashboardPage = () => {
         <TopAttendeesTable topAttendees={topAttendees} />
       </div>
 
-      {/* Upcoming Events and Meetings */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mt-6">
-        {/* Upcoming Events */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yaklaşan Etkinlikler</h3>
+      {/* Upcoming Events and Meetings - Mobilde tek kolon, desktop'ta çoklu kolon */}
+      <div className={`grid ${mobileView ? 'grid-cols-1 gap-4' : 'grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6'} mt-6`}>
+        {/* Upcoming Events - Mobilde tam genişlik, desktop'ta yarım */}
+        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 ${mobileView ? 'p-4' : 'p-6'}`}>
+          <h3 className={`${mobileView ? 'text-base mb-3' : 'text-lg mb-4'} font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Etkinlikler</h3>
           {upcomingEvents.length > 0 ? (
-            <div className="space-y-3">
+            <div className={mobileView ? 'space-y-2' : 'space-y-3'}>
               {upcomingEvents.map((event, index) => (
-                <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div key={index} className={`${mobileView ? 'p-2.5' : 'p-3'} bg-gray-50 dark:bg-gray-700 rounded-lg`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">{event.name}</h4>
@@ -153,13 +157,13 @@ const DashboardPage = () => {
           )}
         </div>
 
-        {/* Upcoming Meetings */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yaklaşan Toplantılar</h3>
+        {/* Upcoming Meetings - Mobilde tam genişlik, desktop'ta yarım */}
+        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 ${mobileView ? 'p-4' : 'p-6'}`}>
+          <h3 className={`${mobileView ? 'text-base mb-3' : 'text-lg mb-4'} font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Toplantılar</h3>
           {upcomingMeetings.length > 0 ? (
-            <div className="space-y-3">
+            <div className={mobileView ? 'space-y-2' : 'space-y-3'}>
               {upcomingMeetings.map((meeting, index) => (
-                <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div key={index} className={`${mobileView ? 'p-2.5' : 'p-3'} bg-gray-50 dark:bg-gray-700 rounded-lg`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">{meeting.name}</h4>
