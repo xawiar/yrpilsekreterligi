@@ -196,7 +196,7 @@ html, body {
   width: 100%;
   max-width: 100vw;
   overscroll-behavior-y: auto;
-  touch-action: pan-y;
+  touch-action: pan-y pan-x pinch-zoom;
   -webkit-overflow-scrolling: touch;
 }
 

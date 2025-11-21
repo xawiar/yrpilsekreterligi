@@ -116,7 +116,7 @@ const NativeCoordinatorDashboard = ({
   };
 
   return (
-    <div className="px-4 py-6 space-y-4 pb-24">
+    <div className="px-4 py-6 space-y-4 pb-24 overflow-y-auto" style={{ height: '100vh', WebkitOverflowScrolling: 'touch' }}>
       {/* Header with Logout */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex-1">
