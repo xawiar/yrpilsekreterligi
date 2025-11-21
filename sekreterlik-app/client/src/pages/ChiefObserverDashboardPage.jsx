@@ -21,6 +21,8 @@ const ChiefObserverDashboardPage = () => {
   const [selectedElection, setSelectedElection] = useState(null);
   const [showResultForm, setShowResultForm] = useState(false);
   const [electionResults, setElectionResults] = useState({}); // electionId -> result
+  const [institutionSupervisor, setInstitutionSupervisor] = useState(null);
+  const [regionSupervisor, setRegionSupervisor] = useState(null);
 
   // Authentication kontrolü - AuthContext'ten gelen değerleri kullan
   useEffect(() => {
@@ -75,6 +77,60 @@ const ChiefObserverDashboardPage = () => {
           }
         }
         setElectionResults(resultsMap);
+        
+        // Üst sorumluları bul (kurum sorumlusu ve bölge sorumlusu)
+        if (user.ballotBoxId || user.ballot_box_id) {
+          try {
+            const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
+            const [ballotBoxes, coordinators, regions] = await Promise.all([
+              ApiService.getBallotBoxes(),
+              ApiService.getElectionCoordinators(),
+              ApiService.getElectionRegions()
+            ]);
+            
+            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
+            if (ballotBox) {
+              // Kurum sorumlusunu bul
+              if (ballotBox.institution_name) {
+                const instSupervisor = coordinators.find(c => 
+                  c.role === 'institution_supervisor' && 
+                  c.institution_name === ballotBox.institution_name
+                );
+                if (instSupervisor) {
+                  setInstitutionSupervisor(instSupervisor);
+                }
+              }
+              
+              // Bölge sorumlusunu bul
+              const neighborhoodId = ballotBox.neighborhood_id;
+              const villageId = ballotBox.village_id;
+              
+              for (const region of regions) {
+                const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
+                  ? region.neighborhood_ids
+                  : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                const regionVillageIds = Array.isArray(region.village_ids)
+                  ? region.village_ids
+                  : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                
+                if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
+                    (villageId && regionVillageIds.includes(villageId))) {
+                  if (region.supervisor_id) {
+                    const regSupervisor = coordinators.find(c => 
+                      String(c.id) === String(region.supervisor_id)
+                    );
+                    if (regSupervisor) {
+                      setRegionSupervisor(regSupervisor);
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching supervisor data:', err);
+          }
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
         if (isMounted) {

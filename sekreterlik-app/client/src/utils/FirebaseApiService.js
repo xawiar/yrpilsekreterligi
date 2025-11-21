@@ -570,17 +570,24 @@ class FirebaseApiService {
       
       let ballotBoxes = [];
       
+      // Hiyerarşik görünürlük: Her sorumlu, altındaki tüm sandıkları görebilmeli
+      // Örnek: 1001 nolu sandık için ahmet (başmüşahit), mehmet (kurum sorumlusu), 
+      // hüseyin (bölge sorumlusu), ali (ilçe sorumlusu), yavuz (il genel sorumlusu) hepsi görebilmeli
+      
       if (coordinator.role === 'provincial_coordinator') {
         // İl Genel Sorumlusu: Tüm sandıklar
         ballotBoxes = allBallotBoxes;
       } else if (coordinator.role === 'district_supervisor') {
-        // İlçe Sorumlusu: Bağlı bölge sorumlularının bölgelerindeki sandıklar
+        // İlçe Sorumlusu: Bağlı bölge sorumlularının bölgelerindeki sandıklar + 
+        // bu bölgelerdeki kurum sorumlularının kurumlarındaki sandıklar
+        const ballotBoxIds = new Set();
+        
+        // 1. Bağlı bölge sorumlularının bölgelerindeki sandıklar
         const regionSupervisors = coordinators.filter(c => 
           c.role === 'region_supervisor' && 
           String(c.parent_coordinator_id) === String(coordinator.id)
         );
         
-        const ballotBoxIds = new Set();
         for (const regionSupervisor of regionSupervisors) {
           const region = allRegions.find(r => 
             String(r.supervisor_id) === String(regionSupervisor.id)
@@ -602,9 +609,36 @@ class FirebaseApiService {
           }
         }
         
+        // 2. Bu bölgelerdeki kurum sorumlularının kurumlarındaki sandıklar
+        const institutionSupervisors = coordinators.filter(c => 
+          c.role === 'institution_supervisor' && 
+          String(c.parent_coordinator_id) === String(regionSupervisors.map(rs => rs.id).find(id => id))
+        );
+        
+        // Kurum sorumlularını bölge sorumlularına göre filtrele
+        for (const regionSupervisor of regionSupervisors) {
+          const institutionSupervisorsInRegion = coordinators.filter(c => 
+            c.role === 'institution_supervisor' && 
+            String(c.parent_coordinator_id) === String(regionSupervisor.id)
+          );
+          
+          for (const instSupervisor of institutionSupervisorsInRegion) {
+            if (instSupervisor.institution_name) {
+              allBallotBoxes.forEach(bb => {
+                if (bb.institution_name === instSupervisor.institution_name) {
+                  ballotBoxIds.add(bb.id);
+                }
+              });
+            }
+          }
+        }
+        
         ballotBoxes = allBallotBoxes.filter(bb => ballotBoxIds.has(bb.id));
       } else if (coordinator.role === 'region_supervisor') {
-        // Bölge Sorumlusu: Kendi bölgesindeki sandıklar
+        // Bölge Sorumlusu: Kendi bölgesindeki sandıklar + bu bölgedeki kurum sorumlularının kurumlarındaki sandıklar
+        const ballotBoxIds = new Set();
+        
+        // 1. Kendi bölgesindeki sandıklar
         const region = allRegions.find(r => 
           String(r.supervisor_id) === String(coordinator.id)
         );
@@ -617,11 +651,31 @@ class FirebaseApiService {
             ? region.village_ids
             : (region.village_ids ? JSON.parse(region.village_ids) : []);
           
-          ballotBoxes = allBallotBoxes.filter(bb => 
-            (neighborhoodIds.length > 0 && neighborhoodIds.includes(bb.neighborhood_id)) ||
-            (villageIds.length > 0 && villageIds.includes(bb.village_id))
-          );
+          allBallotBoxes.forEach(bb => {
+            if ((neighborhoodIds.length > 0 && neighborhoodIds.includes(bb.neighborhood_id)) ||
+                (villageIds.length > 0 && villageIds.includes(bb.village_id))) {
+              ballotBoxIds.add(bb.id);
+            }
+          });
         }
+        
+        // 2. Bu bölgedeki kurum sorumlularının kurumlarındaki sandıklar
+        const institutionSupervisors = coordinators.filter(c => 
+          c.role === 'institution_supervisor' && 
+          String(c.parent_coordinator_id) === String(coordinator.id)
+        );
+        
+        for (const instSupervisor of institutionSupervisors) {
+          if (instSupervisor.institution_name) {
+            allBallotBoxes.forEach(bb => {
+              if (bb.institution_name === instSupervisor.institution_name) {
+                ballotBoxIds.add(bb.id);
+              }
+            });
+          }
+        }
+        
+        ballotBoxes = allBallotBoxes.filter(bb => ballotBoxIds.has(bb.id));
       } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
         // Kurum Sorumlusu: Kendi kurumundaki sandıklar
         ballotBoxes = allBallotBoxes.filter(bb => 

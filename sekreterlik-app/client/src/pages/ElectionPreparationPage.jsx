@@ -227,7 +227,11 @@ const ElectionPreparationPage = () => {
               {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
               {activeTab === 'villages' && <VillagesPage />}
               {activeTab === 'groups' && <GroupsPage />}
-              {activeTab === 'coordinators' && <CoordinatorsPage />}
+              {activeTab === 'coordinators' && (
+                <div className="space-y-6">
+                  <CoordinatorsPage />
+                </div>
+              )}
             </>
           )}
         </div>
