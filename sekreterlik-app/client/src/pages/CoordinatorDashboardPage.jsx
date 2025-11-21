@@ -836,11 +836,7 @@ const CoordinatorDashboardPage = () => {
                   <div
                     key={ballotBox.id}
                     onClick={() => handleBallotBoxClick(ballotBox)}
-                    className={`bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 rounded-xl shadow-md hover:shadow-xl p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 border ${
-                      hasResult 
-                        ? 'border-green-300 dark:border-green-700' 
-                        : 'border-gray-200 dark:border-gray-600'
-                    }`}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 rounded-xl shadow-md hover:shadow-xl p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-600"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -848,11 +844,6 @@ const CoordinatorDashboardPage = () => {
                           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                             Sandık {ballotBox.ballot_number || ballotBox.id}
                           </h3>
-                          {hasResult && (
-                            <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-full text-xs font-semibold">
-                              Sonuç Var
-                            </span>
-                          )}
                         </div>
                         {ballotBox.institution_name && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -860,11 +851,7 @@ const CoordinatorDashboardPage = () => {
                           </p>
                         )}
                       </div>
-                      <div className={`w-12 h-12 bg-gradient-to-br rounded-lg flex items-center justify-center ${
-                        hasResult 
-                          ? 'from-green-500 to-green-600' 
-                          : 'from-indigo-500 to-purple-500'
-                      }`}>
+                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
                         <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
@@ -875,7 +862,7 @@ const CoordinatorDashboardPage = () => {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
-                      <span>{hasResult ? 'Sonuçları görüntüle' : 'Detayları görüntüle'}</span>
+                      <span>Detayları görüntüle</span>
                     </div>
                   </div>
                   );
