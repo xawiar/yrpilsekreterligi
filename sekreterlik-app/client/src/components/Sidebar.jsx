@@ -10,8 +10,8 @@ const Sidebar = ({ onMobileMenuClose }) => {
   const { isDarkMode, toggleTheme } = useTheme();
   const [branding, setBranding] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({
-    main: true,
-    events: true,
+    main: false,
+    events: false,
     management: false
   });
 

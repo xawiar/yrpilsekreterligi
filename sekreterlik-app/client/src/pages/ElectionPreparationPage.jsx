@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeCard from '../components/mobile/NativeCard';
 import BallotBoxesPage from './BallotBoxesPage';
 import ObserversPage from './ObserversPage';
 import RepresentativesPage from './RepresentativesPage';
@@ -165,6 +167,86 @@ const ElectionPreparationPage = () => {
     return colors[color] || colors.indigo;
   };
 
+  const mobileView = isMobile();
+
+  // Native mobile görünümü
+  if (mobileView) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
+        <div className="px-4 py-6">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+              Seçime Hazırlık
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-base">
+              Sandık ve müşahit yönetimi
+            </p>
+          </div>
+
+          {/* Tabs - Native Mobile Style */}
+          <div className="mb-4">
+            <div className="grid grid-cols-2 gap-2">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const colorClasses = getColorClasses(tab.color, isActive);
+                
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab)}
+                    className={`
+                      flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200
+                      ${colorClasses.bg} ${colorClasses.text} ${colorClasses.border} border-2
+                      ${isActive ? 'shadow-lg scale-[0.98]' : 'shadow-sm'}
+                      active:scale-[0.96]
+                    `}
+                  >
+                    {tab.icon}
+                    <span className="text-sm whitespace-nowrap">{tab.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Content Area - Alt sayfalar burada render edilecek */}
+          <div className="mt-4">
+            {/* Route-based navigation - Standalone route olarak kullanıldığında çalışır */}
+            {location.pathname.startsWith('/election-preparation') ? (
+              <Routes>
+                <Route index element={<Navigate to="/election-preparation/ballot-boxes" replace />} />
+                <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
+                <Route path="observers" element={<ObserversPage />} />
+                <Route path="representatives" element={<RepresentativesPage />} />
+                <Route path="neighborhoods" element={<NeighborhoodsPage />} />
+                <Route path="villages" element={<VillagesPage />} />
+                <Route path="groups" element={<GroupsPage />} />
+                <Route path="coordinators/*" element={<CoordinatorsPage />} />
+              </Routes>
+            ) : (
+              /* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */
+              <>
+                {activeTab === 'ballot-boxes' && <BallotBoxesPage />}
+                {activeTab === 'observers' && <ObserversPage />}
+                {activeTab === 'representatives' && <RepresentativesPage />}
+                {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
+                {activeTab === 'villages' && <VillagesPage />}
+                {activeTab === 'groups' && <GroupsPage />}
+                {activeTab === 'coordinators' && (
+                  <div className="space-y-6">
+                    <CoordinatorsPage />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop görünümü
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

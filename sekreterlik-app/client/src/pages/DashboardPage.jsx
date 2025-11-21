@@ -8,8 +8,12 @@ import {
   TopAttendeesTable 
 } from '../components/Dashboard';
 import NativeDashboardExample from '../components/mobile/NativeDashboardExample';
+import Modal from '../components/Modal';
+import MeetingDetails from '../components/MeetingDetails';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalMembers: 0,
     totalMeetings: 0,
@@ -24,6 +28,8 @@ const DashboardPage = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [upcomingMeetings, setUpcomingMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -101,6 +107,28 @@ const DashboardPage = () => {
     );
   }
 
+  const handleMeetingClick = async (meeting) => {
+    try {
+      const meetingDetails = await ApiService.getMeetingById(meeting.id);
+      setSelectedMeeting(meetingDetails);
+      setIsMeetingModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching meeting details:', error);
+    }
+  };
+
+  const handleMemberClick = (member) => {
+    if (member?.id) {
+      navigate(`/members?memberId=${member.id}`);
+    }
+  };
+
+  const handleEventClick = (event) => {
+    if (event?.id) {
+      navigate(`/events?eventId=${event.id}`);
+    }
+  };
+
   const mobileView = isMobile();
   
   // Debug log (production'da kaldırılacak)
@@ -111,13 +139,30 @@ const DashboardPage = () => {
   // Native mobile görünümü için
   if (mobileView) {
     return (
-      <NativeDashboardExample
-        stats={stats}
-        topRegistrars={topRegistrars}
-        topAttendees={topAttendees}
-        upcomingEvents={upcomingEvents}
-        upcomingMeetings={upcomingMeetings}
-      />
+      <>
+        <NativeDashboardExample
+          stats={stats}
+          topRegistrars={topRegistrars}
+          topAttendees={topAttendees}
+          upcomingEvents={upcomingEvents}
+          upcomingMeetings={upcomingMeetings}
+          onMeetingClick={handleMeetingClick}
+          onMemberClick={handleMemberClick}
+          onEventClick={handleEventClick}
+        />
+        <Modal
+          isOpen={isMeetingModalOpen}
+          onClose={() => {
+            setIsMeetingModalOpen(false);
+            setSelectedMeeting(null);
+          }}
+          title={selectedMeeting ? selectedMeeting.name : "Toplantı Detayları"}
+        >
+          {selectedMeeting && (
+            <MeetingDetails meeting={selectedMeeting} />
+          )}
+        </Modal>
+      </>
     );
   }
 
