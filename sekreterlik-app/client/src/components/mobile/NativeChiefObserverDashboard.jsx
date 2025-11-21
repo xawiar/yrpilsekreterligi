@@ -75,6 +75,11 @@ const NativeChiefObserverDashboard = ({
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Kurum Sorumlusu
                   </div>
+                  {institutionSupervisor.phone && (
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      📞 {institutionSupervisor.phone}
+                    </div>
+                  )}
                 </div>
               </div>
             </NativeCard>
@@ -94,6 +99,11 @@ const NativeChiefObserverDashboard = ({
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Bölge Sorumlusu
                   </div>
+                  {regionSupervisor.phone && (
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      📞 {regionSupervisor.phone}
+                    </div>
+                  )}
                 </div>
               </div>
             </NativeCard>

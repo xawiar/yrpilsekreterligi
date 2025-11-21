@@ -78,17 +78,81 @@ const NativeCoordinatorDashboard = ({
 
   return (
     <div className="px-4 py-6 space-y-4 pb-24">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-          Sorumlu Dashboard
-        </h1>
-        {coordinator && (
-          <p className="text-gray-600 dark:text-gray-400 text-base">
-            {coordinator.name || 'Bilinmiyor'} - {getRoleLabel(coordinator.role)}
-          </p>
+      {/* Header with Logout */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+            Sorumlu Dashboard
+          </h1>
+          {coordinator && (
+            <p className="text-gray-600 dark:text-gray-400 text-base">
+              {coordinator.name || 'Bilinmiyor'} - {getRoleLabel(coordinator.role)}
+            </p>
+          )}
+        </div>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="ml-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg active:scale-95"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="hidden sm:inline">Çıkış</span>
+          </button>
         )}
       </div>
+
+      {/* Coordinator Info Card */}
+      {coordinator && (
+        <NativeCard className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">
+                  {coordinator.name || 'Bilinmiyor'}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {getRoleLabel(coordinator.role)}
+                </div>
+              </div>
+            </div>
+            {(coordinator.tc || coordinator.phone) && (
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                {coordinator.tc && (
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">TC Kimlik No</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {coordinator.tc}
+                    </div>
+                  </div>
+                )}
+                {coordinator.phone && (
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Telefon</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {coordinator.phone}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {coordinator.institutionName && (
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Kurum</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {coordinator.institutionName}
+                </div>
+              </div>
+            )}
+          </div>
+        </NativeCard>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3">
@@ -151,6 +215,11 @@ const NativeCoordinatorDashboard = ({
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     {getRoleLabel(parent.role)}
                   </div>
+                  {parent.phone && (
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      📞 {parent.phone}
+                    </div>
+                  )}
                 </div>
               </div>
             </NativeCard>

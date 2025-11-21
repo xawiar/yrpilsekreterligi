@@ -598,6 +598,11 @@ const CoordinatorDashboardPage = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {getRoleLabel(parent.role)}
                     </p>
+                    {parent.phone && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        📞 {parent.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -658,14 +663,9 @@ const CoordinatorDashboardPage = () => {
                   }
                 }
                 
-                // Veri kontrolü: sadece tutanak var mı, sadece veri var mı?
-                const hasProtocol = result.protocol_photo || result.protocol_photos?.length > 0 || 
-                  result.signed_protocol_photo || result.signedProtocolPhoto || 
-                  result.objection_protocol_photo || result.objectionProtocolPhoto;
-                const hasData = result.used_votes > 0 || result.valid_votes > 0 || 
-                  (result.cb_votes && Object.keys(result.cb_votes).length > 0) ||
-                  (result.mv_votes && Object.keys(result.mv_votes).length > 0) ||
-                  (result.mayor_votes && Object.keys(result.mayor_votes).length > 0);
+                // Veri kontrolü: hasData ve hasProtocol fonksiyonlarını kullan
+                const hasProtocolResult = hasProtocol(result);
+                const hasDataResult = hasData(result);
                 
                 // En fazla oy alan parti/aday
                 const winningParty = getWinningParty(result, election);
@@ -676,11 +676,11 @@ const CoordinatorDashboardPage = () => {
                 let cardStyle = {};
                 if (hasObjection) {
                   cardStyle = { borderColor: '#EF4444', backgroundColor: '#FEF2F2', color: '#991B1B' };
-                } else if (hasProtocol && !hasData) {
+                } else if (hasProtocolResult && !hasDataResult) {
                   cardStyle = { borderColor: '#EF4444', backgroundColor: '#FEF2F2', color: '#991B1B' };
-                } else if (hasData && !hasProtocol) {
+                } else if (hasDataResult && !hasProtocolResult) {
                   cardStyle = { borderColor: '#F59E0B', backgroundColor: '#FFFBEB', color: '#92400E' };
-                } else if (partyColor) {
+                } else if (hasDataResult && hasProtocolResult && partyColor) {
                   cardStyle = { borderColor: partyColor.border, backgroundColor: partyColor.bg, color: partyColor.text };
                 } else {
                   cardStyle = { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB', color: '#6B7280' };
@@ -702,19 +702,24 @@ const CoordinatorDashboardPage = () => {
                         <h3 className="text-lg font-semibold" style={{ color: cardStyle.color }}>
                           Sandık No: {ballotBox?.ballot_number || result.ballot_box_id}
                         </h3>
-                        {winningParty && !hasObjection && hasData && (
+                        {winningParty && !hasObjection && hasDataResult && (
                           <div className="text-xs mt-1" style={{ color: cardStyle.color, opacity: 0.8 }}>
                             En Çok Oy: {winningParty}
                           </div>
                         )}
-                        {hasProtocol && !hasData && (
+                        {hasProtocolResult && !hasDataResult && (
                           <div className="text-xs mt-1 text-red-600 dark:text-red-400 font-semibold">
                             ⚠️ Sadece Tutanak (Veri Yok)
                           </div>
                         )}
-                        {hasData && !hasProtocol && (
+                        {hasDataResult && !hasProtocolResult && (
                           <div className="text-xs mt-1 text-yellow-600 dark:text-yellow-400 font-semibold">
                             ⚠️ Sadece Veri (Tutanak Yok)
+                          </div>
+                        )}
+                        {!hasDataResult && !hasProtocolResult && (
+                          <div className="text-xs mt-1 text-gray-500 dark:text-gray-400 font-semibold">
+                            ⏳ Sonuç Girilmemiş
                           </div>
                         )}
                       </div>
@@ -757,7 +762,7 @@ const CoordinatorDashboardPage = () => {
                     )}
                     
                     {/* Oy Sayıları */}
-                    {hasData && (
+                    {hasDataResult && (
                       <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
                         <div>
                           <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
