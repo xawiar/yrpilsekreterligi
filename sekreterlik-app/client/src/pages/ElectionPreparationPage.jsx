@@ -206,17 +206,8 @@ const ElectionPreparationPage = () => {
 
         {/* Content Area - Alt sayfalar burada render edilecek */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[500px]">
-          {/* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */}
-          {activeTab === 'ballot-boxes' && <BallotBoxesPage />}
-          {activeTab === 'observers' && <ObserversPage />}
-          {activeTab === 'representatives' && <RepresentativesPage />}
-          {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
-          {activeTab === 'villages' && <VillagesPage />}
-          {activeTab === 'groups' && <GroupsPage />}
-          {activeTab === 'coordinators' && <CoordinatorsPage />}
-          
           {/* Route-based navigation - Standalone route olarak kullanıldığında çalışır */}
-          {location.pathname.startsWith('/election-preparation') && (
+          {location.pathname.startsWith('/election-preparation') ? (
             <Routes>
               <Route index element={<Navigate to="/election-preparation/ballot-boxes" replace />} />
               <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
@@ -227,6 +218,17 @@ const ElectionPreparationPage = () => {
               <Route path="groups" element={<GroupsPage />} />
               <Route path="coordinators/*" element={<CoordinatorsPage />} />
             </Routes>
+          ) : (
+            /* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */
+            <>
+              {activeTab === 'ballot-boxes' && <BallotBoxesPage />}
+              {activeTab === 'observers' && <ObserversPage />}
+              {activeTab === 'representatives' && <RepresentativesPage />}
+              {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
+              {activeTab === 'villages' && <VillagesPage />}
+              {activeTab === 'groups' && <GroupsPage />}
+              {activeTab === 'coordinators' && <CoordinatorsPage />}
+            </>
           )}
         </div>
       </div>
