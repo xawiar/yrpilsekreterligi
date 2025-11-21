@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
 import MemberDetails from '../components/MemberDetails';
 import MemberForm from '../components/MemberForm';
@@ -11,6 +12,7 @@ import MembersTable from '../components/Members/MembersTable';
 import ExcelImportPreview from '../components/Members/ExcelImportPreview';
 import { calculateMeetingStats, getAttendanceColor, calculateSummaryStats, calculateMemberRegistrations } from '../components/Members/membersUtils';
 import LoadingState from '../components/Members/LoadingState';
+import NativeMembersList from '../components/mobile/NativeMembersList';
 
 const MembersPage = () => {
   const [members, setMembers] = useState([]);
@@ -488,6 +490,153 @@ const MembersPage = () => {
     return <LoadingState />;
   }
 
+  const mobileView = isMobile();
+
+  // Native mobile görünümü
+  if (mobileView) {
+    return (
+      <>
+        <NativeMembersList
+          members={filteredMembers}
+          onMemberClick={handleShowMember}
+          onAddMember={handleAddMember}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedRegion={selectedRegion}
+          onRegionChange={setSelectedRegion}
+          regions={regions}
+          loading={loading}
+        />
+
+        {/* Modals - Mobilde de çalışır */}
+        <Modal
+          isOpen={isDetailModalOpen}
+          onClose={closeDetailModal}
+          title={selectedMember ? selectedMember.name : "Üye Detayları"}
+        >
+          {selectedMember && (
+            <MemberDetails 
+              member={selectedMember} 
+              meetings={meetings} 
+              events={events}
+              memberRegistrations={memberRegistrations}
+              calculateMeetingStats={calculateMeetingStats}
+            />
+          )}
+        </Modal>
+
+        <Modal
+          isOpen={isFormModalOpen}
+          onClose={closeFormModal}
+          title={formMode === 'edit' ? "Üyeyi Düzenle" : "Yeni Üye Ekle"}
+        >
+          <MemberForm
+            member={selectedMember}
+            regions={regions}
+            positions={positions}
+            onClose={closeFormModal}
+            onMemberSaved={handleMemberSaved}
+          />
+        </Modal>
+
+        <Modal
+          isOpen={isRegistrationModalOpen}
+          onClose={() => { setIsRegistrationModalOpen(false); setSelectedMember(null); }}
+          title={selectedMember ? `${selectedMember.name} - Üye Kaydı Ekle` : 'Üye Kaydı Ekle'}
+        >
+          {selectedMember && (
+            <MemberRegistrationForm
+              member={selectedMember}
+              onClose={() => { setIsRegistrationModalOpen(false); setSelectedMember(null); }}
+              onRegistrationSaved={async () => {
+                await fetchMemberRegistrations();
+                setIsRegistrationModalOpen(false);
+                setSelectedMember(null);
+              }}
+            />
+          )}
+        </Modal>
+
+        <Modal
+          isOpen={isRegistrationHistoryOpen}
+          onClose={() => { setIsRegistrationHistoryOpen(false); setSelectedMember(null); setEditingRegistration(null); }}
+          title={selectedMember ? `${selectedMember.name} - Kayıt Geçmişi` : 'Kayıt Geçmişi'}
+        >
+          {selectedMember && (
+            <div className="space-y-4">
+              {editingRegistration ? (
+                <MemberRegistrationForm
+                  member={selectedMember}
+                  initialData={editingRegistration}
+                  onClose={() => setEditingRegistration(null)}
+                  onRegistrationSaved={async () => {
+                    await fetchMemberRegistrations();
+                    setEditingRegistration(null);
+                  }}
+                />
+              ) : null}
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tarih</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Adet</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {memberRegistrations
+                      .filter(r => r.memberId === selectedMember.id)
+                      .sort((a,b) => (a.date < b.date ? 1 : -1))
+                      .map(reg => (
+                        <tr key={reg.id || `${reg.memberId}-${reg.date}`}>
+                          <td className="px-4 py-2 text-sm text-gray-700">{reg.date}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{reg.count}</td>
+                          <td className="px-4 py-2 text-sm font-medium space-x-2">
+                            <button
+                              className="inline-flex items-center px-2 py-1 border border-transparent text-xs rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                              onClick={() => handleEditRegistration(reg)}
+                            >
+                              Düzenle
+                            </button>
+                            {reg.id && (
+                              <button
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs rounded-md text-white bg-red-600 hover:bg-red-700"
+                                onClick={() => handleDeleteRegistration(reg.id)}
+                              >
+                                Sil
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    {memberRegistrations.filter(r => r.memberId === selectedMember.id).length === 0 && (
+                      <tr>
+                        <td colSpan="3" className="px-4 py-6 text-center text-sm text-gray-500">Kayıt bulunamadı.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Excel Import Preview Modal */}
+        {excelImportPreview && (
+          <ExcelImportPreview
+            previewData={excelImportPreview}
+            onConfirm={handleConfirmExcelImport}
+            onCancel={handleCancelExcelImport}
+            loading={excelImportLoading}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Desktop görünümü (mevcut)
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       <MembersHeader onAddMember={handleAddMember} />
