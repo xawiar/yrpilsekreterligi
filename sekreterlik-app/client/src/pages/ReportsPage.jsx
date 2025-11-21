@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -23,6 +23,20 @@ const ReportsPage = () => {
   const [savingStars, setSavingStars] = useState({});
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const mobileView = isMobile();
+  
+  // Üye arama filtresi - useMemo ile optimize edildi
+  const filteredScores = useMemo(() => {
+    return stats.performanceScores.filter(item => {
+      if (!memberSearchTerm) return true;
+      const searchLower = memberSearchTerm.toLowerCase();
+      return (
+        item.member.name?.toLowerCase().includes(searchLower) ||
+        item.member.position?.toLowerCase().includes(searchLower) ||
+        item.member.region?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [stats.performanceScores, memberSearchTerm]);
+  
   const [stats, setStats] = useState({
     // Genel İstatistikler
     totalMembers: 0,
@@ -1315,34 +1329,17 @@ const ReportsPage = () => {
             </div>
           </div>
           
-          {(() => {
-            // Üye arama filtresi
-            const filteredScores = stats.performanceScores.filter(item => {
-              if (!memberSearchTerm) return true;
-              const searchLower = memberSearchTerm.toLowerCase();
-              return (
-                item.member.name?.toLowerCase().includes(searchLower) ||
-                item.member.position?.toLowerCase().includes(searchLower) ||
-                item.member.region?.toLowerCase().includes(searchLower)
-              );
-            });
-
-            if (filteredScores.length === 0) {
-              return (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {stats.performanceScores.length === 0 
-                      ? 'Henüz performans puanı hesaplanamadı'
-                      : 'Arama kriterlerine uygun üye bulunamadı'}
-                  </p>
-                </div>
-              );
-            }
-
+          {filteredScores.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {stats.performanceScores.length === 0 
+                  ? 'Henüz performans puanı hesaplanamadı'
+                  : 'Arama kriterlerine uygun üye bulunamadı'}
+              </p>
+            </div>
+          ) : mobileView ? (
             // Mobilde kart görünümü
-            if (mobileView) {
-              return (
-                <div className="space-y-3">
+            <div className="space-y-3">
                   {filteredScores.map((item, index) => (
                     <NativeCard key={item.member.id}>
                       <div className="flex items-start space-x-3">
@@ -1428,12 +1425,9 @@ const ReportsPage = () => {
                     </NativeCard>
                   ))}
                 </div>
-              );
-            }
-
+          ) : (
             // Desktop table görünümü
-            return (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-700">
@@ -1570,8 +1564,7 @@ const ReportsPage = () => {
               </table>
             </div>
           </div>
-            );
-          })()}
+          )}
         </div>
 
         {/* Kamu Kurumu İstatistikleri */}
