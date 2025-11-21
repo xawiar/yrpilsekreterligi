@@ -318,6 +318,38 @@ const ChiefObserverDashboardPage = () => {
                     )}
                   </div>
                 )}
+                
+                {/* Üst Sorumlular Bilgilendirmesi */}
+                {(institutionSupervisor || regionSupervisor) && (
+                  <div className="mt-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                    <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Üst Sorumlular
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      {institutionSupervisor && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-indigo-200">Kurum Sorumlusu:</span>
+                          <span className="font-medium text-white">{institutionSupervisor.name}</span>
+                          {institutionSupervisor.phone && (
+                            <span className="text-indigo-200">({institutionSupervisor.phone})</span>
+                          )}
+                        </div>
+                      )}
+                      {regionSupervisor && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-indigo-200">Bölge Sorumlusu:</span>
+                          <span className="font-medium text-white">{regionSupervisor.name}</span>
+                          {regionSupervisor.phone && (
+                            <span className="text-indigo-200">({regionSupervisor.phone})</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <button
