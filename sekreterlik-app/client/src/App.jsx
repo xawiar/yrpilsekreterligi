@@ -15,7 +15,8 @@ import {
   MosqueManagerRoute,
   TownPresidentRoleRoute,
   PublicRoute,
-  ChiefObserverRoute
+  ChiefObserverRoute,
+  CoordinatorRoute
 } from './routes/RoleGuards';
 
 // Lazy loading - Code splitting için
@@ -252,6 +253,16 @@ function RouterContent() {
             }
           />
           
+          {/* Election Result Edit - Admin ve Coordinator erişebilir */}
+          <Route 
+            path="/election-results/:electionId/edit/:resultId" 
+            element={
+              <CoordinatorRoute>
+                <ElectionResultEditPage />
+              </CoordinatorRoute>
+            }
+          />
+          
           {/* Admin Routes */}
           <Route 
             path="/*" 
@@ -335,7 +346,6 @@ function RouterContent() {
             <Route path="/election-preparation/ballot-boxes/:id/details" element={<BallotBoxDetailsPage />} />
             <Route path="/elections" element={<ElectionsListPage />} />
             <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
-            <Route path="/election-results/:electionId/edit/:resultId" element={<ElectionResultEditPage />} />
             <Route path="/bulk-sms" element={<BulkSmsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />

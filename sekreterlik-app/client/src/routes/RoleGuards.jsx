@@ -150,3 +150,18 @@ export const ChiefObserverRoute = ({ children }) => {
   return children;
 };
 
+// Coordinator route component - allows both admin and coordinator users
+export const CoordinatorRoute = ({ children }) => {
+  const { isLoggedIn, user, userRole, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  
+  // Admin ve coordinator kullanıcıları erişebilir
+  const coordinatorRoles = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
+  if (user?.role === 'admin' || coordinatorRoles.includes(userRole)) {
+    return children;
+  }
+  
+  return <Navigate to="/login" />;
+};
+
