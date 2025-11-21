@@ -6,6 +6,8 @@ import jsPDF from 'jspdf';
 import { TopRegistrarsTable, TopAttendeesTable } from '../components/Dashboard';
 import { calculateAllMemberScores } from '../utils/performanceScore';
 import { useAuth } from '../contexts/AuthContext';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeCard from '../components/mobile/NativeCard';
 
 const ReportsPage = () => {
   const { user } = useAuth();
@@ -738,34 +740,12 @@ const ReportsPage = () => {
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Raporlar</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Raporlar</h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Genel istatistikler ve performans metrikleri
             </p>
-          </div>
-          
-          {/* Export Butonları */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleExportPDF}
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              PDF İndir
-            </button>
-            <button
-              onClick={handleExportExcel}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Excel İndir
-            </button>
           </div>
         </div>
 
@@ -1319,11 +1299,11 @@ const ReportsPage = () => {
 
         {/* Performans Puanları */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Üye Performans Puanları
             </h2>
-            <div className="w-64">
+            <div className="w-full sm:w-64">
               <input
                 type="text"
                 value={memberSearchTerm}
@@ -1333,72 +1313,54 @@ const ReportsPage = () => {
               />
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Sıra
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Üye Adı
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Seviye
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Toplam Puan
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Detaylar
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {(() => {
-                    // Üye arama filtresi
-                    const filteredScores = stats.performanceScores.filter(item => {
-                      if (!memberSearchTerm) return true;
-                      const searchLower = memberSearchTerm.toLowerCase();
-                      return (
-                        item.member.name?.toLowerCase().includes(searchLower) ||
-                        item.member.position?.toLowerCase().includes(searchLower) ||
-                        item.member.region?.toLowerCase().includes(searchLower)
-                      );
-                    });
+          
+          {(() => {
+            const mobileView = isMobile();
+            // Üye arama filtresi
+            const filteredScores = stats.performanceScores.filter(item => {
+              if (!memberSearchTerm) return true;
+              const searchLower = memberSearchTerm.toLowerCase();
+              return (
+                item.member.name?.toLowerCase().includes(searchLower) ||
+                item.member.position?.toLowerCase().includes(searchLower) ||
+                item.member.region?.toLowerCase().includes(searchLower)
+              );
+            });
 
-                    if (filteredScores.length === 0) {
-                      return (
-                        <tr>
-                          <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                            {stats.performanceScores.length === 0 
-                              ? 'Henüz performans puanı hesaplanamadı'
-                              : 'Arama kriterlerine uygun üye bulunamadı'}
-                          </td>
-                        </tr>
-                      );
-                    }
+            if (filteredScores.length === 0) {
+              return (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {stats.performanceScores.length === 0 
+                      ? 'Henüz performans puanı hesaplanamadı'
+                      : 'Arama kriterlerine uygun üye bulunamadı'}
+                  </p>
+                </div>
+              );
+            }
 
-                    return filteredScores.map((item, index) => (
-                      <tr key={item.member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                            index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
-                            index === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' :
-                            index === 2 ? 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200' :
-                            'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                          }`}>
-                            {index + 1}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {item.member.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
+            // Mobilde kart görünümü
+            if (mobileView) {
+              return (
+                <div className="space-y-3">
+                  {filteredScores.map((item, index) => (
+                    <NativeCard key={item.member.id}>
+                      <div className="flex items-start space-x-3">
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                          index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                          index === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' :
+                          index === 2 ? 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200' :
+                          'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1">
+                            {item.member.name}
+                          </div>
+                          <div className="flex items-center space-x-2 mb-2">
                             <span 
-                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                               style={{ 
                                 backgroundColor: `${item.levelColor}20`,
                                 color: item.levelColor,
@@ -1409,8 +1371,122 @@ const ReportsPage = () => {
                             </span>
                             <div className="flex items-center space-x-0.5">
                               {canSetStars ? (
-                                // Admin/District President için tıklanabilir yıldızlar
                                 [...Array(5)].map((_, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => handleSaveStars(item.member.id, i + 1)}
+                                    disabled={savingStars[item.member.id]}
+                                    className={`text-lg ${i < (item.member.manualStars || 0) ? 'text-yellow-400' : 'text-gray-300'} disabled:opacity-50`}
+                                  >
+                                    ★
+                                  </button>
+                                ))
+                              ) : (
+                                [...Array(5)].map((_, i) => (
+                                  <span
+                                    key={i}
+                                    className={`text-sm ${i < (item.member.manualStars || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                  >
+                                    ★
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                            {canSetStars && (
+                              <button
+                                onClick={() => handleSaveStars(item.member.id, null)}
+                                disabled={savingStars[item.member.id]}
+                                className="ml-1 text-xs text-red-500 hover:text-red-600 disabled:opacity-50"
+                                title="Yıldızı temizle"
+                              >
+                                Temizle
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                            Toplam Puan: {item.totalScore}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            <div>📅 Toplantı: {item.details.meetingAttendance} (+{item.details.breakdown.meetingPoints})</div>
+                            <div>🎉 Etkinlik: {item.details.eventAttendance} (+{item.details.breakdown.eventPoints})</div>
+                            {item.details.meetingAbsence > 0 && (
+                              <div className="text-red-600 dark:text-red-400">
+                                ❌ Mazeretsiz: {item.details.meetingAbsence} ({item.details.breakdown.absencePenalty})
+                              </div>
+                            )}
+                            {item.details.memberRegistrations > 0 && (
+                              <div>👥 Kayıt: {item.details.memberRegistrations} (+{item.details.breakdown.registrationPoints})</div>
+                            )}
+                            {item.details.breakdown.bonusPoints > 0 && (
+                              <div className="text-green-600 dark:text-green-400">
+                                ⭐ Bonus: +{item.details.breakdown.bonusPoints}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </NativeCard>
+                  ))}
+                </div>
+              );
+            }
+
+            // Desktop table görünümü
+            return (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Sıra
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Üye Adı
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Seviye
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Toplam Puan
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Detaylar
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {filteredScores.map((item, index) => (
+                        <tr key={item.member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
+                              index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                              index === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' :
+                              index === 2 ? 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200' :
+                              'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {item.member.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-2">
+                              <span 
+                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                                style={{ 
+                                  backgroundColor: `${item.levelColor}20`,
+                                  color: item.levelColor,
+                                  border: `1px solid ${item.levelColor}40`
+                                }}
+                              >
+                                {item.level}
+                              </span>
+                              <div className="flex items-center space-x-0.5">
+                                {canSetStars ? (
+                                  // Admin/District President için tıklanabilir yıldızlar
+                                  [...Array(5)].map((_, i) => (
                                   <button
                                     key={i}
                                     onClick={() => handleSaveStars(item.member.id, i + 1)}
@@ -1559,6 +1635,30 @@ const ReportsPage = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Export Butonları - En Alta */}
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <button
+              onClick={handleExportPDF}
+              className="inline-flex items-center justify-center px-3 py-2 bg-red-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              PDF İndir
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="inline-flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Excel İndir
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -30,44 +30,72 @@ const NativeCoordinatorDashboard = ({
 }) => {
   const navigate = useNavigate();
 
-  // Sandık numarasına göre unique hale getir - sadece gerçekten seçim sonucu girilmiş olanları göster
-  const uniqueResultsByBallotNumber = {};
-  electionResults.forEach((result) => {
-    // Sadece gerçekten seçim sonucu girilmiş olanları göster (hasData veya hasProtocol)
-    const hasDataResult = hasData(result);
-    const hasProtocolResult = hasProtocol(result);
-    
-    if (!hasDataResult && !hasProtocolResult) {
-      // Bu sonuç gerçek bir seçim sonucu değil, atla
-      return;
+  // Tüm sandıkları ve sonuçlarını gruplandır
+  const allBallotBoxesWithResults = {};
+  
+  // Önce tüm sandıkları ekle
+  ballotBoxes.forEach((ballotBox) => {
+    const ballotNumber = ballotBox.ballot_number || ballotBox.id;
+    if (!allBallotBoxesWithResults[ballotNumber]) {
+      allBallotBoxesWithResults[ballotNumber] = {
+        ballotBox,
+        result: null,
+        hasData: false,
+        hasProtocol: false,
+        hasObjection: false
+      };
     }
-    
+  });
+  
+  // Sonuçları ekle
+  electionResults.forEach((result) => {
     const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
     const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
     
-    if (!uniqueResultsByBallotNumber[ballotNumber] || 
-        (result.created_at && uniqueResultsByBallotNumber[ballotNumber].created_at && 
-         new Date(result.created_at) > new Date(uniqueResultsByBallotNumber[ballotNumber].created_at)) ||
-        (result.id > uniqueResultsByBallotNumber[ballotNumber].id)) {
-      uniqueResultsByBallotNumber[ballotNumber] = result;
+    const hasDataResult = hasData(result);
+    const hasProtocolResult = hasProtocol(result);
+    const hasObjectionResult = result.has_objection === true || result.has_objection === 1;
+    
+    if (!allBallotBoxesWithResults[ballotNumber]) {
+      allBallotBoxesWithResults[ballotNumber] = {
+        ballotBox: ballotBox || { id: result.ballot_box_id, ballot_number: ballotNumber },
+        result: null,
+        hasData: false,
+        hasProtocol: false,
+        hasObjection: false
+      };
+    }
+    
+    // Daha yeni sonuç varsa güncelle
+    if (!allBallotBoxesWithResults[ballotNumber].result || 
+        (result.created_at && allBallotBoxesWithResults[ballotNumber].result?.created_at && 
+         new Date(result.created_at) > new Date(allBallotBoxesWithResults[ballotNumber].result.created_at)) ||
+        (result.id > allBallotBoxesWithResults[ballotNumber].result?.id)) {
+      allBallotBoxesWithResults[ballotNumber].result = result;
+      allBallotBoxesWithResults[ballotNumber].hasData = hasDataResult;
+      allBallotBoxesWithResults[ballotNumber].hasProtocol = hasProtocolResult;
+      allBallotBoxesWithResults[ballotNumber].hasObjection = hasObjectionResult;
     }
   });
   
-  const uniqueResults = Object.values(uniqueResultsByBallotNumber);
+  // Gruplandır
+  const completed = []; // hasData && hasProtocol && !hasObjection
+  const missingProtocol = []; // hasData && !hasProtocol
+  const onlyProtocol = []; // !hasData && hasProtocol
+  const noData = []; // !hasData && !hasProtocol
+  const objected = []; // hasObjection
   
-  // Sonuç girilmemiş sandıklar
-  const ballotBoxesWithoutResults = ballotBoxes.filter(bb => {
-    const hasResult = uniqueResults.some(r => String(r.ballot_box_id) === String(bb.id));
-    return !hasResult;
-  });
-  
-  // Sandık numarasına göre unique hale getir
-  const uniqueBallotBoxes = [];
-  const seenNumbers = new Set();
-  ballotBoxesWithoutResults.forEach(bb => {
-    if (!seenNumbers.has(bb.ballot_number)) {
-      seenNumbers.add(bb.ballot_number);
-      uniqueBallotBoxes.push(bb);
+  Object.values(allBallotBoxesWithResults).forEach((item) => {
+    if (item.hasObjection) {
+      objected.push(item);
+    } else if (item.hasData && item.hasProtocol) {
+      completed.push(item);
+    } else if (item.hasData && !item.hasProtocol) {
+      missingProtocol.push(item);
+    } else if (!item.hasData && item.hasProtocol) {
+      onlyProtocol.push(item);
+    } else {
+      noData.push(item);
     }
   });
 
@@ -178,10 +206,10 @@ const NativeCoordinatorDashboard = ({
 
         <NativeCard className="text-center">
           <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
-            {uniqueResults.length}
+            {completed.length}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Sonuç Girildi
+            Tamamlanan
           </div>
         </NativeCard>
       </div>
@@ -238,31 +266,78 @@ const NativeCoordinatorDashboard = ({
         </div>
       )}
 
-      {/* Seçim Sonuçları */}
-      {uniqueResults.length > 0 && (
+      {/* İtiraz Edilen Sandıklar */}
+      {objected.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 px-1">
-            Seçim Sonuçları
+          <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 px-1">
+            İtiraz Edilen Sandıklar ({objected.length})
           </h2>
-          {uniqueResults.map((result) => {
-            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-            const election = elections.find(e => String(e.id) === String(result.election_id));
-            const location = getLocationInfo(ballotBox || {});
-            const winningParty = getWinningParty(result, election);
-            const partyColor = getPartyColor(winningParty);
-            const hasDataResult = hasData(result);
-            const hasProtocolResult = hasProtocol(result);
-            const hasObjection = result.has_objection === true || result.has_objection === 1;
+          {objected.map((item, index) => {
+            const { ballotBox, result } = item;
+            const election = result ? elections.find(e => String(e.id) === String(result.election_id)) : null;
+            const location = getLocationInfo(ballotBox);
+            const winningParty = result ? getWinningParty(result, election) : null;
+            const partyColor = winningParty ? getPartyColor(winningParty) : null;
             
             return (
               <NativeCard
-                key={result.id}
+                key={ballotBox.id || index}
+                onClick={() => result ? navigate(`/election-results/${result.election_id}/edit/${result.id}`) : null}
+                className={result ? 'cursor-pointer active:scale-[0.98]' : ''}
+                style={{ borderColor: '#EF4444', borderWidth: '2px' }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-red-500 to-red-600 flex items-center justify-center flex-shrink-0">
+                    <div className="text-white font-bold text-lg">
+                      {ballotBox.ballot_number || '?'}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1">
+                      {election?.name || 'Seçim'}
+                    </div>
+                    {location.district && (
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        📍 {[location.district, location.town, location.neighborhood, location.village].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                    <div className="mt-2">
+                      <span className="px-2 py-1 text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
+                        ⚠️ İtiraz Edildi
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </NativeCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Seçimi Tamamlananlar */}
+      {completed.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-green-600 dark:text-green-400 px-1">
+            Seçimi Tamamlananlar ({completed.length})
+          </h2>
+          {completed.map((item, index) => {
+            const { ballotBox, result } = item;
+            const election = result ? elections.find(e => String(e.id) === String(result.election_id)) : null;
+            const location = getLocationInfo(ballotBox);
+            const winningParty = result ? getWinningParty(result, election) : null;
+            const partyColor = winningParty ? getPartyColor(winningParty) : null;
+            
+            return (
+              <NativeCard
+                key={ballotBox.id || index}
                 onClick={() => navigate(`/election-results/${result.election_id}/edit/${result.id}`)}
+                className="cursor-pointer active:scale-[0.98]"
+                style={{ borderColor: '#10B981', borderWidth: '2px' }}
               >
                 <div className="flex items-start space-x-4">
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
                     <div className="text-white font-bold text-lg">
-                      {ballotBox?.ballot_number || '?'}
+                      {ballotBox.ballot_number || '?'}
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -289,10 +364,51 @@ const NativeCoordinatorDashboard = ({
                       </div>
                     )}
                   </div>
-                  <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                </div>
+              </NativeCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tutanak Eksik Olanlar */}
+      {missingProtocol.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-yellow-600 dark:text-yellow-400 px-1">
+            Tutanak Eksik Olanlar ({missingProtocol.length})
+          </h2>
+          {missingProtocol.map((item, index) => {
+            const { ballotBox, result } = item;
+            const election = result ? elections.find(e => String(e.id) === String(result.election_id)) : null;
+            const location = getLocationInfo(ballotBox);
+            
+            return (
+              <NativeCard
+                key={ballotBox.id || index}
+                onClick={() => navigate(`/election-results/${result.election_id}/edit/${result.id}`)}
+                className="cursor-pointer active:scale-[0.98]"
+                style={{ borderColor: '#F59E0B', borderWidth: '2px' }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                    <div className="text-white font-bold text-lg">
+                      {ballotBox.ballot_number || '?'}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1">
+                      {election?.name || 'Seçim'}
+                    </div>
+                    {location.district && (
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        📍 {[location.district, location.town, location.neighborhood, location.village].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                    <div className="mt-2">
+                      <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg">
+                        ⚠️ Tutanak Eksik
+                      </span>
+                    </div>
                   </div>
                 </div>
               </NativeCard>
@@ -301,19 +417,66 @@ const NativeCoordinatorDashboard = ({
         </div>
       )}
 
-      {/* Sandıklar (Sonuç Girilmemiş) */}
-      {uniqueBallotBoxes.length > 0 && (
+      {/* Sadece Tutanak Yüklenenler */}
+      {onlyProtocol.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 px-1">
-            Sonuç Girilmemiş Sandıklar
+          <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 px-1">
+            Sadece Tutanak Yüklenenler ({onlyProtocol.length})
           </h2>
-          {uniqueBallotBoxes.map((ballotBox) => {
+          {onlyProtocol.map((item, index) => {
+            const { ballotBox, result } = item;
+            const election = result ? elections.find(e => String(e.id) === String(result.election_id)) : null;
             const location = getLocationInfo(ballotBox);
             
             return (
-              <NativeCard key={ballotBox.id}>
+              <NativeCard
+                key={ballotBox.id || index}
+                onClick={() => navigate(`/election-results/${result.election_id}/edit/${result.id}`)}
+                className="cursor-pointer active:scale-[0.98]"
+                style={{ borderColor: '#EF4444', borderWidth: '2px' }}
+              >
                 <div className="flex items-start space-x-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <div className="text-white font-bold text-lg">
+                      {ballotBox.ballot_number || '?'}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1">
+                      {election?.name || 'Seçim'}
+                    </div>
+                    {location.district && (
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        📍 {[location.district, location.town, location.neighborhood, location.village].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                    <div className="mt-2">
+                      <span className="px-2 py-1 text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
+                        ⚠️ Sadece Tutanak (Veri Yok)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </NativeCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Hiç Veri Girilmeyenler */}
+      {noData.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-gray-600 dark:text-gray-400 px-1">
+            Hiç Veri Girilmeyenler ({noData.length})
+          </h2>
+          {noData.map((item, index) => {
+            const { ballotBox } = item;
+            const location = getLocationInfo(ballotBox);
+            
+            return (
+              <NativeCard key={ballotBox.id || index} style={{ borderColor: '#E5E7EB', borderWidth: '2px' }}>
+                <div className="flex items-start space-x-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center flex-shrink-0">
                     <div className="text-white font-bold text-lg">
                       {ballotBox.ballot_number || '?'}
                     </div>
@@ -333,8 +496,8 @@ const NativeCoordinatorDashboard = ({
                       </div>
                     )}
                     <div className="mt-2">
-                      <span className="px-2 py-1 text-xs font-semibold bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded-lg">
-                        ⏳ Sonuç Bekleniyor
+                      <span className="px-2 py-1 text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg">
+                        ⏳ Hiç Veri Girilmemiş
                       </span>
                     </div>
                   </div>
@@ -343,15 +506,6 @@ const NativeCoordinatorDashboard = ({
             );
           })}
         </div>
-      )}
-
-      {/* Tüm sandıklar sonuç girildiyse */}
-      {uniqueBallotBoxes.length === 0 && uniqueResults.length > 0 && (
-        <NativeCard>
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-            Tüm sandıklar için sonuç girildi ✅
-          </p>
-        </NativeCard>
       )}
     </div>
   );

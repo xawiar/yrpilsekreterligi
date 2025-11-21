@@ -52,23 +52,27 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (mobileView) {
     return (
       <div 
-        className="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 flex items-end sm:items-center justify-center z-50"
+        className="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 flex items-end justify-center z-50"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             onClose();
           }
         }}
+        style={{
+          overscrollBehavior: 'contain'
+        }}
       >
         <div 
-          className="bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:w-auto sm:max-w-2xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col animate-slide-up sm:animate-none"
+          className="bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-slide-up"
           onClick={(e) => e.stopPropagation()}
           style={{
-            animation: mobileView ? 'slideUp 0.3s ease-out' : 'none'
+            animation: 'slideUp 0.3s ease-out',
+            maxHeight: '85vh'
           }}
         >
           {/* Header - Native mobile style */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-2">{title}</h2>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 pr-2 flex-1 truncate">{title}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex-shrink-0 active:scale-95"
@@ -79,7 +83,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
               </svg>
             </button>
           </div>
-          <div className="p-6 overflow-y-auto flex-1 min-h-0 pb-6">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
             {children}
           </div>
         </div>

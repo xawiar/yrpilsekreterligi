@@ -4,6 +4,7 @@ import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
 import { isMobile } from '../utils/capacitorUtils';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import NativeCoordinatorDashboard from '../components/mobile/NativeCoordinatorDashboard';
 
 // Parti renkleri - Türkiye'deki yaygın partiler
@@ -231,68 +232,65 @@ const CoordinatorDashboardPage = () => {
     }
   }, [isLoggedIn, userRole, user, navigate, loading]);
 
-  // Dashboard verilerini yükle
-  useEffect(() => {
+  // Dashboard verilerini yükle - useCallback ile sarmalıyoruz pull-to-refresh için
+  const loadData = useCallback(async () => {
     if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user || !user.coordinatorId) return;
 
     let isMounted = true;
 
-    const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const dashboardData = await ApiService.getCoordinatorDashboard(user.coordinatorId);
+      
+      if (!isMounted) return;
+
+      setCoordinator(dashboardData.coordinator);
+      setBallotBoxes(dashboardData.ballotBoxes || []);
+      setRegionInfo(dashboardData.regionInfo || null);
+      setNeighborhoods(dashboardData.neighborhoods || []);
+      setVillages(dashboardData.villages || []);
+      setParentCoordinators(dashboardData.parentCoordinators || []);
+      setElectionResults(dashboardData.electionResults || []);
+      
+      // Seçimleri de yükle
+      const allElections = await ApiService.getElections();
+      setElections(allElections || []);
+      
+      // Observers, districts, towns, neighborhoods, villages yükle (seçim sonuçları kartları için)
       try {
-        setLoading(true);
-        setError(null);
-
-        const dashboardData = await ApiService.getCoordinatorDashboard(user.coordinatorId);
-        
-        if (!isMounted) return;
-
-        setCoordinator(dashboardData.coordinator);
-        setBallotBoxes(dashboardData.ballotBoxes || []);
-        setRegionInfo(dashboardData.regionInfo || null);
-        setNeighborhoods(dashboardData.neighborhoods || []);
-        setVillages(dashboardData.villages || []);
-        setParentCoordinators(dashboardData.parentCoordinators || []);
-        setElectionResults(dashboardData.electionResults || []);
-        
-        // Seçimleri de yükle
-        const allElections = await ApiService.getElections();
-        setElections(allElections || []);
-        
-        // Observers, districts, towns, neighborhoods, villages yükle (seçim sonuçları kartları için)
-        try {
-          const [observersData, districtsData, townsData, neighborhoodsData, villagesData] = await Promise.all([
-            ApiService.getBallotBoxObservers(),
-            ApiService.getDistricts(),
-            ApiService.getTowns(),
-            ApiService.getNeighborhoods(),
-            ApiService.getVillages()
-          ]);
-          setObservers(observersData || []);
-          setDistricts(districtsData || []);
-          setTowns(townsData || []);
-          setNeighborhoodsList(neighborhoodsData || []);
-          setVillagesList(villagesData || []);
-        } catch (err) {
-          console.error('Error fetching location data:', err);
-        }
+        const [observersData, districtsData, townsData, neighborhoodsData, villagesData] = await Promise.all([
+          ApiService.getBallotBoxObservers(),
+          ApiService.getDistricts(),
+          ApiService.getTowns(),
+          ApiService.getNeighborhoods(),
+          ApiService.getVillages()
+        ]);
+        setObservers(observersData || []);
+        setDistricts(districtsData || []);
+        setTowns(townsData || []);
+        setNeighborhoodsList(neighborhoodsData || []);
+        setVillagesList(villagesData || []);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        if (isMounted) {
-          setError('Veriler yüklenirken hata oluştu: ' + (err.message || 'Bilinmeyen hata'));
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        console.error('Error fetching location data:', err);
       }
-    };
-
-    loadData();
-
-    return () => {
-      isMounted = false;
-    };
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      if (isMounted) {
+        setError('Veriler yüklenirken hata oluştu: ' + (err.message || 'Bilinmeyen hata'));
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
   }, [user, isLoggedIn, userRole]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user || !user.coordinatorId) return;
+    loadData();
+  }, [loadData, isLoggedIn, userRole, user]);
 
   const handleBallotBoxClick = useCallback((ballotBox) => {
     setSelectedBallotBox(ballotBox);
@@ -365,6 +363,12 @@ const CoordinatorDashboardPage = () => {
 
   const mobileView = isMobile();
 
+  // Pull-to-refresh for mobile
+  const { isRefreshing, pullProgress } = usePullToRefresh(
+    loadData,
+    { disabled: !mobileView || !isLoggedIn || !coordinatorRoles.includes(userRole) || !user || !user.coordinatorId }
+  );
+
   // Loading state
   if (loading && ballotBoxes.length === 0) {
     return (
@@ -385,28 +389,40 @@ const CoordinatorDashboardPage = () => {
   // Native mobile görünümü
   if (mobileView) {
     return (
-      <NativeCoordinatorDashboard
-        coordinator={coordinator}
-        ballotBoxes={ballotBoxes}
-        electionResults={electionResults}
-        regionInfo={regionInfo}
-        neighborhoods={neighborhoods}
-        villages={villages}
-        parentCoordinators={parentCoordinators}
-        elections={elections}
-        observers={observers}
-        districts={districts}
-        towns={towns}
-        neighborhoodsList={neighborhoodsList}
-        villagesList={villagesList}
-        onLogout={handleLogout}
-        getRoleLabel={getRoleLabel}
-        getWinningParty={getWinningParty}
-        getPartyColor={getPartyColor}
-        hasData={hasData}
-        hasProtocol={hasProtocol}
-        loading={loading}
-      />
+      <>
+        {/* Pull-to-refresh indicator */}
+        {isRefreshing && (
+          <div className="fixed top-0 left-0 right-0 z-50 flex justify-center items-center bg-indigo-600 text-white py-2">
+            <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Yenileniyor...</span>
+          </div>
+        )}
+        <NativeCoordinatorDashboard
+          coordinator={coordinator}
+          ballotBoxes={ballotBoxes}
+          electionResults={electionResults}
+          regionInfo={regionInfo}
+          neighborhoods={neighborhoods}
+          villages={villages}
+          parentCoordinators={parentCoordinators}
+          elections={elections}
+          observers={observers}
+          districts={districts}
+          towns={towns}
+          neighborhoodsList={neighborhoodsList}
+          villagesList={villagesList}
+          onLogout={handleLogout}
+          getRoleLabel={getRoleLabel}
+          getWinningParty={getWinningParty}
+          getPartyColor={getPartyColor}
+          hasData={hasData}
+          hasProtocol={hasProtocol}
+          loading={loading}
+        />
+      </>
     );
   }
 
@@ -612,314 +628,300 @@ const CoordinatorDashboardPage = () => {
           </div>
         )}
 
-        {/* Seçim Sonuçları - ElectionResultsPage kart formatında */}
-        {electionResults.length > 0 && (() => {
-          // Sandık numarasına göre unique hale getir - sadece gerçekten seçim sonucu girilmiş olanları göster
-          const uniqueResultsByBallotNumber = {};
-          electionResults.forEach((result) => {
-            // Sadece gerçekten seçim sonucu girilmiş olanları göster (hasData veya hasProtocol)
-            const hasDataResult = hasData(result);
-            const hasProtocolResult = hasProtocol(result);
-            
-            if (!hasDataResult && !hasProtocolResult) {
-              // Bu sonuç gerçek bir seçim sonucu değil, atla
-              return;
-            }
-            
-            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-            const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
-            
-            // Eğer bu sandık numarası için daha önce bir sonuç yoksa veya bu sonuç daha yeni ise
-            if (!uniqueResultsByBallotNumber[ballotNumber] || 
-                (result.created_at && uniqueResultsByBallotNumber[ballotNumber].created_at && 
-                 new Date(result.created_at) > new Date(uniqueResultsByBallotNumber[ballotNumber].created_at)) ||
-                (result.id > uniqueResultsByBallotNumber[ballotNumber].id)) {
-              uniqueResultsByBallotNumber[ballotNumber] = result;
+        {/* Seçim Sonuçları - Gruplandırılmış */}
+        {(() => {
+          // Tüm sandıkları ve sonuçlarını gruplandır
+          const allBallotBoxesWithResults = {};
+          
+          // Önce tüm sandıkları ekle
+          ballotBoxes.forEach((ballotBox) => {
+            const ballotNumber = ballotBox.ballot_number || ballotBox.id;
+            if (!allBallotBoxesWithResults[ballotNumber]) {
+              allBallotBoxesWithResults[ballotNumber] = {
+                ballotBox,
+                result: null,
+                hasData: false,
+                hasProtocol: false,
+                hasObjection: false
+              };
             }
           });
           
-          const uniqueResults = Object.values(uniqueResultsByBallotNumber);
+          // Sonuçları ekle
+          electionResults.forEach((result) => {
+            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+            const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
+            
+            const hasDataResult = hasData(result);
+            const hasProtocolResult = hasProtocol(result);
+            const hasObjectionResult = result.has_objection === true || result.has_objection === 1;
+            
+            if (!allBallotBoxesWithResults[ballotNumber]) {
+              allBallotBoxesWithResults[ballotNumber] = {
+                ballotBox: ballotBox || { id: result.ballot_box_id, ballot_number: ballotNumber },
+                result: null,
+                hasData: false,
+                hasProtocol: false,
+                hasObjection: false
+              };
+            }
+            
+            // Daha yeni sonuç varsa güncelle
+            if (!allBallotBoxesWithResults[ballotNumber].result || 
+                (result.created_at && allBallotBoxesWithResults[ballotNumber].result?.created_at && 
+                 new Date(result.created_at) > new Date(allBallotBoxesWithResults[ballotNumber].result.created_at)) ||
+                (result.id > allBallotBoxesWithResults[ballotNumber].result?.id)) {
+              allBallotBoxesWithResults[ballotNumber].result = result;
+              allBallotBoxesWithResults[ballotNumber].hasData = hasDataResult;
+              allBallotBoxesWithResults[ballotNumber].hasProtocol = hasProtocolResult;
+              allBallotBoxesWithResults[ballotNumber].hasObjection = hasObjectionResult;
+            }
+          });
           
-          return (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
-                <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
-                Seçim Sonuçları ({uniqueResults.length} Sandık)
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {uniqueResults.map((result) => {
-                const election = elections.find(e => String(e.id) === String(result.election_id));
-                const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-                const chiefObserver = getChiefObserver(result.ballot_box_id);
-                
-                // Konum bilgileri
-                const locationParts = [];
-                if (ballotBox) {
-                  if (ballotBox.district_id) {
-                    const district = districts.find(d => String(d.id) === String(ballotBox.district_id));
-                    if (district) locationParts.push({ type: 'İlçe', name: district.name });
-                  }
-                  if (ballotBox.town_id) {
-                    const town = towns.find(t => String(t.id) === String(ballotBox.town_id));
-                    if (town) locationParts.push({ type: 'Belde', name: town.name });
-                  }
-                  if (ballotBox.neighborhood_id) {
-                    const neighborhood = neighborhoodsList.find(n => String(n.id) === String(ballotBox.neighborhood_id));
-                    if (neighborhood) locationParts.push({ type: 'Mahalle', name: neighborhood.name });
-                  }
-                  if (ballotBox.village_id) {
-                    const village = villagesList.find(v => String(v.id) === String(ballotBox.village_id));
-                    if (village) locationParts.push({ type: 'Köy', name: village.name });
-                  }
-                }
-                
-                // Veri kontrolü: hasData ve hasProtocol fonksiyonlarını kullan
-                const hasProtocolResult = hasProtocol(result);
-                const hasDataResult = hasData(result);
-                
-                // En fazla oy alan parti/aday
-                const winningParty = getWinningParty(result, election);
-                const partyColor = winningParty ? getPartyColor(winningParty) : null;
-                
-                // İtiraz varsa kırmızı, sadece tutanak varsa kırmızı border, sadece veri varsa sarı border
-                const hasObjection = result.has_objection === true || result.has_objection === 1;
-                let cardStyle = {};
-                if (hasObjection) {
-                  cardStyle = { borderColor: '#EF4444', backgroundColor: '#FEF2F2', color: '#991B1B' };
-                } else if (hasProtocolResult && !hasDataResult) {
-                  cardStyle = { borderColor: '#EF4444', backgroundColor: '#FEF2F2', color: '#991B1B' };
-                } else if (hasDataResult && !hasProtocolResult) {
-                  cardStyle = { borderColor: '#F59E0B', backgroundColor: '#FFFBEB', color: '#92400E' };
-                } else if (hasDataResult && hasProtocolResult && partyColor) {
-                  cardStyle = { borderColor: partyColor.border, backgroundColor: partyColor.bg, color: partyColor.text };
-                } else {
-                  cardStyle = { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB', color: '#6B7280' };
-                }
-                
-                return (
-                  <div 
-                    key={result.id} 
-                    onClick={() => navigate(`/election-results/${result.election_id}/edit/${result.id}`)}
-                    className="border rounded-lg p-4 transition-shadow hover:shadow-md cursor-pointer"
-                    style={{
-                      borderColor: cardStyle.borderColor,
-                      backgroundColor: cardStyle.backgroundColor,
-                      borderWidth: '2px'
-                    }}
-                  >
-                    <div className="mb-3 flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold" style={{ color: cardStyle.color }}>
-                          Sandık No: {ballotBox?.ballot_number || result.ballot_box_id}
-                        </h3>
-                        {winningParty && !hasObjection && hasDataResult && (
-                          <div className="text-xs mt-1" style={{ color: cardStyle.color, opacity: 0.8 }}>
-                            En Çok Oy: {winningParty}
-                          </div>
-                        )}
-                        {hasProtocolResult && !hasDataResult && (
-                          <div className="text-xs mt-1 text-red-600 dark:text-red-400 font-semibold">
-                            ⚠️ Sadece Tutanak (Veri Yok)
-                          </div>
-                        )}
-                        {hasDataResult && !hasProtocolResult && (
-                          <div className="text-xs mt-1 text-yellow-600 dark:text-yellow-400 font-semibold">
-                            ⚠️ Sadece Veri (Tutanak Yok)
-                          </div>
-                        )}
-                        {!hasDataResult && !hasProtocolResult && (
-                          <div className="text-xs mt-1 text-gray-500 dark:text-gray-400 font-semibold">
-                            ⏳ Sonuç Girilmemiş
-                          </div>
-                        )}
-                      </div>
-                      {hasObjection && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/40 rounded-full">
-                          <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          <span className="text-sm font-semibold text-red-600 dark:text-red-400">İtiraz</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Konum Bilgileri */}
-                    {locationParts.length > 0 && (
-                      <div className="mb-3 space-y-1">
-                        {locationParts.map((part, idx) => (
-                          <div key={idx} className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium">{part.type}:</span> {part.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Başmüşahit Bilgileri */}
-                    {chiefObserver && (
-                      <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-                          Başmüşahit
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {chiefObserver.name}
-                        </div>
-                        {chiefObserver.phone && (
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {chiefObserver.phone}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Oy Sayıları */}
-                    {hasDataResult && (
-                      <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            {result.used_votes || 0}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            {result.invalid_votes || 0}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            {result.valid_votes || 0}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Seçim Bilgisi */}
-                    {election && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                        {election.name}
-                        {election.date && ` - ${new Date(election.date).toLocaleDateString('tr-TR')}`}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Ballot Boxes List - Sadece seçim sonucu olmayan sandıklar */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
-              Sandıklar
-            </h2>
-            {loading && (
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-200 border-t-indigo-600"></div>
-            )}
-          </div>
-
-          {error && ballotBoxes.length === 0 && (
-            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 mb-6 animate-fade-in">
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {!loading && ballotBoxes.length === 0 && (
-            <div className="text-center py-16 animate-fade-in">
-              <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Henüz sandık atanmamış</h3>
-              <p className="text-gray-600 dark:text-gray-400">Sorumlu olduğunuz sandıklar burada görünecektir.</p>
-            </div>
-          )}
-
-          {!loading && ballotBoxes.length > 0 && (() => {
-            // Seçim sonucu olan sandık numaralarını topla
-            const ballotNumbersWithResults = new Set();
-            electionResults.forEach((result) => {
-              const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-              if (ballotBox) {
-                ballotNumbersWithResults.add(ballotBox.ballot_number || result.ballot_box_id);
+          // Gruplandır
+          const completed = []; // hasData && hasProtocol && !hasObjection
+          const missingProtocol = []; // hasData && !hasProtocol
+          const onlyProtocol = []; // !hasData && hasProtocol
+          const noData = []; // !hasData && !hasProtocol
+          const objected = []; // hasObjection
+          
+          Object.values(allBallotBoxesWithResults).forEach((item) => {
+            if (item.hasObjection) {
+              objected.push(item);
+            } else if (item.hasData && item.hasProtocol) {
+              completed.push(item);
+            } else if (item.hasData && !item.hasProtocol) {
+              missingProtocol.push(item);
+            } else if (!item.hasData && item.hasProtocol) {
+              onlyProtocol.push(item);
+            } else {
+              noData.push(item);
+            }
+          });
+          
+          const renderBallotBoxCard = (item, index) => {
+            const { ballotBox, result } = item;
+            const election = result ? elections.find(e => String(e.id) === String(result.election_id)) : null;
+            const chiefObserver = getChiefObserver(ballotBox.id);
+            
+            // Konum bilgileri
+            const locationParts = [];
+            if (ballotBox) {
+              if (ballotBox.district_id) {
+                const district = districts.find(d => String(d.id) === String(ballotBox.district_id));
+                if (district) locationParts.push({ type: 'İlçe', name: district.name });
               }
-            });
-            
-            // Seçim sonucu olmayan sandıkları filtrele ve unique hale getir
-            const uniqueBallotBoxes = {};
-            ballotBoxes.forEach((ballotBox) => {
-              const ballotNumber = ballotBox.ballot_number || ballotBox.id;
-              // Seçim sonucu olmayan ve daha önce eklenmemiş sandıkları ekle
-              if (!ballotNumbersWithResults.has(ballotNumber) && !uniqueBallotBoxes[ballotNumber]) {
-                uniqueBallotBoxes[ballotNumber] = ballotBox;
+              if (ballotBox.town_id) {
+                const town = towns.find(t => String(t.id) === String(ballotBox.town_id));
+                if (town) locationParts.push({ type: 'Belde', name: town.name });
               }
-            });
+              if (ballotBox.neighborhood_id) {
+                const neighborhood = neighborhoodsList.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+                if (neighborhood) locationParts.push({ type: 'Mahalle', name: neighborhood.name });
+              }
+              if (ballotBox.village_id) {
+                const village = villagesList.find(v => String(v.id) === String(ballotBox.village_id));
+                if (village) locationParts.push({ type: 'Köy', name: village.name });
+              }
+            }
             
-            const uniqueBallotBoxesList = Object.values(uniqueBallotBoxes);
+            const winningParty = result ? getWinningParty(result, election) : null;
+            const partyColor = winningParty ? getPartyColor(winningParty) : null;
             
-            if (uniqueBallotBoxesList.length === 0) {
-              return (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Tüm sandıklar için seçim sonucu girilmiş.
-                  </p>
-                </div>
-              );
+            // Kart stili
+            let cardStyle = {};
+            if (item.hasObjection) {
+              cardStyle = { borderColor: '#EF4444', backgroundColor: '#FEF2F2', color: '#991B1B' };
+            } else if (item.hasData && item.hasProtocol) {
+              cardStyle = partyColor ? { borderColor: partyColor.border, backgroundColor: partyColor.bg, color: partyColor.text } : { borderColor: '#10B981', backgroundColor: '#D1FAE5', color: '#065F46' };
+            } else if (item.hasData && !item.hasProtocol) {
+              cardStyle = { borderColor: '#F59E0B', backgroundColor: '#FFFBEB', color: '#92400E' };
+            } else if (!item.hasData && item.hasProtocol) {
+              cardStyle = { borderColor: '#EF4444', backgroundColor: '#FEF2F2', color: '#991B1B' };
+            } else {
+              cardStyle = { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB', color: '#6B7280' };
             }
             
             return (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {uniqueBallotBoxesList.map((ballotBox) => {
-                  return (
-                  <div
-                    key={ballotBox.id}
-                    onClick={() => handleBallotBoxClick(ballotBox)}
-                    className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 rounded-xl shadow-md hover:shadow-xl p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-600"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                            Sandık {ballotBox.ballot_number || ballotBox.id}
-                          </h3>
-                        </div>
-                        {ballotBox.institution_name && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            {ballotBox.institution_name}
-                          </p>
-                        )}
+              <div 
+                key={ballotBox.id || index} 
+                onClick={() => result ? navigate(`/election-results/${result.election_id}/edit/${result.id}`) : null}
+                className="border rounded-lg p-4 transition-shadow hover:shadow-md cursor-pointer"
+                style={{
+                  borderColor: cardStyle.borderColor,
+                  backgroundColor: cardStyle.backgroundColor,
+                  borderWidth: '2px'
+                }}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold" style={{ color: cardStyle.color }}>
+                      Sandık No: {ballotBox.ballot_number || ballotBox.id}
+                    </h3>
+                    {winningParty && !item.hasObjection && item.hasData && (
+                      <div className="text-xs mt-1" style={{ color: cardStyle.color, opacity: 0.8 }}>
+                        En Çok Oy: {winningParty}
                       </div>
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                    )}
+                    {item.hasProtocol && !item.hasData && (
+                      <div className="text-xs mt-1 text-red-600 dark:text-red-400 font-semibold">
+                        ⚠️ Sadece Tutanak (Veri Yok)
+                      </div>
+                    )}
+                    {item.hasData && !item.hasProtocol && (
+                      <div className="text-xs mt-1 text-yellow-600 dark:text-yellow-400 font-semibold">
+                        ⚠️ Tutanak Eksik
+                      </div>
+                    )}
+                    {!item.hasData && !item.hasProtocol && (
+                      <div className="text-xs mt-1 text-gray-500 dark:text-gray-400 font-semibold">
+                        ⏳ Hiç Veri Girilmemiş
+                      </div>
+                    )}
+                  </div>
+                  {item.hasObjection && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/40 rounded-full">
+                      <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-red-600 dark:text-red-400">İtiraz</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Konum Bilgileri */}
+                {locationParts.length > 0 && (
+                  <div className="mb-3 space-y-1">
+                    {locationParts.map((part, idx) => (
+                      <div key={idx} className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-medium">{part.type}:</span> {part.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Başmüşahit Bilgileri */}
+                {chiefObserver && (
+                  <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                      Başmüşahit
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {chiefObserver.name}
+                    </div>
+                    {chiefObserver.phone && (
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {chiefObserver.phone}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Oy Sayıları */}
+                {item.hasData && result && (
+                  <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                        {result.used_votes || 0}
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      <span>Detayları görüntüle</span>
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                        {result.invalid_votes || 0}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                        {result.valid_votes || 0}
+                      </div>
                     </div>
                   </div>
-                  );
-                })}
+                )}
+                
+                {/* Seçim Bilgisi */}
+                {election && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    {election.name}
+                    {election.date && ` - ${new Date(election.date).toLocaleDateString('tr-TR')}`}
+                  </div>
+                )}
               </div>
             );
-          })()}
-        </div>
+          };
+          
+          return (
+            <>
+              {/* İtiraz Edilen Sandıklar */}
+              {objected.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-3 mb-6">
+                    <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full"></div>
+                    İtiraz Edilen Sandıklar ({objected.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {objected.map((item, index) => renderBallotBoxCard(item, index))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Seçimi Tamamlananlar */}
+              {completed.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 flex items-center gap-3 mb-6">
+                    <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+                    Seçimi Tamamlananlar ({completed.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {completed.map((item, index) => renderBallotBoxCard(item, index))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Tutanak Eksik Olanlar */}
+              {missingProtocol.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400 flex items-center gap-3 mb-6">
+                    <div className="w-1 h-8 bg-gradient-to-b from-yellow-500 to-yellow-600 rounded-full"></div>
+                    Tutanak Eksik Olanlar ({missingProtocol.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {missingProtocol.map((item, index) => renderBallotBoxCard(item, index))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Sadece Tutanak Yüklenenler */}
+              {onlyProtocol.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-3 mb-6">
+                    <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full"></div>
+                    Sadece Tutanak Yüklenenler ({onlyProtocol.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {onlyProtocol.map((item, index) => renderBallotBoxCard(item, index))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Hiç Veri Girilmeyenler */}
+              {noData.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-400 flex items-center gap-3 mb-6">
+                    <div className="w-1 h-8 bg-gradient-to-b from-gray-400 to-gray-500 rounded-full"></div>
+                    Hiç Veri Girilmeyenler ({noData.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {noData.map((item, index) => renderBallotBoxCard(item, index))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
+
       </div>
 
       {/* Photo Modal */}

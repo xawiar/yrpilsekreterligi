@@ -847,13 +847,18 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
               <div className="text-xs sm:text-sm text-gray-500 mb-1">Puan Detayları</div>
               {loadingScore ? (
                 <div className="text-sm">...</div>
-              ) : (
+              ) : performanceScore && performanceScore.details && performanceScore.details.breakdown ? (
                 <div className="text-xs space-y-0.5">
-                  <div>Toplantı: +{performanceScore?.breakdown?.meetingPoints || 0}</div>
-                  <div>Etkinlik: +{performanceScore?.breakdown?.eventPoints || 0}</div>
-                  <div>Kayıt: +{performanceScore?.breakdown?.registrationPoints || 0}</div>
-                  <div className="text-green-600">Bonus: +{performanceScore?.breakdown?.bonusPoints || 0}</div>
+                  <div>Toplantı: +{performanceScore.details.breakdown.meetingPoints || 0}</div>
+                  <div>Etkinlik: +{performanceScore.details.breakdown.eventPoints || 0}</div>
+                  <div>Kayıt: +{performanceScore.details.breakdown.registrationPoints || 0}</div>
+                  {performanceScore.details.breakdown.absencePenalty < 0 && (
+                    <div className="text-red-600">Mazeretsiz: {performanceScore.details.breakdown.absencePenalty}</div>
+                  )}
+                  <div className="text-green-600">Bonus: +{performanceScore.details.breakdown.bonusPoints || 0}</div>
                 </div>
+              ) : (
+                <div className="text-xs text-gray-400">Hesaplanamadı</div>
               )}
             </div>
           </div>
