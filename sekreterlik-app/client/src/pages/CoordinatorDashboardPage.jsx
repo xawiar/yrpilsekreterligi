@@ -797,16 +797,42 @@ const CoordinatorDashboardPage = () => {
             </div>
           )}
 
-          {!loading && ballotBoxes.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {ballotBoxes.map((ballotBox) => {
-                // Bu sandık için seçim sonucu var mı kontrol et
-                const hasResult = electionResults.some(result => {
-                  const resultBallotBoxId = result.ballot_box_id || result.ballotBoxId;
-                  return String(resultBallotBoxId) === String(ballotBox.id);
-                });
-                
-                return (
+          {!loading && ballotBoxes.length > 0 && (() => {
+            // Seçim sonucu olan sandık numaralarını topla
+            const ballotNumbersWithResults = new Set();
+            electionResults.forEach((result) => {
+              const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+              if (ballotBox) {
+                ballotNumbersWithResults.add(ballotBox.ballot_number || result.ballot_box_id);
+              }
+            });
+            
+            // Seçim sonucu olmayan sandıkları filtrele ve unique hale getir
+            const uniqueBallotBoxes = {};
+            ballotBoxes.forEach((ballotBox) => {
+              const ballotNumber = ballotBox.ballot_number || ballotBox.id;
+              // Seçim sonucu olmayan ve daha önce eklenmemiş sandıkları ekle
+              if (!ballotNumbersWithResults.has(ballotNumber) && !uniqueBallotBoxes[ballotNumber]) {
+                uniqueBallotBoxes[ballotNumber] = ballotBox;
+              }
+            });
+            
+            const uniqueBallotBoxesList = Object.values(uniqueBallotBoxes);
+            
+            if (uniqueBallotBoxesList.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Tüm sandıklar için seçim sonucu girilmiş.
+                  </p>
+                </div>
+              );
+            }
+            
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {uniqueBallotBoxesList.map((ballotBox) => {
+                  return (
                   <div
                     key={ballotBox.id}
                     onClick={() => handleBallotBoxClick(ballotBox)}
@@ -852,10 +878,11 @@ const CoordinatorDashboardPage = () => {
                       <span>{hasResult ? 'Sonuçları görüntüle' : 'Detayları görüntüle'}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
