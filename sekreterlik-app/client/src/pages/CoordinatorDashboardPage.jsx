@@ -403,6 +403,8 @@ const CoordinatorDashboardPage = () => {
         getRoleLabel={getRoleLabel}
         getWinningParty={getWinningParty}
         getPartyColor={getPartyColor}
+        hasData={hasData}
+        hasProtocol={hasProtocol}
         loading={loading}
       />
     );

@@ -24,6 +24,8 @@ const NativeCoordinatorDashboard = ({
   getRoleLabel = (r) => r,
   getWinningParty = () => null,
   getPartyColor = () => ({ border: '#E5E7EB', bg: '#F9FAFB', text: '#6B7280' }),
+  hasData = () => false,
+  hasProtocol = () => false,
   loading = false
 }) => {
   const navigate = useNavigate();
@@ -239,6 +241,9 @@ const NativeCoordinatorDashboard = ({
             const location = getLocationInfo(ballotBox || {});
             const winningParty = getWinningParty(result, election);
             const partyColor = getPartyColor(winningParty);
+            const hasDataResult = hasData(result);
+            const hasProtocolResult = hasProtocol(result);
+            const hasObjection = result.has_objection === true || result.has_objection === 1;
             
             return (
               <NativeCard
