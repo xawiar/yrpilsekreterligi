@@ -614,9 +614,18 @@ const CoordinatorDashboardPage = () => {
 
         {/* Seçim Sonuçları - ElectionResultsPage kart formatında */}
         {electionResults.length > 0 && (() => {
-          // Sandık numarasına göre unique hale getir - her sandık numarası için en son seçim sonucunu al
+          // Sandık numarasına göre unique hale getir - sadece gerçekten seçim sonucu girilmiş olanları göster
           const uniqueResultsByBallotNumber = {};
           electionResults.forEach((result) => {
+            // Sadece gerçekten seçim sonucu girilmiş olanları göster (hasData veya hasProtocol)
+            const hasDataResult = hasData(result);
+            const hasProtocolResult = hasProtocol(result);
+            
+            if (!hasDataResult && !hasProtocolResult) {
+              // Bu sonuç gerçek bir seçim sonucu değil, atla
+              return;
+            }
+            
             const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
             const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
             
