@@ -573,15 +573,33 @@ const CoordinatorDashboardPage = () => {
         )}
 
         {/* Seçim Sonuçları - ElectionResultsPage kart formatında */}
-        {electionResults.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
-              <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
-              Seçim Sonuçları
-            </h2>
+        {electionResults.length > 0 && (() => {
+          // Sandık numarasına göre unique hale getir - her sandık numarası için en son seçim sonucunu al
+          const uniqueResultsByBallotNumber = {};
+          electionResults.forEach((result) => {
+            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
+            const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {electionResults.map((result) => {
+            // Eğer bu sandık numarası için daha önce bir sonuç yoksa veya bu sonuç daha yeni ise
+            if (!uniqueResultsByBallotNumber[ballotNumber] || 
+                (result.created_at && uniqueResultsByBallotNumber[ballotNumber].created_at && 
+                 new Date(result.created_at) > new Date(uniqueResultsByBallotNumber[ballotNumber].created_at)) ||
+                (result.id > uniqueResultsByBallotNumber[ballotNumber].id)) {
+              uniqueResultsByBallotNumber[ballotNumber] = result;
+            }
+          });
+          
+          const uniqueResults = Object.values(uniqueResultsByBallotNumber);
+          
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
+                <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+                Seçim Sonuçları ({uniqueResults.length} Sandık)
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {uniqueResults.map((result) => {
                 const election = elections.find(e => String(e.id) === String(result.election_id));
                 const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
                 const chiefObserver = getChiefObserver(result.ballot_box_id);
@@ -739,11 +757,12 @@ const CoordinatorDashboardPage = () => {
                   </div>
                 );
               })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
-        {/* Ballot Boxes List */}
+        {/* Ballot Boxes List - Sadece seçim sonucu olmayan sandıklar */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
