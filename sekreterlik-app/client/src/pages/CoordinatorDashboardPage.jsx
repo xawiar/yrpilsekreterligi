@@ -963,10 +963,3 @@ const CoordinatorDashboardPage = () => {
 
 export default CoordinatorDashboardPage;
 
-
-    </div>
-  );
-};
-
-export default CoordinatorDashboardPage;
-
