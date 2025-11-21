@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeMemberDashboard from '../components/mobile/NativeMemberDashboard';
 import MemberDetails from '../components/MemberDetails';
 import { calculateMeetingStats } from '../components/Members/membersUtils';
 import SettingsPage from './SettingsPage';
@@ -908,7 +910,27 @@ const MemberDashboardPage = () => {
         
 
         {currentView === 'dashboard' && (
-        <div className="space-y-4 sm:space-y-6 md:space-y-8">
+        <>
+          {isMobile() ? (
+            <NativeMemberDashboard
+              member={member}
+              user={user}
+              grantedPermissions={grantedPermissions}
+              onViewChange={setViewWithPermission}
+              onLogout={handleLogout}
+              polls={polls}
+              pollResults={pollResults}
+              PollVotingComponent={PollVotingComponent}
+              PollResultsComponent={PollResultsComponent}
+              isWomenBranchPresident={isWomenBranchPresident}
+              isYouthBranchPresident={isYouthBranchPresident}
+              womenBranchManagement={womenBranchManagement}
+              youthBranchManagement={youthBranchManagement}
+              BranchManagementSection={BranchManagementSection}
+              loading={loading}
+            />
+          ) : (
+            <div className="space-y-4 sm:space-y-6 md:space-y-8">
           {/* Welcome Card */}
           <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-black bg-opacity-10"></div>
@@ -1695,6 +1717,8 @@ const MemberDashboardPage = () => {
             />
           </div>
         </div>
+          )}
+        </>
         )}
       </div>
       <Footer />

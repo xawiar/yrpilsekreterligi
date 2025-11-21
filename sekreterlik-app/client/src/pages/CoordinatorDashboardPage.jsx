@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeCoordinatorDashboard from '../components/mobile/NativeCoordinatorDashboard';
 
 // Parti renkleri - Türkiye'deki yaygın partiler
 const PARTY_COLORS = {
@@ -361,6 +363,8 @@ const CoordinatorDashboardPage = () => {
     return null;
   }
 
+  const mobileView = isMobile();
+
   // Loading state
   if (loading && ballotBoxes.length === 0) {
     return (
@@ -375,6 +379,32 @@ const CoordinatorDashboardPage = () => {
           ))}
         </div>
       </div>
+    );
+  }
+
+  // Native mobile görünümü
+  if (mobileView) {
+    return (
+      <NativeCoordinatorDashboard
+        coordinator={coordinator}
+        ballotBoxes={ballotBoxes}
+        electionResults={electionResults}
+        regionInfo={regionInfo}
+        neighborhoods={neighborhoods}
+        villages={villages}
+        parentCoordinators={parentCoordinators}
+        elections={elections}
+        observers={observers}
+        districts={districts}
+        towns={towns}
+        neighborhoodsList={neighborhoodsList}
+        villagesList={villagesList}
+        onLogout={handleLogout}
+        getRoleLabel={getRoleLabel}
+        getWinningParty={getWinningParty}
+        getPartyColor={getPartyColor}
+        loading={loading}
+      />
     );
   }
 

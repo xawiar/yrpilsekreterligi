@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import ElectionResultForm from '../components/ElectionResultForm';
 import { useAuth } from '../contexts/AuthContext';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeChiefObserverDashboard from '../components/mobile/NativeChiefObserverDashboard';
 
 /**
  * Başmüşahit Dashboard Sayfası - Modern, Animasyonlu, Mobile Uyumlu
