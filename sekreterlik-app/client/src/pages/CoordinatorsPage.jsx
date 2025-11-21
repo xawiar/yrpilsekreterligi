@@ -82,6 +82,7 @@ const CoordinatorsPage = () => {
 
 // Sorumlular Listesi Sayfası
 const CoordinatorsListPage = () => {
+  const mobileView = isMobile(); // Hook'u component başında çağır
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCoordinator, setEditingCoordinator] = useState(null);
   const [coordinators, setCoordinators] = useState([]);
@@ -318,7 +319,7 @@ const CoordinatorsListPage = () => {
           <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
         ) : coordinators.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400 text-center py-8">Henüz sorumlu eklenmemiş.</p>
-        ) : isMobile() ? (
+        ) : mobileView ? (
           // Mobilde kart görünümü
           <div className="space-y-3">
             {coordinators.map((coordinator) => {
@@ -1274,6 +1275,7 @@ const CoordinatorsListPage = () => {
 
 // Bölgeler Listesi Sayfası
 const RegionsListPage = () => {
+  const mobileView = isMobile(); // Hook'u component başında çağır
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRegion, setEditingRegion] = useState(null);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -1586,7 +1588,7 @@ const RegionsListPage = () => {
           <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
         ) : regions.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400 text-center py-8">Henüz bölge eklenmemiş.</p>
-        ) : isMobile() ? (
+        ) : mobileView ? (
           // Mobilde kart görünümü
           <div className="space-y-3">
             {regions.map((region) => {
