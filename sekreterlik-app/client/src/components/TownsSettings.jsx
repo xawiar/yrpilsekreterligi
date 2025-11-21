@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeCard from './mobile/NativeCard';
 
 const TownsSettings = () => {
   const [towns, setTowns] = useState([]);
@@ -630,20 +632,130 @@ const TownsSettings = () => {
       )}
 
       {/* Towns List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Mevcut Beldeler</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Mevcut Beldeler</h3>
         </div>
-        <div className="divide-y divide-gray-200">
-          {towns.length === 0 ? (
-            <div className="px-6 py-8 text-center text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-              <p className="mt-2">Henüz belde eklenmemiş</p>
-            </div>
-          ) : (
-            towns.map((town) => {
+        {towns.length === 0 ? (
+          <div className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+            <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <p className="mt-2">Henüz belde eklenmemiş</p>
+          </div>
+        ) : isMobile() ? (
+          // Mobilde kart görünümü
+          <div className="p-4 space-y-3">
+            {towns.map((town) => {
+              const officials = townOfficials.filter(official => official.town_id === town.id);
+              const chairman = officials.find(official => official.chairman_name);
+              const inspector = officials.find(official => official.inspector_name);
+              
+              return (
+                <NativeCard key={town.id}>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center flex-wrap gap-2 mb-2">
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{town.name}</h4>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            {visitCounts[town.id] || 0} ziyaret
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          İlçe: {town.district_name} • Eklenme: {new Date(town.created_at).toLocaleDateString('tr-TR')}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(town)}
+                          className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                          title="Düzenle"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(town)}
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Sil"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Yönetici Bilgileri */}
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                      {/* Belde Başkanı */}
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Belde Başkanı</div>
+                        {chairman ? (
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">{chairman.chairman_name}</p>
+                            {chairman.chairman_phone && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{chairman.chairman_phone}</p>
+                            )}
+                            {chairman.chairman_member_name && (
+                              <p className="text-xs text-gray-500 dark:text-gray-500">Üye: {chairman.chairman_member_name}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 dark:text-gray-500">Atanmamış</p>
+                        )}
+                      </div>
+
+                      {/* Belde Müfettişi */}
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Belde Müfettişi</div>
+                        {inspector ? (
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">{inspector.inspector_name}</p>
+                            {inspector.inspector_phone && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{inspector.inspector_phone}</p>
+                            )}
+                            {inspector.inspector_member_name && (
+                              <p className="text-xs text-gray-500 dark:text-gray-500">Üye: {inspector.inspector_member_name}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 dark:text-gray-500">Atanmamış</p>
+                        )}
+                      </div>
+
+                      {/* Müfettiş Yardımcıları */}
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Müfettiş Yardımcıları</div>
+                        {deputyInspectors[town.id] && deputyInspectors[town.id].length > 0 ? (
+                          <div className="space-y-1">
+                            {deputyInspectors[town.id].map((deputy, index) => (
+                              <div key={index} className="text-xs">
+                                <p className="text-gray-900 dark:text-gray-100 font-medium">{deputy.name}</p>
+                                {deputy.phone && <p className="text-gray-600 dark:text-gray-400">{deputy.phone}</p>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 dark:text-gray-500">Atanmamış</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </NativeCard>
+              );
+            })}
+          </div>
+        ) : (
+          // Desktop liste görünümü
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {towns.map((town) => {
               const officials = townOfficials.filter(official => official.town_id === town.id);
               const chairman = officials.find(official => official.chairman_name);
               const inspector = officials.find(official => official.inspector_name);
@@ -653,11 +765,11 @@ const TownsSettings = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-3">
-                        <h4 className="text-lg font-semibold text-gray-900">{town.name}</h4>
-                        <span className="text-sm text-gray-500">
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{town.name}</h4>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           İlçe: {town.district_name} • Eklenme: {new Date(town.created_at).toLocaleDateString('tr-TR')}
                         </span>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -669,55 +781,55 @@ const TownsSettings = () => {
                       {/* Yönetici Bilgileri */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                         {/* Belde Başkanı */}
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <h5 className="text-sm font-medium text-blue-900 mb-2">Belde Başkanı</h5>
+                        <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                          <h5 className="text-sm font-medium text-blue-900 dark:text-blue-400 mb-2">Belde Başkanı</h5>
                           {chairman ? (
                             <div className="space-y-1">
-                              <p className="text-sm text-blue-800 font-medium">{chairman.chairman_name}</p>
+                              <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">{chairman.chairman_name}</p>
                               {chairman.chairman_phone && (
-                                <p className="text-xs text-blue-600">{chairman.chairman_phone}</p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400">{chairman.chairman_phone}</p>
                               )}
                               {chairman.chairman_member_name && (
-                                <p className="text-xs text-blue-500">Üye: {chairman.chairman_member_name}</p>
+                                <p className="text-xs text-blue-500 dark:text-blue-500">Üye: {chairman.chairman_member_name}</p>
                               )}
                             </div>
                           ) : (
-                            <p className="text-sm text-blue-500">Atanmamış</p>
+                            <p className="text-sm text-blue-500 dark:text-blue-400">Atanmamış</p>
                           )}
                         </div>
 
                         {/* Belde Müfettişi */}
-                        <div className="bg-green-50 p-3 rounded-lg">
-                          <h5 className="text-sm font-medium text-green-900 mb-2">Belde Müfettişi</h5>
+                        <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg">
+                          <h5 className="text-sm font-medium text-green-900 dark:text-green-400 mb-2">Belde Müfettişi</h5>
                           {inspector ? (
                             <div className="space-y-1">
-                              <p className="text-sm text-green-800 font-medium">{inspector.inspector_name}</p>
+                              <p className="text-sm text-green-800 dark:text-green-300 font-medium">{inspector.inspector_name}</p>
                               {inspector.inspector_phone && (
-                                <p className="text-xs text-green-600">{inspector.inspector_phone}</p>
+                                <p className="text-xs text-green-600 dark:text-green-400">{inspector.inspector_phone}</p>
                               )}
                               {inspector.inspector_member_name && (
-                                <p className="text-xs text-green-500">Üye: {inspector.inspector_member_name}</p>
+                                <p className="text-xs text-green-500 dark:text-green-500">Üye: {inspector.inspector_member_name}</p>
                               )}
                             </div>
                           ) : (
-                            <p className="text-sm text-green-500">Atanmamış</p>
+                            <p className="text-sm text-green-500 dark:text-green-400">Atanmamış</p>
                           )}
                         </div>
 
                         {/* Müfettiş Yardımcıları */}
-                        <div className="bg-orange-50 p-3 rounded-lg">
-                          <h5 className="text-sm font-medium text-orange-900 mb-2">Müfettiş Yardımcıları</h5>
+                        <div className="bg-orange-50 dark:bg-orange-900/30 p-3 rounded-lg">
+                          <h5 className="text-sm font-medium text-orange-900 dark:text-orange-400 mb-2">Müfettiş Yardımcıları</h5>
                           {deputyInspectors[town.id] && deputyInspectors[town.id].length > 0 ? (
                             <div className="space-y-1">
                               {deputyInspectors[town.id].map((deputy, index) => (
                                 <div key={index} className="text-xs">
-                                  <p className="text-orange-800 font-medium">{deputy.name}</p>
-                                  {deputy.phone && <p className="text-orange-600">{deputy.phone}</p>}
+                                  <p className="text-orange-800 dark:text-orange-300 font-medium">{deputy.name}</p>
+                                  {deputy.phone && <p className="text-orange-600 dark:text-orange-400">{deputy.phone}</p>}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-sm text-orange-500">Atanmamış</p>
+                            <p className="text-sm text-orange-500 dark:text-orange-400">Atanmamış</p>
                           )}
                         </div>
                       </div>
@@ -726,7 +838,7 @@ const TownsSettings = () => {
                     <div className="flex space-x-2 ml-4">
                       <button
                         onClick={() => handleEdit(town)}
-                        className="p-2 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                        className="p-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors duration-200"
                         title="Düzenle"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -735,7 +847,7 @@ const TownsSettings = () => {
                       </button>
                       <button
                         onClick={() => handleDelete(town)}
-                        className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                        className="p-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
                         title="Sil"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -746,9 +858,9 @@ const TownsSettings = () => {
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

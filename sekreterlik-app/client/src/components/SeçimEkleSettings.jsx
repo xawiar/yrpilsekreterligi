@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
+import NativeCard from './mobile/NativeCard';
 
 const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) => {
   const [elections, setElections] = useState([]);
@@ -1738,39 +1740,125 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
         </form>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Seçim Adı
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Tarih
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Tip
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Durum
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Detaylar
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                İşlemler
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {elections.length === 0 ? (
+      {elections.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+          Henüz seçim eklenmemiş
+        </div>
+      ) : isMobile() ? (
+        // Mobilde kart görünümü
+        <div className="space-y-3">
+          {elections.map((election) => (
+            <NativeCard key={election.id}>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{election.name}</h4>
+                    <div className="flex items-center flex-wrap gap-2 mb-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {election.date ? (() => {
+                          try {
+                            const date = new Date(election.date);
+                            return !isNaN(date.getTime()) ? date.toLocaleDateString('tr-TR') : '-';
+                          } catch (e) {
+                            return '-';
+                          }
+                        })() : '-'}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {getTypeLabel(election.type)}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(election.status || 'draft')}`}>
+                        {getStatusLabel(election.status || 'draft')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Detaylar */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Detaylar:</div>
+                  {election.type === 'genel' && (
+                    <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                      <div><span className="font-medium">CB:</span> {election.cb_candidates?.length || 0} aday</div>
+                      <div><span className="font-medium">Partiler:</span> {election.parties?.length || 0} parti</div>
+                    </div>
+                  )}
+                  {election.type === 'yerel' && (
+                    <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                      <div><span className="font-medium">Belediye Başkanı:</span> {election.mayor_parties?.length || 0} parti, {election.mayor_candidates?.length || 0} bağımsız</div>
+                      <div><span className="font-medium">İl Genel Meclisi:</span> {election.provincial_assembly_parties?.length || 0} parti</div>
+                      <div><span className="font-medium">Belediye Meclisi:</span> {election.municipal_council_parties?.length || 0} parti</div>
+                    </div>
+                  )}
+                  {election.type === 'referandum' && (
+                    <div className="text-sm text-gray-900 dark:text-gray-100">Evet / Hayır</div>
+                  )}
+                </div>
+                
+                {/* İşlemler */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+                  <select
+                    value={election.status || 'draft'}
+                    onChange={(e) => handleStatusChange(election.id, e.target.value)}
+                    className={`text-xs px-2 py-1 rounded border ${getStatusColor(election.status || 'draft')} border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
+                  >
+                    <option value="draft">Taslak</option>
+                    <option value="active">Aktif</option>
+                    <option value="closed">Kapalı</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/election-results/${election.id}`}
+                      className="flex-1 text-center text-xs px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Sonuçlar
+                    </Link>
+                    <button
+                      onClick={() => handleEdit(election)}
+                      className="flex-1 text-xs px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      onClick={() => handleDelete(election.id)}
+                      className="flex-1 text-xs px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </NativeCard>
+          ))}
+        </div>
+      ) : (
+        // Desktop table görünümü
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  Henüz seçim eklenmemiş
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Seçim Adı
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Tarih
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Tip
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Durum
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Detaylar
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  İşlemler
+                </th>
               </tr>
-            ) : (
-              elections.map((election) => (
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {elections.map((election) => (
                 <tr key={election.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                     {election.name}
@@ -1843,11 +1931,11 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
