@@ -41,7 +41,10 @@ export const usePullToRefresh = (onRefresh, options = {}) => {
       // Only allow pulling down (positive distance)
       const scrollTop = element === window ? window.scrollY : element.scrollTop;
       if (distance > 0 && scrollTop <= 0) {
-        e.preventDefault(); // Prevent default scroll behavior
+        // Only preventDefault if event is cancelable
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         const pullDistance = Math.min(distance * 0.5, threshold * 1.5); // Damping factor
         setPullDistance(pullDistance);
         isPulling.current = true;
@@ -84,7 +87,7 @@ export const usePullToRefresh = (onRefresh, options = {}) => {
       element.removeEventListener('touchmove', handleTouchMove);
       element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [onRefresh, threshold, disabled, pullDistance]);
+  }, [onRefresh, threshold, disabled]);
 
   return {
     elementRef,
