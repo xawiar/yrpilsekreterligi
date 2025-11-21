@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
 import CreateEventForm from '../components/CreateEventForm';
 import PlanEventForm from '../components/PlanEventForm';
@@ -14,6 +15,7 @@ import {
   EventsTable 
 } from '../components/Events';
 import { LoadingSpinner } from '../components/UI';
+import NativeEventsList from '../components/mobile/NativeEventsList';
 
 const EventsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -233,6 +235,105 @@ const EventsPage = () => {
     return <LoadingSpinner />;
   }
 
+  const mobileView = isMobile();
+
+  // Native mobile görünümü
+  if (mobileView) {
+    return (
+      <>
+        <NativeEventsList
+          events={filteredEvents}
+          onEventClick={handleShowEvent}
+          onCreateEvent={handleCreateEvent}
+          onPlanEvent={handlePlanEvent}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          loading={loading}
+          calculateAttendanceStats={calculateAttendanceStats}
+          getAttendanceColor={(percentage) => {
+            if (percentage >= 80) return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
+            if (percentage >= 60) return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
+            return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
+          }}
+        />
+
+        {/* Modals - Mobilde de çalışır */}
+        <Modal 
+          isOpen={isPlanModalOpen} 
+          onClose={closePlanModal} 
+          title="Etkinlik Planla"
+          size="xl"
+        >
+          <PlanEventForm 
+            onClose={closePlanModal}
+            onEventPlanned={handleEventPlanned}
+            members={members}
+          />
+        </Modal>
+
+        <Modal 
+          isOpen={isCreateModalOpen} 
+          onClose={closeCreateModal} 
+          title="Yeni Etkinlik Oluştur"
+          size="xl"
+        >
+          <CreateEventForm 
+            onClose={closeCreateModal}
+            onEventCreated={handleEventCreated}
+            members={members}
+          />
+        </Modal>
+
+        <Modal 
+          isOpen={isEditModalOpen} 
+          onClose={closeEditModal} 
+          title="Etkinlik Düzenle"
+          size="xl"
+        >
+          {selectedEvent && (
+            <EventForm 
+              event={selectedEvent}
+              onClose={closeEditModal}
+              onEventSaved={handleEventSaved}
+              members={members}
+            />
+          )}
+        </Modal>
+
+        <Modal 
+          isOpen={isDetailsModalOpen} 
+          onClose={closeDetailsModal} 
+          title={selectedEvent ? `${selectedEvent.name} - Detaylar` : ''}
+          size="xl"
+        >
+          {selectedEvent && (
+            <EventDetails 
+              event={selectedEvent}
+              members={members}
+            />
+          )}
+        </Modal>
+
+        <Modal 
+          isOpen={isAttendanceModalOpen} 
+          onClose={closeAttendanceModal} 
+          title={selectedEvent ? `${selectedEvent.name} - Katılım Güncelle` : ''}
+          size="xl"
+        >
+          {selectedEvent && (
+            <AttendanceUpdate 
+              event={selectedEvent}
+              members={members}
+              onClose={closeAttendanceModal}
+              onAttendanceUpdated={handleAttendanceUpdated}
+            />
+          )}
+        </Modal>
+      </>
+    );
+  }
+
+  // Desktop görünümü (mevcut)
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       {/* Header Section */}

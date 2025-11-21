@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
 import CreateMeetingForm from '../components/CreateMeetingForm';
 import PlanMeetingForm from '../components/PlanMeetingForm';
@@ -15,6 +16,7 @@ import {
   MeetingsTable 
 } from '../components/Meetings';
 import { LoadingSpinner } from '../components/UI';
+import NativeMeetingsList from '../components/mobile/NativeMeetingsList';
 
 const MeetingsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -314,6 +316,101 @@ const MeetingsPage = () => {
     );
   }
 
+  const mobileView = isMobile();
+
+  // Native mobile görünümü
+  if (mobileView) {
+    return (
+      <>
+        <NativeMeetingsList
+          meetings={meetings}
+          onMeetingClick={handleShowMeeting}
+          onCreateMeeting={handleCreateMeeting}
+          onPlanMeeting={handlePlanMeeting}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          loading={loading}
+          calculateAttendanceStats={calculateAttendanceStats}
+          getAttendanceColor={getAttendanceColor}
+        />
+
+        {/* Modals - Mobilde de çalışır */}
+        <Modal
+          isOpen={isPlanModalOpen}
+          onClose={closePlanModal}
+          title="Toplantı Planla"
+          size="xl"
+        >
+          <PlanMeetingForm 
+            regions={regions} 
+            onClose={closePlanModal} 
+            onMeetingPlanned={handleMeetingPlanned} 
+          />
+        </Modal>
+
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={closeCreateMeetingModal}
+          title="Yeni Toplantı Oluştur"
+        >
+          <CreateMeetingForm 
+            regions={regions} 
+            onClose={closeCreateMeetingModal} 
+            onMeetingCreated={handleMeetingCreated} 
+          />
+        </Modal>
+
+        <Modal
+          isOpen={isDetailsModalOpen}
+          onClose={closeDetailsModal}
+          title={selectedMeeting ? selectedMeeting.name : "Toplantı Detayları"}
+        >
+          {selectedMeeting && (
+            <MeetingDetails meeting={selectedMeeting} />
+          )}
+        </Modal>
+
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={closeEditModal}
+          title="Toplantıyı Düzenle"
+        >
+          <MeetingForm 
+            meeting={selectedMeeting}
+            regions={regions}
+            members={members}
+            onClose={closeEditModal}
+            onMeetingSaved={handleMeetingSaved}
+          />
+        </Modal>
+
+        <Modal isOpen={isAttendanceModalOpen} onClose={closeAttendanceModal} title="Yoklama Güncelle">
+          {selectedMeeting && (
+            <AttendanceUpdate 
+              meeting={selectedMeeting} 
+              members={members}
+              onClose={closeAttendanceModal} 
+              onAttendanceUpdated={handleAttendanceUpdated} 
+            />
+          )}
+        </Modal>
+
+        <Modal 
+          isOpen={isCreateFromMinutesModalOpen} 
+          onClose={closeCreateFromMinutesModal} 
+          title="Tutanaktan Toplantı Oluştur"
+          size="xl"
+        >
+          <CreateMeetingFromMinutes 
+            onClose={closeCreateFromMinutesModal}
+            onMeetingCreated={handleMeetingCreated}
+          />
+        </Modal>
+      </>
+    );
+  }
+
+  // Desktop görünümü (mevcut)
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       {/* Header Section */}
