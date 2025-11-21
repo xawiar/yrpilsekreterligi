@@ -27,12 +27,14 @@ const LoginEnhanced = () => {
   const [tc, setTc] = useState('');
   const [chiefObserverLoading, setChiefObserverLoading] = useState(false);
   const [chiefObserverError, setChiefObserverError] = useState('');
+  const [rememberChiefObserver, setRememberChiefObserver] = useState(false);
 
   // Sorumlu form state
   const [coordinatorTc, setCoordinatorTc] = useState('');
   const [coordinatorPhone, setCoordinatorPhone] = useState('');
   const [coordinatorLoading, setCoordinatorLoading] = useState(false);
   const [coordinatorError, setCoordinatorError] = useState('');
+  const [rememberCoordinator, setRememberCoordinator] = useState(false);
 
   // URL'den type parametresini al ve sekmeyi ayarla
   useEffect(() => {
@@ -56,6 +58,28 @@ const LoginEnhanced = () => {
       setUsername(savedUsername);
       setPassword(savedPassword);
       setRememberMe(true);
+    }
+    
+    // Load saved Chief Observer credentials
+    const savedBallotNumber = localStorage.getItem('rememberedBallotNumber');
+    const savedTc = localStorage.getItem('rememberedTc');
+    const savedRememberChiefObserver = localStorage.getItem('rememberChiefObserver') === 'true';
+    
+    if (savedRememberChiefObserver && savedBallotNumber && savedTc) {
+      setBallotNumber(savedBallotNumber);
+      setTc(savedTc);
+      setRememberChiefObserver(true);
+    }
+    
+    // Load saved Coordinator credentials
+    const savedCoordinatorTc = localStorage.getItem('rememberedCoordinatorTc');
+    const savedCoordinatorPhone = localStorage.getItem('rememberedCoordinatorPhone');
+    const savedRememberCoordinator = localStorage.getItem('rememberCoordinator') === 'true';
+    
+    if (savedRememberCoordinator && savedCoordinatorTc && savedCoordinatorPhone) {
+      setCoordinatorTc(savedCoordinatorTc);
+      setCoordinatorPhone(savedCoordinatorPhone);
+      setRememberCoordinator(true);
     }
     
     // Auto-focus username field on mount (sadece admin-member sekmesinde)
@@ -153,6 +177,17 @@ const LoginEnhanced = () => {
       const result = await ApiService.loginChiefObserver(ballotNumber.trim(), tc.trim());
       
       if (result.success) {
+        // Handle remember me functionality
+        if (rememberChiefObserver) {
+          localStorage.setItem('rememberedBallotNumber', ballotNumber.trim());
+          localStorage.setItem('rememberedTc', tc.trim());
+          localStorage.setItem('rememberChiefObserver', 'true');
+        } else {
+          localStorage.removeItem('rememberedBallotNumber');
+          localStorage.removeItem('rememberedTc');
+          localStorage.removeItem('rememberChiefObserver');
+        }
+        
         // Set user in AuthContext (localStorage is managed automatically)
         setUserFromLogin(result.user);
         // Dashboard'a yönlendir
@@ -177,6 +212,17 @@ const LoginEnhanced = () => {
       const result = await ApiService.loginCoordinator(coordinatorTc.trim(), coordinatorPhone.trim());
       
       if (result.success) {
+        // Handle remember me functionality
+        if (rememberCoordinator) {
+          localStorage.setItem('rememberedCoordinatorTc', coordinatorTc.trim());
+          localStorage.setItem('rememberedCoordinatorPhone', coordinatorPhone.trim());
+          localStorage.setItem('rememberCoordinator', 'true');
+        } else {
+          localStorage.removeItem('rememberedCoordinatorTc');
+          localStorage.removeItem('rememberedCoordinatorPhone');
+          localStorage.removeItem('rememberCoordinator');
+        }
+        
         // Set user in AuthContext (localStorage is managed automatically)
         setUserFromLogin(result.user);
         // Dashboard'a yönlendir

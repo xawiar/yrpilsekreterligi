@@ -26,10 +26,13 @@ const ChiefObserverDashboardPage = () => {
 
   // Authentication kontrolü - AuthContext'ten gelen değerleri kullan
   useEffect(() => {
+    // Loading tamamlanmadan yönlendirme yapma
+    if (authLoading) return;
+    
     if (!isLoggedIn || userRole !== 'chief_observer' || !user) {
       navigate('/login?type=chief-observer', { replace: true });
     }
-  }, [isLoggedIn, userRole, user, navigate]);
+  }, [isLoggedIn, userRole, user, navigate, authLoading]);
 
   // Seçimleri ve sonuçları yükle
   useEffect(() => {

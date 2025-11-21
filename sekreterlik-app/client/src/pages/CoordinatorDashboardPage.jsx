@@ -219,12 +219,15 @@ const CoordinatorDashboardPage = () => {
   // Coordinator rolleri
   const coordinatorRoles = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
 
-  // Authentication kontrolü
+  // Authentication kontrolü - loading state'ini kontrol et
   useEffect(() => {
+    // Loading tamamlanmadan yönlendirme yapma
+    if (loading) return;
+    
     if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user) {
       navigate('/login?type=coordinator', { replace: true });
     }
-  }, [isLoggedIn, userRole, user, navigate]);
+  }, [isLoggedIn, userRole, user, navigate, loading]);
 
   // Dashboard verilerini yükle
   useEffect(() => {
