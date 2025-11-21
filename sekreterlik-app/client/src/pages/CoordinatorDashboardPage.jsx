@@ -205,6 +205,8 @@ const CoordinatorDashboardPage = () => {
   const [regionInfo, setRegionInfo] = useState(null);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
+  const [neighborhoodsList, setNeighborhoodsList] = useState([]);
+  const [villagesList, setVillagesList] = useState([]);
   const [parentCoordinators, setParentCoordinators] = useState([]);
   const [electionResults, setElectionResults] = useState([]);
   const [elections, setElections] = useState([]);
