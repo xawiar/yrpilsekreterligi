@@ -22,6 +22,7 @@ const ReportsPage = () => {
   });
   const [savingStars, setSavingStars] = useState({});
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const mobileView = isMobile();
   const [stats, setStats] = useState({
     // Genel İstatistikler
     totalMembers: 0,
@@ -1315,7 +1316,6 @@ const ReportsPage = () => {
           </div>
           
           {(() => {
-            const mobileView = isMobile();
             // Üye arama filtresi
             const filteredScores = stats.performanceScores.filter(item => {
               if (!memberSearchTerm) return true;
