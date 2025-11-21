@@ -438,7 +438,7 @@ const BallotBoxesPage = () => {
       town: townName,
       neighborhood: neighborhoodName,
       village: villageName,
-      chiefObserver: chiefObserver ? chiefObserver.name : null
+      chiefObserver: chiefObserver ? (chiefObserver.name || chiefObserver.observer_name || null) : null
     };
   };
 
