@@ -1,9 +1,10 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { isNative } from './utils/capacitorUtils';
 import {
   ProtectedRoute,
   AdminRoute,
@@ -410,6 +411,25 @@ function RouterContent() {
 
 // Component wrapper
 function App() {
+  // Initialize Capacitor plugins for native apps
+  useEffect(() => {
+    if (isNative()) {
+      // Initialize StatusBar and SplashScreen for native apps
+      import('@capacitor/status-bar').then(({ StatusBar }) => {
+        StatusBar.setStyle({ style: 'dark' });
+        StatusBar.setBackgroundColor({ color: '#3b82f6' });
+      }).catch(() => {
+        // Plugin not available (web)
+      });
+
+      import('@capacitor/splash-screen').then(({ SplashScreen }) => {
+        SplashScreen.hide();
+      }).catch(() => {
+        // Plugin not available (web)
+      });
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
     <ThemeProvider>
