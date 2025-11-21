@@ -71,13 +71,16 @@ const ReportsPage = () => {
 
   // Üye arama filtresi - useMemo ile optimize edildi (stats tanımından sonra)
   const filteredScores = useMemo(() => {
+    if (!stats.performanceScores || !Array.isArray(stats.performanceScores)) {
+      return [];
+    }
     return stats.performanceScores.filter(item => {
       if (!memberSearchTerm) return true;
       const searchLower = memberSearchTerm.toLowerCase();
       return (
-        item.member.name?.toLowerCase().includes(searchLower) ||
-        item.member.position?.toLowerCase().includes(searchLower) ||
-        item.member.region?.toLowerCase().includes(searchLower)
+        item.member?.name?.toLowerCase().includes(searchLower) ||
+        item.member?.position?.toLowerCase().includes(searchLower) ||
+        item.member?.region?.toLowerCase().includes(searchLower)
       );
     });
   }, [stats.performanceScores, memberSearchTerm]);
