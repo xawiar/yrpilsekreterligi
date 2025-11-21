@@ -69,6 +69,44 @@ Mobil tasarım iyileştirmeleri uygulandı:
 - ✅ Touch-friendly boyutlar
 - ✅ Mobil için özel spacing ve typography
 
+## 📱 Telefona Yükleme
+
+### Hızlı Yöntem (Development)
+
+**Android:**
+```bash
+npm run build
+npm run cap:sync
+npm run cap:open:android
+# Android Studio'da "Run" butonuna bas (USB ile telefon bağlı olmalı)
+```
+
+**iOS (Mac + Xcode):**
+```bash
+npm run build
+npm run cap:sync
+npm run cap:open:ios
+# Xcode'da "Run" butonuna bas (USB ile iPhone bağlı olmalı)
+```
+
+### APK Oluşturma (Android)
+
+1. Android Studio'da: `Build` → `Build Bundle(s) / APK(s)` → `Build APK(s)`
+2. APK dosyası: `android/app/build/outputs/apk/debug/app-debug.apk`
+3. APK'yı telefona aktar ve yükle
+
+**Detaylı rehber:** `MOBILE_APP_INSTALL_GUIDE.md` dosyasına bakın.
+
+### Alternatif: PWA (Önerilen - Hızlı)
+
+Uygulama zaten PWA! App Store'a gerek yok:
+
+**Android Chrome:**
+- Siteyi aç → Menü → "Ana ekrana ekle"
+
+**iOS Safari:**
+- Siteyi aç → Paylaş → "Ana Ekrana Ekle"
+
 ## 🎯 Sonraki Adımlar
 
 1. **Android Build:**
