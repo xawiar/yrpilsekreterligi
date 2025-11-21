@@ -23,20 +23,6 @@ const ReportsPage = () => {
   const [savingStars, setSavingStars] = useState({});
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const mobileView = isMobile();
-  
-  // Üye arama filtresi - useMemo ile optimize edildi
-  const filteredScores = useMemo(() => {
-    return stats.performanceScores.filter(item => {
-      if (!memberSearchTerm) return true;
-      const searchLower = memberSearchTerm.toLowerCase();
-      return (
-        item.member.name?.toLowerCase().includes(searchLower) ||
-        item.member.position?.toLowerCase().includes(searchLower) ||
-        item.member.region?.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [stats.performanceScores, memberSearchTerm]);
-  
   const [stats, setStats] = useState({
     // Genel İstatistikler
     totalMembers: 0,
@@ -82,6 +68,19 @@ const ReportsPage = () => {
     // Performans Puanları
     performanceScores: [],
   });
+
+  // Üye arama filtresi - useMemo ile optimize edildi (stats tanımından sonra)
+  const filteredScores = useMemo(() => {
+    return stats.performanceScores.filter(item => {
+      if (!memberSearchTerm) return true;
+      const searchLower = memberSearchTerm.toLowerCase();
+      return (
+        item.member.name?.toLowerCase().includes(searchLower) ||
+        item.member.position?.toLowerCase().includes(searchLower) ||
+        item.member.region?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [stats.performanceScores, memberSearchTerm]);
 
   useEffect(() => {
     fetchReportsData();

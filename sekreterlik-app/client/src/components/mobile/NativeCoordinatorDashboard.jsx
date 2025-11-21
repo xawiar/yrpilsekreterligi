@@ -80,15 +80,22 @@ const NativeCoordinatorDashboard = ({
   
   // Gruplandır
   const completed = []; // hasData && hasProtocol && !hasObjection
-  const missingProtocol = []; // hasData && !hasProtocol
-  const onlyProtocol = []; // !hasData && hasProtocol
-  const noData = []; // !hasData && !hasProtocol
+  const missingProtocol = []; // hasData && !hasProtocol (sadece veri girilmiş ama tutanak yok)
+  const onlyProtocol = []; // !hasData && hasProtocol (sadece tutanak var, veri yok)
+  const noData = []; // !hasData && !hasProtocol (hiçbir şey yok)
   const objected = []; // hasObjection
   
   Object.values(allBallotBoxesWithResults).forEach((item) => {
+    // Önce itiraz kontrolü
     if (item.hasObjection) {
       objected.push(item);
-    } else if (item.hasData && item.hasProtocol) {
+    } 
+    // Sonra result var mı kontrolü - eğer result yoksa, noData'ya git
+    else if (!item.result) {
+      noData.push(item);
+    }
+    // Result var, durumlarına göre grupla
+    else if (item.hasData && item.hasProtocol) {
       completed.push(item);
     } else if (item.hasData && !item.hasProtocol) {
       missingProtocol.push(item);
@@ -116,7 +123,7 @@ const NativeCoordinatorDashboard = ({
   };
 
   return (
-    <div className="px-4 py-6 space-y-4 pb-24 overflow-y-auto" style={{ height: '100vh', WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen px-4 py-6 space-y-4 pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
       {/* Header with Logout */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex-1">

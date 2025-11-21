@@ -649,6 +649,8 @@ const CoordinatorDashboardPage = () => {
           
           // Sonuçları ekle
           electionResults.forEach((result) => {
+            if (!result) return; // Null check
+            
             const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
             const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
             
@@ -675,6 +677,15 @@ const CoordinatorDashboardPage = () => {
               allBallotBoxesWithResults[ballotNumber].hasData = hasDataResult;
               allBallotBoxesWithResults[ballotNumber].hasProtocol = hasProtocolResult;
               allBallotBoxesWithResults[ballotNumber].hasObjection = hasObjectionResult;
+            }
+          });
+          
+          // Sonuç olmayan sandıklar için hasData ve hasProtocol'i false olarak işaretle
+          Object.values(allBallotBoxesWithResults).forEach((item) => {
+            if (!item.result) {
+              item.hasData = false;
+              item.hasProtocol = false;
+              item.hasObjection = false;
             }
           });
           
@@ -946,6 +957,13 @@ const CoordinatorDashboardPage = () => {
           </div>
         </Modal>
       )}
+    </div>
+  );
+};
+
+export default CoordinatorDashboardPage;
+
+
     </div>
   );
 };
