@@ -426,6 +426,20 @@ const LoginEnhanced = () => {
                     )}
                   </motion.button>
                 </div>
+                
+                <div className="flex items-center">
+                  <input
+                    id="remember-chief-observer"
+                    name="remember-chief-observer"
+                    type="checkbox"
+                    checked={rememberChiefObserver}
+                    onChange={(e) => setRememberChiefObserver(e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-chief-observer" className="ml-2 block text-sm text-gray-900">
+                    Beni hatırla
+                  </label>
+                </div>
               </form>
             ) : (
               /* Sorumlu Form */
@@ -509,6 +523,20 @@ const LoginEnhanced = () => {
                       "Giriş Yap"
                     )}
                   </motion.button>
+                </div>
+                
+                <div className="flex items-center">
+                  <input
+                    id="remember-coordinator"
+                    name="remember-coordinator"
+                    type="checkbox"
+                    checked={rememberCoordinator}
+                    onChange={(e) => setRememberCoordinator(e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-coordinator" className="ml-2 block text-sm text-gray-900">
+                    Beni hatırla
+                  </label>
                 </div>
               </form>
             )}
