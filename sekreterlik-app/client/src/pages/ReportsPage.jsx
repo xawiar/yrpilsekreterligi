@@ -74,9 +74,15 @@ const ReportsPage = () => {
     if (!stats.performanceScores || !Array.isArray(stats.performanceScores)) {
       return [];
     }
-    return stats.performanceScores.filter(item => {
-      if (!memberSearchTerm) return true;
-      const searchLower = memberSearchTerm.toLowerCase();
+    // Önce member'ı olmayan item'ları filtrele
+    const validScores = stats.performanceScores.filter(item => item && item.member);
+    
+    // Sonra arama terimine göre filtrele
+    if (!memberSearchTerm) {
+      return validScores;
+    }
+    const searchLower = memberSearchTerm.toLowerCase();
+    return validScores.filter(item => {
       return (
         item.member?.name?.toLowerCase().includes(searchLower) ||
         item.member?.position?.toLowerCase().includes(searchLower) ||
@@ -1342,8 +1348,10 @@ const ReportsPage = () => {
           ) : mobileView ? (
             // Mobilde kart görünümü
             <div className="space-y-3">
-                  {filteredScores.map((item, index) => (
-                    <NativeCard key={item.member.id}>
+                  {filteredScores.map((item, index) => {
+                    if (!item || !item.member) return null;
+                    return (
+                    <NativeCard key={item.member?.id || index}>
                       <div className="flex items-start space-x-3">
                         <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
                           index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
@@ -1425,7 +1433,8 @@ const ReportsPage = () => {
                         </div>
                       </div>
                     </NativeCard>
-                  ))}
+                    );
+                  })}
                 </div>
           ) : (
             // Desktop table görünümü
@@ -1452,8 +1461,10 @@ const ReportsPage = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredScores.map((item, index) => (
-                        <tr key={item.member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      {filteredScores.map((item, index) => {
+                        if (!item || !item.member) return null;
+                        return (
+                        <tr key={item.member?.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                             <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
                               index === 0 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
@@ -1561,7 +1572,8 @@ const ReportsPage = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
