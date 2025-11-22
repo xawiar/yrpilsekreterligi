@@ -1135,6 +1135,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           ))}
                         </>
                       )}
+                      {/* Diğer CB Adayları */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan adaylar)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.cb_votes['Diğer'] || ''}
+                          onChange={(e) => handleCbVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1188,6 +1203,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           ))}
                         </>
                       )}
+                      {/* Diğer MV Partileri */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.mv_votes['Diğer'] || ''}
+                          onChange={(e) => handleMvVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1241,6 +1271,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           ))}
                         </>
                       )}
+                      {/* Diğer CB Adayları */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan adaylar)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.cb_votes['Diğer'] || ''}
+                          onChange={(e) => handleCbVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1289,6 +1334,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           ))}
                         </>
                       )}
+                      {/* Diğer MV Partileri */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.mv_votes['Diğer'] || ''}
+                          onChange={(e) => handleMvVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1475,6 +1535,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           />
                         </div>
                       ))}
+                      {/* Diğer Belediye Başkanı Partileri */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler/adaylar)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.mayor_votes['Diğer'] || ''}
+                          onChange={(e) => handleMayorVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1510,6 +1585,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           </div>
                         );
                       })}
+                      {/* Diğer İl Genel Meclisi Partileri */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.provincial_assembly_votes['Diğer'] || ''}
+                          onChange={(e) => handleProvincialAssemblyVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1545,6 +1635,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           </div>
                         );
                       })}
+                      {/* Diğer Belediye Meclisi Partileri */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.municipal_council_votes['Diğer'] || ''}
+                          onChange={(e) => handleMunicipalCouncilVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1662,6 +1767,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         </div>
                         );
                       })}
+                      {/* Diğer İl Genel Meclisi Partileri */}
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.provincial_assembly_votes['Diğer'] || ''}
+                          onChange={(e) => handleProvincialAssemblyVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1694,6 +1814,22 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         </div>
                         );
                       })}
+                      {/* Diğer Belediye Meclisi Partileri */}
+                      <div className={`flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50 ${isVillage() ? 'opacity-50' : ''}`}>
+                        <label className="flex-1 text-sm font-medium text-gray-900">
+                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={formData.municipal_council_votes['Diğer'] || ''}
+                          onChange={(e) => handleMunicipalCouncilVoteChange('Diğer', e.target.value)}
+                          inputMode="numeric"
+                          disabled={isVillage()}
+                          className={`w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

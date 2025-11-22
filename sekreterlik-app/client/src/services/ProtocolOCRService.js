@@ -491,13 +491,13 @@ KRİTİK KURALLAR:
   }
 
   /**
-   * AI'dan gelen veriyi formda tanımlı olanlarla filtrele
+   * AI'dan gelen veriyi formda tanımlı olanlarla filtrele ve "Diğer" hesapla
    */
   static filterDataByFormDefinitions(data, electionType, electionInfo = {}) {
     const filtered = { ...data };
     
     if (electionType === 'cb' || electionType === 'genel') {
-      // CB adaylarını filtrele
+      // CB adaylarını filtrele ve "Diğer" hesapla
       if (data.cb_oylari && typeof data.cb_oylari === 'object') {
         const cbCandidates = electionInfo.cb_candidates || [];
         const independentCbCandidates = electionInfo.independent_cb_candidates || [];
@@ -505,6 +505,8 @@ KRİTİK KURALLAR:
         
         if (allCbCandidates.length > 0) {
           const filteredCbOylari = {};
+          let digerToplam = 0;
+          
           Object.keys(data.cb_oylari).forEach(aday => {
             // Aday adını normalize et ve formdaki adaylarla eşleştir
             const normalizedAday = aday.trim();
@@ -518,15 +520,24 @@ KRİTİK KURALLAR:
             
             if (foundCandidate) {
               filteredCbOylari[foundCandidate] = data.cb_oylari[aday];
+            } else {
+              // Formda olmayan adayın oylarını "Diğer"e ekle
+              digerToplam += parseInt(data.cb_oylari[aday]) || 0;
             }
           });
+          
+          // "Diğer" varsa ekle
+          if (digerToplam > 0) {
+            filteredCbOylari['Diğer'] = digerToplam;
+          }
+          
           filtered.cb_oylari = filteredCbOylari;
         }
       }
     }
     
     if (electionType === 'mv' || electionType === 'genel') {
-      // MV partilerini filtrele
+      // MV partilerini filtrele ve "Diğer" hesapla
       if (data.mv_oylari && typeof data.mv_oylari === 'object') {
         const parties = electionInfo.parties || [];
         const independentMvCandidates = electionInfo.independent_mv_candidates || [];
@@ -535,6 +546,8 @@ KRİTİK KURALLAR:
         
         if (allMvCandidates.length > 0) {
           const filteredMvOylari = {};
+          let digerToplam = 0;
+          
           Object.keys(data.mv_oylari).forEach(parti => {
             // Parti adını normalize et ve formdaki partilerle eşleştir
             const normalizedParti = parti.trim();
@@ -548,8 +561,17 @@ KRİTİK KURALLAR:
             
             if (foundParty) {
               filteredMvOylari[foundParty] = data.mv_oylari[parti];
+            } else {
+              // Formda olmayan partinin oylarını "Diğer"e ekle
+              digerToplam += parseInt(data.mv_oylari[parti]) || 0;
             }
           });
+          
+          // "Diğer" varsa ekle
+          if (digerToplam > 0) {
+            filteredMvOylari['Diğer'] = digerToplam;
+          }
+          
           filtered.mv_oylari = filteredMvOylari;
         }
       }
@@ -557,7 +579,7 @@ KRİTİK KURALLAR:
     
     if (electionType === 'yerel_metropolitan_mayor' || electionType === 'yerel_city_mayor' || 
         electionType === 'yerel_district_mayor' || electionType === 'yerel') {
-      // Belediye Başkanı adaylarını filtrele
+      // Belediye Başkanı adaylarını filtrele ve "Diğer" hesapla
       if (data.belediye_baskani_oylari && typeof data.belediye_baskani_oylari === 'object') {
         const mayorParties = electionInfo.mayor_parties || [];
         const mayorCandidates = electionInfo.mayor_candidates || [];
@@ -566,6 +588,8 @@ KRİTİK KURALLAR:
         
         if (allMayorCandidates.length > 0) {
           const filteredMayorOylari = {};
+          let digerToplam = 0;
+          
           Object.keys(data.belediye_baskani_oylari).forEach(aday => {
             const normalizedAday = aday.trim();
             const foundCandidate = allMayorCandidates.find(c => {
@@ -578,21 +602,32 @@ KRİTİK KURALLAR:
             
             if (foundCandidate) {
               filteredMayorOylari[foundCandidate] = data.belediye_baskani_oylari[aday];
+            } else {
+              // Formda olmayan adayın oylarını "Diğer"e ekle
+              digerToplam += parseInt(data.belediye_baskani_oylari[aday]) || 0;
             }
           });
+          
+          // "Diğer" varsa ekle
+          if (digerToplam > 0) {
+            filteredMayorOylari['Diğer'] = digerToplam;
+          }
+          
           filtered.belediye_baskani_oylari = filteredMayorOylari;
         }
       }
     }
     
     if (electionType === 'yerel_provincial_assembly' || electionType === 'yerel') {
-      // İl Genel Meclisi partilerini filtrele
+      // İl Genel Meclisi partilerini filtrele ve "Diğer" hesapla
       if (data.il_genel_meclisi_oylari && typeof data.il_genel_meclisi_oylari === 'object') {
         const provincialAssemblyParties = electionInfo.provincial_assembly_parties || [];
         const allProvincialParties = provincialAssemblyParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
         
         if (allProvincialParties.length > 0) {
           const filteredProvincialOylari = {};
+          let digerToplam = 0;
+          
           Object.keys(data.il_genel_meclisi_oylari).forEach(parti => {
             const normalizedParti = parti.trim();
             const foundParty = allProvincialParties.find(p => {
@@ -605,21 +640,32 @@ KRİTİK KURALLAR:
             
             if (foundParty) {
               filteredProvincialOylari[foundParty] = data.il_genel_meclisi_oylari[parti];
+            } else {
+              // Formda olmayan partinin oylarını "Diğer"e ekle
+              digerToplam += parseInt(data.il_genel_meclisi_oylari[parti]) || 0;
             }
           });
+          
+          // "Diğer" varsa ekle
+          if (digerToplam > 0) {
+            filteredProvincialOylari['Diğer'] = digerToplam;
+          }
+          
           filtered.il_genel_meclisi_oylari = filteredProvincialOylari;
         }
       }
     }
     
     if (electionType === 'yerel_municipal_council' || electionType === 'yerel') {
-      // Belediye Meclisi partilerini filtrele
+      // Belediye Meclisi partilerini filtrele ve "Diğer" hesapla
       if (data.belediye_meclisi_oylari && typeof data.belediye_meclisi_oylari === 'object') {
         const municipalCouncilParties = electionInfo.municipal_council_parties || [];
         const allMunicipalParties = municipalCouncilParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
         
         if (allMunicipalParties.length > 0) {
           const filteredMunicipalOylari = {};
+          let digerToplam = 0;
+          
           Object.keys(data.belediye_meclisi_oylari).forEach(parti => {
             const normalizedParti = parti.trim();
             const foundParty = allMunicipalParties.find(p => {
@@ -632,8 +678,17 @@ KRİTİK KURALLAR:
             
             if (foundParty) {
               filteredMunicipalOylari[foundParty] = data.belediye_meclisi_oylari[parti];
+            } else {
+              // Formda olmayan partinin oylarını "Diğer"e ekle
+              digerToplam += parseInt(data.belediye_meclisi_oylari[parti]) || 0;
             }
           });
+          
+          // "Diğer" varsa ekle
+          if (digerToplam > 0) {
+            filteredMunicipalOylari['Diğer'] = digerToplam;
+          }
+          
           filtered.belediye_meclisi_oylari = filteredMunicipalOylari;
         }
       }
