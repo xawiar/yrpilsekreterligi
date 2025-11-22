@@ -645,6 +645,7 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
       date: dateValue,
       type: election.type || 'genel',
       status: election.status || 'draft',
+      is_metropolitan: election.is_metropolitan || false,
       cb_candidates: election.cb_candidates || [],
       parties: election.parties || [],
       independent_cb_candidates: election.independent_cb_candidates || [],
