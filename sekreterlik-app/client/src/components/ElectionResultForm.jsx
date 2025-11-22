@@ -6,6 +6,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { useAuth } from '../contexts/AuthContext';
 import uploadQueue from '../utils/UploadQueue';
+import ProtocolOCRService from '../services/ProtocolOCRService';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
   const { userRole, user } = useAuth();
@@ -81,6 +82,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     signed: 0,
     objection: 0
   });
+  const [fillingWithAI, setFillingWithAI] = useState(false);
 
   // Fetch ballot box information
   useEffect(() => {
@@ -425,6 +427,47 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     }
   };
 
+  // AI ile tutanak doldur
+  const handleAIFill = async () => {
+    if (!formData.signed_protocol_photo) {
+      setMessage('Lütfen önce tutanak fotoğrafı yükleyin');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setFillingWithAI(true);
+      setMessage('AI tutanağı okumaya başladı...');
+      setMessageType('success');
+
+      // AI ile tutanağı oku
+      const extractedData = await ProtocolOCRService.readProtocol(
+        formData.signed_protocol_photo,
+        {
+          type: election.type,
+          candidates: election.candidates || [],
+          parties: election.parties || []
+        }
+      );
+
+      // Formu doldur
+      setFormData(prev => ({
+        ...prev,
+        ...extractedData,
+        filled_by_ai: true // AI ile doldurulduğunu işaretle
+      }));
+
+      setMessage('AI tutanağı başarıyla okudu ve formu doldurdu. Lütfen kontrol edin ve kaydedin. Başmüşahit onayı gerekecek.');
+      setMessageType('success');
+    } catch (error) {
+      console.error('AI fill error:', error);
+      setMessage(`AI okuma hatası: ${error.message}`);
+      setMessageType('error');
+    } finally {
+      setFillingWithAI(false);
+    }
+  };
+
   // Check if ballot box is in a village (köy)
   const isVillage = () => {
     return !!(formData.village_name && formData.village_name.trim() !== '');
@@ -636,7 +679,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       const submitData = {
         ...formData,
         ballot_box_id: ballotBoxId,
-        ballot_number: ballotNumber || formData.ballot_number
+        ballot_number: ballotNumber || formData.ballot_number,
+        filled_by_ai: formData.filled_by_ai || false // AI ile dolduruldu mu?
       };
       
       // Check if protocol photo is missing
@@ -1341,6 +1385,25 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       disabled={uploadingPhotos.signed}
                     />
                   </label>
+                  {/* AI ile Doldur Butonu */}
+                  {formData.signed_protocol_photo && !fillingWithAI && (
+                    <button
+                      type="button"
+                      onClick={handleAIFill}
+                      className="mt-2 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      AI ile Otomatik Doldur
+                    </button>
+                  )}
+                  {fillingWithAI && (
+                    <div className="mt-2 w-full px-4 py-2 bg-purple-100 text-purple-700 font-medium rounded-lg flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-purple-300 border-t-purple-600"></div>
+                      AI tutanağı okuyor...
+                    </div>
+                  )}
               </div>
 
                 <div>

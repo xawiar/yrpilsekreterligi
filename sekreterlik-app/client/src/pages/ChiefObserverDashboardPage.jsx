@@ -25,6 +25,11 @@ const ChiefObserverDashboardPage = () => {
   const [electionResults, setElectionResults] = useState({}); // electionId -> result
   const [institutionSupervisor, setInstitutionSupervisor] = useState(null);
   const [regionSupervisor, setRegionSupervisor] = useState(null);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [loadingApprovals, setLoadingApprovals] = useState(false);
+  const [activeTab, setActiveTab] = useState('elections'); // 'elections' or 'approvals'
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
 
   // Authentication kontrolü - AuthContext'ten gelen değerleri kullan
   useEffect(() => {
@@ -35,6 +40,23 @@ const ChiefObserverDashboardPage = () => {
       navigate('/login?type=chief-observer', { replace: true });
     }
   }, [isLoggedIn, userRole, user, navigate, authLoading]);
+
+  // Bekleyen onayları yükle
+  const loadPendingApprovals = useCallback(async () => {
+    if (!isLoggedIn || userRole !== 'chief_observer') return;
+    
+    try {
+      setLoadingApprovals(true);
+      const data = await ApiService.getPendingElectionResults();
+      if (data && data.results) {
+        setPendingApprovals(data.results);
+      }
+    } catch (error) {
+      console.error('Error loading pending approvals:', error);
+    } finally {
+      setLoadingApprovals(false);
+    }
+  }, [isLoggedIn, userRole]);
 
   // Seçimleri ve sonuçları yükle
   useEffect(() => {
@@ -149,11 +171,12 @@ const ChiefObserverDashboardPage = () => {
     };
 
     loadData();
+    loadPendingApprovals(); // Bekleyen onayları da yükle
 
     return () => {
       isMounted = false;
     };
-  }, [user, isLoggedIn, userRole]);
+  }, [user, isLoggedIn, userRole, loadPendingApprovals]);
 
   // Event handlers
   const handleElectionClick = useCallback((election) => {
@@ -234,6 +257,34 @@ const ChiefObserverDashboardPage = () => {
       return null;
     }
   }, []);
+
+  // Onayla
+  const handleApprove = useCallback(async (resultId) => {
+    try {
+      await ApiService.approveElectionResult(resultId);
+      setMessage('Sonuç başarıyla onaylandı');
+      setMessageType('success');
+      await loadPendingApprovals(); // Listeyi yenile
+    } catch (error) {
+      console.error('Error approving result:', error);
+      setMessage(error.message || 'Onaylama sırasında hata oluştu');
+      setMessageType('error');
+    }
+  }, [loadPendingApprovals]);
+
+  // Reddet
+  const handleReject = useCallback(async (resultId, reason) => {
+    try {
+      await ApiService.rejectElectionResult(resultId, reason);
+      setMessage('Sonuç reddedildi');
+      setMessageType('success');
+      await loadPendingApprovals(); // Listeyi yenile
+    } catch (error) {
+      console.error('Error rejecting result:', error);
+      setMessage(error.message || 'Reddetme sırasında hata oluştu');
+      setMessageType('error');
+    }
+  }, [loadPendingApprovals]);
 
   // Auth kontrolü tamamlanmamışsa loading göster
   if (authLoading) {
@@ -371,7 +422,7 @@ const ChiefObserverDashboardPage = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
             <div className="flex items-center justify-between">
               <div>
@@ -413,8 +464,86 @@ const ChiefObserverDashboardPage = () => {
               </div>
             </div>
           </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer" onClick={() => setActiveTab('approvals')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Onay Bekleyen</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-400">{pendingApprovals.length}</p>
+              </div>
+              <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* Message Alert */}
+        {message && (
+          <div 
+            className={`p-4 rounded-lg border-l-4 shadow-md ${
+              messageType === 'success' 
+                ? 'bg-green-50 border-green-500 text-green-800' 
+                : 'bg-red-50 border-red-500 text-red-800'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              {messageType === 'success' ? (
+                <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <p className="text-sm font-medium flex-1">{message}</p>
+              <button
+                onClick={() => setMessage('')}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div className="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-6">
+            <button
+              onClick={() => setActiveTab('elections')}
+              className={`px-6 py-3 font-medium text-sm transition-colors ${
+                activeTab === 'elections'
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              Seçimler
+            </button>
+            <button
+              onClick={() => setActiveTab('approvals')}
+              className={`px-6 py-3 font-medium text-sm transition-colors relative ${
+                activeTab === 'approvals'
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              Bekleyen Onaylar
+              {pendingApprovals.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full">
+                  {pendingApprovals.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Elections Tab */}
+          {activeTab === 'elections' && (
         {/* Elections List */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">
@@ -540,6 +669,158 @@ const ChiefObserverDashboardPage = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+          )}
+
+          {/* Approvals Tab */}
+          {activeTab === 'approvals' && (
+            <div>
+              {loadingApprovals ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
+                </div>
+              ) : pendingApprovals.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bekleyen onay bulunmuyor</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingApprovals.map((result, index) => (
+                    <div
+                      key={result.id}
+                      className="bg-white dark:bg-gray-800 border-2 border-orange-200 dark:border-orange-800 rounded-xl shadow-lg p-6"
+                      style={{ animation: `fadeInUp 0.3s ease-out ${index * 0.1}s both` }}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="px-3 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded-lg text-sm font-semibold">
+                              AI ile Dolduruldu
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                              {result.election_name || 'Seçim'}
+                            </h3>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">Sandık:</span>
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.ballot_number || '-'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">Kullanılan Oy:</span>
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.used_votes || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">Geçerli Oy:</span>
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.valid_votes || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">Giriş Yapan:</span>
+                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.creator_name || '-'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tutanak Fotoğrafı */}
+                      {result.signed_protocol_photo && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Tutanak Fotoğrafı
+                          </label>
+                          <img
+                            src={result.signed_protocol_photo}
+                            alt="Tutanak"
+                            className="w-full max-w-md rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(result.signed_protocol_photo, '_blank')}
+                          />
+                        </div>
+                      )}
+
+                      {/* AI'nın Doldurduğu Veriler */}
+                      <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">AI'nın Doldurduğu Veriler:</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Toplam Seçmen:</span>
+                            <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{result.total_voters || 0}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Geçersiz Oy:</span>
+                            <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{result.invalid_votes || 0}</span>
+                          </div>
+                          {result.election_type === 'genel' && (
+                            <>
+                              <div>
+                                <span className="text-gray-600 dark:text-gray-400">CB Oyları:</span>
+                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
+                                  {Object.values(result.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 dark:text-gray-400">MV Oyları:</span>
+                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
+                                  {Object.values(result.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                          {result.election_type === 'yerel' && (
+                            <>
+                              <div>
+                                <span className="text-gray-600 dark:text-gray-400">Belediye Başkanı:</span>
+                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
+                                  {Object.values(result.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 dark:text-gray-400">İl Genel Meclisi:</span>
+                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
+                                  {Object.values(result.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Onay/Red Butonları */}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleApprove(result.id)}
+                          className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Onayla
+                        </button>
+                        <button
+                          onClick={() => {
+                            const reason = prompt('Reddetme nedeni:');
+                            if (reason) {
+                              handleReject(result.id, reason);
+                            }
+                          }}
+                          className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Reddet
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

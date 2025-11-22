@@ -2065,6 +2065,58 @@ class ApiService {
     return response.json();
   }
 
+  // Get pending election results (for chief observer)
+  static async getPendingElectionResults() {
+    if (USE_FIREBASE) {
+      // Firebase için implementasyon gerekirse buraya eklenebilir
+      throw new Error('Pending election results için Firebase implementasyonu henüz eklenmedi');
+    }
+    const response = await fetch(`${API_BASE_URL}/election-results/pending`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Bekleyen sonuçlar alınamadı');
+    }
+    return data;
+  }
+
+  // Approve election result (chief observer only)
+  static async approveElectionResult(id) {
+    if (USE_FIREBASE) {
+      // Firebase için implementasyon gerekirse buraya eklenebilir
+      throw new Error('Approve election result için Firebase implementasyonu henüz eklenmedi');
+    }
+    const response = await fetch(`${API_BASE_URL}/election-results/${id}/approve`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Sonuç onaylanamadı');
+    }
+    return data;
+  }
+
+  // Reject election result (chief observer only)
+  static async rejectElectionResult(id, rejectionReason = '') {
+    if (USE_FIREBASE) {
+      // Firebase için implementasyon gerekirse buraya eklenebilir
+      throw new Error('Reject election result için Firebase implementasyonu henüz eklenmedi');
+    }
+    const response = await fetch(`${API_BASE_URL}/election-results/${id}/reject`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ rejection_reason: rejectionReason }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Sonuç reddedilemedi');
+    }
+    return data;
+  }
+
   // Neighborhood Representatives API
   static async getNeighborhoodRepresentatives() {
     if (USE_FIREBASE) {

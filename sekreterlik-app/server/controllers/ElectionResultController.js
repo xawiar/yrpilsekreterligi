@@ -187,13 +187,18 @@ class ElectionResultController {
         return res.status(400).json({ message: 'Bu sandık için zaten sonuç girilmiş' });
       }
 
+      // Determine approval status: if filled by AI, it needs approval, otherwise auto-approved
+      const filledByAI = resultData.filled_by_ai === true || resultData.filled_by_ai === 1;
+      const approvalStatus = filledByAI ? 'pending' : (resultData.approval_status || 'approved');
+
       const sql = `INSERT INTO election_results 
                    (election_id, ballot_box_id, ballot_number, region_name, district_name, town_name, 
                     neighborhood_name, village_name, total_voters, used_votes, invalid_votes, valid_votes,
                     cb_votes, mv_votes, mayor_votes, provincial_assembly_votes, municipal_council_votes,
                     referendum_votes, party_votes, candidate_votes, signed_protocol_photo, 
-                    objection_protocol_photo, has_objection, objection_reason, notes, created_by) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                    objection_protocol_photo, has_objection, objection_reason, notes, created_by,
+                    filled_by_ai, approval_status) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       
       const params = [
         resultData.election_id,
@@ -221,7 +226,9 @@ class ElectionResultController {
         resultData.has_objection ? 1 : 0,
         resultData.objection_reason || null,
         resultData.notes || null,
-        userId
+        userId,
+        filledByAI ? 1 : 0,
+        approvalStatus
       ];
 
       const dbResult = await db.run(sql, params);
@@ -374,6 +381,147 @@ class ElectionResultController {
       res.json({ message: 'Seçim sonucu başarıyla silindi' });
     } catch (error) {
       console.error('Error deleting election result:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
+  // Get pending election results (for chief observer approval)
+  static async getPending(req, res) {
+    try {
+      // Only chief observers can see pending results
+      if (req.user?.type !== 'chief_observer') {
+        return res.status(403).json({ message: 'Sadece başmüşahit bekleyen onayları görebilir' });
+      }
+
+      const sql = `SELECT er.*, e.name as election_name, e.type as election_type, e.date as election_date,
+                          bb.ballot_number, bb.voter_count,
+                          m.name as creator_name
+                   FROM election_results er
+                   LEFT JOIN elections e ON er.election_id = e.id
+                   LEFT JOIN ballot_boxes bb ON er.ballot_box_id = bb.id
+                   LEFT JOIN members m ON er.created_by = m.id
+                   WHERE er.approval_status = 'pending'
+                   ORDER BY er.created_at DESC`;
+
+      const results = await db.all(sql);
+      
+      // Parse JSON fields
+      const parsedResults = results.map(result => ({
+        ...result,
+        cb_votes: result.cb_votes ? JSON.parse(result.cb_votes) : {},
+        mv_votes: result.mv_votes ? JSON.parse(result.mv_votes) : {},
+        mayor_votes: result.mayor_votes ? JSON.parse(result.mayor_votes) : {},
+        provincial_assembly_votes: result.provincial_assembly_votes ? JSON.parse(result.provincial_assembly_votes) : {},
+        municipal_council_votes: result.municipal_council_votes ? JSON.parse(result.municipal_council_votes) : {},
+        referendum_votes: result.referendum_votes ? JSON.parse(result.referendum_votes) : {},
+        party_votes: result.party_votes ? JSON.parse(result.party_votes) : {},
+        candidate_votes: result.candidate_votes ? JSON.parse(result.candidate_votes) : {},
+        filled_by_ai: result.filled_by_ai === 1 || result.filled_by_ai === true
+      }));
+
+      res.json({ success: true, results: parsedResults });
+    } catch (error) {
+      console.error('Error fetching pending election results:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
+  // Approve election result (chief observer only)
+  static async approve(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id || null;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('user-agent');
+
+      // Only chief observers can approve
+      if (req.user?.type !== 'chief_observer') {
+        return res.status(403).json({ message: 'Sadece başmüşahit onaylayabilir' });
+      }
+
+      // Get the result
+      const result = await db.get('SELECT * FROM election_results WHERE id = ?', [id]);
+      if (!result) {
+        return res.status(404).json({ message: 'Seçim sonucu bulunamadı' });
+      }
+
+      // Check if already approved or rejected
+      if (result.approval_status === 'approved') {
+        return res.status(400).json({ message: 'Bu sonuç zaten onaylanmış' });
+      }
+
+      // Update approval status
+      await db.run(
+        `UPDATE election_results 
+         SET approval_status = 'approved', 
+             approved_by = ?, 
+             approved_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [userId, id]
+      );
+
+      // Audit log
+      await db.run(
+        `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, new_data, ip_address, user_agent) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'chief_observer', 'approve', 'election_result', id, JSON.stringify({ approval_status: 'approved' }), ipAddress, userAgent]
+      );
+
+      res.json({ message: 'Seçim sonucu başarıyla onaylandı' });
+    } catch (error) {
+      console.error('Error approving election result:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
+
+  // Reject election result (chief observer only)
+  static async reject(req, res) {
+    try {
+      const { id } = req.params;
+      const { rejection_reason } = req.body;
+      const userId = req.user?.id || null;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('user-agent');
+
+      // Only chief observers can reject
+      if (req.user?.type !== 'chief_observer') {
+        return res.status(403).json({ message: 'Sadece başmüşahit reddedebilir' });
+      }
+
+      // Get the result
+      const result = await db.get('SELECT * FROM election_results WHERE id = ?', [id]);
+      if (!result) {
+        return res.status(404).json({ message: 'Seçim sonucu bulunamadı' });
+      }
+
+      // Check if already approved or rejected
+      if (result.approval_status === 'approved') {
+        return res.status(400).json({ message: 'Onaylanmış sonuç reddedilemez. Önce onayı kaldırın.' });
+      }
+
+      // Update rejection status
+      await db.run(
+        `UPDATE election_results 
+         SET approval_status = 'rejected', 
+             approved_by = ?, 
+             approved_at = CURRENT_TIMESTAMP,
+             rejection_reason = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [userId, rejection_reason || 'Reddedilme nedeni belirtilmedi', id]
+      );
+
+      // Audit log
+      await db.run(
+        `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, new_data, ip_address, user_agent) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, 'chief_observer', 'reject', 'election_result', id, JSON.stringify({ approval_status: 'rejected', rejection_reason }), ipAddress, userAgent]
+      );
+
+      res.json({ message: 'Seçim sonucu reddedildi' });
+    } catch (error) {
+      console.error('Error rejecting election result:', error);
       res.status(500).json({ message: 'Sunucu hatası', error: error.message });
     }
   }

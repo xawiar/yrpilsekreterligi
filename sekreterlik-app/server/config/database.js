@@ -703,6 +703,37 @@ db.serialize(() => {
     UNIQUE(election_id, ballot_box_id)
   )`);
 
+  // Add approval status columns to election_results table (migration)
+  db.run(`ALTER TABLE election_results ADD COLUMN approval_status TEXT DEFAULT 'pending' CHECK(approval_status IN ('pending', 'approved', 'rejected'))`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding approval_status column to election_results:', err);
+    }
+  });
+
+  db.run(`ALTER TABLE election_results ADD COLUMN filled_by_ai BOOLEAN DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding filled_by_ai column to election_results:', err);
+    }
+  });
+
+  db.run(`ALTER TABLE election_results ADD COLUMN approved_by INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding approved_by column to election_results:', err);
+    }
+  });
+
+  db.run(`ALTER TABLE election_results ADD COLUMN approved_at DATETIME`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding approved_at column to election_results:', err);
+    }
+  });
+
+  db.run(`ALTER TABLE election_results ADD COLUMN rejection_reason TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding rejection_reason column to election_results:', err);
+    }
+  });
+
   // Create election_coordinators table
   db.run(`CREATE TABLE IF NOT EXISTS election_coordinators (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
