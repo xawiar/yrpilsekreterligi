@@ -55,7 +55,16 @@ class ProtocolOCRService {
 
       // Firebase Storage URL'leri için backend proxy kullan
       if (imageUrl.includes('firebasestorage.googleapis.com')) {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        // API_BASE_URL'i al - /api prefix'i olabilir veya olmayabilir
+        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        
+        // Eğer /api yoksa ekle
+        if (!API_BASE_URL.endsWith('/api') && !API_BASE_URL.includes('/api/')) {
+          API_BASE_URL = API_BASE_URL.endsWith('/') 
+            ? `${API_BASE_URL}api` 
+            : `${API_BASE_URL}/api`;
+        }
+        
         const proxyUrl = `${API_BASE_URL}/election-results/proxy-image?imageUrl=${encodeURIComponent(imageUrl)}`;
         
         try {
@@ -125,21 +134,7 @@ class ProtocolOCRService {
     try {
       const apiKey = await this.getApiKey();
       
-      // Firebase Storage URL'leri için önce direkt URL göndermeyi dene (Gemini bazı durumlarda URL'yi direkt kabul edebilir)
-      if (imageUrl.includes('firebasestorage.googleapis.com') && !imageUrl.startsWith('data:image')) {
-        // Önce direkt URL ile dene
-        try {
-          const result = await this.readProtocolWithUrl(imageUrl, electionInfo, apiKey);
-          if (result) {
-            return result;
-          }
-        } catch (urlError) {
-          console.warn('Direct URL method failed, trying base64:', urlError);
-          // Fallback: base64'e çevir
-        }
-      }
-      
-      // Base64 yöntemi (proxy veya direkt)
+      // Base64 yöntemi (proxy veya direkt) - Gemini API file_uri desteklemiyor, sadece base64 kullan
       const base64Image = await this.imageToBase64(imageUrl);
       
       // Base64'ten sadece data kısmını al (data:image/jpeg;base64, kısmını çıkar)
@@ -257,125 +252,6 @@ GEREKLİ ALANLAR:
     }
   }
 
-  /**
-   * Gemini API'ye direkt URL gönder (CORS bypass için)
-   */
-  static async readProtocolWithUrl(imageUrl, electionInfo, apiKey) {
-    try {
-      const electionType = electionInfo.type || 'genel';
-      let prompt = `Bu bir seçim tutanağı fotoğrafıdır. Lütfen tutanaktaki tüm bilgileri okuyup aşağıdaki JSON formatında döndür. SADECE JSON döndür, başka açıklama yapma.
-
-GEREKLİ ALANLAR:
-- sandik_numarasi: Sandık numarası (varsa)
-- toplam_secmen: Toplam seçmen sayısı
-- kullanilan_oy: Kullanılan oy sayısı
-- gecersiz_oy: Geçersiz oy sayısı
-- gecerli_oy: Geçerli oy sayısı`;
-
-      if (electionType === 'genel') {
-        prompt += `
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı": oy_sayısı})
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
-      } else if (electionType === 'yerel') {
-        prompt += `
-- belediye_baskani_oylari: Belediye başkanı adayları ve oyları (JSON object: {"Aday Adı": oy_sayısı})
-- il_genel_meclisi_oylari: İl genel meclisi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-- belediye_meclisi_oylari: Belediye meclisi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
-      } else if (electionType === 'referandum') {
-        prompt += `
-- evet_oy: Evet oyu sayısı
-- hayir_oy: Hayır oyu sayısı`;
-      }
-
-      prompt += `
-
-ÖNEMLİ:
-1. Tüm sayıları tam olarak oku, tahmin yapma
-2. Eğer bir bilgi okunamıyorsa null veya 0 yaz
-3. SADECE JSON döndür, başka metin ekleme
-4. JSON formatı şöyle olmalı:
-{
-  "sandik_numarasi": "1234",
-  "toplam_secmen": 500,
-  "kullanilan_oy": 450,
-  "gecersiz_oy": 10,
-  "gecerli_oy": 440,
-  ... (seçim türüne göre diğer alanlar)
-}`;
-
-      // Gemini Vision API çağrısı - direkt URL ile
-      const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                text: prompt
-              },
-              {
-                file_data: {
-                  mime_type: 'image/jpeg',
-                  file_uri: imageUrl
-                }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 2048,
-            responseMimeType: 'application/json'
-          }
-        })
-      });
-
-      if (!response.ok) {
-        // URL yöntemi desteklenmiyorsa null dön (fallback'e geç)
-        if (response.status === 400) {
-          return null;
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `API hatası: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Gemini'nin yanıtını parse et
-      let extractedData = {};
-      
-      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        const content = data.candidates[0].content.parts[0].text;
-        
-        // JSON'u extract et (code block içinde olabilir)
-        let jsonText = content.trim();
-        
-        // ```json veya ``` ile başlayıp bitiyorsa temizle
-        if (jsonText.startsWith('```')) {
-          jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-        }
-        
-        try {
-          extractedData = JSON.parse(jsonText);
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError, 'Content:', content);
-          throw new Error('AI yanıtı parse edilemedi. Lütfen tekrar deneyin.');
-        }
-      } else {
-        throw new Error('AI\'dan geçerli yanıt alınamadı');
-      }
-
-      // Veriyi sistem formatına çevir
-      return this.convertToSystemFormat(extractedData, electionType);
-    } catch (error) {
-      // URL yöntemi başarısız oldu, null dön (fallback'e geç)
-      if (error.message.includes('400') || error.message.includes('file_uri')) {
-        return null;
-      }
-      throw error;
-    }
-  }
 
   /**
    * AI'dan gelen veriyi sistem formatına çevir

@@ -4500,13 +4500,20 @@ class FirebaseApiService {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const changes = {};
       
-      // Track which fields changed
+      // Track which fields changed (undefined değerleri filtrele)
       if (oldResult) {
         Object.keys(resultData).forEach(key => {
-          if (JSON.stringify(oldResult[key]) !== JSON.stringify(resultData[key])) {
+          const oldValue = oldResult[key];
+          const newValue = resultData[key];
+          
+          // Undefined değerleri null'a çevir (Firestore undefined kabul etmez)
+          const normalizedOld = oldValue === undefined ? null : oldValue;
+          const normalizedNew = newValue === undefined ? null : newValue;
+          
+          if (JSON.stringify(normalizedOld) !== JSON.stringify(normalizedNew)) {
             changes[key] = {
-              old: oldResult[key],
-              new: resultData[key]
+              old: normalizedOld,
+              new: normalizedNew
             };
           }
         });
