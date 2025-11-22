@@ -44,7 +44,7 @@ class ProtocolOCRService {
 
   /**
    * Fotoğrafı base64'e çevir
-   * CORS sorununu bypass etmek için img element ve canvas kullanır
+   * CORS sorununu bypass etmek için backend proxy kullanır
    */
   static async imageToBase64(imageUrl) {
     try {
@@ -53,88 +53,65 @@ class ProtocolOCRService {
         return imageUrl;
       }
 
-      // CORS sorununu bypass etmek için img element ve canvas kullan
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous'; // CORS için
+      // Firebase Storage URL'leri için backend proxy kullan
+      if (imageUrl.includes('firebasestorage.googleapis.com')) {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        const proxyUrl = `${API_BASE_URL}/election-results/proxy-image?imageUrl=${encodeURIComponent(imageUrl)}`;
         
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            
-            // Canvas'tan base64'e çevir
-            const base64 = canvas.toDataURL('image/jpeg', 0.9);
-            resolve(base64);
-          } catch (error) {
-            console.error('Canvas conversion error:', error);
-            // Fallback: fetch ile dene (CORS hatası olabilir)
-            fetch(imageUrl)
-              .then(response => response.blob())
-              .then(blob => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              })
-              .catch(reject);
+        try {
+          const response = await fetch(proxyUrl);
+          if (!response.ok) {
+            throw new Error(`Proxy request failed: ${response.status}`);
           }
-        };
-        
-        img.onerror = (error) => {
-          console.error('Image load error:', error);
-          // Fallback: fetch ile dene
-          fetch(imageUrl, { mode: 'cors' })
-            .then(response => {
-              if (!response.ok) throw new Error('Failed to fetch image');
-              return response.blob();
-            })
-            .then(blob => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            })
-            .catch((fetchError) => {
-              console.error('Fetch fallback error:', fetchError);
-              // Son çare: URL'yi direkt kullan (Gemini bazı durumlarda URL'yi direkt kabul edebilir)
-              reject(new Error('Fotoğraf yüklenirken hata oluştu. Lütfen fotoğrafın erişilebilir olduğundan emin olun.'));
-            });
-        };
-        
-        // Firebase Storage URL'lerinde token varsa, crossOrigin ayarı çalışmayabilir
-        // Bu durumda direkt fetch ile dene
-        if (imageUrl.includes('firebasestorage.googleapis.com')) {
-          // Firebase Storage için özel işlem
-          fetch(imageUrl, { 
-            mode: 'cors',
-            credentials: 'omit'
-          })
-            .then(response => {
-              if (!response.ok) throw new Error('Failed to fetch from Firebase Storage');
-              return response.blob();
-            })
-            .then(blob => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            })
-            .catch(() => {
-              // Firebase Storage CORS hatası varsa, img element ile dene
-              img.src = imageUrl;
-            });
-        } else {
-          img.src = imageUrl;
+          
+          const blob = await response.blob();
+          
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (proxyError) {
+          console.error('Proxy error, trying direct fetch:', proxyError);
+          // Fallback: Direct fetch (CORS hatası olabilir)
+          return this.imageToBase64Direct(imageUrl);
         }
-      });
+      }
+
+      // Diğer URL'ler için direkt fetch
+      return this.imageToBase64Direct(imageUrl);
     } catch (error) {
       console.error('Error converting image to base64:', error);
       throw new Error('Fotoğraf yüklenirken hata oluştu');
+    }
+  }
+
+  /**
+   * Direkt fetch ile base64'e çevir (fallback)
+   */
+  static async imageToBase64Direct(imageUrl) {
+    try {
+      const response = await fetch(imageUrl, { 
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch image');
+      }
+      
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Direct fetch error:', error);
+      throw new Error('Fotoğraf yüklenirken hata oluştu. Lütfen fotoğrafın erişilebilir olduğundan emin olun.');
     }
   }
 
@@ -148,7 +125,21 @@ class ProtocolOCRService {
     try {
       const apiKey = await this.getApiKey();
       
-      // Fotoğrafı base64'e çevir
+      // Firebase Storage URL'leri için önce direkt URL göndermeyi dene (Gemini bazı durumlarda URL'yi direkt kabul edebilir)
+      if (imageUrl.includes('firebasestorage.googleapis.com') && !imageUrl.startsWith('data:image')) {
+        // Önce direkt URL ile dene
+        try {
+          const result = await this.readProtocolWithUrl(imageUrl, electionInfo, apiKey);
+          if (result) {
+            return result;
+          }
+        } catch (urlError) {
+          console.warn('Direct URL method failed, trying base64:', urlError);
+          // Fallback: base64'e çevir
+        }
+      }
+      
+      // Base64 yöntemi (proxy veya direkt)
       const base64Image = await this.imageToBase64(imageUrl);
       
       // Base64'ten sadece data kısmını al (data:image/jpeg;base64, kısmını çıkar)
@@ -263,6 +254,126 @@ GEREKLİ ALANLAR:
     } catch (error) {
       console.error('Protocol OCR error:', error);
       throw new Error(`Tutanak okuma hatası: ${error.message}`);
+    }
+  }
+
+  /**
+   * Gemini API'ye direkt URL gönder (CORS bypass için)
+   */
+  static async readProtocolWithUrl(imageUrl, electionInfo, apiKey) {
+    try {
+      const electionType = electionInfo.type || 'genel';
+      let prompt = `Bu bir seçim tutanağı fotoğrafıdır. Lütfen tutanaktaki tüm bilgileri okuyup aşağıdaki JSON formatında döndür. SADECE JSON döndür, başka açıklama yapma.
+
+GEREKLİ ALANLAR:
+- sandik_numarasi: Sandık numarası (varsa)
+- toplam_secmen: Toplam seçmen sayısı
+- kullanilan_oy: Kullanılan oy sayısı
+- gecersiz_oy: Geçersiz oy sayısı
+- gecerli_oy: Geçerli oy sayısı`;
+
+      if (electionType === 'genel') {
+        prompt += `
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı": oy_sayısı})
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
+      } else if (electionType === 'yerel') {
+        prompt += `
+- belediye_baskani_oylari: Belediye başkanı adayları ve oyları (JSON object: {"Aday Adı": oy_sayısı})
+- il_genel_meclisi_oylari: İl genel meclisi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+- belediye_meclisi_oylari: Belediye meclisi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
+      } else if (electionType === 'referandum') {
+        prompt += `
+- evet_oy: Evet oyu sayısı
+- hayir_oy: Hayır oyu sayısı`;
+      }
+
+      prompt += `
+
+ÖNEMLİ:
+1. Tüm sayıları tam olarak oku, tahmin yapma
+2. Eğer bir bilgi okunamıyorsa null veya 0 yaz
+3. SADECE JSON döndür, başka metin ekleme
+4. JSON formatı şöyle olmalı:
+{
+  "sandik_numarasi": "1234",
+  "toplam_secmen": 500,
+  "kullanilan_oy": 450,
+  "gecersiz_oy": 10,
+  "gecerli_oy": 440,
+  ... (seçim türüne göre diğer alanlar)
+}`;
+
+      // Gemini Vision API çağrısı - direkt URL ile
+      const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                text: prompt
+              },
+              {
+                file_data: {
+                  mime_type: 'image/jpeg',
+                  file_uri: imageUrl
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 2048,
+            responseMimeType: 'application/json'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        // URL yöntemi desteklenmiyorsa null dön (fallback'e geç)
+        if (response.status === 400) {
+          return null;
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API hatası: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Gemini'nin yanıtını parse et
+      let extractedData = {};
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        const content = data.candidates[0].content.parts[0].text;
+        
+        // JSON'u extract et (code block içinde olabilir)
+        let jsonText = content.trim();
+        
+        // ```json veya ``` ile başlayıp bitiyorsa temizle
+        if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+        }
+        
+        try {
+          extractedData = JSON.parse(jsonText);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError, 'Content:', content);
+          throw new Error('AI yanıtı parse edilemedi. Lütfen tekrar deneyin.');
+        }
+      } else {
+        throw new Error('AI\'dan geçerli yanıt alınamadı');
+      }
+
+      // Veriyi sistem formatına çevir
+      return this.convertToSystemFormat(extractedData, electionType);
+    } catch (error) {
+      // URL yöntemi başarısız oldu, null dön (fallback'e geç)
+      if (error.message.includes('400') || error.message.includes('file_uri')) {
+        return null;
+      }
+      throw error;
     }
   }
 

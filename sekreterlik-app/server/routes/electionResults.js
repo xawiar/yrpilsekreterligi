@@ -11,6 +11,9 @@ router.get('/election/:election_id/ballot-box/:ballot_box_id', ElectionResultCon
 // GET /api/election-results/pending - Get pending election results (chief observer only)
 router.get('/pending', ElectionResultController.getPending);
 
+// GET /api/election-results/proxy-image - Proxy image from Firebase Storage (for OCR - bypasses CORS)
+router.get('/proxy-image', ElectionResultController.proxyImage);
+
 // GET /api/election-results/:id - Get election result by ID
 router.get('/:id', ElectionResultController.getById);
 

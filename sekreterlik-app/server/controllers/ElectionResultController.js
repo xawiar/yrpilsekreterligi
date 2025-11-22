@@ -525,6 +525,49 @@ class ElectionResultController {
       res.status(500).json({ message: 'Sunucu hatası', error: error.message });
     }
   }
+
+  // Proxy image from Firebase Storage (for OCR - bypasses CORS)
+  static async proxyImage(req, res) {
+    try {
+      const { imageUrl } = req.query;
+
+      if (!imageUrl) {
+        return res.status(400).json({ message: 'imageUrl parametresi gerekli' });
+      }
+
+      // Validate URL (sadece Firebase Storage URL'lerine izin ver)
+      if (!imageUrl.includes('firebasestorage.googleapis.com')) {
+        return res.status(400).json({ message: 'Geçersiz URL. Sadece Firebase Storage URL\'leri desteklenir.' });
+      }
+
+      // Fetch image from Firebase Storage
+      const response = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; ElectionSystem/1.0)'
+        }
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).json({ message: 'Görüntü alınamadı' });
+      }
+
+      // Get image buffer
+      const buffer = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+      // Set CORS headers
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET');
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      // Send image
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error('Error proxying image:', error);
+      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+    }
+  }
 }
 
 module.exports = ElectionResultController;
