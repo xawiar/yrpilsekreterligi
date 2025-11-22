@@ -142,31 +142,9 @@ class ProtocolOCRService {
         ? base64Image.split(',')[1] 
         : base64Image;
 
-      // Seçim türüne göre prompt hazırla
+      // Seçim türüne ve tutanak tipine göre prompt hazırla
       const electionType = electionInfo.type || 'genel';
-      let prompt = `Bu bir seçim tutanağı fotoğrafıdır. Lütfen tutanaktaki tüm bilgileri okuyup aşağıdaki JSON formatında döndür. SADECE JSON döndür, başka açıklama yapma.
-
-GEREKLİ ALANLAR:
-- sandik_numarasi: Sandık numarası (varsa)
-- toplam_secmen: Toplam seçmen sayısı
-- kullanilan_oy: Kullanılan oy sayısı
-- gecersiz_oy: Geçersiz oy sayısı
-- gecerli_oy: Geçerli oy sayısı`;
-
-      if (electionType === 'genel') {
-        prompt += `
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı": oy_sayısı})
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
-      } else if (electionType === 'yerel') {
-        prompt += `
-- belediye_baskani_oylari: Belediye başkanı adayları ve oyları (JSON object: {"Aday Adı": oy_sayısı})
-- il_genel_meclisi_oylari: İl genel meclisi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-- belediye_meclisi_oylari: Belediye meclisi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
-      } else if (electionType === 'referandum') {
-        prompt += `
-- evet_oy: Evet oyu sayısı
-- hayir_oy: Hayır oyu sayısı`;
-      }
+      const prompt = this.buildPromptForElectionType(electionType, electionInfo);
 
       prompt += `
 
@@ -252,6 +230,131 @@ GEREKLİ ALANLAR:
     }
   }
 
+
+  /**
+   * Seçim türüne göre prompt oluştur
+   */
+  static buildPromptForElectionType(electionType, electionInfo = {}) {
+    // Tüm tutanaklarda ortak olan bilgiler
+    let prompt = `Bu bir seçim tutanağı fotoğrafıdır. Lütfen tutanaktaki tüm bilgileri okuyup aşağıdaki JSON formatında döndür. SADECE JSON döndür, başka açıklama yapma.
+
+TÜM TUTANAKLARDA ORTAK OLAN BİLGİLER (Tutanak üst kısmı):
+- sandik_numarasi: Sandık numarası
+- toplam_secmen: Sandık seçmen listesinde yazılı olan seçmenlerin sayısı
+- kullanilan_oy: Oy kullanan seçmenlerin toplam sayısı (kullanılan zarf sayısı)
+- gecerli_oy: Geçerli oy pusulası toplamı
+- gecersiz_oy: Geçersiz sayılan veya hesaba katılmayan oy sayısı
+
+`;
+
+    // Seçim türüne göre özel alanlar
+    if (electionType === 'genel') {
+      // Genel seçim: CB ve MV ayrı tutanaklar olabilir
+      // Eğer electionInfo'da cb_candidates varsa CB tutanağı, parties varsa MV tutanağı
+      const hasCbCandidates = electionInfo.cb_candidates && electionInfo.cb_candidates.length > 0;
+      const hasParties = electionInfo.parties && electionInfo.parties.length > 0;
+      
+      if (hasCbCandidates && hasParties) {
+        // Hem CB hem MV tutanağı (birleşik)
+        prompt += `CUMHURBAŞKANI SEÇİMİ VE MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120}
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30}`;
+      } else if (hasCbCandidates) {
+        // Sadece CB tutanağı
+        prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "Cumhurbaşkanı Adayı" veya "Başkan Adayı" bölümündeki tüm adayları ve aldıkları oyları oku.
+  Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120, "Sinan Oğan": 50}`;
+      } else if (hasParties) {
+        // Sadece MV tutanağı
+        prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "Siyasi Partinin Adı" veya "Parti Adı" bölümündeki tüm partileri ve aldıkları oyları oku.
+  Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30, "İYİ PARTİ": 25}`;
+      } else {
+        // Varsayılan: Her ikisi de
+        prompt += `GENEL SEÇİM TUTANAĞI (CB ve MV):
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
+      }
+    } else if (electionType === 'yerel') {
+      // Yerel seçim: Birden fazla tutanak tipi olabilir
+      const isMetropolitan = electionInfo.is_metropolitan || false;
+      const isVillage = electionInfo.is_village || false;
+      const hasMayor = electionInfo.mayor_candidates && electionInfo.mayor_candidates.length > 0;
+      const hasProvincialAssembly = electionInfo.provincial_assembly_parties && electionInfo.provincial_assembly_parties.length > 0;
+      const hasMunicipalCouncil = electionInfo.municipal_council_parties && electionInfo.municipal_council_parties.length > 0;
+      
+      prompt += `YEREL SEÇİM TUTANAĞI:\n`;
+      
+      if (isVillage) {
+        // Köy: Sadece İl Genel Meclisi
+        prompt += `KÖY YEREL SEÇİM TUTANAĞI (Sadece İl Genel Meclisi):
+- il_genel_meclisi_oylari: İl Genel Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "İl Genel Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.`;
+      } else {
+        // Şehir/Mahalle: Birden fazla tutanak olabilir
+        if (isMetropolitan) {
+          // Büyükşehir
+          if (hasMayor) {
+            prompt += `- belediye_baskani_oylari: Büyükşehir Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "Büyükşehir Belediye Başkanı" veya "Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.\n`;
+          }
+          if (hasMunicipalCouncil) {
+            prompt += `- belediye_meclisi_oylari: Belediye Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "Belediye Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.\n`;
+          }
+        } else {
+          // Büyükşehir değil
+          if (hasMayor) {
+            prompt += `- belediye_baskani_oylari: İl Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "İl Belediye Başkanı" veya "Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.\n`;
+          }
+          if (hasProvincialAssembly) {
+            prompt += `- il_genel_meclisi_oylari: İl Genel Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "İl Genel Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.\n`;
+          }
+          if (hasMunicipalCouncil) {
+            prompt += `- belediye_meclisi_oylari: Belediye Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "Belediye Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.\n`;
+          }
+        }
+        
+        // İlçe Belediye Başkanı (varsa)
+        if (electionInfo.district_mayor_candidates && electionInfo.district_mayor_candidates.length > 0) {
+          prompt += `- ilce_belediye_baskani_oylari: İlçe Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "İlçe Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.\n`;
+        }
+      }
+    } else if (electionType === 'referandum') {
+      prompt += `REFERANDUM TUTANAĞI:
+- evet_oy: Evet oyu sayısı
+- hayir_oy: Hayır oyu sayısı`;
+    }
+
+    prompt += `
+
+ÖNEMLİ KURALLAR:
+1. Tüm sayıları tam olarak oku, tahmin yapma veya yuvarlama yapma
+2. Tutanak üst kısmındaki ortak bilgileri (toplam seçmen, kullanılan oy, geçerli oy, geçersiz oy) mutlaka oku
+3. Tutanak alt kısmındaki seçim türüne özel bilgileri (adaylar, partiler, oylar) mutlaka oku
+4. Eğer bir bilgi okunamıyorsa null veya 0 yaz
+5. Parti adlarını ve aday adlarını tam olarak yaz (kısaltma yapma)
+6. SADECE JSON döndür, başka metin ekleme
+7. JSON formatı şöyle olmalı:
+{
+  "sandik_numarasi": "4104",
+  "toplam_secmen": 369,
+  "kullanilan_oy": 333,
+  "gecerli_oy": 329,
+  "gecersiz_oy": 4,
+  ... (seçim türüne göre diğer alanlar)
+}`;
+
+    return prompt;
+  }
 
   /**
    * AI'dan gelen veriyi sistem formatına çevir

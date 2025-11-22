@@ -440,14 +440,27 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       setMessage('AI tutanağı okumaya başladı...');
       setMessageType('success');
 
-      // AI ile tutanağı oku
+      // AI ile tutanağı oku - seçim türüne göre detaylı bilgi gönder
+      const electionInfo = {
+        type: election.type,
+        // Genel seçim için
+        cb_candidates: election.cb_candidates || [],
+        parties: election.parties || [],
+        independent_cb_candidates: election.independent_cb_candidates || [],
+        independent_mv_candidates: election.independent_mv_candidates || [],
+        // Yerel seçim için
+        mayor_candidates: election.mayor_candidates || [],
+        mayor_parties: election.mayor_parties || [],
+        provincial_assembly_parties: election.provincial_assembly_parties || [],
+        municipal_council_parties: election.municipal_council_parties || [],
+        // Konum bilgisi (köy/büyükşehir kontrolü için)
+        is_village: isVillage(),
+        is_metropolitan: election.is_metropolitan || false // Bu bilgi election objesinden gelmeli veya ballot box'tan çıkarılmalı
+      };
+      
       const extractedData = await ProtocolOCRService.readProtocol(
         formData.signed_protocol_photo,
-        {
-          type: election.type,
-          candidates: election.candidates || [],
-          parties: election.parties || []
-        }
+        electionInfo
       );
 
       // Formu doldur
