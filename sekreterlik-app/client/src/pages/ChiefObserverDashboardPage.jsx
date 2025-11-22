@@ -544,133 +544,133 @@ const ChiefObserverDashboardPage = () => {
 
           {/* Elections Tab */}
           {activeTab === 'elections' && (
-        {/* Elections List */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
-              Güncel Seçimler
-            </h2>
-            {loading && (
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-200 border-t-indigo-600"></div>
-            )}
-          </div>
-
-          {error && elections.length === 0 && (
-            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 mb-6 animate-fade-in">
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                  <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+                  Güncel Seçimler
+                </h2>
+                {loading && (
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-200 border-t-indigo-600"></div>
+                )}
               </div>
-            </div>
-          )}
 
-          {!loading && elections.length === 0 && (
-            <div className="text-center py-16 animate-fade-in">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
-                <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Henüz aktif seçim bulunmuyor</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Yeni seçimler eklendiğinde burada görünecek</p>
-            </div>
-          )}
+              {error && elections.length === 0 && (
+                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 mb-6 animate-fade-in">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+                  </div>
+                </div>
+              )}
 
-          {!loading && elections.length > 0 && (
-            <div className="grid gap-4 sm:gap-6">
-              {elections.map((election, index) => {
-                const daysUntil = getDaysUntil(election.date);
-                const isCompleted = hasResult(election.id);
-                const isToday = daysUntil === 0;
-                const isPast = daysUntil !== null && daysUntil < 0;
+              {!loading && elections.length === 0 && (
+                <div className="text-center py-16 animate-fade-in">
+                  <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Henüz aktif seçim bulunmuyor</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Yeni seçimler eklendiğinde burada görünecek</p>
+                </div>
+              )}
 
-                return (
-                  <div
-                    key={election.id}
-                    className={`group relative overflow-hidden bg-gradient-to-r ${getTypeColor(election.type)} rounded-2xl shadow-lg transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl cursor-pointer ${
-                      isCompleted ? 'ring-2 ring-green-400 ring-offset-2' : ''
-                    }`}
-                    style={{
-                      animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
-                    }}
-                    onClick={() => handleElectionClick(election)}
-                  >
-                    {/* Background pattern */}
-                    <div className="absolute inset-0 opacity-10">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-2xl"></div>
-                      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-xl"></div>
-                    </div>
+              {!loading && elections.length > 0 && (
+                <div className="grid gap-4 sm:gap-6">
+                  {elections.map((election, index) => {
+                    const daysUntil = getDaysUntil(election.date);
+                    const isCompleted = hasResult(election.id);
+                    const isToday = daysUntil === 0;
+                    const isPast = daysUntil !== null && daysUntil < 0;
 
-                    <div className="relative p-6 sm:p-8 text-white">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <h3 className="text-xl sm:text-2xl font-bold mb-1">
-                                {election.name || 'İsimsiz Seçim'}
-                              </h3>
-                              <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium">
-                                {getTypeLabel(election.type)}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
-                            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <span className="font-medium">{formatDate(election.date)}</span>
-                            </div>
-
-                            {daysUntil !== null && !isPast && (
-                              <div className={`flex items-center gap-2 backdrop-blur-sm px-3 py-1.5 rounded-lg font-medium ${
-                                isToday 
-                                  ? 'bg-yellow-500/30 text-yellow-100' 
-                                  : daysUntil <= 7 
-                                    ? 'bg-orange-500/30 text-orange-100'
-                                    : 'bg-white/20 text-white'
-                              }`}>
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {isToday ? 'Bugün' : `${daysUntil} gün kaldı`}
-                              </div>
-                            )}
-
-                            {isCompleted && (
-                              <div className="flex items-center gap-2 bg-green-500/30 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="font-medium">Tamamlandı</span>
-                              </div>
-                            )}
-                          </div>
+                    return (
+                      <div
+                        key={election.id}
+                        className={`group relative overflow-hidden bg-gradient-to-r ${getTypeColor(election.type)} rounded-2xl shadow-lg transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl cursor-pointer ${
+                          isCompleted ? 'ring-2 ring-green-400 ring-offset-2' : ''
+                        }`}
+                        style={{
+                          animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
+                        }}
+                        onClick={() => handleElectionClick(election)}
+                      >
+                        {/* Background pattern */}
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-2xl"></div>
+                          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-xl"></div>
                         </div>
 
-                        <div className="flex-shrink-0">
-                          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                            <svg className="w-7 h-7 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
+                        <div className="relative p-6 sm:p-8 text-white">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h3 className="text-xl sm:text-2xl font-bold mb-1">
+                                    {election.name || 'İsimsiz Seçim'}
+                                  </h3>
+                                  <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium">
+                                    {getTypeLabel(election.type)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
+                                <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  <span className="font-medium">{formatDate(election.date)}</span>
+                                </div>
+
+                                {daysUntil !== null && !isPast && (
+                                  <div className={`flex items-center gap-2 backdrop-blur-sm px-3 py-1.5 rounded-lg font-medium ${
+                                    isToday 
+                                      ? 'bg-yellow-500/30 text-yellow-100' 
+                                      : daysUntil <= 7 
+                                        ? 'bg-orange-500/30 text-orange-100'
+                                        : 'bg-white/20 text-white'
+                                  }`}>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {isToday ? 'Bugün' : `${daysUntil} gün kaldı`}
+                                  </div>
+                                )}
+
+                                {isCompleted && (
+                                  <div className="flex items-center gap-2 bg-green-500/30 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="font-medium">Tamamlandı</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex-shrink-0">
+                              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                                <svg className="w-7 h-7 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
           )}
 
           {/* Approvals Tab */}
