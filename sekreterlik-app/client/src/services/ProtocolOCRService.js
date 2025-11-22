@@ -44,6 +44,7 @@ class ProtocolOCRService {
 
   /**
    * Fotoğrafı base64'e çevir
+   * CORS sorununu bypass etmek için img element ve canvas kullanır
    */
   static async imageToBase64(imageUrl) {
     try {
@@ -52,15 +53,84 @@ class ProtocolOCRService {
         return imageUrl;
       }
 
-      // URL'den fetch et
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      
+      // CORS sorununu bypass etmek için img element ve canvas kullan
       return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+        const img = new Image();
+        img.crossOrigin = 'anonymous'; // CORS için
+        
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            // Canvas'tan base64'e çevir
+            const base64 = canvas.toDataURL('image/jpeg', 0.9);
+            resolve(base64);
+          } catch (error) {
+            console.error('Canvas conversion error:', error);
+            // Fallback: fetch ile dene (CORS hatası olabilir)
+            fetch(imageUrl)
+              .then(response => response.blob())
+              .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              })
+              .catch(reject);
+          }
+        };
+        
+        img.onerror = (error) => {
+          console.error('Image load error:', error);
+          // Fallback: fetch ile dene
+          fetch(imageUrl, { mode: 'cors' })
+            .then(response => {
+              if (!response.ok) throw new Error('Failed to fetch image');
+              return response.blob();
+            })
+            .then(blob => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            })
+            .catch((fetchError) => {
+              console.error('Fetch fallback error:', fetchError);
+              // Son çare: URL'yi direkt kullan (Gemini bazı durumlarda URL'yi direkt kabul edebilir)
+              reject(new Error('Fotoğraf yüklenirken hata oluştu. Lütfen fotoğrafın erişilebilir olduğundan emin olun.'));
+            });
+        };
+        
+        // Firebase Storage URL'lerinde token varsa, crossOrigin ayarı çalışmayabilir
+        // Bu durumda direkt fetch ile dene
+        if (imageUrl.includes('firebasestorage.googleapis.com')) {
+          // Firebase Storage için özel işlem
+          fetch(imageUrl, { 
+            mode: 'cors',
+            credentials: 'omit'
+          })
+            .then(response => {
+              if (!response.ok) throw new Error('Failed to fetch from Firebase Storage');
+              return response.blob();
+            })
+            .then(blob => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            })
+            .catch(() => {
+              // Firebase Storage CORS hatası varsa, img element ile dene
+              img.src = imageUrl;
+            });
+        } else {
+          img.src = imageUrl;
+        }
       });
     } catch (error) {
       console.error('Error converting image to base64:', error);

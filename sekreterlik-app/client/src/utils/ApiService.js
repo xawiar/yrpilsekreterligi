@@ -2068,8 +2068,7 @@ class ApiService {
   // Get pending election results (for chief observer)
   static async getPendingElectionResults() {
     if (USE_FIREBASE) {
-      // Firebase için implementasyon gerekirse buraya eklenebilir
-      throw new Error('Pending election results için Firebase implementasyonu henüz eklenmedi');
+      return FirebaseApiService.getPendingElectionResults();
     }
     const response = await fetch(`${API_BASE_URL}/election-results/pending`, {
       method: 'GET',
@@ -2085,8 +2084,7 @@ class ApiService {
   // Approve election result (chief observer only)
   static async approveElectionResult(id) {
     if (USE_FIREBASE) {
-      // Firebase için implementasyon gerekirse buraya eklenebilir
-      throw new Error('Approve election result için Firebase implementasyonu henüz eklenmedi');
+      return FirebaseApiService.approveElectionResult(id);
     }
     const response = await fetch(`${API_BASE_URL}/election-results/${id}/approve`, {
       method: 'POST',
@@ -2102,8 +2100,7 @@ class ApiService {
   // Reject election result (chief observer only)
   static async rejectElectionResult(id, rejectionReason = '') {
     if (USE_FIREBASE) {
-      // Firebase için implementasyon gerekirse buraya eklenebilir
-      throw new Error('Reject election result için Firebase implementasyonu henüz eklenmedi');
+      return FirebaseApiService.rejectElectionResult(id, rejectionReason);
     }
     const response = await fetch(`${API_BASE_URL}/election-results/${id}/reject`, {
       method: 'POST',

@@ -4450,10 +4450,22 @@ class FirebaseApiService {
 
   static async createElectionResult(resultData) {
     try {
+      // Determine approval status: if filled by AI, it needs approval, otherwise auto-approved
+      const filledByAI = resultData.filled_by_ai === true || resultData.filled_by_ai === 1;
+      const approvalStatus = filledByAI ? 'pending' : (resultData.approval_status || 'approved');
+
+      const dataToSave = {
+        ...resultData,
+        filled_by_ai: filledByAI,
+        approval_status: approvalStatus,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       const docId = await FirebaseService.create(
         this.COLLECTIONS.ELECTION_RESULTS,
         null,
-        resultData
+        dataToSave
       );
       
       // Audit log
@@ -4464,7 +4476,7 @@ class FirebaseApiService {
         action: 'create',
         entity_type: 'election_result',
         entity_id: docId,
-        new_data: resultData,
+        new_data: dataToSave,
         user_agent: navigator.userAgent,
         created_at: new Date().toISOString()
       };
@@ -4546,6 +4558,157 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Delete election result error:', error);
       throw new Error('Seçim sonucu silinirken hata oluştu');
+    }
+  }
+
+  // Get pending election results (for chief observer)
+  static async getPendingElectionResults() {
+    try {
+      const allResults = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS, false);
+      
+      // Filter pending results
+      const pendingResults = allResults.filter(result => 
+        result.approval_status === 'pending'
+      );
+
+      // Enrich with election and ballot box data
+      const enrichedResults = await Promise.all(
+        pendingResults.map(async (result) => {
+          let election = null;
+          let ballotBox = null;
+          let creator = null;
+
+          if (result.election_id) {
+            try {
+              election = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, result.election_id, false);
+            } catch (e) {
+              console.warn('Election not found:', result.election_id);
+            }
+          }
+
+          if (result.ballot_box_id) {
+            try {
+              ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, result.ballot_box_id, false);
+            } catch (e) {
+              console.warn('Ballot box not found:', result.ballot_box_id);
+            }
+          }
+
+          if (result.created_by) {
+            try {
+              creator = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, result.created_by, false);
+            } catch (e) {
+              console.warn('Creator not found:', result.created_by);
+            }
+          }
+
+          return {
+            ...result,
+            election_name: election?.name || null,
+            election_type: election?.type || null,
+            election_date: election?.date || null,
+            ballot_number: ballotBox?.ballot_number || result.ballot_number || null,
+            voter_count: ballotBox?.voter_count || null,
+            creator_name: creator?.name || null
+          };
+        })
+      );
+
+      return { success: true, results: enrichedResults };
+    } catch (error) {
+      console.error('Get pending election results error:', error);
+      throw new Error('Bekleyen sonuçlar alınırken hata oluştu');
+    }
+  }
+
+  // Approve election result (chief observer only)
+  static async approveElectionResult(id) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || user.uid || null;
+
+      // Get the result
+      const result = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
+      if (!result) {
+        throw new Error('Seçim sonucu bulunamadı');
+      }
+
+      // Check if already approved
+      if (result.approval_status === 'approved') {
+        throw new Error('Bu sonuç zaten onaylanmış');
+      }
+
+      // Update approval status
+      await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, {
+        approval_status: 'approved',
+        approved_by: userId,
+        approved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, false);
+
+      // Audit log
+      const auditData = {
+        user_id: userId,
+        user_type: localStorage.getItem('userRole') || 'chief_observer',
+        action: 'approve',
+        entity_type: 'election_result',
+        entity_id: id,
+        new_data: { approval_status: 'approved' },
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString()
+      };
+      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+
+      return { success: true, message: 'Seçim sonucu başarıyla onaylandı' };
+    } catch (error) {
+      console.error('Approve election result error:', error);
+      throw new Error(error.message || 'Sonuç onaylanırken hata oluştu');
+    }
+  }
+
+  // Reject election result (chief observer only)
+  static async rejectElectionResult(id, rejectionReason = '') {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || user.uid || null;
+
+      // Get the result
+      const result = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
+      if (!result) {
+        throw new Error('Seçim sonucu bulunamadı');
+      }
+
+      // Check if already approved
+      if (result.approval_status === 'approved') {
+        throw new Error('Onaylanmış sonuç reddedilemez. Önce onayı kaldırın.');
+      }
+
+      // Update rejection status
+      await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, {
+        approval_status: 'rejected',
+        approved_by: userId,
+        approved_at: new Date().toISOString(),
+        rejection_reason: rejectionReason || 'Reddedilme nedeni belirtilmedi',
+        updated_at: new Date().toISOString()
+      }, false);
+
+      // Audit log
+      const auditData = {
+        user_id: userId,
+        user_type: localStorage.getItem('userRole') || 'chief_observer',
+        action: 'reject',
+        entity_type: 'election_result',
+        entity_id: id,
+        new_data: { approval_status: 'rejected', rejection_reason: rejectionReason },
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString()
+      };
+      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+
+      return { success: true, message: 'Seçim sonucu reddedildi' };
+    } catch (error) {
+      console.error('Reject election result error:', error);
+      throw new Error(error.message || 'Sonuç reddedilirken hata oluştu');
     }
   }
 
