@@ -144,7 +144,7 @@ class ProtocolOCRService {
 
       // Seçim türüne ve tutanak tipine göre prompt hazırla
       const electionType = electionInfo.type || 'genel';
-      const prompt = this.buildPromptForElectionType(electionType, electionInfo);
+      let prompt = this.buildPromptForElectionType(electionType, electionInfo);
 
       prompt += `
 
@@ -155,12 +155,12 @@ class ProtocolOCRService {
 4. JSON formatı şöyle olmalı:
 {
   "sandik_numarasi": "1234",
-  "toplam_secmen": 500,
   "kullanilan_oy": 450,
   "gecersiz_oy": 10,
   "gecerli_oy": 440,
   ... (seçim türüne göre diğer alanlar)
-}`;
+}
+5. NOT: "toplam_secmen" alanını okuma, bu bilgi zaten sandık eklerken ekleniyor`;
 
       // Gemini Vision API çağrısı
       const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
@@ -221,8 +221,9 @@ class ProtocolOCRService {
         throw new Error('AI\'dan geçerli yanıt alınamadı');
       }
 
-      // Veriyi sistem formatına çevir
-      return this.convertToSystemFormat(extractedData, electionType);
+      // Veriyi sistem formatına çevir - sadece formda tanımlı olanları filtrele
+      const filteredData = this.filterDataByFormDefinitions(extractedData, electionType, electionInfo);
+      return this.convertToSystemFormat(filteredData, electionType, electionInfo);
       
     } catch (error) {
       console.error('Protocol OCR error:', error);
@@ -235,63 +236,177 @@ class ProtocolOCRService {
    * Seçim türüne göre prompt oluştur
    */
   static buildPromptForElectionType(electionType, electionInfo = {}) {
-    // Tüm tutanaklarda ortak olan bilgiler
-    let prompt = `Bu bir seçim tutanağı fotoğrafıdır. Lütfen tutanaktaki tüm bilgileri okuyup aşağıdaki JSON formatında döndür. SADECE JSON döndür, başka açıklama yapma.
+    // Tüm tutanaklarda ortak olan bilgiler (sadece manuel girilmesi gerekenler)
+    let prompt = `Bu bir seçim tutanağı fotoğrafıdır. Lütfen tutanaktaki bilgileri okuyup aşağıdaki JSON formatında döndür. SADECE JSON döndür, başka açıklama yapma.
 
-TÜM TUTANAKLARDA ORTAK OLAN BİLGİLER (Tutanak üst kısmı):
+ÖNEMLİ: SADECE FORMA YAZILMASI GEREKEN BİLGİLERİ OKU!
+
+MANUEL GİRİLMESİ GEREKEN BİLGİLER (Tutanak üst kısmı):
 - sandik_numarasi: Sandık numarası
-- toplam_secmen: Sandık seçmen listesinde yazılı olan seçmenlerin sayısı
-- kullanilan_oy: Oy kullanan seçmenlerin toplam sayısı (kullanılan zarf sayısı)
-- gecerli_oy: Geçerli oy pusulası toplamı
-- gecersiz_oy: Geçersiz sayılan veya hesaba katılmayan oy sayısı
+- kullanilan_oy: Oy kullanan seçmenlerin toplam sayısı (kullanılan zarf sayısı) - MUTLAKA OKU
+- gecerli_oy: Geçerli oy pusulası toplamı - MUTLAKA OKU
+- gecersiz_oy: Geçersiz sayılan veya hesaba katılmayan oy sayısı - MUTLAKA OKU
+
+NOT: "toplam_secmen" alanını OKUMA, bu bilgi zaten sandık eklerken ekleniyor.
 
 `;
 
-    // Seçim türüne göre özel alanlar
+    // Seçim türüne göre özel alanlar - SADECE FORMA TANIMLI OLANLARI OKU
     if (electionType === 'cb') {
       // Sadece Cumhurbaşkanı Seçimi
-      prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
+      const cbCandidates = electionInfo.cb_candidates || [];
+      const independentCbCandidates = electionInfo.independent_cb_candidates || [];
+      const allCbCandidates = [...cbCandidates, ...independentCbCandidates];
+      
+      if (allCbCandidates.length > 0) {
+        prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
 - cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Tutanakta "Cumhurbaşkanı Adayı" veya "Başkan Adayı" bölümündeki tüm adayları ve aldıkları oyları oku.
-  Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120, "Sinan Oğan": 50}`;
+  
+  KRİTİK: SADECE AŞAĞIDAKİ ADAMLARI OKU! TUTANAKTA BAŞKA ADAMLAR VARSA GÖRMEZDEN GEL!
+  Formda tanımlı adaylar: ${allCbCandidates.map(c => `"${c}"`).join(', ')}
+  
+  Tutanakta sadece bu adayları ara ve oylarını oku. Formda olmayan adayları görmezden gel.
+  Örnek: ${JSON.stringify(Object.fromEntries(allCbCandidates.map(c => [c, 0])))}`;
+      } else {
+        prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "Cumhurbaşkanı Adayı" veya "Başkan Adayı" bölümündeki adayları ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'mv') {
       // Sadece Milletvekili Genel Seçimi
-      prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+      const parties = electionInfo.parties || [];
+      const independentMvCandidates = electionInfo.independent_mv_candidates || [];
+      const allParties = parties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      const allMvCandidates = [...allParties, ...independentMvCandidates];
+      
+      if (allMvCandidates.length > 0) {
+        prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
 - mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  Tutanakta "Siyasi Partinin Adı" veya "Parti Adı" bölümündeki tüm partileri ve aldıkları oyları oku.
-  Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30, "İYİ PARTİ": 25}`;
+  
+  KRİTİK: SADECE AŞAĞIDAKİ PARTİLERİ OKU! TUTANAKTA BAŞKA PARTİLER VARSA GÖRMEZDEN GEL!
+  Formda tanımlı partiler: ${allMvCandidates.map(p => `"${p}"`).join(', ')}
+  
+  Tutanakta sadece bu partileri ara ve oylarını oku. Formda olmayan partileri görmezden gel.
+  Örnek: ${JSON.stringify(Object.fromEntries(allMvCandidates.map(p => [p, 0])))}`;
+      } else {
+        prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "Siyasi Partinin Adı" veya "Parti Adı" bölümündeki partileri ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'genel') {
       // Genel seçim: CB ve MV birlikte
+      const cbCandidates = electionInfo.cb_candidates || [];
+      const independentCbCandidates = electionInfo.independent_cb_candidates || [];
+      const allCbCandidates = [...cbCandidates, ...independentCbCandidates];
+      
+      const parties = electionInfo.parties || [];
+      const independentMvCandidates = electionInfo.independent_mv_candidates || [];
+      const allParties = parties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      const allMvCandidates = [...allParties, ...independentMvCandidates];
+      
       prompt += `CUMHURBAŞKANI SEÇİMİ VE MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI (BİRLEŞİK):
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120}
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30}`;
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})`;
+      
+      if (allCbCandidates.length > 0) {
+        prompt += `
+  
+  KRİTİK CB: SADECE AŞAĞIDAKİ CB ADAMLARINI OKU! Formda tanımlı CB adayları: ${allCbCandidates.map(c => `"${c}"`).join(', ')}`;
+      }
+      
+      prompt += `
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
+      
+      if (allMvCandidates.length > 0) {
+        prompt += `
+  
+  KRİTİK MV: SADECE AŞAĞIDAKİ PARTİLERİ OKU! Formda tanımlı partiler: ${allMvCandidates.map(p => `"${p}"`).join(', ')}`;
+      }
     } else if (electionType === 'yerel_metropolitan_mayor') {
       // Büyükşehir Belediye Başkanı
+      const mayorParties = electionInfo.mayor_parties || [];
+      const mayorCandidates = electionInfo.mayor_candidates || [];
+      const allMayorParties = mayorParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      const allMayorCandidates = [...allMayorParties, ...mayorCandidates];
+      
       prompt += `BÜYÜKŞEHİR BELEDİYE BAŞKANI SEÇİMİ TUTANAĞI:
-- belediye_baskani_oylari: Büyükşehir Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Tutanakta "Büyükşehir Belediye Başkanı" veya "Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.`;
+- belediye_baskani_oylari: Büyükşehir Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})`;
+      
+      if (allMayorCandidates.length > 0) {
+        prompt += `
+  
+  KRİTİK: SADECE AŞAĞIDAKİ ADAMLARI OKU! Formda tanımlı adaylar: ${allMayorCandidates.map(c => `"${c}"`).join(', ')}`;
+      } else {
+        prompt += `
+  Tutanakta "Büyükşehir Belediye Başkanı" veya "Belediye Başkanı" bölümündeki adayları ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'yerel_city_mayor') {
       // İl Belediye Başkanı
+      const mayorParties = electionInfo.mayor_parties || [];
+      const mayorCandidates = electionInfo.mayor_candidates || [];
+      const allMayorParties = mayorParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      const allMayorCandidates = [...allMayorParties, ...mayorCandidates];
+      
       prompt += `İL BELEDİYE BAŞKANI SEÇİMİ TUTANAĞI:
-- belediye_baskani_oylari: İl Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Tutanakta "İl Belediye Başkanı" veya "Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.`;
+- belediye_baskani_oylari: İl Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})`;
+      
+      if (allMayorCandidates.length > 0) {
+        prompt += `
+  
+  KRİTİK: SADECE AŞAĞIDAKİ ADAMLARI OKU! Formda tanımlı adaylar: ${allMayorCandidates.map(c => `"${c}"`).join(', ')}`;
+      } else {
+        prompt += `
+  Tutanakta "İl Belediye Başkanı" veya "Belediye Başkanı" bölümündeki adayları ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'yerel_district_mayor') {
       // İlçe Belediye Başkanı
+      const mayorParties = electionInfo.mayor_parties || [];
+      const mayorCandidates = electionInfo.mayor_candidates || [];
+      const allMayorParties = mayorParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      const allMayorCandidates = [...allMayorParties, ...mayorCandidates];
+      
       prompt += `İLÇE BELEDİYE BAŞKANI SEÇİMİ TUTANAĞI:
-- belediye_baskani_oylari: İlçe Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Tutanakta "İlçe Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.`;
+- belediye_baskani_oylari: İlçe Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})`;
+      
+      if (allMayorCandidates.length > 0) {
+        prompt += `
+  
+  KRİTİK: SADECE AŞAĞIDAKİ ADAMLARI OKU! Formda tanımlı adaylar: ${allMayorCandidates.map(c => `"${c}"`).join(', ')}`;
+      } else {
+        prompt += `
+  Tutanakta "İlçe Belediye Başkanı" bölümündeki adayları ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'yerel_provincial_assembly') {
       // İl Genel Meclisi Üyesi
+      const provincialAssemblyParties = electionInfo.provincial_assembly_parties || [];
+      const allProvincialParties = provincialAssemblyParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      
       prompt += `İL GENEL MECLİSİ ÜYESİ SEÇİMİ TUTANAĞI:
-- il_genel_meclisi_oylari: İl Genel Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  Tutanakta "İl Genel Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.`;
+- il_genel_meclisi_oylari: İl Genel Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
+      
+      if (allProvincialParties.length > 0) {
+        prompt += `
+  
+  KRİTİK: SADECE AŞAĞIDAKİ PARTİLERİ OKU! Formda tanımlı partiler: ${allProvincialParties.map(p => `"${p}"`).join(', ')}`;
+      } else {
+        prompt += `
+  Tutanakta "İl Genel Meclisi Üyesi" bölümündeki partileri ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'yerel_municipal_council') {
       // Belediye Meclisi Üyesi
+      const municipalCouncilParties = electionInfo.municipal_council_parties || [];
+      const allMunicipalParties = municipalCouncilParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+      
       prompt += `BELEDİYE MECLİSİ ÜYESİ SEÇİMİ TUTANAĞI:
-- belediye_meclisi_oylari: Belediye Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  Tutanakta "Belediye Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.`;
+- belediye_meclisi_oylari: Belediye Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
+      
+      if (allMunicipalParties.length > 0) {
+        prompt += `
+  
+  KRİTİK: SADECE AŞAĞIDAKİ PARTİLERİ OKU! Formda tanımlı partiler: ${allMunicipalParties.map(p => `"${p}"`).join(', ')}`;
+      } else {
+        prompt += `
+  Tutanakta "Belediye Meclisi Üyesi" bölümündeki partileri ve aldıkları oyları oku.`;
+      }
     } else if (electionType === 'yerel') {
       // Yerel seçim: Birden fazla tutanak tipi olabilir
       const isMetropolitan = electionInfo.is_metropolitan || false;
@@ -349,32 +464,190 @@ TÜM TUTANAKLARDA ORTAK OLAN BİLGİLER (Tutanak üst kısmı):
 
     prompt += `
 
-ÖNEMLİ KURALLAR:
+KRİTİK KURALLAR:
 1. Tüm sayıları tam olarak oku, tahmin yapma veya yuvarlama yapma
-2. Tutanak üst kısmındaki ortak bilgileri (toplam seçmen, kullanılan oy, geçerli oy, geçersiz oy) mutlaka oku
-3. Tutanak alt kısmındaki seçim türüne özel bilgileri (adaylar, partiler, oylar) mutlaka oku
-4. Eğer bir bilgi okunamıyorsa null veya 0 yaz
-5. Parti adlarını ve aday adlarını tam olarak yaz (kısaltma yapma)
-6. SADECE JSON döndür, başka metin ekleme
-7. JSON formatı şöyle olmalı:
+2. Tutanak üst kısmındaki MANUEL GİRİLMESİ GEREKEN bilgileri mutlaka oku:
+   - kullanilan_oy: Oy kullanan seçmenlerin toplam sayısı (MUTLAKA OKU)
+   - gecerli_oy: Geçerli oy pusulası toplamı (MUTLAKA OKU)
+   - gecersiz_oy: Geçersiz sayılan oy sayısı (MUTLAKA OKU)
+   - sandik_numarasi: Sandık numarası (varsa oku)
+3. "toplam_secmen" alanını OKUMA! Bu bilgi zaten sandık eklerken ekleniyor.
+4. Tutanak alt kısmındaki seçim türüne özel bilgileri (adaylar, partiler, oylar) oku:
+   - SADECE FORMA TANIMLI OLAN ADAMLARI/PARTİLERİ OKU!
+   - Formda olmayan adayları/partileri görmezden gel, JSON'a ekleme
+5. Eğer bir bilgi okunamıyorsa null veya 0 yaz
+6. Parti adlarını ve aday adlarını tam olarak yaz (kısaltma yapma)
+7. SADECE JSON döndür, başka metin ekleme
+8. JSON formatı şöyle olmalı:
 {
   "sandik_numarasi": "4104",
-  "toplam_secmen": 369,
   "kullanilan_oy": 333,
   "gecerli_oy": 329,
   "gecersiz_oy": 4,
-  ... (seçim türüne göre diğer alanlar)
+  ... (seçim türüne göre sadece formda tanımlı adaylar/partiler)
 }`;
 
     return prompt;
   }
 
   /**
+   * AI'dan gelen veriyi formda tanımlı olanlarla filtrele
+   */
+  static filterDataByFormDefinitions(data, electionType, electionInfo = {}) {
+    const filtered = { ...data };
+    
+    if (electionType === 'cb' || electionType === 'genel') {
+      // CB adaylarını filtrele
+      if (data.cb_oylari && typeof data.cb_oylari === 'object') {
+        const cbCandidates = electionInfo.cb_candidates || [];
+        const independentCbCandidates = electionInfo.independent_cb_candidates || [];
+        const allCbCandidates = [...cbCandidates, ...independentCbCandidates];
+        
+        if (allCbCandidates.length > 0) {
+          const filteredCbOylari = {};
+          Object.keys(data.cb_oylari).forEach(aday => {
+            // Aday adını normalize et ve formdaki adaylarla eşleştir
+            const normalizedAday = aday.trim();
+            const foundCandidate = allCbCandidates.find(c => {
+              const normalizedCandidate = c.trim();
+              return normalizedAday === normalizedCandidate || 
+                     normalizedAday.toLowerCase() === normalizedCandidate.toLowerCase() ||
+                     normalizedAday.includes(normalizedCandidate) ||
+                     normalizedCandidate.includes(normalizedAday);
+            });
+            
+            if (foundCandidate) {
+              filteredCbOylari[foundCandidate] = data.cb_oylari[aday];
+            }
+          });
+          filtered.cb_oylari = filteredCbOylari;
+        }
+      }
+    }
+    
+    if (electionType === 'mv' || electionType === 'genel') {
+      // MV partilerini filtrele
+      if (data.mv_oylari && typeof data.mv_oylari === 'object') {
+        const parties = electionInfo.parties || [];
+        const independentMvCandidates = electionInfo.independent_mv_candidates || [];
+        const allParties = parties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+        const allMvCandidates = [...allParties, ...independentMvCandidates];
+        
+        if (allMvCandidates.length > 0) {
+          const filteredMvOylari = {};
+          Object.keys(data.mv_oylari).forEach(parti => {
+            // Parti adını normalize et ve formdaki partilerle eşleştir
+            const normalizedParti = parti.trim();
+            const foundParty = allMvCandidates.find(p => {
+              const normalizedParty = p.trim();
+              return normalizedParti === normalizedParty || 
+                     normalizedParti.toLowerCase() === normalizedParty.toLowerCase() ||
+                     normalizedParti.includes(normalizedParty) ||
+                     normalizedParty.includes(normalizedParti);
+            });
+            
+            if (foundParty) {
+              filteredMvOylari[foundParty] = data.mv_oylari[parti];
+            }
+          });
+          filtered.mv_oylari = filteredMvOylari;
+        }
+      }
+    }
+    
+    if (electionType === 'yerel_metropolitan_mayor' || electionType === 'yerel_city_mayor' || 
+        electionType === 'yerel_district_mayor' || electionType === 'yerel') {
+      // Belediye Başkanı adaylarını filtrele
+      if (data.belediye_baskani_oylari && typeof data.belediye_baskani_oylari === 'object') {
+        const mayorParties = electionInfo.mayor_parties || [];
+        const mayorCandidates = electionInfo.mayor_candidates || [];
+        const allMayorParties = mayorParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+        const allMayorCandidates = [...allMayorParties, ...mayorCandidates];
+        
+        if (allMayorCandidates.length > 0) {
+          const filteredMayorOylari = {};
+          Object.keys(data.belediye_baskani_oylari).forEach(aday => {
+            const normalizedAday = aday.trim();
+            const foundCandidate = allMayorCandidates.find(c => {
+              const normalizedCandidate = c.trim();
+              return normalizedAday === normalizedCandidate || 
+                     normalizedAday.toLowerCase() === normalizedCandidate.toLowerCase() ||
+                     normalizedAday.includes(normalizedCandidate) ||
+                     normalizedCandidate.includes(normalizedAday);
+            });
+            
+            if (foundCandidate) {
+              filteredMayorOylari[foundCandidate] = data.belediye_baskani_oylari[aday];
+            }
+          });
+          filtered.belediye_baskani_oylari = filteredMayorOylari;
+        }
+      }
+    }
+    
+    if (electionType === 'yerel_provincial_assembly' || electionType === 'yerel') {
+      // İl Genel Meclisi partilerini filtrele
+      if (data.il_genel_meclisi_oylari && typeof data.il_genel_meclisi_oylari === 'object') {
+        const provincialAssemblyParties = electionInfo.provincial_assembly_parties || [];
+        const allProvincialParties = provincialAssemblyParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+        
+        if (allProvincialParties.length > 0) {
+          const filteredProvincialOylari = {};
+          Object.keys(data.il_genel_meclisi_oylari).forEach(parti => {
+            const normalizedParti = parti.trim();
+            const foundParty = allProvincialParties.find(p => {
+              const normalizedParty = p.trim();
+              return normalizedParti === normalizedParty || 
+                     normalizedParti.toLowerCase() === normalizedParty.toLowerCase() ||
+                     normalizedParti.includes(normalizedParty) ||
+                     normalizedParty.includes(normalizedParti);
+            });
+            
+            if (foundParty) {
+              filteredProvincialOylari[foundParty] = data.il_genel_meclisi_oylari[parti];
+            }
+          });
+          filtered.il_genel_meclisi_oylari = filteredProvincialOylari;
+        }
+      }
+    }
+    
+    if (electionType === 'yerel_municipal_council' || electionType === 'yerel') {
+      // Belediye Meclisi partilerini filtrele
+      if (data.belediye_meclisi_oylari && typeof data.belediye_meclisi_oylari === 'object') {
+        const municipalCouncilParties = electionInfo.municipal_council_parties || [];
+        const allMunicipalParties = municipalCouncilParties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+        
+        if (allMunicipalParties.length > 0) {
+          const filteredMunicipalOylari = {};
+          Object.keys(data.belediye_meclisi_oylari).forEach(parti => {
+            const normalizedParti = parti.trim();
+            const foundParty = allMunicipalParties.find(p => {
+              const normalizedParty = p.trim();
+              return normalizedParti === normalizedParty || 
+                     normalizedParti.toLowerCase() === normalizedParty.toLowerCase() ||
+                     normalizedParti.includes(normalizedParty) ||
+                     normalizedParty.includes(normalizedParti);
+            });
+            
+            if (foundParty) {
+              filteredMunicipalOylari[foundParty] = data.belediye_meclisi_oylari[parti];
+            }
+          });
+          filtered.belediye_meclisi_oylari = filteredMunicipalOylari;
+        }
+      }
+    }
+    
+    return filtered;
+  }
+
+  /**
    * AI'dan gelen veriyi sistem formatına çevir
    */
-  static convertToSystemFormat(data, electionType) {
+  static convertToSystemFormat(data, electionType, electionInfo = {}) {
     const result = {
-      total_voters: parseInt(data.toplam_secmen) || 0,
+      // total_voters: OKUMA! Zaten sandık eklerken ekleniyor
       used_votes: parseInt(data.kullanilan_oy) || 0,
       invalid_votes: parseInt(data.gecersiz_oy) || 0,
       valid_votes: parseInt(data.gecerli_oy) || 0,
