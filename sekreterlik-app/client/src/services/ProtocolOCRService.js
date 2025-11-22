@@ -248,37 +248,50 @@ TÜM TUTANAKLARDA ORTAK OLAN BİLGİLER (Tutanak üst kısmı):
 `;
 
     // Seçim türüne göre özel alanlar
-    if (electionType === 'genel') {
-      // Genel seçim: CB ve MV ayrı tutanaklar olabilir
-      // Eğer electionInfo'da cb_candidates varsa CB tutanağı, parties varsa MV tutanağı
-      const hasCbCandidates = electionInfo.cb_candidates && electionInfo.cb_candidates.length > 0;
-      const hasParties = electionInfo.parties && electionInfo.parties.length > 0;
-      
-      if (hasCbCandidates && hasParties) {
-        // Hem CB hem MV tutanağı (birleşik)
-        prompt += `CUMHURBAŞKANI SEÇİMİ VE MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+    if (electionType === 'cb') {
+      // Sadece Cumhurbaşkanı Seçimi
+      prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
+- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "Cumhurbaşkanı Adayı" veya "Başkan Adayı" bölümündeki tüm adayları ve aldıkları oyları oku.
+  Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120, "Sinan Oğan": 50}`;
+    } else if (electionType === 'mv') {
+      // Sadece Milletvekili Genel Seçimi
+      prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "Siyasi Partinin Adı" veya "Parti Adı" bölümündeki tüm partileri ve aldıkları oyları oku.
+  Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30, "İYİ PARTİ": 25}`;
+    } else if (electionType === 'genel') {
+      // Genel seçim: CB ve MV birlikte
+      prompt += `CUMHURBAŞKANI SEÇİMİ VE MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI (BİRLEŞİK):
 - cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
   Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120}
 - mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
   Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30}`;
-      } else if (hasCbCandidates) {
-        // Sadece CB tutanağı
-        prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Tutanakta "Cumhurbaşkanı Adayı" veya "Başkan Adayı" bölümündeki tüm adayları ve aldıkları oyları oku.
-  Örnek: {"Recep Tayyip Erdoğan": 150, "Kemal Kılıçdaroğlu": 120, "Sinan Oğan": 50}`;
-      } else if (hasParties) {
-        // Sadece MV tutanağı
-        prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  Tutanakta "Siyasi Partinin Adı" veya "Parti Adı" bölümündeki tüm partileri ve aldıkları oyları oku.
-  Örnek: {"AK PARTİ": 140, "CHP": 100, "MHP": 30, "İYİ PARTİ": 25}`;
-      } else {
-        // Varsayılan: Her ikisi de
-        prompt += `GENEL SEÇİM TUTANAĞI (CB ve MV):
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
-      }
+    } else if (electionType === 'yerel_metropolitan_mayor') {
+      // Büyükşehir Belediye Başkanı
+      prompt += `BÜYÜKŞEHİR BELEDİYE BAŞKANI SEÇİMİ TUTANAĞI:
+- belediye_baskani_oylari: Büyükşehir Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "Büyükşehir Belediye Başkanı" veya "Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.`;
+    } else if (electionType === 'yerel_city_mayor') {
+      // İl Belediye Başkanı
+      prompt += `İL BELEDİYE BAŞKANI SEÇİMİ TUTANAĞI:
+- belediye_baskani_oylari: İl Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "İl Belediye Başkanı" veya "Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.`;
+    } else if (electionType === 'yerel_district_mayor') {
+      // İlçe Belediye Başkanı
+      prompt += `İLÇE BELEDİYE BAŞKANI SEÇİMİ TUTANAĞI:
+- belediye_baskani_oylari: İlçe Belediye Başkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
+  Tutanakta "İlçe Belediye Başkanı" bölümündeki tüm adayları ve aldıkları oyları oku.`;
+    } else if (electionType === 'yerel_provincial_assembly') {
+      // İl Genel Meclisi Üyesi
+      prompt += `İL GENEL MECLİSİ ÜYESİ SEÇİMİ TUTANAĞI:
+- il_genel_meclisi_oylari: İl Genel Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "İl Genel Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.`;
+    } else if (electionType === 'yerel_municipal_council') {
+      // Belediye Meclisi Üyesi
+      prompt += `BELEDİYE MECLİSİ ÜYESİ SEÇİMİ TUTANAĞI:
+- belediye_meclisi_oylari: Belediye Meclisi Üyesi partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
+  Tutanakta "Belediye Meclisi Üyesi" bölümündeki tüm partileri ve aldıkları oyları oku.`;
     } else if (electionType === 'yerel') {
       // Yerel seçim: Birden fazla tutanak tipi olabilir
       const isMetropolitan = electionInfo.is_metropolitan || false;
@@ -368,9 +381,19 @@ TÜM TUTANAKLARDA ORTAK OLAN BİLGİLER (Tutanak üst kısmı):
       ballot_number: data.sandik_numarasi || null
     };
 
-    if (electionType === 'genel') {
+    if (electionType === 'cb') {
+      result.cb_votes = data.cb_oylari || {};
+    } else if (electionType === 'mv') {
+      result.mv_votes = data.mv_oylari || {};
+    } else if (electionType === 'genel') {
       result.cb_votes = data.cb_oylari || {};
       result.mv_votes = data.mv_oylari || {};
+    } else if (electionType === 'yerel_metropolitan_mayor' || electionType === 'yerel_city_mayor' || electionType === 'yerel_district_mayor') {
+      result.mayor_votes = data.belediye_baskani_oylari || {};
+    } else if (electionType === 'yerel_provincial_assembly') {
+      result.provincial_assembly_votes = data.il_genel_meclisi_oylari || {};
+    } else if (electionType === 'yerel_municipal_council') {
+      result.municipal_council_votes = data.belediye_meclisi_oylari || {};
     } else if (electionType === 'yerel') {
       result.mayor_votes = data.belediye_baskani_oylari || {};
       result.provincial_assembly_votes = data.il_genel_meclisi_oylari || {};

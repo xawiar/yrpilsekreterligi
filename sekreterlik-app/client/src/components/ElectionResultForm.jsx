@@ -492,10 +492,25 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     
     const result = {};
     
-    if (election.type === 'genel') {
+    if (election.type === 'cb') {
+      // Sadece Cumhurbaşkanı Seçimi
+      result.cb = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+    } else if (election.type === 'mv') {
+      // Sadece Milletvekili Genel Seçimi
+      result.mv = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+    } else if (election.type === 'genel') {
       // Genel Seçim: CB ve MV ayrı ayrı
       result.cb = Object.values(formData.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
       result.mv = Object.values(formData.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+    } else if (election.type === 'yerel_metropolitan_mayor' || election.type === 'yerel_city_mayor' || election.type === 'yerel_district_mayor') {
+      // Belediye Başkanı seçimleri (Büyükşehir, İl, İlçe)
+      result.mayor = Object.values(formData.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+    } else if (election.type === 'yerel_provincial_assembly') {
+      // İl Genel Meclisi Üyesi Seçimi
+      result.provincial_assembly = Object.values(formData.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+    } else if (election.type === 'yerel_municipal_council') {
+      // Belediye Meclisi Üyesi Seçimi
+      result.municipal_council = Object.values(formData.municipal_council_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
     } else if (election.type === 'yerel') {
       // Yerel Seçim: Köyde sadece İl Genel Meclisi, değilse hepsi
       const isVil = isVillage();
@@ -571,7 +586,25 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     const enteredValidVotes = parseInt(formData.valid_votes) || 0;
     const totalCalculatedValidVotes = calculateTotalValidVotes();
     
-    if (election.type === 'genel') {
+    if (election.type === 'cb') {
+      // Sadece Cumhurbaşkanı Seçimi
+      const cbTotal = validVotesByCategory.cb || 0;
+      if (cbTotal !== enteredValidVotes) {
+        setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+    } else if (election.type === 'mv') {
+      // Sadece Milletvekili Genel Seçimi
+      const mvTotal = validVotesByCategory.mv || 0;
+      if (mvTotal !== enteredValidVotes) {
+        setMessage(`Milletvekili oyları toplamı (${mvTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+    } else if (election.type === 'genel') {
       // Genel seçim: CB ve MV oyları ayrı ayrı kontrol edilir
       // Her seçmen hem CB hem MV için oy kullanır, bu yüzden her ikisi de geçerli oy sayısına eşit olmalı
       const cbTotal = validVotesByCategory.cb || 0;
@@ -579,13 +612,40 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       
       if (cbTotal !== enteredValidVotes) {
         setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-      setMessageType('error');
-      setSaving(false);
-      return;
+        setMessageType('error');
+        setSaving(false);
+        return;
       }
       
       if (mvTotal !== enteredValidVotes) {
         setMessage(`Milletvekili oyları toplamı (${mvTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+    } else if (election.type === 'yerel_metropolitan_mayor' || election.type === 'yerel_city_mayor' || election.type === 'yerel_district_mayor') {
+      // Belediye Başkanı seçimleri (Büyükşehir, İl, İlçe)
+      const mayorTotal = validVotesByCategory.mayor || 0;
+      if (mayorTotal !== enteredValidVotes) {
+        setMessage(`Belediye Başkanı oyları toplamı (${mayorTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+    } else if (election.type === 'yerel_provincial_assembly') {
+      // İl Genel Meclisi Üyesi Seçimi
+      const provincialAssemblyTotal = validVotesByCategory.provincial_assembly || 0;
+      if (provincialAssemblyTotal !== enteredValidVotes) {
+        setMessage(`İl Genel Meclisi oyları toplamı (${provincialAssemblyTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+    } else if (election.type === 'yerel_municipal_council') {
+      // Belediye Meclisi Üyesi Seçimi
+      const municipalCouncilTotal = validVotesByCategory.municipal_council || 0;
+      if (municipalCouncilTotal !== enteredValidVotes) {
+        setMessage(`Belediye Meclisi oyları toplamı (${municipalCouncilTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
         setMessageType('error');
         setSaving(false);
         return;
@@ -739,10 +799,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     if (!election?.type) return 'Seçim';
     
     const labels = {
-      'yerel': 'Yerel Seçim',
-      'genel': 'Genel Seçim',
-      'referandum': 'Referandum',
-      'cb': 'Cumhurbaşkanlığı Seçimi' // Legacy
+      'cb': 'Cumhurbaşkanı Seçimi',
+      'mv': 'Milletvekili Genel Seçimi',
+      'genel': 'Genel Seçim (CB + MV)',
+      'yerel': 'Yerel Seçim (Tüm Alt Türler)',
+      'yerel_metropolitan_mayor': 'Büyükşehir Belediye Başkanı',
+      'yerel_city_mayor': 'İl Belediye Başkanı',
+      'yerel_district_mayor': 'İlçe Belediye Başkanı',
+      'yerel_provincial_assembly': 'İl Genel Meclisi Üyesi',
+      'yerel_municipal_council': 'Belediye Meclisi Üyesi',
+      'referandum': 'Referandum'
     };
     return labels[election.type] || election.type;
   };
@@ -953,12 +1019,42 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     const validVotesByCategory = calculateValidVotesByCategory();
                     const isVil = isVillage();
                     
-                    if (election?.type === 'genel') {
+                    if (election?.type === 'cb') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>CB oyları toplamı: <span className="font-semibold">{validVotesByCategory.cb || 0}</span></div>
+                        </div>
+                      );
+                    } else if (election?.type === 'mv') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>MV oyları toplamı: <span className="font-semibold">{validVotesByCategory.mv || 0}</span></div>
+                        </div>
+                      );
+                    } else if (election?.type === 'genel') {
                       return (
                         <div className="mt-2 space-y-1 text-xs text-gray-600">
                           <div>CB oyları toplamı: <span className="font-semibold">{validVotesByCategory.cb || 0}</span></div>
                           <div>MV oyları toplamı: <span className="font-semibold">{validVotesByCategory.mv || 0}</span></div>
                           <div className="text-gray-500 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
+                        </div>
+                      );
+                    } else if (election?.type === 'yerel_metropolitan_mayor' || election?.type === 'yerel_city_mayor' || election?.type === 'yerel_district_mayor') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>Belediye Başkanı oyları toplamı: <span className="font-semibold">{validVotesByCategory.mayor || 0}</span></div>
+                        </div>
+                      );
+                    } else if (election?.type === 'yerel_provincial_assembly') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>İl Genel Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.provincial_assembly || 0}</span></div>
+                        </div>
+                      );
+                    } else if (election?.type === 'yerel_municipal_council') {
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div>Belediye Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.municipal_council || 0}</span></div>
                         </div>
                       );
                     } else if (election?.type === 'yerel') {
@@ -992,7 +1088,113 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </div>
             </div>
 
-            {/* Genel Seçim: CB ve MV Oyları */}
+            {/* Cumhurbaşkanı Seçimi: Sadece CB Oyları */}
+            {election?.type === 'cb' && (
+              <div className="space-y-5">
+                {/* Cumhurbaşkanı Oyları */}
+                {election.cb_candidates && election.cb_candidates.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Cumhurbaşkanı Adayları ve Aldıkları Oy Sayıları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.cb_candidates.map((candidate) => (
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
+                            {candidate}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.cb_votes[candidate] || ''}
+                            onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                      {/* Bağımsız CB Adayları */}
+                      {election.independent_cb_candidates && election.independent_cb_candidates.length > 0 && (
+                        <>
+                          {election.independent_cb_candidates.map((candidate) => (
+                            <div key={`ind_cb_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900">
+                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={formData.cb_votes[candidate] || ''}
+                                onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
+                                inputMode="numeric"
+                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                placeholder="0"
+                              />
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Milletvekili Genel Seçimi: Sadece MV Oyları */}
+            {election?.type === 'mv' && (
+              <div className="space-y-5">
+                {/* Milletvekili Oyları (Parti Bazlı) */}
+                {election.parties && election.parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Milletvekili Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.parties.map((party) => (
+                        <div key={party.name || party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
+                            {party.name || party}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.mv_votes[party.name || party] || ''}
+                            onChange={(e) => handleMvVoteChange(party.name || party, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                      {/* Bağımsız MV Adayları */}
+                      {election.independent_mv_candidates && election.independent_mv_candidates.length > 0 && (
+                        <>
+                          {election.independent_mv_candidates.map((candidate) => (
+                            <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900">
+                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={formData.mv_votes[candidate] || ''}
+                                onChange={(e) => handleMvVoteChange(candidate, e.target.value)}
+                                inputMode="numeric"
+                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                placeholder="0"
+                              />
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Genel Seçim: CB ve MV Oyları (Birlikte) */}
             {election?.type === 'genel' && (
               <div className="space-y-5">
                 {/* Cumhurbaşkanı Oyları */}
@@ -1093,7 +1295,263 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </div>
             )}
 
-            {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
+            {/* Büyükşehir Belediye Başkanı Seçimi */}
+            {election?.type === 'yerel_metropolitan_mayor' && (
+              <div className="space-y-5">
+                {/* Belediye Başkanı Parti Oyları */}
+                {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Büyükşehir Belediye Başkanı Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900">
+                              {partyName}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.mayor_votes[partyName] || ''}
+                              onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
+                              inputMode="numeric"
+                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              placeholder="0"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bağımsız Belediye Başkanı Adayları */}
+                {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Bağımsız Büyükşehir Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_candidates.map((candidate) => (
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
+                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.mayor_votes[candidate] || ''}
+                            onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* İl Belediye Başkanı Seçimi */}
+            {election?.type === 'yerel_city_mayor' && (
+              <div className="space-y-5">
+                {/* Belediye Başkanı Parti Oyları */}
+                {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      İl Belediye Başkanı Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900">
+                              {partyName}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.mayor_votes[partyName] || ''}
+                              onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
+                              inputMode="numeric"
+                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              placeholder="0"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bağımsız Belediye Başkanı Adayları */}
+                {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Bağımsız İl Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_candidates.map((candidate) => (
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
+                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.mayor_votes[candidate] || ''}
+                            onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* İlçe Belediye Başkanı Seçimi */}
+            {election?.type === 'yerel_district_mayor' && (
+              <div className="space-y-5">
+                {/* Belediye Başkanı Parti Oyları */}
+                {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      İlçe Belediye Başkanı Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900">
+                              {partyName}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.mayor_votes[partyName] || ''}
+                              onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
+                              inputMode="numeric"
+                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              placeholder="0"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bağımsız Belediye Başkanı Adayları */}
+                {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Bağımsız İlçe Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.mayor_candidates.map((candidate) => (
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900">
+                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.mayor_votes[candidate] || ''}
+                            onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
+                            inputMode="numeric"
+                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* İl Genel Meclisi Üyesi Seçimi */}
+            {election?.type === 'yerel_provincial_assembly' && (
+              <div className="space-y-5">
+                {/* İl Genel Meclisi Üyesi Oyları (Parti Bazlı) */}
+                {election.provincial_assembly_parties && Array.isArray(election.provincial_assembly_parties) && election.provincial_assembly_parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      İl Genel Meclisi Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.provincial_assembly_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900">
+                              {partyName}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.provincial_assembly_votes[partyName] || ''}
+                              onChange={(e) => handleProvincialAssemblyVoteChange(partyName, e.target.value)}
+                              inputMode="numeric"
+                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              placeholder="0"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Belediye Meclisi Üyesi Seçimi */}
+            {election?.type === 'yerel_municipal_council' && (
+              <div className="space-y-5">
+                {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) */}
+                {election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                      Belediye Meclis Parti Oyları
+                    </h2>
+                    <div className="space-y-2">
+                      {election.municipal_council_parties.map((party) => {
+                        const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
+                        return (
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900">
+                              {partyName}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.municipal_council_votes[partyName] || ''}
+                              onChange={(e) => handleMunicipalCouncilVoteChange(partyName, e.target.value)}
+                              inputMode="numeric"
+                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              placeholder="0"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi (Tüm Alt Türler - Eski Sistem Uyumluluğu) */}
             {election?.type === 'yerel' && (
               <div className="space-y-5">
                 {/* Köy kontrolü bilgilendirmesi */}

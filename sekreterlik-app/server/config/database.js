@@ -631,7 +631,7 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     date TEXT NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('genel', 'yerel', 'referandum')),
+    type TEXT NOT NULL CHECK(type IN ('cb', 'mv', 'genel', 'yerel', 'referandum', 'yerel_metropolitan_mayor', 'yerel_city_mayor', 'yerel_district_mayor', 'yerel_provincial_assembly', 'yerel_municipal_council')),
     status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'active', 'closed')),
     voter_count INTEGER,
     cb_candidates TEXT,

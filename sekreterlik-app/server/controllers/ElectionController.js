@@ -81,7 +81,8 @@ class ElectionController {
       const errors = [];
       if (!electionData.name) errors.push('Seçim adı zorunludur');
       if (!electionData.date) errors.push('Seçim tarihi zorunludur');
-      if (!electionData.type || !['genel', 'yerel', 'referandum'].includes(electionData.type)) {
+      const validTypes = ['cb', 'mv', 'genel', 'yerel', 'referandum', 'yerel_metropolitan_mayor', 'yerel_city_mayor', 'yerel_district_mayor', 'yerel_provincial_assembly', 'yerel_municipal_council'];
+      if (!electionData.type || !validTypes.includes(electionData.type)) {
         errors.push('Geçerli bir seçim türü seçilmelidir');
       }
 
