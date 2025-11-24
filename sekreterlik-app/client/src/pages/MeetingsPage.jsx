@@ -144,9 +144,17 @@ const MeetingsPage = () => {
     }
   };
 
-  const handleShowMeeting = async (id) => {
+  const handleShowMeeting = async (idOrMeeting) => {
     try {
-      const meeting = await ApiService.getMeetingById(id);
+      // Eğer meeting objesi gönderildiyse direkt kullan, değilse id ile API'den çek
+      let meeting;
+      if (typeof idOrMeeting === 'object' && idOrMeeting !== null) {
+        // Meeting objesi gönderilmiş
+        meeting = idOrMeeting;
+      } else {
+        // ID gönderilmiş, API'den çek
+        meeting = await ApiService.getMeetingById(idOrMeeting);
+      }
       setSelectedMeeting(meeting);
       setIsDetailsModalOpen(true);
     } catch (error) {
