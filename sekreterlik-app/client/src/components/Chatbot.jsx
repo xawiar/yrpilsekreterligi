@@ -7,6 +7,9 @@ import DeepSeekService from '../services/DeepSeekService';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { analyzeSentiment, getResponseTone } from '../utils/sentimentAnalysis';
+import { predictMeetingAttendance, detectAnomalies, generateRecommendations, analyzeTrend } from '../utils/advancedAnalysis';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Chatbot = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -782,6 +785,14 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Role-specific training context
       const roleSpecificContext = getRoleSpecificContext(userRole);
       
+      // Duygu analizi
+      const sentimentResult = analyzeSentiment(userMessage);
+      const responseTone = getResponseTone(sentimentResult);
+
+      // Gelişmiş analiz (anomali tespiti ve öneriler)
+      const anomalies = siteData ? detectAnomalies(siteData) : [];
+      const recommendations = siteData ? generateRecommendations(siteData, userRole) : [];
+
       // Enhanced AI prompt with better context understanding and training
       const conversationSummary = conversationHistory.length > 0 
         ? `\n=== ÖNCEKİ KONUŞMA ÖZETİ ===\n` +
@@ -792,6 +803,24 @@ const Chatbot = ({ isOpen, onClose }) => {
           (conversationHistory.length > 5 ? `\n... ve ${conversationHistory.length - 5} mesaj daha` : '')
         : '';
 
+      // Duygu analizi context'i
+      const sentimentContext = `\n=== DUYGU ANALİZİ ===
+Kullanıcının mesajından tespit edilen duygu:
+- Duygu: ${sentimentResult.emotion}
+- Sentiment: ${sentimentResult.sentiment === 'positive' ? 'Pozitif' : sentimentResult.sentiment === 'negative' ? 'Negatif' : 'Nötr'}
+- Yoğunluk: ${sentimentResult.intensity}
+- Önerilen yanıt tonu: ${responseTone}
+
+ÖNEMLİ: Kullanıcı ${sentimentResult.sentiment === 'negative' ? 'olumsuz' : sentimentResult.sentiment === 'positive' ? 'olumlu' : 'nötr'} bir duygu durumunda. Yanıtını ${responseTone} bir tonla ver.`;
+
+      // Gelişmiş analiz context'i
+      const analysisContext = anomalies.length > 0 || recommendations.length > 0
+        ? `\n=== GELİŞMİŞ ANALİZ ===
+${anomalies.length > 0 ? `Tespit edilen anomaliler (${anomalies.length} adet):\n${anomalies.slice(0, 3).map(a => `- ${a.message}`).join('\n')}\n` : ''}
+${recommendations.length > 0 ? `Öneriler (${recommendations.length} adet):\n${recommendations.slice(0, 3).map(r => `- ${r.title}: ${r.description}`).join('\n')}\n` : ''}
+Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
+        : '';
+
       const enhancedContext = [
         ...context,
         `\n=== KONUŞMA BAĞLAMI ===`,
@@ -800,6 +829,8 @@ const Chatbot = ({ isOpen, onClose }) => {
         `Mevcut sayfa: ${location.pathname}`,
         `Konuşma geçmişi: ${conversationHistory.length} mesaj`,
         conversationSummary,
+        sentimentContext,
+        analysisContext,
         ...roleSpecificContext,
         `\n=== SOHBET MODU ===`,
         `Bu bir devam eden sohbet. Önceki konuşmaları hatırla ve referans ver.`,
