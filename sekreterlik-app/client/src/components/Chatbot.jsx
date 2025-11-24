@@ -69,6 +69,26 @@ const Chatbot = ({ isOpen, onClose }) => {
     }
   }, [isOpen, siteData]);
 
+  // Proactive suggestions and alerts
+  useEffect(() => {
+    if (isOpen && siteData && messages.length <= 1) {
+      // Wait a bit before showing proactive suggestions
+      const timer = setTimeout(() => {
+        const proactiveMessage = getProactiveSuggestions(siteData, userRole);
+        if (proactiveMessage) {
+          setMessages(prev => [...prev, {
+            id: Date.now() + 1000,
+            role: 'assistant',
+            content: proactiveMessage,
+            isProactive: true
+          }]);
+        }
+      }, 2000); // Show after 2 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, siteData, messages.length, userRole]);
+
   const loadSiteData = async () => {
     try {
       // Optimize: Load critical data first, then less critical data
@@ -626,11 +646,70 @@ const Chatbot = ({ isOpen, onClose }) => {
         }
       }
       
-      // Build conversation history (last 5 messages for context)
-      const conversationHistory = messages.slice(-5).map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      // Enhanced context for comparative analysis
+      if (userMessage.toLowerCase().includes('karşılaştır') || 
+          userMessage.toLowerCase().includes('geçen') || 
+          userMessage.toLowerCase().includes('trend') ||
+          userMessage.toLowerCase().includes('artış') ||
+          userMessage.toLowerCase().includes('azalış')) {
+        context.push(`\n=== KARŞILAŞTIRMALI ANALİZ İSTEĞİ ===`);
+        context.push(`Kullanıcı karşılaştırmalı analiz veya trend analizi istiyor.`);
+        
+        // Add time-based statistics
+        if (siteData.meetings) {
+          const now = new Date();
+          const thisMonth = now.getMonth();
+          const thisYear = now.getFullYear();
+          const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+          const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+
+          const thisMonthMeetings = siteData.meetings.filter(m => {
+            if (!m.date) return false;
+            try {
+              const date = new Date(m.date.split('.').reverse().join('-'));
+              return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
+            } catch {
+              return false;
+            }
+          });
+
+          const lastMonthMeetings = siteData.meetings.filter(m => {
+            if (!m.date) return false;
+            try {
+              const date = new Date(m.date.split('.').reverse().join('-'));
+              return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
+            } catch {
+              return false;
+            }
+          });
+
+          context.push(`Bu Ay Toplantı Sayısı: ${thisMonthMeetings.length}`);
+          context.push(`Geçen Ay Toplantı Sayısı: ${lastMonthMeetings.length}`);
+          
+          // Calculate attendance trends
+          const thisMonthAvg = calculateAverageAttendance(thisMonthMeetings);
+          const lastMonthAvg = calculateAverageAttendance(lastMonthMeetings);
+          context.push(`Bu Ay Ortalama Katılım: %${thisMonthAvg}`);
+          context.push(`Geçen Ay Ortalama Katılım: %${lastMonthAvg}`);
+          
+          if (thisMonthAvg > lastMonthAvg) {
+            context.push(`Katılım Trendi: Artış var (+${(thisMonthAvg - lastMonthAvg).toFixed(1)}%)`);
+          } else if (thisMonthAvg < lastMonthAvg) {
+            context.push(`Katılım Trendi: Azalış var (${(thisMonthAvg - lastMonthAvg).toFixed(1)}%)`);
+          } else {
+            context.push(`Katılım Trendi: Değişiklik yok`);
+          }
+        }
+      }
+
+      // Build conversation history (last 10 messages for better context - increased from 5)
+      const conversationHistory = messages
+        .filter(msg => !msg.isProactive) // Exclude proactive messages from history
+        .slice(-10)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
 
       // Check for help commands
       const helpKeywords = ['yardım', 'help', 'nasıl', 'komut', 'ne yapabilir', 'ne sorabilir', 'kullanım'];
@@ -659,6 +738,26 @@ const Chatbot = ({ isOpen, onClose }) => {
         context.push(`Raporlar sayfasına yönlendirme yapılabilir veya chatbot üzerinden özet rapor verilebilir.`);
       }
 
+      // Check for automatic action requests
+      const createMeetingPattern = /(toplantı|meeting)\s+(?:oluştur|create|yap|düzenle)/i;
+      if (createMeetingPattern.test(userMessage) && userRole === 'admin') {
+        // Extract meeting details from message
+        const nameMatch = userMessage.match(/(?:adı|name|isim)[\s:]+(.+?)(?:\s|$|,)/i);
+        const dateMatch = userMessage.match(/(?:tarih|date)[\s:]+(.+?)(?:\s|$|,)/i);
+        const regionMatch = userMessage.match(/(?:bölge|region)[\s:]+(.+?)(?:\s|$|,)/i);
+        
+        const params = {};
+        if (nameMatch) params.name = nameMatch[1].trim();
+        if (dateMatch) params.date = dateMatch[1].trim();
+        if (regionMatch) params.regions = regionMatch[1].split(',').map(r => r.trim());
+        
+        const actionHandled = await handleAutomaticAction('create_meeting', params);
+        if (actionHandled) {
+          setLoading(false);
+          return;
+        }
+      }
+
       // Check for advanced search patterns
       const searchPatterns = [
         { pattern: /(.+?)(?:'in|'nin|'un|'ün)\s+(?:katıldığı|gittiği|olduğu)\s+(toplantılar|etkinlikler)/i, type: 'member_events' },
@@ -678,16 +777,29 @@ const Chatbot = ({ isOpen, onClose }) => {
         }
       }
 
+      // Enhanced AI prompt with better context understanding
+      const enhancedContext = [
+        ...context,
+        `\n=== KONUŞMA BAĞLAMI ===`,
+        `Bu bir parti sekreterlik yönetim sistemidir.`,
+        `Kullanıcı rolü: ${userRole || 'bilinmiyor'}`,
+        `Mevcut sayfa: ${location.pathname}`,
+        `Konuşma geçmişi: ${conversationHistory.length} mesaj`,
+        `\nÖNEMLİ: Uzun konuşmalarda önceki mesajları dikkate al ve bağlamı koru.`,
+        `Kullanıcının sorusuna net, kısa ve anlaşılır cevap ver.`,
+        `Gerekirse örnekler ver ve kullanıcıyı yönlendir.`
+      ];
+
       // Seçilen AI servisine göre API çağrısı yap
       let response;
       if (aiProvider === 'gemini') {
-        response = await GeminiService.chat(userMessage, context, conversationHistory);
+        response = await GeminiService.chat(userMessage, enhancedContext, conversationHistory);
       } else if (aiProvider === 'chatgpt') {
-        response = await ChatGPTService.chat(userMessage, context, conversationHistory);
+        response = await ChatGPTService.chat(userMessage, enhancedContext, conversationHistory);
       } else if (aiProvider === 'deepseek') {
-        response = await DeepSeekService.chat(userMessage, context, conversationHistory);
+        response = await DeepSeekService.chat(userMessage, enhancedContext, conversationHistory);
       } else {
-        response = await GroqService.chat(userMessage, context, conversationHistory); // Default: Groq
+        response = await GroqService.chat(userMessage, enhancedContext, conversationHistory); // Default: Groq
       }
 
       // Process response for report links
@@ -839,6 +951,121 @@ const Chatbot = ({ isOpen, onClose }) => {
     return actions.filter(a => !a.roles || a.roles.includes(userRole));
   };
 
+  // Get proactive suggestions based on data
+  const getProactiveSuggestions = (data, role) => {
+    if (!data) return null;
+
+    const suggestions = [];
+    
+    // Upcoming meetings
+    if (data.meetings && data.meetings.length > 0) {
+      const now = new Date();
+      const upcomingMeetings = data.meetings
+        .filter(m => !m.archived && m.date)
+        .map(m => {
+          try {
+            const meetingDate = new Date(m.date.split('.').reverse().join('-'));
+            return { ...m, dateObj: meetingDate };
+          } catch {
+            return null;
+          }
+        })
+        .filter(m => m && m.dateObj > now)
+        .sort((a, b) => a.dateObj - b.dateObj)
+        .slice(0, 3);
+
+      if (upcomingMeetings.length > 0) {
+        suggestions.push(`📅 Yaklaşan ${upcomingMeetings.length} toplantı var:`);
+        upcomingMeetings.forEach(m => {
+          const dateStr = m.dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+          suggestions.push(`   • ${m.name} - ${dateStr}`);
+        });
+      }
+    }
+
+    // Missing attendance data
+    if (data.meetings && role === 'admin') {
+      const meetingsWithoutAttendance = data.meetings
+        .filter(m => !m.archived && (!m.attendees || m.attendees.length === 0))
+        .slice(0, 3);
+
+      if (meetingsWithoutAttendance.length > 0) {
+        suggestions.push(`\n⚠️ ${meetingsWithoutAttendance.length} toplantıda yoklama eksik:`);
+        meetingsWithoutAttendance.forEach(m => {
+          suggestions.push(`   • ${m.name}`);
+        });
+      }
+    }
+
+    // Low attendance rate meetings
+    if (data.meetings && role === 'admin') {
+      const lowAttendanceMeetings = data.meetings
+        .filter(m => !m.archived && m.attendees && m.attendees.length > 0)
+        .map(m => {
+          const attended = m.attendees.filter(a => a.attended).length;
+          const rate = (attended / m.attendees.length) * 100;
+          return { ...m, attendanceRate: rate };
+        })
+        .filter(m => m.attendanceRate < 50)
+        .sort((a, b) => a.attendanceRate - b.attendanceRate)
+        .slice(0, 3);
+
+      if (lowAttendanceMeetings.length > 0) {
+        suggestions.push(`\n📉 Düşük katılımlı toplantılar (<%50):`);
+        lowAttendanceMeetings.forEach(m => {
+          suggestions.push(`   • ${m.name} - %${Math.round(m.attendanceRate)} katılım`);
+        });
+      }
+    }
+
+    // Upcoming events
+    if (data.events && data.events.length > 0) {
+      const now = new Date();
+      const upcomingEvents = data.events
+        .filter(e => !e.archived && e.date)
+        .map(e => {
+          try {
+            const eventDate = new Date(e.date.split('.').reverse().join('-'));
+            return { ...e, dateObj: eventDate };
+          } catch {
+            return null;
+          }
+        })
+        .filter(e => e && e.dateObj > now)
+        .sort((a, b) => a.dateObj - b.dateObj)
+        .slice(0, 3);
+
+      if (upcomingEvents.length > 0) {
+        suggestions.push(`\n🎉 Yaklaşan ${upcomingEvents.length} etkinlik var:`);
+        upcomingEvents.forEach(e => {
+          const dateStr = e.dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+          suggestions.push(`   • ${e.name} - ${dateStr}`);
+        });
+      }
+    }
+
+    // Missing election results
+    if (data.elections && data.electionResults && role === 'admin') {
+      const electionsWithoutResults = data.elections.filter(election => {
+        const hasResults = data.electionResults.some(r => 
+          String(r.election_id || r.electionId) === String(election.id)
+        );
+        return !hasResults;
+      }).slice(0, 3);
+
+      if (electionsWithoutResults.length > 0) {
+        suggestions.push(`\n🗳️ ${electionsWithoutResults.length} seçimde sonuç eksik:`);
+        electionsWithoutResults.forEach(e => {
+          suggestions.push(`   • ${e.name}`);
+        });
+      }
+    }
+
+    if (suggestions.length === 0) return null;
+
+    return `💡 PROAKTİF ÖNERİLER:\n\n${suggestions.join('\n')}\n\nBu konular hakkında daha fazla bilgi almak için soru sorabilirsiniz.`;
+  };
+
   // Get help message based on user role
   const getHelpMessage = (role) => {
     let helpMessage = `📚 CHATBOT YARDIM REHBERİ\n\n`;
@@ -886,6 +1113,42 @@ const Chatbot = ({ isOpen, onClose }) => {
     helpMessage += `• Hızlı aksiyon butonlarını kullanarak daha hızlı bilgi alabilirsiniz\n`;
     
     return helpMessage;
+  };
+
+  // Helper function to calculate average attendance
+  const calculateAverageAttendance = (meetings) => {
+    if (!meetings || meetings.length === 0) return 0;
+    
+    let totalRate = 0;
+    let count = 0;
+    
+    meetings.forEach(meeting => {
+      if (meeting.attendees && meeting.attendees.length > 0) {
+        const attended = meeting.attendees.filter(a => a.attended).length;
+        const rate = (attended / meeting.attendees.length) * 100;
+        totalRate += rate;
+        count++;
+      }
+    });
+    
+    return count > 0 ? Math.round(totalRate / count) : 0;
+  };
+
+  // Handle automatic actions (meeting creation, etc.)
+  const handleAutomaticAction = async (actionType, params) => {
+    if (actionType === 'create_meeting' && userRole === 'admin') {
+      // Navigate to meeting creation page with pre-filled data
+      const queryParams = new URLSearchParams();
+      if (params.name) queryParams.set('name', params.name);
+      if (params.date) queryParams.set('date', params.date);
+      if (params.regions) queryParams.set('regions', params.regions.join(','));
+      
+      navigate(`/meetings?create=true&${queryParams.toString()}`);
+      onClose();
+      return true;
+    }
+    
+    return false;
   };
 
   const clearChat = () => {
