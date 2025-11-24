@@ -148,13 +148,32 @@ const MeetingsPage = () => {
     try {
       // Eğer meeting objesi gönderildiyse direkt kullan, değilse id ile API'den çek
       let meeting;
-      if (typeof idOrMeeting === 'object' && idOrMeeting !== null) {
+      if (typeof idOrMeeting === 'object' && idOrMeeting !== null && idOrMeeting.id) {
         // Meeting objesi gönderilmiş
         meeting = idOrMeeting;
-      } else {
+        // Eğer meeting objesi eksik bilgiler içeriyorsa, API'den tam detay çek
+        if (!meeting.attendees && !meeting.notes) {
+          try {
+            const fullMeeting = await ApiService.getMeetingById(meeting.id);
+            meeting = fullMeeting || meeting;
+          } catch (e) {
+            // API hatası olursa mevcut meeting objesini kullan
+            console.warn('Could not fetch full meeting details, using provided meeting object');
+          }
+        }
+      } else if (idOrMeeting) {
         // ID gönderilmiş, API'den çek
         meeting = await ApiService.getMeetingById(idOrMeeting);
+      } else {
+        console.error('handleShowMeeting: idOrMeeting is null or undefined');
+        return;
       }
+      
+      if (!meeting || !meeting.id) {
+        console.error('handleShowMeeting: Invalid meeting object', meeting);
+        return;
+      }
+      
       setSelectedMeeting(meeting);
       setIsDetailsModalOpen(true);
     } catch (error) {
@@ -256,19 +275,34 @@ const MeetingsPage = () => {
 
   // Function to calculate attendance statistics
   const calculateAttendanceStats = (meeting) => {
+    // Güvenlik kontrolü: meeting ve attendees olmalı
+    if (!meeting || !meeting.attendees || !Array.isArray(meeting.attendees)) {
+      return {
+        totalExpected: 0,
+        totalAttendees: 0,
+        attendedCount: 0,
+        excusedCount: 0,
+        nonAttendedCount: 0,
+        notAttendedCount: 0,
+        attendancePercentage: 0
+      };
+    }
+    
     const totalExpected = meeting.attendees.length;
-    const attendedCount = meeting.attendees.filter(a => a.attended).length;
-    const excusedCount = meeting.attendees.filter(a => a.excuse && a.excuse.hasExcuse).length;
+    const attendedCount = meeting.attendees.filter(a => a && a.attended).length;
+    const excusedCount = meeting.attendees.filter(a => a && a.excuse && a.excuse.hasExcuse).length;
     const attendancePercentage = totalExpected > 0 
       ? Math.round((attendedCount / totalExpected) * 100) 
       : 0;
     
     return {
       totalExpected,
+      totalAttendees: totalExpected,
       attendedCount,
       excusedCount,
       // Non-attended count includes both those who didn't attend and those with excuses
       nonAttendedCount: totalExpected - attendedCount,
+      notAttendedCount: totalExpected - attendedCount,
       attendancePercentage
     };
   };

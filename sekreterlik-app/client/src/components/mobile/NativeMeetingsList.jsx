@@ -98,13 +98,22 @@ const NativeMeetingsList = ({
       ) : (
         <div className="space-y-3">
           {filteredMeetings.map((meeting) => {
+            // Güvenlik kontrolü: meeting objesi ve id olmalı
+            if (!meeting || !meeting.id) {
+              return null;
+            }
+            
             const stats = calculateAttendanceStats(meeting);
-            const attendanceColor = getAttendanceColor(stats.attendancePercentage);
+            const attendanceColor = getAttendanceColor(stats?.attendancePercentage || 0);
             
             return (
               <NativeCard
                 key={meeting.id}
-                onClick={() => onMeetingClick && onMeetingClick(meeting)}
+                onClick={() => {
+                  if (onMeetingClick && meeting && meeting.id) {
+                    onMeetingClick(meeting);
+                  }
+                }}
               >
                 <div className="flex items-start space-x-4">
                   {/* Date Icon */}
