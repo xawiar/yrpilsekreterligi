@@ -86,10 +86,9 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         }}
       >
         <div 
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-white dark:bg-gray-800 rounded-none shadow-2xl w-full h-full overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
           style={{
-            maxHeight: '90vh',
             position: 'relative',
             zIndex: 10000
           }}
@@ -107,7 +106,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
               </svg>
             </button>
           </div>
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch', maxHeight: 'calc(90vh - 80px)' }}>
+          <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
             {children}
           </div>
         </div>

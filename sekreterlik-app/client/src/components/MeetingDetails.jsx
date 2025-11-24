@@ -3,6 +3,7 @@ import ApiService from '../utils/ApiService';
 import { stringify } from 'csv-stringify/browser/esm/sync'; // Import csv-stringify
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { isMobile } from '../utils/capacitorUtils';
 
 const MeetingDetails = ({ meeting }) => {
   const [members, setMembers] = useState([]);
@@ -295,99 +296,164 @@ const MeetingDetails = ({ meeting }) => {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Üye
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Görev
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Bölge
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Katılım Durumu
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Mazeret
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {meeting.attendees && meeting.attendees
-                  .sort((a, b) => {
-                    // Handle both string and number memberId values
-                    const attendeeMemberIdA = a.memberId || a.member_id;
-                    const attendeeMemberIdB = b.memberId || b.member_id;
-                    const memberA = getMember(attendeeMemberIdA);
-                    const memberB = getMember(attendeeMemberIdB);
-                    const nameA = memberA ? memberA.name : 'Bilinmeyen Üye';
-                    const nameB = memberB ? memberB.name : 'Bilinmeyen Üye';
-                    return nameA.localeCompare(nameB, 'tr', { sensitivity: 'base' });
-                  })
-                  .map((attendance) => {
-                  // Handle both string and number memberId values
-                  const attendeeMemberId = attendance.memberId || attendance.member_id;
-                  const member = getMember(attendeeMemberId);
-                  return (
-                    <tr key={attendance.memberId} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span className="text-indigo-800 text-xs font-medium">
+          (() => {
+            const mobileView = isMobile();
+            const sortedAttendees = meeting.attendees && meeting.attendees
+              .sort((a, b) => {
+                const attendeeMemberIdA = a.memberId || a.member_id;
+                const attendeeMemberIdB = b.memberId || b.member_id;
+                const memberA = getMember(attendeeMemberIdA);
+                const memberB = getMember(attendeeMemberIdB);
+                const nameA = memberA ? memberA.name : 'Bilinmeyen Üye';
+                const nameB = memberB ? memberB.name : 'Bilinmeyen Üye';
+                return nameA.localeCompare(nameB, 'tr', { sensitivity: 'base' });
+              }) || [];
+
+            if (mobileView) {
+              // Mobile Card Layout
+              return (
+                <div className="space-y-2 p-4">
+                  {sortedAttendees.map((attendance) => {
+                    const attendeeMemberId = attendance.memberId || attendance.member_id;
+                    const member = getMember(attendeeMemberId);
+                    return (
+                      <div key={attendance.memberId} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+                            <span className="text-indigo-800 dark:text-indigo-200 text-sm font-medium">
                               {member ? member.name.charAt(0) : '?'}
                             </span>
                           </div>
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
                               {member ? member.name : 'Bilinmeyen Üye'}
                             </div>
+                            {member && member.position && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                {member.position}
+                              </div>
+                            )}
+                            {member && member.region && (
+                              <div className="mb-2">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
+                                  {member.region}
+                                </span>
+                              </div>
+                            )}
+                            <div className="mb-1">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                                attendance.attended 
+                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                                  : (attendance.excuse && attendance.excuse.hasExcuse)
+                                    ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                    : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                              }`}>
+                                {attendance.attended 
+                                  ? 'Katıldı' 
+                                  : (attendance.excuse && attendance.excuse.hasExcuse)
+                                    ? 'Mazeretli'
+                                    : 'Katılmadı'}
+                              </span>
+                            </div>
+                            {attendance.excuse && attendance.excuse.hasExcuse && (
+                              <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Mazeret:</span> {attendance.excuse.reason}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {member ? member.position : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {member ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                            {member.region}
-                          </span>
-                        ) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          attendance.attended 
-                            ? 'bg-green-100 text-green-800' 
-                            : (attendance.excuse && attendance.excuse.hasExcuse)
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                        }`}>
-                          {attendance.attended 
-                            ? 'Katıldı' 
-                            : (attendance.excuse && attendance.excuse.hasExcuse)
-                              ? 'Mazeretli'
-                              : 'Katılmadı'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {attendance.excuse && attendance.excuse.hasExcuse ? (
-                          <div className="max-w-xs">
-                            <span className="text-xs text-gray-600">{attendance.excuse.reason}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">Yok</span>
-                        )}
-                      </td>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            // Desktop Table Layout
+            return (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Üye
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Görev
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Bölge
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Katılım Durumu
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Mazeret
+                      </th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {sortedAttendees.map((attendance) => {
+                      const attendeeMemberId = attendance.memberId || attendance.member_id;
+                      const member = getMember(attendeeMemberId);
+                      return (
+                        <tr key={attendance.memberId} className="hover:bg-gray-50 transition-colors duration-150">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                <span className="text-indigo-800 text-xs font-medium">
+                                  {member ? member.name.charAt(0) : '?'}
+                                </span>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {member ? member.name : 'Bilinmeyen Üye'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {member ? member.position : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {member ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {member.region}
+                              </span>
+                            ) : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              attendance.attended 
+                                ? 'bg-green-100 text-green-800' 
+                                : (attendance.excuse && attendance.excuse.hasExcuse)
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                            }`}>
+                              {attendance.attended 
+                                ? 'Katıldı' 
+                                : (attendance.excuse && attendance.excuse.hasExcuse)
+                                  ? 'Mazeretli'
+                                  : 'Katılmadı'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {attendance.excuse && attendance.excuse.hasExcuse ? (
+                              <div className="max-w-xs">
+                                <span className="text-xs text-gray-600">{attendance.excuse.reason}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">Yok</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()
         )}
       </div>
     </div>
