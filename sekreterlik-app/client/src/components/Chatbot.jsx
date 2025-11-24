@@ -648,6 +648,17 @@ const Chatbot = ({ isOpen, onClose }) => {
         return;
       }
 
+      // Check for report requests
+      const reportKeywords = ['rapor', 'report', 'istatistik', 'statistic', 'özet', 'summary', 'excel', 'pdf'];
+      const isReportRequest = reportKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+      
+      if (isReportRequest && userRole === 'admin') {
+        // Add report context
+        context.push(`\n=== RAPOR İSTEĞİ ===`);
+        context.push(`Kullanıcı rapor istiyor. Mevcut raporlar: Toplantı Raporu, Üye Performans Raporu, Etkinlik Raporu, Katılım Raporu.`);
+        context.push(`Raporlar sayfasına yönlendirme yapılabilir veya chatbot üzerinden özet rapor verilebilir.`);
+      }
+
       // Check for advanced search patterns
       const searchPatterns = [
         { pattern: /(.+?)(?:'in|'nin|'un|'ün)\s+(?:katıldığı|gittiği|olduğu)\s+(toplantılar|etkinlikler)/i, type: 'member_events' },
@@ -679,11 +690,22 @@ const Chatbot = ({ isOpen, onClose }) => {
         response = await GroqService.chat(userMessage, context, conversationHistory); // Default: Groq
       }
 
+      // Process response for report links
+      let processedResponse = response;
+      
+      // Check if response contains report-related content and add action buttons
+      if (isReportRequest && userRole === 'admin' && (response.toLowerCase().includes('rapor') || response.toLowerCase().includes('report'))) {
+        processedResponse += `\n\n💡 Hızlı Erişim:\n`;
+        processedResponse += `• [Raporlar Sayfasına Git](/reports) - Detaylı raporlar için\n`;
+        processedResponse += `• [Toplantı Raporu](/reports?type=meetings) - Toplantı istatistikleri\n`;
+        processedResponse += `• [Üye Performans Raporu](/reports?type=members) - Üye performans puanları\n`;
+      }
+
       // Add assistant message
       const newAssistantMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: response
+        content: processedResponse
       };
       setMessages(prev => [...prev, newAssistantMessage]);
     } catch (error) {
@@ -973,6 +995,32 @@ const Chatbot = ({ isOpen, onClose }) => {
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {/* Render links in assistant messages */}
+                {message.role === 'assistant' && message.content.includes('[') && (
+                  <div className="mt-2 space-y-1">
+                    {message.content.match(/\[([^\]]+)\]\(([^)]+)\)/g)?.map((link, idx) => {
+                      const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
+                      if (match) {
+                        const [, label, path] = match;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              if (path.startsWith('/')) {
+                                navigate(path);
+                                onClose();
+                              }
+                            }}
+                            className="block w-full text-left px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-xs transition-colors"
+                          >
+                            {label}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ))}
