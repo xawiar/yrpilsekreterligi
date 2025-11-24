@@ -3,6 +3,7 @@ import { isMobile } from '../utils/capacitorUtils';
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   const mobileView = isMobile();
+  
   useEffect(() => {
     // Prevent body scroll when modal is open
     if (isOpen) {
@@ -33,6 +34,23 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     };
   }, [isOpen, onClose]);
 
+  // Mobile scroll lock - Hook'u component'in en üst seviyesinde tutmalıyız
+  useEffect(() => {
+    if (mobileView && isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen, mobileView]);
+
   if (!isOpen) return null;
 
   const getSizeClasses = () => {
@@ -50,23 +68,6 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   // Native mobile görünümü
   if (mobileView) {
-    // Modal açıldığında scroll pozisyonunu kaydet ve sabitle
-    useEffect(() => {
-      if (isOpen) {
-        const scrollY = window.scrollY;
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.width = '100%';
-        
-        return () => {
-          document.body.style.position = '';
-          document.body.style.top = '';
-          document.body.style.width = '';
-          window.scrollTo(0, scrollY);
-        };
-      }
-    }, [isOpen]);
-
     return (
       <div 
         className="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 flex items-center justify-center z-[9999]"
