@@ -45,8 +45,8 @@ const LoginForm = ({
         <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
           Kullanıcı Adı
         </label>
-        <div className="mt-1 relative rounded-xl shadow-sm">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <div className="mt-1 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
@@ -59,7 +59,10 @@ const LoginForm = ({
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200/60 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:shadow-lg focus:shadow-indigo-500/20 text-sm transition-all bg-white/90 backdrop-blur-sm"
+            style={{
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
+            }}
             placeholder="Kullanıcı adınızı girin"
           />
         </div>
@@ -69,8 +72,8 @@ const LoginForm = ({
         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
           Şifre
         </label>
-        <div className="mt-1 relative rounded-xl shadow-sm">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <div className="mt-1 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
@@ -83,7 +86,10 @@ const LoginForm = ({
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200/60 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:shadow-lg focus:shadow-indigo-500/20 text-sm transition-all bg-white/90 backdrop-blur-sm"
+            style={{
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
+            }}
             placeholder="Şifrenizi girin"
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -132,12 +138,17 @@ const LoginForm = ({
 
       <div>
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98, y: 0 }}
           type="submit"
           disabled={isLoading}
-          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl text-sm font-medium text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+          style={{
+            boxShadow: '0 10px 30px -10px rgba(99, 102, 241, 0.5), 0 0 0 1px rgba(255,255,255,0.1) inset, 0 1px 0 rgba(255,255,255,0.2) inset'
+          }}
         >
+          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
+          <span className="relative z-10">
           {isLoading ? (
             <div className="flex items-center">
               <LoadingSpinner />
@@ -146,6 +157,7 @@ const LoginForm = ({
           ) : (
             "Giriş Yap"
           )}
+          </span>
         </motion.button>
       </div>
     </form>

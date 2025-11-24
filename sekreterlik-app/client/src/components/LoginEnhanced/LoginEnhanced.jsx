@@ -241,28 +241,38 @@ const LoginEnhanced = () => {
   const mobileView = isMobile();
   
   return (
-    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center ${mobileView ? 'p-0' : 'py-8 px-4 sm:px-6 lg:px-8'}`}>
+    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center ${mobileView ? 'p-4' : 'py-8 px-4 sm:px-6 lg:px-8'} relative overflow-hidden`}>
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+      </div>
+      
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className={`w-full ${mobileView ? 'h-full' : 'max-w-md'} mx-auto ${mobileView ? 'flex flex-col' : ''}`}
+        className={`w-full ${mobileView ? 'h-full' : 'max-w-md'} mx-auto ${mobileView ? 'flex flex-col' : ''} relative z-10`}
       >
         <LoginHeader />
         
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className={`${mobileView ? 'flex-1 flex flex-col mt-0 rounded-none border-0 shadow-none' : 'mt-8'} bg-white ${mobileView ? 'py-6 px-4' : 'py-8 px-6'} ${mobileView ? '' : 'shadow-xl rounded-2xl border border-gray-200'} sm:px-10 relative overflow-hidden`}
+          className={`${mobileView ? 'flex-1 flex flex-col' : 'mt-8'} bg-white/80 backdrop-blur-xl ${mobileView ? 'py-6 px-5 rounded-3xl' : 'py-8 px-6 rounded-2xl'} ${mobileView ? 'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/20' : 'shadow-2xl border border-gray-200'} sm:px-10 relative overflow-hidden`}
+          style={{
+            boxShadow: mobileView 
+              ? '0 20px 60px -15px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2) inset, 0 1px 0 rgba(255,255,255,0.5) inset'
+              : undefined
+          }}
         >
-            {/* Animated background elements */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
-            <div className="absolute -bottom-12 -left-20 w-40 h-40 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
-            <div className="absolute top-10 left-20 w-40 h-40 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
+            {/* Inner glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-transparent pointer-events-none"></div>
             
             {/* Tab Navigation */}
-            <div className="mb-6 flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <div className={`mb-6 flex space-x-1 ${mobileView ? 'bg-gradient-to-r from-gray-100/80 to-gray-100/60 backdrop-blur-sm' : 'bg-gray-100'} rounded-xl p-1.5 shadow-inner border border-white/50`}>
               <button
                 type="button"
                 onClick={() => {
@@ -272,10 +282,10 @@ const LoginEnhanced = () => {
                   setChiefObserverError('');
                   setCoordinatorError('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'admin-member'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-indigo-600 shadow-md shadow-indigo-500/20 transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
               >
                 Admin / Üye
@@ -289,10 +299,10 @@ const LoginEnhanced = () => {
                   setChiefObserverError('');
                   setCoordinatorError('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'chief-observer'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-indigo-600 shadow-md shadow-indigo-500/20 transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
               >
                 Başmüşahit
@@ -306,10 +316,10 @@ const LoginEnhanced = () => {
                   setChiefObserverError('');
                   setCoordinatorError('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'coordinator'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-indigo-600 shadow-md shadow-indigo-500/20 transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
               >
                 Sorumlu
