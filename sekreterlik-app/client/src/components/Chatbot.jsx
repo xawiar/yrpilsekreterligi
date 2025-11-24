@@ -868,11 +868,86 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         processedResponse += `• [Üye Performans Raporu](/reports?type=members) - Üye performans puanları\n`;
       }
 
+      // Görselleştirme: Eğer kullanıcı grafik istiyorsa
+      const visualizationKeywords = ['grafik', 'chart', 'görsel', 'görselleştir', 'göster', 'çiz', 'tablo'];
+      const wantsVisualization = visualizationKeywords.some(keyword => 
+        userMessage.toLowerCase().includes(keyword)
+      );
+
+      // Görselleştirme verisi hazırla
+      let visualizationData = null;
+      if (wantsVisualization && siteData) {
+        // Toplantı katılım grafiği
+        if (userMessage.toLowerCase().includes('toplantı') || userMessage.toLowerCase().includes('katılım')) {
+          const meetings = siteData.meetings?.filter(m => !m.archived && m.attendees) || [];
+          if (meetings.length > 0) {
+            visualizationData = {
+              type: 'attendance',
+              data: meetings.slice(-10).map(m => {
+                const attended = m.attendees.filter(a => a.attended === true).length;
+                const total = m.attendees.length;
+                return {
+                  name: m.name?.substring(0, 20) || 'Toplantı',
+                  katılım: total > 0 ? Math.round((attended / total) * 100) : 0,
+                  katılan: attended,
+                  toplam: total
+                };
+              })
+            };
+          }
+        }
+        // Üye performans grafiği
+        else if (userMessage.toLowerCase().includes('üye') || userMessage.toLowerCase().includes('performans')) {
+          const performanceScores = siteData.performanceScores || [];
+          if (performanceScores.length > 0) {
+            visualizationData = {
+              type: 'performance',
+              data: performanceScores
+                .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
+                .slice(0, 10)
+                .map(score => ({
+                  name: score.member?.name?.substring(0, 15) || 'Üye',
+                  puan: score.totalScore || 0,
+                  yıldız: score.stars || score.averageStars || 0
+                }))
+            };
+          }
+        }
+        // Etkinlik grafiği
+        else if (userMessage.toLowerCase().includes('etkinlik')) {
+          const events = siteData.events?.filter(e => !e.archived) || [];
+          if (events.length > 0) {
+            // Ay bazında grupla
+            const eventsByMonth = {};
+            events.forEach(event => {
+              if (event.date) {
+                try {
+                  const date = new Date(event.date.split('.').reverse().join('-'));
+                  const monthKey = date.toLocaleDateString('tr-TR', { month: 'short' });
+                  eventsByMonth[monthKey] = (eventsByMonth[monthKey] || 0) + 1;
+                } catch (e) {}
+              }
+            });
+            visualizationData = {
+              type: 'events',
+              data: Object.entries(eventsByMonth).map(([month, count]) => ({
+                name: month,
+                sayı: count
+              }))
+            };
+          }
+        }
+      }
+
       // Add assistant message
       const newAssistantMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: processedResponse
+        content: processedResponse,
+        sentiment: sentimentResult,
+        visualization: visualizationData,
+        anomalies: anomalies.length > 0 ? anomalies.slice(0, 3) : null,
+        recommendations: recommendations.length > 0 ? recommendations.slice(0, 3) : null
       };
       setMessages(prev => [...prev, newAssistantMessage]);
     } catch (error) {
