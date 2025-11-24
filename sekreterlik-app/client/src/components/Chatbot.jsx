@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import GroqService from '../services/GroqService';
 import GeminiService from '../services/GeminiService';
 import ChatGPTService from '../services/ChatGPTService';
 import DeepSeekService from '../services/DeepSeekService';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
+import { useAuth } from '../contexts/AuthContext';
 
 const Chatbot = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -15,7 +17,11 @@ const Chatbot = ({ isOpen, onClose }) => {
   const [bylawsText, setBylawsText] = useState('');
   const [aiProvider, setAiProvider] = useState('groq'); // 'groq', 'gemini', 'chatgpt', 'deepseek'
   const [showLimitInfo, setShowLimitInfo] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const messagesEndRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, userRole } = useAuth();
 
   // Scroll to bottom when new message is added
   useEffect(() => {
@@ -53,11 +59,12 @@ const Chatbot = ({ isOpen, onClose }) => {
         console.error('Error loading chatbot data:', error);
       });
       
-      // Welcome message
+      // Welcome message with context awareness
+      const welcomeMessage = getWelcomeMessage(userRole, location.pathname);
       setMessages([{
         id: Date.now(),
         role: 'assistant',
-        content: 'Merhaba başkanım! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim? Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz.'
+        content: welcomeMessage
       }]);
     }
   }, [isOpen, siteData]);
@@ -415,6 +422,14 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Build context from site data
       const context = [];
       
+      // Add user context and role information
+      if (user && userRole) {
+        context.push(`\n=== KULLANICI BİLGİLERİ ===`);
+        context.push(`Kullanıcı Rolü: ${userRole}`);
+        if (user.name) context.push(`Kullanıcı Adı: ${user.name}`);
+        if (location.pathname) context.push(`Mevcut Sayfa: ${location.pathname}`);
+      }
+      
       if (siteData) {
         // Seçilen AI servisine göre context builder kullan
         let AIService;
@@ -660,12 +675,121 @@ const Chatbot = ({ isOpen, onClose }) => {
     }
   };
 
+  // Get welcome message based on user role and current page
+  const getWelcomeMessage = (role, pathname) => {
+    let baseMessage = 'Merhaba! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
+    
+    // Role-based customization
+    if (role === 'admin') {
+      baseMessage = 'Merhaba başkanım! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
+    } else if (role === 'member') {
+      baseMessage = 'Merhaba üyemiz! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
+    } else if (role === 'chief_observer') {
+      baseMessage = 'Merhaba başmüşahit! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
+    } else if (['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(role)) {
+      baseMessage = 'Merhaba sorumlu! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
+    }
+    
+    // Page context
+    if (pathname.includes('/meetings')) {
+      baseMessage += ' Şu anda toplantılar sayfasındasınız. Toplantılar hakkında sorular sorabilirsiniz.';
+    } else if (pathname.includes('/members')) {
+      baseMessage += ' Şu anda üyeler sayfasındasınız. Üyeler hakkında sorular sorabilirsiniz.';
+    } else if (pathname.includes('/events')) {
+      baseMessage += ' Şu anda etkinlikler sayfasındasınız. Etkinlikler hakkında sorular sorabilirsiniz.';
+    } else if (pathname.includes('/reports')) {
+      baseMessage += ' Şu anda raporlar sayfasındasınız. Raporlar hakkında sorular sorabilirsiniz.';
+    }
+    
+    baseMessage += '\n\n💡 Hızlı erişim butonlarını kullanarak hızlıca bilgi alabilir veya doğrudan soru sorabilirsiniz.';
+    
+    return baseMessage;
+  };
+
+  // Quick action handlers
+  const handleQuickAction = async (action) => {
+    let message = '';
+    
+    switch(action) {
+      case 'toplantilar':
+        message = 'Yaklaşan toplantıları göster';
+        break;
+      case 'aktif_uyeler':
+        message = 'En aktif üyeleri göster';
+        break;
+      case 'katilim_raporu':
+        message = 'Toplantı katılım raporunu göster';
+        break;
+      case 'etkinlikler':
+        message = 'Yaklaşan etkinlikleri göster';
+        break;
+      case 'istatistikler':
+        message = 'Genel istatistikleri göster';
+        break;
+      case 'toplanti_olustur':
+        if (userRole === 'admin') {
+          navigate('/meetings?create=true');
+          onClose();
+          return;
+        } else {
+          message = 'Toplantı oluşturma yetkiniz yok. Lütfen admin ile iletişime geçin.';
+        }
+        break;
+      case 'uye_ara':
+        message = 'Üye arama özelliği. Hangi üyeyi arıyorsunuz?';
+        break;
+      case 'rapor_goster':
+        navigate('/reports');
+        onClose();
+        return;
+      case 'yardim':
+        message = 'Yardım: Nasıl kullanılır? Komutlar nelerdir?';
+        break;
+      default:
+        message = action;
+    }
+    
+    setInput(message);
+    setShowQuickActions(false);
+    // Auto send after a short delay
+    setTimeout(() => {
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      const form = document.querySelector('form[onsubmit]');
+      if (form) {
+        form.dispatchEvent(event);
+      }
+    }, 100);
+  };
+
+  // Predefined questions
+  const predefinedQuestions = [
+    { id: 'toplantilar', label: '📅 Yaklaşan Toplantılar', action: 'toplantilar' },
+    { id: 'aktif_uyeler', label: '⭐ En Aktif Üyeler', action: 'aktif_uyeler' },
+    { id: 'katilim_raporu', label: '📊 Katılım Raporu', action: 'katilim_raporu' },
+    { id: 'etkinlikler', label: '🎉 Yaklaşan Etkinlikler', action: 'etkinlikler' },
+    { id: 'istatistikler', label: '📈 Genel İstatistikler', action: 'istatistikler' }
+  ];
+
+  // Quick actions based on role
+  const getQuickActions = () => {
+    const actions = [
+      { id: 'toplanti_olustur', label: '➕ Toplantı Oluştur', action: 'toplanti_olustur', roles: ['admin'] },
+      { id: 'uye_ara', label: '🔍 Üye Ara', action: 'uye_ara', roles: ['admin', 'member'] },
+      { id: 'rapor_goster', label: '📄 Raporlar', action: 'rapor_goster', roles: ['admin'] },
+      { id: 'yardim', label: '❓ Yardım', action: 'yardim', roles: ['admin', 'member', 'chief_observer'] }
+    ];
+    
+    return actions.filter(a => !a.roles || a.roles.includes(userRole));
+  };
+
   const clearChat = () => {
+    const welcomeMessage = getWelcomeMessage(userRole, location.pathname);
     setMessages([{
       id: Date.now(),
       role: 'assistant',
-      content: 'Merhaba başkanım! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim? Site içi bilgiler (üyeler, toplantılar, etkinlikler) ve tüzük hakkında sorular sorabilirsiniz.'
+      content: welcomeMessage
     }]);
+    setShowQuickActions(true);
   };
 
   if (!isOpen) return null;
@@ -715,6 +839,40 @@ const Chatbot = ({ isOpen, onClose }) => {
             </button>
           </div>
         </div>
+
+        {/* Quick Actions & Predefined Questions */}
+        {showQuickActions && messages.length <= 1 && (
+          <div className="px-4 pt-4 pb-2 border-b border-gray-200">
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-600 mb-2">⚡ Hızlı Aksiyonlar</p>
+              <div className="flex flex-wrap gap-2">
+                {getQuickActions().map(action => (
+                  <button
+                    key={action.id}
+                    onClick={() => handleQuickAction(action.action)}
+                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium rounded-lg transition-colors"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">💬 Önceden Tanımlı Sorular</p>
+              <div className="flex flex-wrap gap-2">
+                {predefinedQuestions.map(q => (
+                  <button
+                    key={q.id}
+                    onClick={() => handleQuickAction(q.action)}
+                    className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
