@@ -632,6 +632,41 @@ const Chatbot = ({ isOpen, onClose }) => {
         content: msg.content
       }));
 
+      // Check for help commands
+      const helpKeywords = ['yardım', 'help', 'nasıl', 'komut', 'ne yapabilir', 'ne sorabilir', 'kullanım'];
+      const isHelpRequest = helpKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+      
+      if (isHelpRequest) {
+        const helpMessage = getHelpMessage(userRole);
+        const newAssistantMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: helpMessage
+        };
+        setMessages(prev => [...prev, newAssistantMessage]);
+        setLoading(false);
+        return;
+      }
+
+      // Check for advanced search patterns
+      const searchPatterns = [
+        { pattern: /(.+?)(?:'in|'nin|'un|'ün)\s+(?:katıldığı|gittiği|olduğu)\s+(toplantılar|etkinlikler)/i, type: 'member_events' },
+        { pattern: /(.+?)(?:'in|'nin|'un|'ün)\s+(bilgileri|hakkında|detayları)/i, type: 'member_info' },
+        { pattern: /(toplantı|etkinlik)\s+(.+?)\s+(hakkında|detayları)/i, type: 'event_info' },
+        { pattern: /(bu ay|geçen ay|bu hafta|geçen hafta)\s+(toplantı|etkinlik|üye|katılım)/i, type: 'time_filter' }
+      ];
+      
+      // Enhanced search handling
+      for (const searchPattern of searchPatterns) {
+        const match = userMessage.match(searchPattern.pattern);
+        if (match) {
+          // Add enhanced context for search
+          context.push(`\n=== GELİŞMİŞ ARAMA İSTEĞİ ===`);
+          context.push(`Arama Tipi: ${searchPattern.type}`);
+          context.push(`Arama Terimi: ${match[1] || match[2] || userMessage}`);
+        }
+      }
+
       // Seçilen AI servisine göre API çağrısı yap
       let response;
       if (aiProvider === 'gemini') {
@@ -780,6 +815,55 @@ const Chatbot = ({ isOpen, onClose }) => {
     ];
     
     return actions.filter(a => !a.roles || a.roles.includes(userRole));
+  };
+
+  // Get help message based on user role
+  const getHelpMessage = (role) => {
+    let helpMessage = `📚 CHATBOT YARDIM REHBERİ\n\n`;
+    
+    helpMessage += `🎯 GENEL KULLANIM:\n`;
+    helpMessage += `• Doğal dilde sorular sorabilirsiniz\n`;
+    helpMessage += `• "Ahmet'in katıldığı toplantılar" gibi sorgular yapabilirsiniz\n`;
+    helpMessage += `• "En aktif üyeler" gibi istatistik soruları sorabilirsiniz\n`;
+    helpMessage += `• Tüzük hakkında sorular sorabilirsiniz\n\n`;
+    
+    helpMessage += `⚡ HIZLI AKSİYONLAR:\n`;
+    const quickActions = getQuickActions();
+    quickActions.forEach(action => {
+      helpMessage += `• ${action.label}\n`;
+    });
+    
+    helpMessage += `\n💬 ÖNCEDEN TANIMLI SORULAR:\n`;
+    predefinedQuestions.forEach(q => {
+      helpMessage += `• ${q.label}\n`;
+    });
+    
+    helpMessage += `\n🔍 ÖRNEK SORULAR:\n`;
+    if (role === 'admin') {
+      helpMessage += `• "Toplam kaç üye var?"\n`;
+      helpMessage += `• "Bu ay kaç toplantı yapıldı?"\n`;
+      helpMessage += `• "En yüksek katılımlı toplantı hangisi?"\n`;
+      helpMessage += `• "Ahmet'in performans puanı nedir?"\n`;
+      helpMessage += `• "Tüzükte üyelik şartları nelerdir?"\n`;
+    } else if (role === 'member') {
+      helpMessage += `• "Yaklaşan toplantılar neler?"\n`;
+      helpMessage += `• "Katıldığım toplantılar hangileri?"\n`;
+      helpMessage += `• "Performans puanım nedir?"\n`;
+    } else if (role === 'chief_observer') {
+      helpMessage += `• "Onay bekleyen seçim sonuçları neler?"\n`;
+      helpMessage += `• "Seçim istatistikleri nedir?"\n`;
+    } else if (['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(role)) {
+      helpMessage += `• "Sorumlu olduğum sandıklar neler?"\n`;
+      helpMessage += `• "Seçim sonuçları nasıl?"\n`;
+    }
+    
+    helpMessage += `\n💡 İPUÇLARI:\n`;
+    helpMessage += `• Sorularınızı Türkçe yazabilirsiniz\n`;
+    helpMessage += `• "Nasıl", "Neden", "Ne zaman" gibi sorular sorabilirsiniz\n`;
+    helpMessage += `• Karşılaştırma soruları sorabilirsiniz (ör: "Geçen ay ile karşılaştır")\n`;
+    helpMessage += `• Hızlı aksiyon butonlarını kullanarak daha hızlı bilgi alabilirsiniz\n`;
+    
+    return helpMessage;
   };
 
   const clearChat = () => {
