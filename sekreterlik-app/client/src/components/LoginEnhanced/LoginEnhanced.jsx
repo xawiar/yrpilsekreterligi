@@ -7,6 +7,7 @@ import LoginForm from './LoginForm';
 import LoginFooter from './LoginFooter';
 import LoadingSpinner from './LoadingSpinner';
 import { motion } from 'framer-motion';
+import { isMobile } from '../../utils/capacitorUtils';
 
 const LoginEnhanced = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -237,13 +238,15 @@ const LoginEnhanced = () => {
     }
   };
 
+  const mobileView = isMobile();
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center ${mobileView ? 'p-0' : 'py-8 px-4 sm:px-6 lg:px-8'}`}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md mx-auto"
+        className={`w-full ${mobileView ? 'h-full' : 'max-w-md'} mx-auto ${mobileView ? 'flex flex-col' : ''}`}
       >
         <LoginHeader />
         
