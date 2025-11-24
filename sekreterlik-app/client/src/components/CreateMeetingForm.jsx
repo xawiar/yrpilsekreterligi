@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { formatMemberName } from '../utils/nameFormatter';
+import { isMobile } from '../utils/capacitorUtils';
 
 const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
   const [selectedRegions, setSelectedRegions] = useState([]);
@@ -167,65 +168,67 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
     }
   };
 
+  const mobileView = isMobile();
+  
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className={`space-y-${mobileView ? '2' : '4'} sm:space-y-6`}>
       <form onSubmit={handleSubmit}>
-        <div className="space-y-3 sm:space-y-4">
+        <div className={`space-y-${mobileView ? '2' : '3'} sm:space-y-4`}>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={`block ${mobileView ? 'text-[10px]' : 'text-xs'} sm:text-sm font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Toplantı Adı <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={meetingName}
               onChange={(e) => setMeetingName(e.target.value)}
-              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className={`w-full ${mobileView ? 'px-2 py-1 text-xs' : 'px-2 sm:px-3 py-1.5 sm:py-2'} ${mobileView ? '' : 'text-sm sm:text-base'} border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               placeholder="Toplantı adını girin"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={`block ${mobileView ? 'text-[10px]' : 'text-xs'} sm:text-sm font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Tarih ve Saat <span className="text-red-500">*</span>
             </label>
             <input
               type="datetime-local"
               value={meetingDate}
               onChange={(e) => setMeetingDate(e.target.value)}
-              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className={`w-full ${mobileView ? 'px-2 py-1 text-xs' : 'px-2 sm:px-3 py-1.5 sm:py-2'} ${mobileView ? '' : 'text-sm sm:text-base'} border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               required
             />
           </div>
           
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={`block ${mobileView ? 'text-[10px]' : 'text-xs'} sm:text-sm font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Bölgeler <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${mobileView ? 'gap-1' : 'gap-1.5 sm:gap-2'}`}>
               {regions.map((region, idx) => (
-              <label key={`${region.id ?? region.name}-${idx}`} className="flex items-center p-2 sm:p-3 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition duration-200 cursor-pointer">
+              <label key={`${region.id ?? region.name}-${idx}`} className={`flex items-center ${mobileView ? 'p-1' : 'p-2 sm:p-3'} bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition duration-200 cursor-pointer`}>
                   <input
                     type="checkbox"
                     checked={selectedRegions.includes(region.name)}
                     onChange={() => handleRegionChange(region.name)}
-                    className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    className={`${mobileView ? 'h-3 w-3' : 'h-3.5 w-3.5 sm:h-4 sm:w-4'} text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded`}
                   />
-                  <span className="ml-1.5 sm:ml-2 text-xs sm:text-sm text-gray-700">{region.name}</span>
+                  <span className={`${mobileView ? 'ml-1 text-[10px]' : 'ml-1.5 sm:ml-2 text-xs sm:text-sm'} text-gray-700`}>{region.name}</span>
                 </label>
               ))}
             </div>
           </div>
           
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={`block ${mobileView ? 'text-[10px]' : 'text-xs'} sm:text-sm font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Toplantı Notları
             </label>
             <textarea
               value={meetingNotes}
               onChange={(e) => setMeetingNotes(e.target.value)}
-              rows={3}
-              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              rows={mobileView ? 2 : 3}
+              className={`w-full ${mobileView ? 'px-2 py-1 text-xs' : 'px-2 sm:px-3 py-1.5 sm:py-2'} ${mobileView ? '' : 'text-sm sm:text-base'} border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               placeholder="Toplantı notlarını girin"
             />
           </div>
@@ -318,17 +321,17 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
           )}
         </div>
         
-        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 pb-4 sm:pb-0 sticky bottom-0 bg-white dark:bg-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700 mt-4 sm:mt-0">
+        <div className={`flex flex-col sm:flex-row justify-end ${mobileView ? 'gap-1.5 pt-2' : 'gap-2 sm:gap-3 pt-4'} pb-4 sm:pb-0 sticky bottom-0 bg-white dark:bg-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700 ${mobileView ? 'mt-2' : 'mt-4 sm:mt-0'}`}>
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
+            className={`w-full sm:w-auto ${mobileView ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'} border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200`}
           >
             İptal
           </button>
           <button
             type="submit"
-            className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200"
+            className={`w-full sm:w-auto ${mobileView ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'} bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200`}
           >
             Toplantıyı Kaydet
           </button>

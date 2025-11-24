@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { formatMemberName } from '../utils/nameFormatter';
+import { isMobile } from '../utils/capacitorUtils';
 
 const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => {
   const [formData, setFormData] = useState({
@@ -208,12 +209,14 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
     }
   };
 
+  const mobileView = isMobile();
+  
   return (
-    <div className="space-y-4">
+    <div className={`space-y-${mobileView ? '2' : '4'}`}>
       <form onSubmit={handleSubmit}>
-        <div className="space-y-4">
+        <div className={`space-y-${mobileView ? '2' : '4'}`}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className={`block ${mobileView ? 'text-xs' : 'text-sm'} font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Toplantı Adı
             </label>
             <input
@@ -221,32 +224,32 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className={`w-full ${mobileView ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm'} border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               placeholder="Toplantı adı"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className={`block ${mobileView ? 'text-xs' : 'text-sm'} font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Bölgeler
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid grid-cols-2 ${mobileView ? 'gap-1' : 'gap-2'}`}>
               {regions.map(region => (
-                <label key={region.id} className="flex items-center">
+                <label key={region.id} className={`flex items-center ${mobileView ? 'p-1' : ''}`}>
                   <input
                     type="checkbox"
                     checked={formData.regions.includes(region.name)}
                     onChange={() => handleRegionChange(region.name)}
-                    className="mr-2"
+                    className={`${mobileView ? 'h-3 w-3 mr-1' : 'mr-2'}`}
                   />
-                  <span className="text-sm">{region.name}</span>
+                  <span className={mobileView ? 'text-xs' : 'text-sm'}>{region.name}</span>
                 </label>
               ))}
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={`block ${mobileView ? 'text-xs' : 'text-sm'} font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Tarih ve Saat <span className="text-red-500">*</span>
             </label>
             <input
@@ -254,21 +257,21 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
               name="date"
               value={formData.date}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className={`w-full ${mobileView ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm'} border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={`block ${mobileView ? 'text-xs' : 'text-sm'} font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Notlar
             </label>
             <textarea
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              rows={mobileView ? 2 : 3}
+              className={`w-full ${mobileView ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm'} border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
               placeholder="Toplantı notları"
             />
           </div>
@@ -276,17 +279,17 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
           {/* Attendance Section */}
           {filteredMembers.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className={`block ${mobileView ? 'text-xs' : 'text-sm'} font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
                 Katılımcı Yoklaması
               </label>
-              <div className="border rounded-lg overflow-hidden shadow-sm max-h-96 overflow-y-auto">
+              <div className={`border rounded-lg overflow-hidden shadow-sm ${mobileView ? 'max-h-64' : 'max-h-96'} overflow-y-auto`}>
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gradient-to-r from-indigo-500 to-purple-600">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      <th className={`${mobileView ? 'px-2 py-1.5 text-[10px]' : 'px-4 py-3 text-xs'} text-left font-medium text-white uppercase tracking-wider`}>
                         Üye
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      <th className={`${mobileView ? 'px-2 py-1.5 text-[10px]' : 'px-4 py-3 text-xs'} text-left font-medium text-white uppercase tracking-wider`}>
                         Katılım
                       </th>
                     </tr>
@@ -294,41 +297,41 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredMembers.map(member => (
                       <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <td className={`${mobileView ? 'px-2 py-1.5 text-xs' : 'px-4 py-3 text-sm'} whitespace-nowrap font-medium text-gray-900 dark:text-gray-100`}>
                           {formatMemberName(member.name)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          <div className="flex space-x-4">
-                            <label className="flex items-center">
+                        <td className={`${mobileView ? 'px-2 py-1.5' : 'px-4 py-3'} whitespace-nowrap ${mobileView ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400`}>
+                          <div className={`flex ${mobileView ? 'flex-col space-y-1' : 'space-x-4'}`}>
+                            <label className={`flex items-center ${mobileView ? 'text-xs' : ''}`}>
                               <input
                                 type="radio"
                                 name={`attendance-${member.id}`}
                                 checked={attendance[String(member.id)] === true}
                                 onChange={() => handleAttendanceChange(member.id, true)}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                                className={`${mobileView ? 'h-3 w-3 mr-1' : 'h-4 w-4 mr-1'} text-indigo-600 focus:ring-indigo-500`}
                               />
-                              <span className="ml-1">Katıldı</span>
+                              <span className={mobileView ? 'text-xs' : ''}>Katıldı</span>
                             </label>
-                            <label className="flex items-center">
+                            <label className={`flex items-center ${mobileView ? 'text-xs' : ''}`}>
                               <input
                                 type="radio"
                                 name={`attendance-${member.id}`}
                                 checked={attendance[String(member.id)] === false && !excuse[String(member.id)]}
                                 onChange={() => handleAttendanceChange(member.id, false)}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                                className={`${mobileView ? 'h-3 w-3 mr-1' : 'h-4 w-4 mr-1'} text-indigo-600 focus:ring-indigo-500`}
                               />
-                              <span className="ml-1">Katılmadı</span>
+                              <span className={mobileView ? 'text-xs' : ''}>Katılmadı</span>
                             </label>
                             <div className="flex flex-col">
-                              <label className="flex items-center">
+                              <label className={`flex items-center ${mobileView ? 'text-xs' : ''}`}>
                                 <input
                                   type="radio"
                                   name={`attendance-${member.id}`}
                                   checked={excuse[String(member.id)] === true}
                                   onChange={() => handleExcuseChange(member.id, true)}
-                                  className="h-4 w-4 text-yellow-600 focus:ring-yellow-500"
+                                  className={`${mobileView ? 'h-3 w-3 mr-1' : 'h-4 w-4 mr-1'} text-yellow-600 focus:ring-yellow-500`}
                                 />
-                                <span className="ml-1">Mazeretli</span>
+                                <span className={mobileView ? 'text-xs' : ''}>Mazeretli</span>
                               </label>
                               {excuse[String(member.id)] === true && (
                                 <input
@@ -336,7 +339,7 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
                                   placeholder="Mazeret sebebi"
                                   value={excuseReasons[String(member.id)] || ''}
                                   onChange={(e) => handleExcuseReasonChange(member.id, e.target.value)}
-                                  className="mt-1 w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className={`mt-1 w-full ${mobileView ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
                                 />
                               )}
                             </div>
