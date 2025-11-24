@@ -254,7 +254,7 @@ const LoginEnhanced = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="mt-8 bg-white py-8 px-6 shadow-xl rounded-2xl border border-gray-200 sm:px-10 relative overflow-hidden"
+          className={`${mobileView ? 'flex-1 flex flex-col mt-0 rounded-none border-0 shadow-none' : 'mt-8'} bg-white ${mobileView ? 'py-6 px-4' : 'py-8 px-6'} ${mobileView ? '' : 'shadow-xl rounded-2xl border border-gray-200'} sm:px-10 relative overflow-hidden`}
         >
             {/* Animated background elements */}
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
