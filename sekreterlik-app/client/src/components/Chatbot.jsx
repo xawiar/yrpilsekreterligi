@@ -702,13 +702,15 @@ const Chatbot = ({ isOpen, onClose }) => {
         }
       }
 
-      // Build conversation history (last 10 messages for better context - increased from 5)
+      // Build conversation history (last 20 messages for better context - devam eden sohbet için)
+      // Proaktif mesajları da dahil et ama daha az ağırlık ver
       const conversationHistory = messages
-        .filter(msg => !msg.isProactive) // Exclude proactive messages from history
-        .slice(-10)
+        .filter(msg => !msg.isFeedback) // Feedback mesajlarını çıkar
+        .slice(-20) // Son 20 mesajı hatırla
         .map(msg => ({
           role: msg.role,
-          content: msg.content
+          content: msg.content,
+          isProactive: msg.isProactive || false
         }));
 
       // Check for help commands
@@ -781,6 +783,15 @@ const Chatbot = ({ isOpen, onClose }) => {
       const roleSpecificContext = getRoleSpecificContext(userRole);
       
       // Enhanced AI prompt with better context understanding and training
+      const conversationSummary = conversationHistory.length > 0 
+        ? `\n=== ÖNCEKİ KONUŞMA ÖZETİ ===\n` +
+          `Toplam ${conversationHistory.length} mesaj var. Önceki konuşmalarda şunlar konuşuldu:\n` +
+          conversationHistory.slice(0, 5).map((msg, idx) => 
+            `${idx + 1}. ${msg.role === 'user' ? 'Kullanıcı' : 'Sen'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`
+          ).join('\n') +
+          (conversationHistory.length > 5 ? `\n... ve ${conversationHistory.length - 5} mesaj daha` : '')
+        : '';
+
       const enhancedContext = [
         ...context,
         `\n=== KONUŞMA BAĞLAMI ===`,
@@ -788,11 +799,19 @@ const Chatbot = ({ isOpen, onClose }) => {
         `Kullanıcı rolü: ${userRole || 'bilinmiyor'}`,
         `Mevcut sayfa: ${location.pathname}`,
         `Konuşma geçmişi: ${conversationHistory.length} mesaj`,
+        conversationSummary,
         ...roleSpecificContext,
+        `\n=== SOHBET MODU ===`,
+        `Bu bir devam eden sohbet. Önceki konuşmaları hatırla ve referans ver.`,
+        `Kullanıcı önceki bir konuya değinirse, o konuyu hatırla ve devam ettir.`,
+        `Kendi fikirlerini ve önerilerini sun. Sadece bilgi verme, aynı zamanda yorum yap ve öner.`,
+        `Samimi ve sohbet eder gibi konuş. Çok formal olma, ama saygılı kal.`,
+        `Önceki mesajlarda bahsedilen konuları hatırla ve bağlantı kur.`,
+        `Kullanıcı "önceki konu", "az önce", "daha önce" gibi ifadeler kullanırsa, önceki konuşmalara referans ver.`,
         `\nÖNEMLİ: Uzun konuşmalarda önceki mesajları dikkate al ve bağlamı koru.`,
-        `Kullanıcının sorusuna net, kısa ve anlaşılır cevap ver.`,
-        `Gerekirse örnekler ver ve kullanıcıyı yönlendir.`,
-        `Chain of Thought: Önce soruyu anla, sonra context'te ilgili bilgileri bul, sonra cevabı oluştur.`
+        `Kullanıcının sorusuna net, samimi ve sohbet eder gibi cevap ver.`,
+        `Gerekirse örnekler ver, kendi görüşlerini belirt ve kullanıcıyı yönlendir.`,
+        `Chain of Thought: Önce soruyu anla, önceki konuşmaları kontrol et, sonra context'te ilgili bilgileri bul, sonra kendi görüşlerini ekle, sonra cevabı oluştur.`
       ];
 
       // Seçilen AI servisine göre API çağrısı yap

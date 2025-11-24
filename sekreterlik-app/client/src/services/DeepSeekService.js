@@ -126,9 +126,24 @@ CEVAP FORMATI:
 CONTEXT BİLGİLERİ:
 ${contextText}`;
 
-      // Konuşma geçmişini formatla
+      // Konuşma geçmişini formatla (sohbet modu için daha detaylı)
+      const formattedHistory = conversationHistory.map(msg => {
+        // Proaktif mesajları daha az ağırlıkla ekle
+        if (msg.isProactive) {
+          return {
+            role: msg.role,
+            content: `[Proaktif öneri] ${msg.content}`
+          };
+        }
+        return {
+          role: msg.role,
+          content: msg.content
+        };
+      });
+
       const messages = [
         { role: 'system', content: systemPrompt },
+        ...formattedHistory,
         ...conversationHistory,
         { role: 'user', content: userMessage }
       ];
@@ -142,7 +157,7 @@ ${contextText}`;
         body: JSON.stringify({
           model: 'deepseek-chat', // DeepSeek'in ana modeli
           messages: messages,
-          temperature: 0.7,
+            temperature: 0.8, // Sohbet modu için biraz daha yaratıcı
           max_tokens: 2048,
           stream: false
         })

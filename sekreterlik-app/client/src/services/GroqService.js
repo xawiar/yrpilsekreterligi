@@ -70,42 +70,46 @@ class GroqService {
         }
       }
 
-      // Few-shot examples for better training
+      // Few-shot examples for better training (sohbet modu ile)
       const fewShotExamples = `
-ÖRNEK SORU-CEVAP ÇİFTLERİ (Bu örnekleri takip et):
+ÖRNEK SORU-CEVAP ÇİFTLERİ (Bu örnekleri takip et - SOHBET MODU):
 
 Soru: "Toplam kaç üye var?"
-Cevap: "Context'teki üye bilgilerine göre toplam X üye kayıtlı başkanım."
+Cevap: "Context'teki üye bilgilerine göre toplam X üye kayıtlı başkanım. Bu sayı oldukça iyi görünüyor, aktif bir organizasyonumuz var."
 
 Soru: "Ahmet'in katıldığı toplantılar neler?"
 Cevap: "Ahmet'in üye kartı bilgilerine göre, katıldığı toplantılar şunlar:
 - Toplantı 1 (Tarih: ...)
 - Toplantı 2 (Tarih: ...)
-Toplam X toplantıya katılmış başkanım."
+Toplam X toplantıya katılmış başkanım. Oldukça aktif bir üye görünüyor."
 
 Soru: "Bu ay kaç toplantı yapıldı?"
-Cevap: "Bu ayın toplantı istatistiklerine göre X toplantı yapılmış başkanım. Ortalama katılım oranı %Y."
+Cevap: "Bu ayın toplantı istatistiklerine göre X toplantı yapılmış başkanım. Ortalama katılım oranı %Y. Bu oran ${conversationHistory.length > 0 ? 'önceki aylara göre' : 'genel olarak'} ${conversationHistory.length > 0 ? 'iyi/orta/düşük' : 'iyi'} görünüyor."
 
 Soru: "En aktif üyeler kimler?"
 Cevap: "Performans puanlarına göre en aktif üyeler:
 1. Üye Adı - X yıldız, Y puan
 2. Üye Adı - X yıldız, Y puan
-... başkanım."
+... başkanım. Bu üyeleri örnek alarak diğer üyeleri de teşvik edebiliriz."
 
 Soru: "Seçim sonuçları nasıl?"
 Cevap: "Seçim sonuçlarına göre:
 - Toplam X sandık sonucu girilmiş
 - En yüksek oy alan parti/aday: ...
 - Mahalle bazında toplam oylar: ...
-başkanım."
+başkanım. Sonuçlar ${conversationHistory.length > 0 ? 'beklentilerimizle uyumlu' : 'genel olarak'} görünüyor."
 
 Soru: "Tüzükte üyelik şartları neler?"
 Cevap: "Tüzük bilgilerine göre üyelik şartları şunlar:
 1. ...
 2. ...
-... başkanım."
+... başkanım. Bu şartlar parti yapısını korumak için önemli."
 
-ÖNEMLİ: Bu örnekleri takip ederek benzer sorulara benzer formatlarda cevap ver.
+ÖNEMLİ: 
+- Bu örnekleri takip ederek benzer sorulara benzer formatlarda cevap ver.
+- Sohbet modunda: Kendi görüşlerini ve yorumlarını ekle.
+- Önceki konuşmaları hatırla ve referans ver.
+- Samimi ama saygılı bir dil kullan.
 `;
 
       // System prompt - AI'nın kimliği ve sınırları (geliştirilmiş - eğitim odaklı)
@@ -134,10 +138,24 @@ CEVAP FORMATI:
 CONTEXT:
 ${contextText}`;
 
-      // Konuşma geçmişini formatla
+      // Konuşma geçmişini formatla (sohbet modu için daha detaylı)
+      const formattedHistory = conversationHistory.map(msg => {
+        // Proaktif mesajları daha az ağırlıkla ekle
+        if (msg.isProactive) {
+          return {
+            role: msg.role,
+            content: `[Proaktif öneri] ${msg.content}`
+          };
+        }
+        return {
+          role: msg.role,
+          content: msg.content
+        };
+      });
+
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...conversationHistory,
+        ...formattedHistory,
         { role: 'user', content: userMessage }
       ];
 
@@ -150,7 +168,7 @@ ${contextText}`;
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile', // Güncel model - hızlı ve ücretsiz
             messages: messages,
-            temperature: 0.7,
+            temperature: 0.8, // Sohbet modu için biraz daha yaratıcı (0.7'den 0.8'e)
             max_tokens: 2048, // Tüzük metni için daha fazla token
             stream: false
           })

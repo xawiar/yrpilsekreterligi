@@ -142,7 +142,7 @@ ${contextText}`;
         body: JSON.stringify({
           model: 'gpt-4o-mini', // Daha ucuz ve hızlı model
           messages: messages,
-          temperature: 0.7,
+            temperature: 0.8, // Sohbet modu için biraz daha yaratıcı
           max_tokens: 2048,
           stream: false
         })

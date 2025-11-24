@@ -144,7 +144,7 @@ ${contextText}`;
             }]
           }],
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.8, // Sohbet modu için biraz daha yaratıcı
             maxOutputTokens: 2048
           }
         })
