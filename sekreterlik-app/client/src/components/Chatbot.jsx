@@ -777,7 +777,10 @@ const Chatbot = ({ isOpen, onClose }) => {
         }
       }
 
-      // Enhanced AI prompt with better context understanding
+      // Role-specific training context
+      const roleSpecificContext = getRoleSpecificContext(userRole);
+      
+      // Enhanced AI prompt with better context understanding and training
       const enhancedContext = [
         ...context,
         `\n=== KONUŞMA BAĞLAMI ===`,
@@ -785,9 +788,11 @@ const Chatbot = ({ isOpen, onClose }) => {
         `Kullanıcı rolü: ${userRole || 'bilinmiyor'}`,
         `Mevcut sayfa: ${location.pathname}`,
         `Konuşma geçmişi: ${conversationHistory.length} mesaj`,
+        ...roleSpecificContext,
         `\nÖNEMLİ: Uzun konuşmalarda önceki mesajları dikkate al ve bağlamı koru.`,
         `Kullanıcının sorusuna net, kısa ve anlaşılır cevap ver.`,
-        `Gerekirse örnekler ver ve kullanıcıyı yönlendir.`
+        `Gerekirse örnekler ver ve kullanıcıyı yönlendir.`,
+        `Chain of Thought: Önce soruyu anla, sonra context'te ilgili bilgileri bul, sonra cevabı oluştur.`
       ];
 
       // Seçilen AI servisine göre API çağrısı yap
@@ -1115,6 +1120,35 @@ const Chatbot = ({ isOpen, onClose }) => {
     return helpMessage;
   };
 
+  // Get role-specific context for training
+  const getRoleSpecificContext = (role) => {
+    const contexts = [];
+    
+    if (role === 'admin') {
+      contexts.push(`\n=== ADMIN KULLANICI EĞİTİMİ ===`);
+      contexts.push(`Bu kullanıcı admin rolünde. Tüm verilere erişimi var.`);
+      contexts.push(`Admin için özel sorular: Toplantı oluşturma, üye yönetimi, raporlar, istatistikler, seçim sonuçları.`);
+      contexts.push(`Admin sorularına detaylı ve kapsamlı cevap ver.`);
+    } else if (role === 'member') {
+      contexts.push(`\n=== ÜYE KULLANICI EĞİTİMİ ===`);
+      contexts.push(`Bu kullanıcı üye rolünde. Kendi bilgilerine ve genel bilgilere erişimi var.`);
+      contexts.push(`Üye için özel sorular: Kendi performans puanı, katıldığı toplantılar, yaklaşan etkinlikler.`);
+      contexts.push(`Üye sorularına samimi ve yardımcı cevap ver.`);
+    } else if (role === 'chief_observer') {
+      contexts.push(`\n=== BAŞMÜŞAHİT KULLANICI EĞİTİMİ ===`);
+      contexts.push(`Bu kullanıcı başmüşahit rolünde. Seçim sonuçları ve onay işlemlerine erişimi var.`);
+      contexts.push(`Başmüşahit için özel sorular: Onay bekleyen sonuçlar, seçim istatistikleri, tutanak durumları.`);
+      contexts.push(`Başmüşahit sorularına teknik ve detaylı cevap ver.`);
+    } else if (['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(role)) {
+      contexts.push(`\n=== SORUMLU KULLANICI EĞİTİMİ ===`);
+      contexts.push(`Bu kullanıcı sorumlu rolünde. Sorumlu olduğu sandıklar ve seçim sonuçlarına erişimi var.`);
+      contexts.push(`Sorumlu için özel sorular: Sorumlu olduğu sandıklar, seçim sonuç girişi, sandık durumları.`);
+      contexts.push(`Sorumlu sorularına pratik ve işlevsel cevap ver.`);
+    }
+    
+    return contexts;
+  };
+
   // Helper function to calculate average attendance
   const calculateAverageAttendance = (meetings) => {
     if (!meetings || meetings.length === 0) return 0;
@@ -1149,6 +1183,46 @@ const Chatbot = ({ isOpen, onClose }) => {
     }
     
     return false;
+  };
+
+  // Handle feedback for learning
+  const handleFeedback = async (messageId, feedback) => {
+    try {
+      // Store feedback locally (can be sent to backend later)
+      const feedbackData = {
+        messageId,
+        feedback,
+        timestamp: new Date().toISOString(),
+        userRole,
+        userMessage: messages.find(m => m.id === messageId - 1)?.content || '',
+        assistantMessage: messages.find(m => m.id === messageId)?.content || ''
+      };
+      
+      // Store in localStorage for now (can be sent to backend for analysis)
+      const existingFeedback = JSON.parse(localStorage.getItem('chatbot_feedback') || '[]');
+      existingFeedback.push(feedbackData);
+      localStorage.setItem('chatbot_feedback', JSON.stringify(existingFeedback.slice(-100))); // Keep last 100 feedbacks
+      
+      // Show confirmation
+      const feedbackMessage = feedback === 'helpful' 
+        ? '✅ Geri bildiriminiz kaydedildi. Teşekkürler!'
+        : '⚠️ Geri bildiriminiz kaydedildi. Daha iyi hizmet verebilmek için çalışıyoruz.';
+      
+      // Add a temporary message
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        role: 'assistant',
+        content: feedbackMessage,
+        isFeedback: true
+      }]);
+      
+      // Remove feedback message after 3 seconds
+      setTimeout(() => {
+        setMessages(prev => prev.filter(m => !m.isFeedback));
+      }, 3000);
+    } catch (error) {
+      console.error('Error saving feedback:', error);
+    }
   };
 
   const clearChat = () => {
@@ -1282,6 +1356,31 @@ const Chatbot = ({ isOpen, onClose }) => {
                       }
                       return null;
                     })}
+                  </div>
+                )}
+                {/* Feedback buttons for assistant messages */}
+                {message.role === 'assistant' && !message.isProactive && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      onClick={() => handleFeedback(message.id, 'helpful')}
+                      className="text-xs text-green-600 hover:text-green-700 flex items-center gap-1"
+                      title="Yararlı"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      Yararlı
+                    </button>
+                    <button
+                      onClick={() => handleFeedback(message.id, 'not_helpful')}
+                      className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                      title="Yararsız"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                      </svg>
+                      Yararsız
+                    </button>
                   </div>
                 )}
               </div>
