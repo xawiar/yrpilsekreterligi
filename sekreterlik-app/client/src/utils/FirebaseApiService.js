@@ -66,6 +66,7 @@ class FirebaseApiService {
     ELECTION_RESULTS: 'election_results',
     ELECTION_COORDINATORS: 'election_coordinators',
     ELECTION_REGIONS: 'election_regions',
+    ALLIANCES: 'alliances',
     // Visit counts collections
     DISTRICT_VISITS: 'district_visits',
     TOWN_VISITS: 'town_visits',
@@ -8373,6 +8374,119 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Validate API key error:', error);
       return null;
+    }
+  }
+
+  // Alliance methods
+  /**
+   * Get all alliances for an election
+   * @param {string|number} electionId - Election ID
+   */
+  static async getAlliances(electionId) {
+    try {
+      const alliances = await FirebaseService.getAll(this.COLLECTIONS.ALLIANCES, {
+        where: [
+          { field: 'election_id', operator: '==', value: String(electionId) }
+        ]
+      });
+      
+      return alliances.map(alliance => ({
+        ...alliance,
+        election_id: alliance.election_id || alliance.electionId,
+        party_ids: alliance.party_ids || alliance.partyIds || []
+      }));
+    } catch (error) {
+      console.error('Error getting alliances:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get alliance by ID
+   * @param {string|number} id - Alliance ID
+   */
+  static async getAlliance(id) {
+    try {
+      const alliance = await FirebaseService.getById(this.COLLECTIONS.ALLIANCES, String(id || '').trim());
+      if (!alliance) return null;
+      
+      return {
+        ...alliance,
+        election_id: alliance.election_id || alliance.electionId,
+        party_ids: alliance.party_ids || alliance.partyIds || []
+      };
+    } catch (error) {
+      console.error('Error getting alliance by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create new alliance
+   * @param {object} allianceData - { election_id, name, party_ids }
+   */
+  static async createAlliance(allianceData) {
+    try {
+      const alliance = {
+        election_id: String(allianceData.election_id || allianceData.electionId),
+        name: allianceData.name,
+        party_ids: Array.isArray(allianceData.party_ids) ? allianceData.party_ids : (allianceData.partyIds || []),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const docId = await FirebaseService.create(this.COLLECTIONS.ALLIANCES, alliance);
+      
+      return {
+        id: docId,
+        ...alliance
+      };
+    } catch (error) {
+      console.error('Error creating alliance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update alliance
+   * @param {string|number} id - Alliance ID
+   * @param {object} allianceData - Update data
+   */
+  static async updateAlliance(id, allianceData) {
+    try {
+      const updateData = {
+        ...allianceData,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Normalize field names
+      if (allianceData.election_id !== undefined) {
+        updateData.election_id = String(allianceData.election_id);
+      }
+      if (allianceData.party_ids !== undefined) {
+        updateData.party_ids = Array.isArray(allianceData.party_ids) ? allianceData.party_ids : [];
+      }
+      
+      await FirebaseService.update(this.COLLECTIONS.ALLIANCES, String(id), updateData);
+      
+      return await this.getAlliance(id);
+    } catch (error) {
+      console.error('Error updating alliance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete alliance
+   * @param {string|number} id - Alliance ID
+   */
+  static async deleteAlliance(id) {
+    try {
+      await FirebaseService.delete(this.COLLECTIONS.ALLIANCES, String(id));
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting alliance:', error);
+      throw error;
     }
   }
 }

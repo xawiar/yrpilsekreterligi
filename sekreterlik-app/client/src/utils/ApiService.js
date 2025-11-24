@@ -1707,8 +1707,7 @@ class ApiService {
   // Alliance API
   static async getAlliances(electionId) {
     if (USE_FIREBASE) {
-      // Firebase için implementasyon gerekirse buraya eklenebilir
-      throw new Error('Alliance API is not yet implemented for Firebase');
+      return FirebaseApiService.getAlliances(electionId);
     }
 
     const token = localStorage.getItem('token');
@@ -1723,7 +1722,7 @@ class ApiService {
 
   static async getAlliance(id) {
     if (USE_FIREBASE) {
-      throw new Error('Alliance API is not yet implemented for Firebase');
+      return FirebaseApiService.getAlliance(id);
     }
 
     const token = localStorage.getItem('token');
@@ -1738,7 +1737,7 @@ class ApiService {
 
   static async createAlliance(allianceData) {
     if (USE_FIREBASE) {
-      throw new Error('Alliance API is not yet implemented for Firebase');
+      return FirebaseApiService.createAlliance(allianceData);
     }
 
     const token = localStorage.getItem('token');
@@ -1755,7 +1754,7 @@ class ApiService {
 
   static async updateAlliance(id, allianceData) {
     if (USE_FIREBASE) {
-      throw new Error('Alliance API is not yet implemented for Firebase');
+      return FirebaseApiService.updateAlliance(id, allianceData);
     }
 
     const token = localStorage.getItem('token');
@@ -1772,7 +1771,7 @@ class ApiService {
 
   static async deleteAlliance(id) {
     if (USE_FIREBASE) {
-      throw new Error('Alliance API is not yet implemented for Firebase');
+      return FirebaseApiService.deleteAlliance(id);
     }
 
     const token = localStorage.getItem('token');
