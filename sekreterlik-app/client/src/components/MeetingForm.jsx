@@ -212,9 +212,9 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
   const mobileView = isMobile();
   
   return (
-    <div className={`space-y-${mobileView ? '2' : '4'}`}>
+    <div className={mobileView ? 'space-y-2' : 'space-y-4'}>
       <form onSubmit={handleSubmit}>
-        <div className={`space-y-${mobileView ? '2' : '4'}`}>
+        <div className={mobileView ? 'space-y-2' : 'space-y-4'}>
           <div>
             <label className={`block ${mobileView ? 'text-xs' : 'text-sm'} font-medium text-gray-700 dark:text-gray-300 ${mobileView ? 'mb-0.5' : 'mb-1'}`}>
               Toplantı Adı
