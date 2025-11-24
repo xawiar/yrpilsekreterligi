@@ -1382,6 +1382,82 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                
+                {/* Görselleştirme: Grafikler */}
+                {message.role === 'assistant' && message.visualization && (
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                    {message.visualization.type === 'attendance' && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">📊 Toplantı Katılım Grafiği</h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={message.visualization.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip />
+                            <Bar dataKey="katılım" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                    {message.visualization.type === 'performance' && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">⭐ Üye Performans Grafiği</h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={message.visualization.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 10 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip />
+                            <Bar dataKey="puan" fill="#10b981" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                    {message.visualization.type === 'events' && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">🎉 Etkinlik Dağılımı</h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={message.visualization.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip />
+                            <Bar dataKey="sayı" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Anomali ve Öneriler */}
+                {message.role === 'assistant' && (message.anomalies || message.recommendations) && (
+                  <div className="mt-4 space-y-2">
+                    {message.anomalies && message.anomalies.length > 0 && (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h4 className="text-xs font-semibold text-yellow-800 mb-2">⚠️ Tespit Edilen Anomaliler</h4>
+                        {message.anomalies.map((anomaly, idx) => (
+                          <div key={idx} className="text-xs text-yellow-700 mb-1">
+                            • {anomaly.message}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {message.recommendations && message.recommendations.length > 0 && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="text-xs font-semibold text-blue-800 mb-2">💡 Öneriler</h4>
+                        {message.recommendations.map((rec, idx) => (
+                          <div key={idx} className="text-xs text-blue-700 mb-2">
+                            <div className="font-medium">{rec.title}</div>
+                            <div className="text-blue-600">{rec.description}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Render links in assistant messages */}
                 {message.role === 'assistant' && message.content.includes('[') && (
                   <div className="mt-2 space-y-1">
@@ -1431,6 +1507,15 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                       </svg>
                       Yararsız
                     </button>
+                    {/* Duygu göstergesi */}
+                    {message.sentiment && (
+                      <span className="text-xs text-gray-500 ml-auto" title={`Duygu: ${message.sentiment.emotion}, Sentiment: ${message.sentiment.sentiment}`}>
+                        {message.sentiment.sentiment === 'positive' && '😊'}
+                        {message.sentiment.sentiment === 'negative' && '😔'}
+                        {message.sentiment.sentiment === 'neutral' && '😐'}
+                        {message.sentiment.sentiment === 'curious' && '🤔'}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
