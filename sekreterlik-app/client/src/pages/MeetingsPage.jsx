@@ -369,6 +369,9 @@ const MeetingsPage = () => {
           onMeetingClick={handleShowMeeting}
           onCreateMeeting={handleCreateMeeting}
           onPlanMeeting={handlePlanMeeting}
+          onEditMeeting={handleEditMeeting}
+          onArchiveMeeting={handleArchiveMeeting}
+          onUpdateAttendance={handleUpdateAttendance}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           loading={loading}
