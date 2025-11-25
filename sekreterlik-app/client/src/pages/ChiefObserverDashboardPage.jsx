@@ -43,11 +43,13 @@ const ChiefObserverDashboardPage = () => {
 
   // Bekleyen onayları yükle
   const loadPendingApprovals = useCallback(async () => {
-    if (!isLoggedIn || userRole !== 'chief_observer') return;
+    if (!isLoggedIn || userRole !== 'chief_observer' || !user) return;
     
     try {
       setLoadingApprovals(true);
-      const data = await ApiService.getPendingElectionResults();
+      // Sandık izolasyonu: Sadece kullanıcının sandığına ait sonuçları göster
+      const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
+      const data = await ApiService.getPendingElectionResults(ballotBoxId);
       if (data && data.results) {
         setPendingApprovals(data.results);
       }
@@ -56,7 +58,7 @@ const ChiefObserverDashboardPage = () => {
     } finally {
       setLoadingApprovals(false);
     }
-  }, [isLoggedIn, userRole]);
+  }, [isLoggedIn, userRole, user]);
 
   // Seçimleri ve sonuçları yükle
   useEffect(() => {

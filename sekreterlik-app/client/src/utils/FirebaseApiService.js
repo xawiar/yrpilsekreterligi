@@ -4570,14 +4570,21 @@ class FirebaseApiService {
   }
 
   // Get pending election results (for chief observer)
-  static async getPendingElectionResults() {
+  static async getPendingElectionResults(ballotBoxId = null) {
     try {
       const allResults = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS, false);
       
       // Filter pending results
-      const pendingResults = allResults.filter(result => 
+      let pendingResults = allResults.filter(result => 
         result.approval_status === 'pending'
       );
+
+      // Sandık izolasyonu: Eğer ballotBoxId verilmişse, sadece o sandığın sonuçlarını göster
+      if (ballotBoxId) {
+        pendingResults = pendingResults.filter(result => 
+          String(result.ballot_box_id) === String(ballotBoxId)
+        );
+      }
 
       // Enrich with election and ballot box data
       const enrichedResults = await Promise.all(
