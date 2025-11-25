@@ -692,14 +692,71 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       };
     }
 
-    // Legacy support for old election types
+    // MV (Milletvekili) Seçimi - Sadece MV oyları
+    if (election?.type === 'mv') {
+      const mvTotals = {};
+      if (election.parties) {
+        election.parties.forEach(party => {
+          const partyName = typeof party === 'string' ? party : (party.name || party);
+          mvTotals[partyName] = 0;
+        });
+      }
+      if (election.independent_mv_candidates) {
+        election.independent_mv_candidates.forEach(candidate => {
+          mvTotals[candidate] = 0;
+        });
+      }
+
+      filtered.forEach(result => {
+        if (result.mv_votes) {
+          Object.keys(result.mv_votes).forEach(party => {
+            if (mvTotals.hasOwnProperty(party)) {
+              mvTotals[party] += parseInt(result.mv_votes[party]) || 0;
+            }
+          });
+        }
+      });
+
+      const mvTotal = Object.values(mvTotals).reduce((sum, val) => sum + val, 0);
+
+      return {
+        type: 'mv',
+        categories: [
+          {
+            name: 'Milletvekili Seçimi',
+            data: Object.keys(mvTotals).map(party => ({
+              name: party,
+              value: mvTotals[party],
+              percentage: mvTotal > 0 ? ((mvTotals[party] / mvTotal) * 100) : 0
+            })),
+            total: mvTotal
+          }
+        ],
+        total: mvTotal
+      };
+    }
+
+    // CB (Cumhurbaşkanı) Seçimi - Sadece CB oyları
     if (election?.type === 'cb' && election?.candidates) {
       const candidateTotals = {};
       election.candidates.forEach(candidate => {
         candidateTotals[candidate] = 0;
       });
+      if (election.independent_cb_candidates) {
+        election.independent_cb_candidates.forEach(candidate => {
+          candidateTotals[candidate] = 0;
+        });
+      }
 
       filtered.forEach(result => {
+        if (result.cb_votes) {
+          Object.keys(result.cb_votes).forEach(candidate => {
+            if (candidateTotals.hasOwnProperty(candidate)) {
+              candidateTotals[candidate] += parseInt(result.cb_votes[candidate]) || 0;
+            }
+          });
+        }
+        // Legacy support for candidate_votes
         if (result.candidate_votes) {
           Object.keys(result.candidate_votes).forEach(candidate => {
             if (candidateTotals.hasOwnProperty(candidate)) {
@@ -712,15 +769,15 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       const total = Object.values(candidateTotals).reduce((sum, val) => sum + val, 0);
       
       return {
-        type: 'candidates',
+        type: 'cb',
         categories: [
           {
             name: 'Cumhurbaşkanı Seçimi',
-        data: Object.keys(candidateTotals).map(candidate => ({
-          name: candidate,
-          value: candidateTotals[candidate],
-          percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100) : 0
-        })),
+            data: Object.keys(candidateTotals).map(candidate => ({
+              name: candidate,
+              value: candidateTotals[candidate],
+              percentage: total > 0 ? ((candidateTotals[candidate] / total) * 100) : 0
+            })),
             total: total
           }
         ],
@@ -1050,9 +1107,9 @@ const ElectionResultsPage = ({ readOnly = false }) => {
     }));
   }, []);
 
-  // D'Hondt calculation for MV election with winning candidates
+  // D'Hondt calculation for MV election with winning candidates (genel ve mv seçimleri için)
   const dhondtResults = useMemo(() => {
-    if (election?.type !== 'genel' || !aggregatedResults.categories) return null;
+    if ((election?.type !== 'genel' && election?.type !== 'mv') || !aggregatedResults.categories) return null;
     
     const mvCategory = aggregatedResults.categories.find(c => c.name === 'Milletvekili Seçimi');
     if (!mvCategory || mvCategory.data.length === 0) return null;
@@ -1159,7 +1216,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
           votes: item.value,
           percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
         })));
-      } else if (category.name === 'Milletvekili Seçimi' && dhondtData && dhondtData.partySeats && Array.isArray(dhondtData.partySeats)) {
+      } else if ((category.name === 'Milletvekili Seçimi' || category.name === 'Cumhurbaşkanı Seçimi') && dhondtData && dhondtData.partySeats && Array.isArray(dhondtData.partySeats)) {
         // MV için D'Hondt sonuçlarına göre kazanan adayları belirle
         dhondtData.partySeats.forEach(partySeat => {
           const partyName = partySeat.party;
@@ -1857,7 +1914,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
         )}
 
         {/* D'Hondt Calculation Visualization - Milletvekili Dağılımı */}
-        {dhondtResults && election?.type === 'genel' && (
+        {dhondtResults && (election?.type === 'genel' || election?.type === 'mv') && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
