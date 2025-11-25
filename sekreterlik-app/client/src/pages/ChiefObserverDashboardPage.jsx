@@ -731,65 +731,150 @@ const ChiefObserverDashboardPage = () => {
                         </div>
                       </div>
 
-                      {/* Tutanak Fotoğrafı */}
-                      {result.signed_protocol_photo && (
-                        <div className="mb-4">
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            Tutanak Fotoğrafı
-                          </label>
-                          <img
-                            src={result.signed_protocol_photo}
-                            alt="Tutanak"
-                            className="w-full max-w-md rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => window.open(result.signed_protocol_photo, '_blank')}
-                          />
+                      {/* Tutanak ve Oylar - Yan Yana */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                        {/* Sol: Tutanak Fotoğrafı */}
+                        <div>
+                          {result.signed_protocol_photo && (
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                📄 Tutanak Fotoğrafı
+                              </label>
+                              <img
+                                src={result.signed_protocol_photo}
+                                alt="Tutanak"
+                                className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity shadow-md"
+                                onClick={() => window.open(result.signed_protocol_photo, '_blank')}
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
 
-                      {/* AI'nın Doldurduğu Veriler */}
-                      <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">AI'nın Doldurduğu Veriler:</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <span className="text-gray-600 dark:text-gray-400">Toplam Seçmen:</span>
-                            <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{result.total_voters || 0}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600 dark:text-gray-400">Geçersiz Oy:</span>
-                            <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{result.invalid_votes || 0}</span>
-                          </div>
-                          {result.election_type === 'genel' && (
-                            <>
-                              <div>
-                                <span className="text-gray-600 dark:text-gray-400">CB Oyları:</span>
-                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                                  {Object.values(result.cb_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 dark:text-gray-400">MV Oyları:</span>
-                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                                  {Object.values(result.mv_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
-                                </span>
-                              </div>
-                            </>
+                        {/* Sağ: Girilen Oylar (Parti/Aday Bazında) */}
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Girilen Oylar (Tutanak ile Karşılaştırın)
+                          </h4>
+                          
+                          {/* Genel Seçim: CB ve MV Oyları */}
+                          {(result.election_type === 'genel' || result.election_type === 'mv' || result.election_type === 'cb') && (
+                            <div className="space-y-3">
+                              {/* CB Oyları */}
+                              {(result.election_type === 'genel' || result.election_type === 'cb') && result.cb_votes && (
+                                <div>
+                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Cumhurbaşkanı Seçimi:</div>
+                                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                                    {Object.entries(result.cb_votes).map(([candidate, votes]) => (
+                                      <div key={candidate} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{candidate}</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* MV Oyları */}
+                              {(result.election_type === 'genel' || result.election_type === 'mv') && result.mv_votes && (
+                                <div>
+                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Milletvekili Seçimi:</div>
+                                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                                    {Object.entries(result.mv_votes).map(([party, votes]) => (
+                                      <div key={party} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
+
+                          {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
                           {result.election_type === 'yerel' && (
-                            <>
-                              <div>
-                                <span className="text-gray-600 dark:text-gray-400">Belediye Başkanı:</span>
-                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                                  {Object.values(result.mayor_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 dark:text-gray-400">İl Genel Meclisi:</span>
-                                <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                                  {Object.values(result.provincial_assembly_votes || {}).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
-                                </span>
-                              </div>
-                            </>
+                            <div className="space-y-3">
+                              {/* Belediye Başkanı */}
+                              {result.mayor_votes && Object.keys(result.mayor_votes).length > 0 && (
+                                <div>
+                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Belediye Başkanı:</div>
+                                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                    {Object.entries(result.mayor_votes).map(([candidate, votes]) => (
+                                      <div key={candidate} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{candidate}</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* İl Genel Meclisi */}
+                              {result.provincial_assembly_votes && Object.keys(result.provincial_assembly_votes).length > 0 && (
+                                <div>
+                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">İl Genel Meclisi:</div>
+                                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                    {Object.entries(result.provincial_assembly_votes).map(([party, votes]) => (
+                                      <div key={party} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Belediye Meclisi */}
+                              {result.municipal_council_votes && Object.keys(result.municipal_council_votes).length > 0 && (
+                                <div>
+                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Belediye Meclisi:</div>
+                                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                    {Object.entries(result.municipal_council_votes).map(([party, votes]) => (
+                                      <div key={party} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
+
+                          {/* Referandum */}
+                          {result.election_type === 'referandum' && result.referendum_votes && (
+                            <div className="space-y-1.5">
+                              {Object.entries(result.referendum_votes).map(([option, votes]) => (
+                                <div key={option} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                  <span className="text-gray-700 dark:text-gray-300 font-medium">{option}</span>
+                                  <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Özet Bilgiler */}
+                          <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700 space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Toplam Seçmen:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{result.total_voters || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Kullanılan Oy:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{result.used_votes || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Geçerli Oy:</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{result.valid_votes || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Geçersiz Oy:</span>
+                              <span className="font-medium text-red-600 dark:text-red-400">{result.invalid_votes || 0}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 

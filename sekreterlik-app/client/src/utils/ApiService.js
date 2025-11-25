@@ -2065,9 +2065,9 @@ class ApiService {
   }
 
   // Get pending election results (for chief observer)
-  static async getPendingElectionResults() {
+  static async getPendingElectionResults(ballotBoxId = null) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.getPendingElectionResults();
+      return FirebaseApiService.getPendingElectionResults(ballotBoxId);
     }
     const response = await fetch(`${API_BASE_URL}/election-results/pending`, {
       method: 'GET',

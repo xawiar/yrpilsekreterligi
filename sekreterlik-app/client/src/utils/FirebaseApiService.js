@@ -4698,11 +4698,11 @@ class FirebaseApiService {
         throw new Error('Onaylanmış sonuç reddedilemez. Önce onayı kaldırın.');
       }
 
-      // Update rejection status
+      // Update rejection status - Reddedilen sonuçlar seçim alanına geri düşer (pending olur)
       await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, {
-        approval_status: 'rejected',
-        approved_by: userId,
-        approved_at: new Date().toISOString(),
+        approval_status: 'pending', // Reddedilen sonuçlar tekrar düzenlenebilir olmalı
+        rejected_by: userId,
+        rejected_at: new Date().toISOString(),
         rejection_reason: rejectionReason || 'Reddedilme nedeni belirtilmedi',
         updated_at: new Date().toISOString()
       }, false);
