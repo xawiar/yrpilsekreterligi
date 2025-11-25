@@ -16,7 +16,7 @@ const LoginForm = ({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
       <AnimatePresence>
         {error && (
           <motion.div
@@ -55,7 +55,8 @@ const LoginForm = ({
             id="username"
             name="username"
             type="text"
-            autoComplete="username"
+            autoComplete="off"
+            data-form-type="other"
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -82,7 +83,8 @@ const LoginForm = ({
             id="password"
             name="password"
             type={showPassword ? "text" : "password"}
-            autoComplete="current-password"
+            autoComplete="new-password"
+            data-form-type="other"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}

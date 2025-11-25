@@ -9,7 +9,7 @@ const LoginForm = ({
   handleSubmit 
 }) => {
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex">
@@ -36,7 +36,8 @@ const LoginForm = ({
             id="username"
             name="username"
             type="text"
-            autoComplete="username"
+            autoComplete="off"
+            data-form-type="other"
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -54,7 +55,8 @@ const LoginForm = ({
             id="password"
             name="password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
+            data-form-type="other"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
