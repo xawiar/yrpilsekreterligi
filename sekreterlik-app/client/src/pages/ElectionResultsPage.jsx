@@ -1844,9 +1844,73 @@ const ElectionResultsPage = ({ readOnly = false }) => {
                   </div>
                 </div>
                 
-                      {/* Kazanan Adaylar Listesi */}
+                      {/* Parti Oy Sıralaması veya Kazanan Adaylar Listesi */}
                       {(() => {
-                        // Kazanan adayları bul (D'Hondt sonuçlarına göre)
+                        // MV seçimleri için: Partilerin oy sıralaması göster
+                        if (category.name === 'Milletvekili Seçimi' && (election?.type === 'mv' || election?.type === 'genel')) {
+                          // Partileri oy sayısına göre sırala (en çok oy alandan başla)
+                          const sortedParties = [...category.data]
+                            .filter(item => item && (item.value || item.value === 0))
+                            .sort((a, b) => (b.value || 0) - (a.value || 0))
+                            .map((item, index) => ({
+                              ...item,
+                              rank: index + 1,
+                              name: typeof item.name === 'string' ? item.name : (item.name?.name || String(item.name || '') || 'Bilinmeyen'),
+                              value: item.value || 0,
+                              percentage: typeof item.percentage === 'number' ? item.percentage : parseFloat(item.percentage || 0)
+                            }));
+
+                          return sortedParties && sortedParties.length > 0 ? (
+                            <div className="space-y-2">
+                              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Parti Oy Sıralaması
+                              </h3>
+                              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2">
+                                {sortedParties.map((party, idx) => {
+                                  const partyColor = getPartyColor(party.name);
+                                  return (
+                                    <div 
+                                      key={idx} 
+                                      className="flex items-center justify-between text-sm py-2 px-3 rounded-lg border-2 transition-all hover:shadow-md"
+                                      style={{
+                                        borderColor: partyColor.border,
+                                        backgroundColor: partyColor.bg
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div 
+                                          className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs shadow-md"
+                                          style={{ backgroundColor: partyColor.border }}
+                                        >
+                                          #{party.rank}
+                                        </div>
+                                        <span 
+                                          className="font-semibold flex-1"
+                                          style={{ color: partyColor.text }}
+                                        >
+                                          {party.name}
+                                        </span>
+                                      </div>
+                                      <div className="text-right ml-4">
+                                        <div className="text-base font-bold text-indigo-600 dark:text-indigo-400">
+                                          {party.value.toLocaleString('tr-TR')} oy
+                                        </div>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                                          %{party.percentage.toFixed(2)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : null;
+                        }
+
+                        // Diğer seçim türleri için: Kazanan adayları bul (D'Hondt sonuçlarına göre)
                         const winningCandidates = calculateWinningCandidates(
                           category,
                           category.name === 'Milletvekili Seçimi' ? dhondtResults : null,
