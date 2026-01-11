@@ -354,6 +354,7 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
                     {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                     {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
+                    {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
                   </>
                 )}
               </>
