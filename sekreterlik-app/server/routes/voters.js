@@ -12,6 +12,15 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+// Yardımcı fonksiyon: Sütun adını normalize et ve eşleşen anahtarı bul
+const findKey = (row, possibleKeys) => {
+    const rowKeys = Object.keys(row);
+    return rowKeys.find(key => {
+        const normalizedKey = key.toLowerCase().replace(/\./g, '').replace(/\s+/g, '').trim();
+        return possibleKeys.some(pK => normalizedKey === pK.toLowerCase().replace(/\./g, '').replace(/\s+/g, '').trim()) || possibleKeys.includes(key);
+    });
+};
+
 // Excel Yükleme Endpoint'i
 router.post('/upload', authenticateToken, isAdmin, upload.single('file'), async (req, res) => {
     try {
@@ -19,34 +28,90 @@ router.post('/upload', authenticateToken, isAdmin, upload.single('file'), async 
             return res.status(400).json({ message: 'Dosya yüklenmedi' });
         }
 
-        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        console.log('Dosya yükleniyor:', req.file.originalname, 'Boyut:', req.file.size);
+
+        // Dosya türüne göre okuma ayarları
+        let readOpts = { type: 'buffer', cellDates: true };
+
+        // CSV ise delimiter tahmin etmeye çalışabiliriz ama xlsx genelde iyi iş çıkarır.
+        // Gerekirse raw: true ile okuyup kendimiz parse edebiliriz ama şimdilik standart okuma.
+
+        const workbook = XLSX.read(req.file.buffer, readOpts);
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
+
+        // Header'ı temizlemek için range ayarı yapılabilir ama default bırakalım
         const data = XLSX.utils.sheet_to_json(sheet);
 
         if (!data || data.length === 0) {
-            return res.status(400).json({ message: 'Dosya boş veya okunamadı' });
+            return res.status(400).json({ message: 'Dosya boş veya veri okunamadı' });
+        }
+
+        console.log('Okunan satır sayısı:', data.length);
+        if (data.length > 0) {
+            console.log('İlk satır örneği (Header tespiti için):', JSON.stringify(data[0]));
+        }
+
+        // Sütun Eşleştirme Tanımları (Genişletilmiş)
+        const mappings = {
+            tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO'],
+            fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad', 'İsim', 'Tam Ad'],
+            phone: ['Telefon', 'Cep Tel', 'Cep Telefonu', 'Tel', 'Gsm', 'Mobil'],
+            district: ['İlçe', 'İlcesi', 'Semt'],
+            region: ['Bölge', 'Bolge', 'Seçim Bölgesi'],
+            role: ['Görev', 'Gorev', 'Ünvan', 'Unvan', 'Pozisyon']
+        };
+
+        // İlk veri satırından hangi key'in hangisine denk geldiğini bulalım
+        // (Her satırda keyler değişmez ama yine de sağlam olsun diye ilk satıra bakıp map çıkarıyoruz)
+        const firstRow = data[0];
+        const colMap = {};
+
+        // Her hedef alan için (tc, fullName vs.) dosyadaki karşılığını bul
+        for (const [targetField, possibleHeaders] of Object.entries(mappings)) {
+            const foundKey = findKey(firstRow, possibleHeaders);
+            if (foundKey) {
+                colMap[targetField] = foundKey;
+            }
+        }
+
+        console.log('Sütun Eşleştirmesi:', colMap);
+
+        if (!colMap.tc) {
+            const foundHeaders = Object.keys(firstRow).join(', ');
+            return res.status(400).json({
+                message: `Zorunlu 'TC' sütunu bulunamadı.`,
+                details: `Dosyadaki başlıklar: ${foundHeaders}. Lütfen sütun adını 'TC', 'T.C.' veya 'TC NO' olarak düzeltin.`
+            });
         }
 
         // Bulk operations hazırlığı
-        const operations = data.map(row => {
-            // Excel başlık eşleştirmesi (Esnek yapı)
-            const tc = row['TC'] || row['tc'] || row['Tc'];
-            const fullName = row['İsim Soyisim'] || row['isim soyisim'] || row['Ad Soyad'] || row['ad soyad'];
-            const phone = row['Telefon'] || row['telefon'] || row['Tel'];
-            const district = row['İlçe'] || row['ilçe'] || row['District'];
-            const region = row['Bölge'] || row['bölge'] || row['Region'];
-            const role = row['Görev'] || row['görev'] || row['Role'];
+        const operations = data.map((row, index) => {
+            // Map kullanarak değerleri al
+            const tc = row[colMap.tc]; // TC zorunlu
 
-            if (!tc) return null; // TC'si olmayan satırı atla
+            // TC yoksa bu satırı atla
+            if (!tc) return null;
+
+            // Diğer alanları al (varsa)
+            const fullName = colMap.fullName ? row[colMap.fullName] : '';
+            const phone = colMap.phone ? row[colMap.phone] : '';
+            const district = colMap.district ? row[colMap.district] : '';
+            const region = colMap.region ? row[colMap.region] : '';
+            const role = colMap.role ? row[colMap.role] : '';
+
+            // TC temizle (sadece rakam kalsın)
+            const cleanTC = String(tc).replace(/\D/g, '');
+
+            if (cleanTC.length < 10) return null; // Geçersiz TC
 
             return {
                 updateOne: {
-                    filter: { tc: String(tc).trim() },
+                    filter: { tc: cleanTC },
                     update: {
                         $set: {
                             fullName: String(fullName || '').trim(),
-                            phone: String(phone || '').trim(),
+                            phone: String(phone || '').replace(/\s+/g, '').trim(), // Telefonu temizle
                             district: String(district || '').trim(),
                             region: String(region || '').trim(),
                             role: String(role || '').trim(),
@@ -61,15 +126,18 @@ router.post('/upload', authenticateToken, isAdmin, upload.single('file'), async 
 
         if (operations.length > 0) {
             const result = await Voter.bulkWrite(operations);
+            console.log('BulkWrite Sonucu:', result);
+
             res.json({
                 message: 'İşlem başarılı',
-                matchedCount: result.matchedCount,
-                modifiedCount: result.modifiedCount,
-                upsertedCount: result.upsertedCount,
+                // Mongoose bulkWrite result yapısı
+                matchedCount: result.matchedCount || 0,
+                modifiedCount: result.modifiedCount || 0,
+                upsertedCount: result.upsertedCount || 0,
                 totalProcessed: operations.length
             });
         } else {
-            res.status(400).json({ message: 'Geçerli veri bulunamadı (TC sütunu zorunludur)' });
+            res.status(400).json({ message: 'İşlenecek geçerli veri bulunamadı. TC sütunlarını kontrol edin.' });
         }
 
     } catch (error) {
