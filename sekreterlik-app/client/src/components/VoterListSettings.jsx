@@ -103,13 +103,13 @@ const VoterListSettings = () => {
                                                 name="file-upload"
                                                 type="file"
                                                 className="sr-only"
-                                                accept=".xlsx, .xls"
+                                                accept=".xlsx, .xls, .csv"
                                                 onChange={handleFileChange}
                                             />
                                             <span className="pl-1">veya sürükle bırak</span>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {file ? `Seçilen: ${file.name}` : "XLSX (Max 10MB)"}
+                                            {file ? `Seçilen: ${file.name}` : "XLSX, XLS veya CSV (Max 10MB)"}
                                         </p>
                                     </div>
                                 </label>
