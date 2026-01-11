@@ -4,12 +4,31 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const Voter = require('../models/Voter');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
+const fs = require('fs');
+const path = require('path');
 
-// Multer conf - bellekte tut
-const storage = multer.memoryStorage();
+// Klasör yoksa oluştur (Her ihtimale karşı)
+const uploadDir = path.join(__dirname, '../uploads/voters');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer conf - belleğe değil diske kaydet
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir)
+    },
+    filename: function (req, file, cb) {
+        // Dosya ismini tarihle benzersiz yapalım (Türkçe karakterleri temizleyerek)
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + safeName);
+    }
+});
+
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    limits: { fileSize: 50 * 1024 * 1024 } // Limit 50MB olsun
 });
 
 // Yardımcı fonksiyon: Sütun adını normalize et ve eşleşen anahtarı bul
@@ -58,11 +77,11 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                 const isCsv = file.originalname.toLowerCase().endsWith('.csv');
 
                 let workbook;
-                // CSV için özel okuma denemesi
+                // CSV için özel okuma denemesi (path kullanarak)
                 if (isCsv) {
-                    workbook = XLSX.read(file.buffer, { type: 'buffer', codepage: 65001, raw: true });
+                    workbook = XLSX.readFile(file.path, { type: 'file', codepage: 65001, raw: true });
                 } else {
-                    workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: true });
+                    workbook = XLSX.readFile(file.path, { type: 'file', cellDates: true });
                 }
 
                 const sheetName = workbook.SheetNames[0];
@@ -134,7 +153,7 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                                     district: String(district || '').trim(),
                                     region: String(region || '').trim(),
                                     role: String(role || '').trim(),
-                                    sourceFile: file.originalname,
+                                    sourceFile: file.originalname, // DB'de orijinal ismini tutuyoruz
                                     updatedAt: new Date()
                                 }
                             },
@@ -164,7 +183,7 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                     globalStats.upsertedCount += result.upsertedCount || 0;
 
                     report.status = 'success';
-                    report.message = `${validOperations.length} kayıt işlendi.`;
+                    report.message = `${validOperations.length} kayıt işlendi. (Dosya kaydedildi: ${file.filename})`;
                 } else {
                     report.status = 'warning';
                     report.message = 'Hiçbir geçerli kayıt bulunamadı (TC hatalı veya filtreye takıldı).';
