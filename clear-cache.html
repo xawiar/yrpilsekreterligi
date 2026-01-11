@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cache Temizleme</title>
+</head>
+<body>
+    <h1>Cache Temizleniyor...</h1>
+    <script>
+        // Service Worker'ı unregister et
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(registration => {
+                    registration.unregister();
+                    console.log('Service Worker unregistered');
+                });
+            });
+        }
+        
+        // Cache'i temizle
+        caches.keys().then(names => {
+            names.forEach(name => {
+                caches.delete(name);
+                console.log('Cache deleted:', name);
+            });
+        });
+        
+        // localStorage temizle
+        localStorage.clear();
+        console.log('localStorage cleared');
+        
+        // sessionStorage temizle
+        sessionStorage.clear();
+        console.log('sessionStorage cleared');
+        
+        // 2 saniye sonra ana sayfaya yönlendir
+        setTimeout(() => {
+            alert('Cache temizlendi! Ana sayfaya yönlendiriliyorsunuz...');
+            window.location.href = '/';
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,13 +1,51 @@
 services:
+  # Backend Web Service
+  - type: web
+    name: sekreterlik-backend
+    branch: main
+    rootDir: "sekreterlik-app/server"
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: VITE_USE_FIREBASE
+        value: true
+      - key: USE_FIREBASE
+        value: true
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false  # Render.com dashboard'dan manuel eklenmeli
+      - key: VITE_ENCRYPTION_KEY
+        value: ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://yrpilsekreterligi.onrender.com,https://ilce-sekreterlik.onrender.com
+
+  # Frontend Static Site
   - type: static
     name: ilce-sekreterlik
     branch: main
     rootDir: "sekreterlik-app/client"
-    buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build && node scripts/fix-spa-routing.js && ls -la dist && echo "Build completed at $(date)" && echo "Commit: $(git rev-parse HEAD)"
-    staticPublishPath: "./dist"
+    buildCommand: rm -rf dist node_modules/.vite .cache && npm install && npm run build && node scripts/fix-spa-routing.js
+    staticPublishPath: "dist"
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0
+      # SPA Routing için - Tüm route'ları index.html'e yönlendir
+      - path: /*
+        name: X-Redirect
+        value: /* /index.html 200
     envVars:
       - key: VITE_USE_FIREBASE
         value: true
       - key: VITE_ENCRYPTION_KEY
         value: ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters
+      - key: VITE_API_BASE_URL
+        # Backend URL'i - Backend servisinin URL'ini buraya yazın
+        # Örnek: https://sekreterlik-backend.onrender.com/api
+        # Backend servisi oluşturulduktan sonra URL'i buraya ekleyin
+        value: https://sekreterlik-backend.onrender.com/api
+        # Not: Eğer backend servis adı farklıysa, URL'i buna göre güncelleyin
 
