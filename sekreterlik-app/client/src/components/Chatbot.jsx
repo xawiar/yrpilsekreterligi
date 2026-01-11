@@ -61,7 +61,7 @@ const Chatbot = ({ isOpen, onClose }) => {
       ]).catch(error => {
         console.error('Error loading chatbot data:', error);
       });
-      
+
       // Welcome message with context awareness
       const welcomeMessage = getWelcomeMessage(userRole, location.pathname);
       setMessages([{
@@ -97,12 +97,12 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Optimize: Load critical data first, then less critical data
       // This prevents blocking the UI for too long
       const [
-        members, 
-        events, 
-        meetings, 
-        districts, 
-        towns, 
-        neighborhoods, 
+        members,
+        events,
+        meetings,
+        districts,
+        towns,
+        neighborhoods,
         villages
       ] = await Promise.all([
         ApiService.getMembers().catch(() => []),
@@ -132,20 +132,20 @@ const Chatbot = ({ isOpen, onClose }) => {
         ApiService.getBallotBoxes().catch(() => []),
         ApiService.getBallotBoxObservers().catch(() => []),
         ApiService.getGroups().catch(() => []),
-        
+
         // Yönetim verileri
         ApiService.getDistrictOfficials().catch(() => []),
         ApiService.getTownOfficials().catch(() => []),
-        
+
         // Tüm yönetim üyeleri - Tüm district ve town'lar için
         Promise.all([
-          ApiService.getDistricts().then(districts => 
-            Promise.all(districts.map(d => 
+          ApiService.getDistricts().then(districts =>
+            Promise.all(districts.map(d =>
               ApiService.getDistrictManagementMembers(d.id).catch(() => [])
             ))
           ).then(results => results.flat()).catch(() => []),
-          ApiService.getTowns().then(towns => 
-            Promise.all(towns.map(t => 
+          ApiService.getTowns().then(towns =>
+            Promise.all(towns.map(t =>
               ApiService.getTownManagementMembers(t.id).catch(() => [])
             ))
           ).then(results => results.flat()).catch(() => [])
@@ -153,7 +153,7 @@ const Chatbot = ({ isOpen, onClose }) => {
           districtManagementMembers: districtMembers,
           townManagementMembers: townMembers
         })).catch(() => ({ districtManagementMembers: [], townManagementMembers: [] })),
-        
+
         // Temsilci ve sorumlu verileri
         ApiService.getNeighborhoodRepresentatives().catch(() => []),
         ApiService.getVillageRepresentatives().catch(() => []),
@@ -161,47 +161,47 @@ const Chatbot = ({ isOpen, onClose }) => {
         ApiService.getVillageSupervisors().catch(() => []),
         ApiService.getAllDistrictDeputyInspectors().catch(() => []),
         ApiService.getAllTownDeputyInspectors().catch(() => []),
-        
+
         // Ziyaret sayıları
         ApiService.getAllVisitCounts('neighborhood').catch(() => []),
         ApiService.getAllVisitCounts('village').catch(() => []),
         ApiService.getAllVisitCounts('stk').catch(() => []),
         ApiService.getAllVisitCounts('public_institution').catch(() => []),
         ApiService.getAllVisitCounts('mosque').catch(() => []),
-        
+
         // Üye kayıtları
         ApiService.getMemberRegistrations().catch(() => []),
-        
+
         // STK, Kamu Kurumu ve Cami verileri
         ApiService.getSTKs().catch(() => []),
         ApiService.getPublicInstitutions().catch(() => []),
         ApiService.getMosques().catch(() => []),
-        
+
         // Etkinlik kategorileri
         ApiService.getEventCategories().catch(() => []),
-        
+
         // Tüm kişisel belgeler - Tüm üyeler için
-        ApiService.getMembers().then(members => 
-          Promise.all(members.map(m => 
+        ApiService.getMembers().then(members =>
+          Promise.all(members.map(m =>
             ApiService.getPersonalDocuments(m.id).catch(() => [])
           ))
         ).then(results => results.flat()).catch(() => []),
-        
+
         // Arşiv verileri
         ApiService.getDocuments().catch(() => []),
-        
+
         // Arşivlenmiş üyeler, toplantılar, etkinlikler
         ApiService.getMembers(true).catch(() => []), // archived members
         ApiService.getMeetings(true).catch(() => []), // archived meetings
         ApiService.getEvents(true).catch(() => []), // archived events
-        
+
         // Seçim verileri
         ApiService.getElections().catch(() => []),
         // Tüm seçimler için sonuçları al
         ApiService.getElections().then(elections => {
           if (!elections || elections.length === 0) return [];
           return Promise.all(
-            elections.map(election => 
+            elections.map(election =>
               ApiService.getElectionResults(election.id, null).catch(() => [])
             )
           ).then(results => results.flat());
@@ -210,7 +210,7 @@ const Chatbot = ({ isOpen, onClose }) => {
         ApiService.getElections().then(elections => {
           if (!elections || elections.length === 0) return [];
           return Promise.all(
-            elections.map(election => 
+            elections.map(election =>
               ApiService.getAlliances(election.id).catch(() => [])
             )
           ).then(alliances => {
@@ -284,8 +284,8 @@ const Chatbot = ({ isOpen, onClose }) => {
             electionsCount: elections?.length || 0,
             electionResultsCount: electionResults?.length || 0,
             elections: elections?.slice(0, 3).map(e => ({ id: e.id, name: e.name, type: e.type })),
-            sampleResults: electionResults?.slice(0, 2).map(r => ({ 
-              electionId: r.election_id || r.electionId, 
+            sampleResults: electionResults?.slice(0, 2).map(r => ({
+              electionId: r.election_id || r.electionId,
               ballotNumber: r.ballot_number || r.ballotNumber,
               hasSignedProtocol: !!(r.signed_protocol_photo || r.signedProtocolPhoto),
               hasObjectionProtocol: !!(r.objection_protocol_photo || r.objectionProtocolPhoto)
@@ -341,24 +341,24 @@ const Chatbot = ({ isOpen, onClose }) => {
     try {
       // Firebase'den tüzük metnini veya URL'yi yükle
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      
+
       if (USE_FIREBASE) {
         try {
           const { getDoc, doc } = await import('firebase/firestore');
           const { db } = await import('../config/firebase');
           const bylawsRef = doc(db, 'bylaws', 'main');
           const bylawsSnap = await getDoc(bylawsRef);
-          
+
           if (bylawsSnap.exists()) {
             const bylawsData = bylawsSnap.data();
-            
+
             console.log('📋 Bylaws data loaded:', {
               hasText: !!bylawsData.text,
               textLength: bylawsData.text?.length || 0,
               hasUrl: !!bylawsData.url,
               url: bylawsData.url
             });
-            
+
             // Önce text varsa onu kullan (text varsa URL'yi ignore et)
             if (bylawsData.text && bylawsData.text.trim()) {
               console.log('✅ Using bylaws text (length:', bylawsData.text.length, ')');
@@ -371,29 +371,29 @@ const Chatbot = ({ isOpen, onClose }) => {
                 // Backend API'den URL'den içeriği çek
                 const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
                 let API_BASE_URL;
-                
+
                 if (USE_FIREBASE) {
                   // Render.com'da backend URL'i environment variable'dan al
                   API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
                 } else {
                   API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
                 }
-                
+
                 console.log('Loading bylaws from URL:', bylawsData.url, 'API:', API_BASE_URL);
-                
+
                 const response = await fetch(`${API_BASE_URL}/bylaws/fetch?url=${encodeURIComponent(bylawsData.url)}`, {
                   method: 'GET',
                   headers: {
                     'Content-Type': 'application/json'
                   }
                 });
-                
+
                 console.log('Bylaws load response status:', response.status);
-                
+
                 if (response.ok) {
                   const data = await response.json();
                   console.log('Bylaws load success:', data.success, 'Text length:', data.text?.length);
-                  
+
                   if (data.success && data.text) {
                     setBylawsText(data.text);
                   } else {
@@ -425,7 +425,7 @@ const Chatbot = ({ isOpen, onClose }) => {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    
+
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
@@ -444,7 +444,34 @@ const Chatbot = ({ isOpen, onClose }) => {
     try {
       // Build context from site data
       const context = [];
-      
+
+      // RAG: SEÇMEN SORGULAMA (Dosyalardan Arama)
+      // Kullanıcı mesajı ile veritabanında dinamik arama yap
+      if (userMessage.length >= 2) {
+        try {
+          console.log('🔍 [CHATBOT] Seçmen araması yapılıyor:', userMessage);
+          const voterResults = await ApiService.searchVoters(userMessage);
+
+          if (voterResults && voterResults.length > 0) {
+            console.log('✅ [CHATBOT] Seçmen bulundu:', voterResults.length);
+            context.push(`\n=== 📂 YÜKLENEN DOSYALARDAN BULUNAN KAYITLAR (RAG) ===`);
+            context.push(`Kullanıcının sorusuyla ("${userMessage}") eşleşen ${voterResults.length} kişi dosyalarınızda bulundu:`);
+
+            voterResults.slice(0, 5).forEach((voter, index) => { // Max 5 kayıt göster (token tasarrufu)
+              context.push(`${index + 1}. AD SOYAD: ${voter.fullName} | TC: ${voter.tc} | TEL: ${voter.phone} | BÖLGE: ${voter.region} ${voter.district ? `(${voter.district})` : ''} | GÖREV: ${voter.role}`);
+            });
+
+            if (voterResults.length > 5) {
+              context.push(`... ve ${voterResults.length - 5} benzer kayıt daha var.`);
+            }
+            context.push(`YÖNERGE: Kullanıcı bu kişileri soruyorsa yukarıdaki bilgileri ver. Eğer sormuyorsa bu bilgiyi görmezden gel.`);
+          }
+        } catch (searchErr) {
+          console.warn('Chatbot voter search error:', searchErr);
+          // Sessizce devam et
+        }
+      }
+
       // Add user context and role information
       if (user && userRole) {
         context.push(`\n=== KULLANICI BİLGİLERİ ===`);
@@ -452,7 +479,7 @@ const Chatbot = ({ isOpen, onClose }) => {
         if (user.name) context.push(`Kullanıcı Adı: ${user.name}`);
         if (location.pathname) context.push(`Mevcut Sayfa: ${location.pathname}`);
       }
-      
+
       if (siteData) {
         // Seçilen AI servisine göre context builder kullan
         let AIService;
@@ -468,9 +495,9 @@ const Chatbot = ({ isOpen, onClose }) => {
 
         const siteContext = AIService.buildSiteContext(siteData);
         context.push(...siteContext);
-        
+
         // Debug: Context'e eklenen seçim verilerini kontrol et
-        const electionContextLines = siteContext.filter(line => 
+        const electionContextLines = siteContext.filter(line =>
           line.includes('SEÇİM') || line.includes('seçim') || line.includes('Seçim')
         );
         if (electionContextLines.length > 0) {
@@ -486,30 +513,30 @@ const Chatbot = ({ isOpen, onClose }) => {
             electionResultsCount: siteData.electionResults?.length || 0
           });
         }
-        
+
         // Check if user is asking about a specific member (with all site data for comprehensive info)
         const memberContext = AIService.buildMemberContext(
-          siteData.members, 
+          siteData.members,
           userMessage,
           siteData // Tüm site verilerini gönder (meetings, representatives, supervisors, observers vb.)
         );
         context.push(...memberContext);
       }
-      
+
       // Add bylaws text or URL if available (daha fazla karakter - tüzük önemli)
       if (bylawsText) {
         // Tüzük metnini kısalt (token limiti için - max 50000 karakter - tüzük çok önemli)
         const MAX_BYLAWS_LENGTH = 50000;
-        const shortenedBylaws = bylawsText.length > MAX_BYLAWS_LENGTH 
+        const shortenedBylaws = bylawsText.length > MAX_BYLAWS_LENGTH
           ? bylawsText.substring(0, MAX_BYLAWS_LENGTH) + '\n\n[Tüzük metni kısaltıldı - token limiti nedeniyle]'
           : bylawsText;
-        
+
         console.log('📋 Adding bylaws to context:', {
           textLength: bylawsText.length,
           startsWithLink: bylawsText.startsWith('TÜZÜK_LINK:'),
           preview: bylawsText.substring(0, 100)
         });
-        
+
         // Eğer URL ise (TÜZÜK_LINK: ile başlıyorsa), tekrar çekmeyi dene
         if (bylawsText.startsWith('TÜZÜK_LINK:')) {
           console.log('⚠️ Bylaws text is a link, trying to fetch...');
@@ -519,29 +546,29 @@ const Chatbot = ({ isOpen, onClose }) => {
             // Firebase kullanılıyorsa backend URL'i kontrol et
             const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
             let API_BASE_URL;
-            
+
             if (USE_FIREBASE) {
               // Render.com'da backend URL'i environment variable'dan al
               API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
             } else {
               API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
             }
-            
+
             console.log('Fetching bylaws from URL:', url, 'API:', API_BASE_URL);
-            
+
             const response = await fetch(`${API_BASE_URL}/bylaws/fetch?url=${encodeURIComponent(url)}`, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json'
               }
             });
-            
+
             console.log('Bylaws fetch response status:', response.status);
-            
+
             if (response.ok) {
               const data = await response.json();
               console.log('Bylaws fetch success:', data.success, 'Text length:', data.text?.length);
-              
+
               if (data.success && data.text) {
                 // Tüzük metnini context'e ekle (ilk 50000 karakter - tüzük çok önemli)
                 const text = data.text.substring(0, 50000);
@@ -566,18 +593,18 @@ const Chatbot = ({ isOpen, onClose }) => {
           console.log('✅ Using bylaws text directly (length:', bylawsText.length, ')');
           // Tüzük metni çok uzun olabilir, ama mümkün olduğunca fazla karakter kullan (max 50000 karakter)
           const maxLength = 50000;
-          const textToAdd = bylawsText.length > maxLength 
-            ? bylawsText.substring(0, maxLength) + '... (devamı var - tüzük metni çok uzun)' 
+          const textToAdd = bylawsText.length > maxLength
+            ? bylawsText.substring(0, maxLength) + '... (devamı var - tüzük metni çok uzun)'
             : bylawsText;
           context.push(`TÜZÜK BİLGİLERİ:\n${textToAdd}`);
         }
-        
+
         // Dashboard İstatistikleri
         if (siteData.members && siteData.meetings && siteData.events) {
           const totalMembers = siteData.members.length;
           const totalMeetings = siteData.meetings.filter(m => !m.archived).length;
           const totalEvents = siteData.events.filter(e => !e.archived).length;
-          
+
           // Ortalama toplantı katılım oranı
           let totalAttendanceRate = 0;
           let meetingsWithAttendees = 0;
@@ -589,16 +616,16 @@ const Chatbot = ({ isOpen, onClose }) => {
               meetingsWithAttendees++;
             }
           });
-          const avgMeetingAttendanceRate = meetingsWithAttendees > 0 
-            ? Math.round(totalAttendanceRate / meetingsWithAttendees) 
+          const avgMeetingAttendanceRate = meetingsWithAttendees > 0
+            ? Math.round(totalAttendanceRate / meetingsWithAttendees)
             : 0;
-          
+
           context.push(`\n=== DASHBOARD İSTATİSTİKLERİ ===`);
           context.push(`Toplam Üye Sayısı: ${totalMembers}`);
           context.push(`Toplam Toplantı Sayısı: ${totalMeetings}`);
           context.push(`Ortalama Toplantı Katılım Oranı: %${avgMeetingAttendanceRate}`);
           context.push(`Toplam Etkinlik Sayısı: ${totalEvents}`);
-          
+
           // Kategori bazında etkinlik istatistikleri
           if (siteData.eventCategories && siteData.events) {
             const categoryStats = {};
@@ -616,7 +643,7 @@ const Chatbot = ({ isOpen, onClose }) => {
               });
             }
           }
-          
+
           // Mahalle ve köy istatistikleri
           if (siteData.neighborhoods) {
             context.push(`\nToplam Mahalle Sayısı: ${siteData.neighborhoods.length}`);
@@ -625,7 +652,7 @@ const Chatbot = ({ isOpen, onClose }) => {
             const assignedNeighborhoodReps = new Set((siteData.neighborhoodRepresentatives || []).map(r => String(r.neighborhood_id))).size;
             context.push(`Atanmış Mahalle Temsilci Sayısı: ${assignedNeighborhoodReps}`);
           }
-          
+
           if (siteData.villages) {
             context.push(`\nToplam Köy Sayısı: ${siteData.villages.length}`);
             const totalVillageVisits = (siteData.villageVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
@@ -633,14 +660,14 @@ const Chatbot = ({ isOpen, onClose }) => {
             const assignedVillageReps = new Set((siteData.villageRepresentatives || []).map(r => String(r.village_id))).size;
             context.push(`Atanmış Köy Temsilci Sayısı: ${assignedVillageReps}`);
           }
-          
+
           // STK ve Kamu Kurumu istatistikleri
           if (siteData.stks) {
             context.push(`\nToplam STK Sayısı: ${siteData.stks.length}`);
             const totalSTKVisits = (siteData.stkVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
             context.push(`Toplam STK Ziyaret Sayısı: ${totalSTKVisits}`);
           }
-          
+
           if (siteData.publicInstitutions) {
             context.push(`\nToplam Kamu Kurumu Sayısı: ${siteData.publicInstitutions.length}`);
             const totalPublicInstitutionVisits = (siteData.publicInstitutionVisitCounts || []).reduce((sum, v) => sum + (v.visit_count || 0), 0);
@@ -648,16 +675,16 @@ const Chatbot = ({ isOpen, onClose }) => {
           }
         }
       }
-      
+
       // Enhanced context for comparative analysis
-      if (userMessage.toLowerCase().includes('karşılaştır') || 
-          userMessage.toLowerCase().includes('geçen') || 
-          userMessage.toLowerCase().includes('trend') ||
-          userMessage.toLowerCase().includes('artış') ||
-          userMessage.toLowerCase().includes('azalış')) {
+      if (userMessage.toLowerCase().includes('karşılaştır') ||
+        userMessage.toLowerCase().includes('geçen') ||
+        userMessage.toLowerCase().includes('trend') ||
+        userMessage.toLowerCase().includes('artış') ||
+        userMessage.toLowerCase().includes('azalış')) {
         context.push(`\n=== KARŞILAŞTIRMALI ANALİZ İSTEĞİ ===`);
         context.push(`Kullanıcı karşılaştırmalı analiz veya trend analizi istiyor.`);
-        
+
         // Add time-based statistics
         if (siteData.meetings) {
           const now = new Date();
@@ -688,13 +715,13 @@ const Chatbot = ({ isOpen, onClose }) => {
 
           context.push(`Bu Ay Toplantı Sayısı: ${thisMonthMeetings.length}`);
           context.push(`Geçen Ay Toplantı Sayısı: ${lastMonthMeetings.length}`);
-          
+
           // Calculate attendance trends
           const thisMonthAvg = calculateAverageAttendance(thisMonthMeetings);
           const lastMonthAvg = calculateAverageAttendance(lastMonthMeetings);
           context.push(`Bu Ay Ortalama Katılım: %${thisMonthAvg}`);
           context.push(`Geçen Ay Ortalama Katılım: %${lastMonthAvg}`);
-          
+
           if (thisMonthAvg > lastMonthAvg) {
             context.push(`Katılım Trendi: Artış var (+${(thisMonthAvg - lastMonthAvg).toFixed(1)}%)`);
           } else if (thisMonthAvg < lastMonthAvg) {
@@ -719,7 +746,7 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Check for help commands
       const helpKeywords = ['yardım', 'help', 'nasıl', 'komut', 'ne yapabilir', 'ne sorabilir', 'kullanım'];
       const isHelpRequest = helpKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
-      
+
       if (isHelpRequest) {
         const helpMessage = getHelpMessage(userRole);
         const newAssistantMessage = {
@@ -735,7 +762,7 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Check for report requests
       const reportKeywords = ['rapor', 'report', 'istatistik', 'statistic', 'özet', 'summary', 'excel', 'pdf'];
       const isReportRequest = reportKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
-      
+
       if (isReportRequest && userRole === 'admin') {
         // Add report context
         context.push(`\n=== RAPOR İSTEĞİ ===`);
@@ -750,12 +777,12 @@ const Chatbot = ({ isOpen, onClose }) => {
         const nameMatch = userMessage.match(/(?:adı|name|isim)[\s:]+(.+?)(?:\s|$|,)/i);
         const dateMatch = userMessage.match(/(?:tarih|date)[\s:]+(.+?)(?:\s|$|,)/i);
         const regionMatch = userMessage.match(/(?:bölge|region)[\s:]+(.+?)(?:\s|$|,)/i);
-        
+
         const params = {};
         if (nameMatch) params.name = nameMatch[1].trim();
         if (dateMatch) params.date = dateMatch[1].trim();
         if (regionMatch) params.regions = regionMatch[1].split(',').map(r => r.trim());
-        
+
         const actionHandled = await handleAutomaticAction('create_meeting', params);
         if (actionHandled) {
           setLoading(false);
@@ -770,7 +797,7 @@ const Chatbot = ({ isOpen, onClose }) => {
         { pattern: /(toplantı|etkinlik)\s+(.+?)\s+(hakkında|detayları)/i, type: 'event_info' },
         { pattern: /(bu ay|geçen ay|bu hafta|geçen hafta)\s+(toplantı|etkinlik|üye|katılım)/i, type: 'time_filter' }
       ];
-      
+
       // Enhanced search handling
       for (const searchPattern of searchPatterns) {
         const match = userMessage.match(searchPattern.pattern);
@@ -784,7 +811,7 @@ const Chatbot = ({ isOpen, onClose }) => {
 
       // Role-specific training context
       const roleSpecificContext = getRoleSpecificContext(userRole);
-      
+
       // Duygu analizi
       const sentimentResult = analyzeSentiment(userMessage);
       const responseTone = getResponseTone(sentimentResult);
@@ -794,13 +821,13 @@ const Chatbot = ({ isOpen, onClose }) => {
       const recommendations = siteData ? generateRecommendations(siteData, userRole) : [];
 
       // Enhanced AI prompt with better context understanding and training
-      const conversationSummary = conversationHistory.length > 0 
+      const conversationSummary = conversationHistory.length > 0
         ? `\n=== ÖNCEKİ KONUŞMA ÖZETİ ===\n` +
-          `Toplam ${conversationHistory.length} mesaj var. Önceki konuşmalarda şunlar konuşuldu:\n` +
-          conversationHistory.slice(0, 5).map((msg, idx) => 
-            `${idx + 1}. ${msg.role === 'user' ? 'Kullanıcı' : 'Sen'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`
-          ).join('\n') +
-          (conversationHistory.length > 5 ? `\n... ve ${conversationHistory.length - 5} mesaj daha` : '')
+        `Toplam ${conversationHistory.length} mesaj var. Önceki konuşmalarda şunlar konuşuldu:\n` +
+        conversationHistory.slice(0, 5).map((msg, idx) =>
+          `${idx + 1}. ${msg.role === 'user' ? 'Kullanıcı' : 'Sen'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`
+        ).join('\n') +
+        (conversationHistory.length > 5 ? `\n... ve ${conversationHistory.length - 5} mesaj daha` : '')
         : '';
 
       // Duygu analizi context'i
@@ -859,7 +886,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
 
       // Process response for report links
       let processedResponse = response;
-      
+
       // Check if response contains report-related content and add action buttons
       if (isReportRequest && userRole === 'admin' && (response.toLowerCase().includes('rapor') || response.toLowerCase().includes('report'))) {
         processedResponse += `\n\n💡 Hızlı Erişim:\n`;
@@ -870,7 +897,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
 
       // Görselleştirme: Eğer kullanıcı grafik istiyorsa
       const visualizationKeywords = ['grafik', 'chart', 'görsel', 'görselleştir', 'göster', 'çiz', 'tablo'];
-      const wantsVisualization = visualizationKeywords.some(keyword => 
+      const wantsVisualization = visualizationKeywords.some(keyword =>
         userMessage.toLowerCase().includes(keyword)
       );
 
@@ -925,7 +952,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                   const date = new Date(event.date.split('.').reverse().join('-'));
                   const monthKey = date.toLocaleDateString('tr-TR', { month: 'short' });
                   eventsByMonth[monthKey] = (eventsByMonth[monthKey] || 0) + 1;
-                } catch (e) {}
+                } catch (e) { }
               }
             });
             visualizationData = {
@@ -953,7 +980,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
     } catch (error) {
       console.error('Chat error:', error);
       setError(error.message || 'Mesaj gönderilirken hata oluştu');
-      
+
       // 402 hatası için özel mesaj
       let errorContent = 'Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.';
       if (error.message && error.message.includes('402')) {
@@ -961,7 +988,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       } else if (error.message) {
         errorContent = error.message;
       }
-      
+
       // Add error message
       const errorMessage = {
         id: Date.now() + 1,
@@ -977,7 +1004,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
   // Get welcome message based on user role and current page
   const getWelcomeMessage = (role, pathname) => {
     let baseMessage = 'Merhaba! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
-    
+
     // Role-based customization
     if (role === 'admin') {
       baseMessage = 'Merhaba başkanım! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
@@ -988,7 +1015,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
     } else if (['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(role)) {
       baseMessage = 'Merhaba sorumlu! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
     }
-    
+
     // Page context
     if (pathname.includes('/meetings')) {
       baseMessage += ' Şu anda toplantılar sayfasındasınız. Toplantılar hakkında sorular sorabilirsiniz.';
@@ -999,17 +1026,17 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
     } else if (pathname.includes('/reports')) {
       baseMessage += ' Şu anda raporlar sayfasındasınız. Raporlar hakkında sorular sorabilirsiniz.';
     }
-    
+
     baseMessage += '\n\n💡 Hızlı erişim butonlarını kullanarak hızlıca bilgi alabilir veya doğrudan soru sorabilirsiniz.';
-    
+
     return baseMessage;
   };
 
   // Quick action handlers
   const handleQuickAction = async (action) => {
     let message = '';
-    
-    switch(action) {
+
+    switch (action) {
       case 'toplantilar':
         message = 'Yaklaşan toplantıları göster';
         break;
@@ -1047,7 +1074,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       default:
         message = action;
     }
-    
+
     setInput(message);
     setShowQuickActions(false);
     // Auto send after a short delay
@@ -1077,7 +1104,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       { id: 'rapor_goster', label: '📄 Raporlar', action: 'rapor_goster', roles: ['admin'] },
       { id: 'yardim', label: '❓ Yardım', action: 'yardim', roles: ['admin', 'member', 'chief_observer'] }
     ];
-    
+
     return actions.filter(a => !a.roles || a.roles.includes(userRole));
   };
 
@@ -1086,7 +1113,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
     if (!data) return null;
 
     const suggestions = [];
-    
+
     // Upcoming meetings
     if (data.meetings && data.meetings.length > 0) {
       const now = new Date();
@@ -1177,7 +1204,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
     // Missing election results
     if (data.elections && data.electionResults && role === 'admin') {
       const electionsWithoutResults = data.elections.filter(election => {
-        const hasResults = data.electionResults.some(r => 
+        const hasResults = data.electionResults.some(r =>
           String(r.election_id || r.electionId) === String(election.id)
         );
         return !hasResults;
@@ -1199,24 +1226,24 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
   // Get help message based on user role
   const getHelpMessage = (role) => {
     let helpMessage = `📚 CHATBOT YARDIM REHBERİ\n\n`;
-    
+
     helpMessage += `🎯 GENEL KULLANIM:\n`;
     helpMessage += `• Doğal dilde sorular sorabilirsiniz\n`;
     helpMessage += `• "Ahmet'in katıldığı toplantılar" gibi sorgular yapabilirsiniz\n`;
     helpMessage += `• "En aktif üyeler" gibi istatistik soruları sorabilirsiniz\n`;
     helpMessage += `• Tüzük hakkında sorular sorabilirsiniz\n\n`;
-    
+
     helpMessage += `⚡ HIZLI AKSİYONLAR:\n`;
     const quickActions = getQuickActions();
     quickActions.forEach(action => {
       helpMessage += `• ${action.label}\n`;
     });
-    
+
     helpMessage += `\n💬 ÖNCEDEN TANIMLI SORULAR:\n`;
     predefinedQuestions.forEach(q => {
       helpMessage += `• ${q.label}\n`;
     });
-    
+
     helpMessage += `\n🔍 ÖRNEK SORULAR:\n`;
     if (role === 'admin') {
       helpMessage += `• "Toplam kaç üye var?"\n`;
@@ -1235,20 +1262,20 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       helpMessage += `• "Sorumlu olduğum sandıklar neler?"\n`;
       helpMessage += `• "Seçim sonuçları nasıl?"\n`;
     }
-    
+
     helpMessage += `\n💡 İPUÇLARI:\n`;
     helpMessage += `• Sorularınızı Türkçe yazabilirsiniz\n`;
     helpMessage += `• "Nasıl", "Neden", "Ne zaman" gibi sorular sorabilirsiniz\n`;
     helpMessage += `• Karşılaştırma soruları sorabilirsiniz (ör: "Geçen ay ile karşılaştır")\n`;
     helpMessage += `• Hızlı aksiyon butonlarını kullanarak daha hızlı bilgi alabilirsiniz\n`;
-    
+
     return helpMessage;
   };
 
   // Get role-specific context for training
   const getRoleSpecificContext = (role) => {
     const contexts = [];
-    
+
     if (role === 'admin') {
       contexts.push(`\n=== ADMIN KULLANICI EĞİTİMİ ===`);
       contexts.push(`Bu kullanıcı admin rolünde. Tüm verilere erişimi var.`);
@@ -1270,17 +1297,17 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       contexts.push(`Sorumlu için özel sorular: Sorumlu olduğu sandıklar, seçim sonuç girişi, sandık durumları.`);
       contexts.push(`Sorumlu sorularına pratik ve işlevsel cevap ver.`);
     }
-    
+
     return contexts;
   };
 
   // Helper function to calculate average attendance
   const calculateAverageAttendance = (meetings) => {
     if (!meetings || meetings.length === 0) return 0;
-    
+
     let totalRate = 0;
     let count = 0;
-    
+
     meetings.forEach(meeting => {
       if (meeting.attendees && meeting.attendees.length > 0) {
         const attended = meeting.attendees.filter(a => a.attended).length;
@@ -1289,7 +1316,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         count++;
       }
     });
-    
+
     return count > 0 ? Math.round(totalRate / count) : 0;
   };
 
@@ -1301,12 +1328,12 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       if (params.name) queryParams.set('name', params.name);
       if (params.date) queryParams.set('date', params.date);
       if (params.regions) queryParams.set('regions', params.regions.join(','));
-      
+
       navigate(`/meetings?create=true&${queryParams.toString()}`);
       onClose();
       return true;
     }
-    
+
     return false;
   };
 
@@ -1322,17 +1349,17 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         userMessage: messages.find(m => m.id === messageId - 1)?.content || '',
         assistantMessage: messages.find(m => m.id === messageId)?.content || ''
       };
-      
+
       // Store in localStorage for now (can be sent to backend for analysis)
       const existingFeedback = JSON.parse(localStorage.getItem('chatbot_feedback') || '[]');
       existingFeedback.push(feedbackData);
       localStorage.setItem('chatbot_feedback', JSON.stringify(existingFeedback.slice(-100))); // Keep last 100 feedbacks
-      
+
       // Show confirmation
-      const feedbackMessage = feedback === 'helpful' 
+      const feedbackMessage = feedback === 'helpful'
         ? '✅ Geri bildiriminiz kaydedildi. Teşekkürler!'
         : '⚠️ Geri bildiriminiz kaydedildi. Daha iyi hizmet verebilmek için çalışıyoruz.';
-      
+
       // Add a temporary message
       setMessages(prev => [...prev, {
         id: Date.now(),
@@ -1340,7 +1367,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         content: feedbackMessage,
         isFeedback: true
       }]);
-      
+
       // Remove feedback message after 3 seconds
       setTimeout(() => {
         setMessages(prev => prev.filter(m => !m.isFeedback));
@@ -1368,7 +1395,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         {/* Header */}
         <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 rounded-t-2xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
@@ -1450,14 +1477,13 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
+                className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === 'user'
                     ? 'bg-red-600 text-white'
                     : 'bg-red-500 text-white'
-                }`}
+                  }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                
+
                 {/* Görselleştirme: Grafikler */}
                 {message.role === 'assistant' && message.visualization && (
                   <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
@@ -1596,7 +1622,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               </div>
             </div>
           ))}
-          
+
           {loading && (
             <div className="flex justify-start">
               <div className="bg-gray-100 rounded-2xl px-4 py-3">
@@ -1608,7 +1634,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -1634,7 +1660,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                   </svg>
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-3">
@@ -1643,7 +1669,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                   <p className="text-xs text-gray-500 mb-4">
                     API limitlerini kontrol etmek için aşağıdaki dashboard linklerini kullanabilirsiniz:
                   </p>
-                  
+
                   <div className="space-y-2">
                     <a
                       href="https://console.groq.com/usage"
@@ -1659,7 +1685,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                       </div>
                       <p className="text-xs text-indigo-700 mt-1">Ücretsiz tier: 12,000 TPM (Tokens Per Minute)</p>
                     </a>
-                    
+
                     <a
                       href="https://aistudio.google.com/app/apikey"
                       target="_blank"
@@ -1674,7 +1700,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                       </div>
                       <p className="text-xs text-blue-700 mt-1">Gemini API kullanım ve limit bilgileri</p>
                     </a>
-                    
+
                     <a
                       href="https://platform.openai.com/usage"
                       target="_blank"
@@ -1689,7 +1715,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                       </div>
                       <p className="text-xs text-green-700 mt-1">ChatGPT API kullanım ve limit bilgileri</p>
                     </a>
-                    
+
                     <a
                       href="https://platform.deepseek.com/usage"
                       target="_blank"
@@ -1706,11 +1732,11 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                     </a>
                   </div>
                 </div>
-                
+
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-xs text-yellow-800">
-                      <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar {'>'} Chatbot API sayfasından başka bir servis seçebilirsiniz.
-                    </p>
+                  <p className="text-xs text-yellow-800">
+                    <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar {'>'} Chatbot API sayfasından başka bir servis seçebilirsiniz.
+                  </p>
                 </div>
               </div>
             </div>
