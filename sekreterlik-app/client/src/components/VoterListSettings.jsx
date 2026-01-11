@@ -32,15 +32,16 @@ const VoterListSettings = () => {
             const result = await ApiService.uploadVoterList(files);
             setUploadResult(result);
 
-            if (result.details && result.details.errors && result.details.errors.length > 0) {
-                showToast(`${result.details.processedFiles.length} dosya işlendi, ${result.details.errors.length} dosyada hata var.`, 'warning');
+            if (result.globalStats && result.globalStats.skippedRows > 0) {
+                showToast(`İşlem tamamlandı ancak ${result.globalStats.skippedRows} kayıt atlandı/hatalı.`, 'warning');
             } else {
                 showToast('Tüm dosyalar başarıyla yüklendi ve işlendi', 'success');
             }
 
             setFiles(null); // İşlem sonrası dosya seçimini temizle
-            // Input değerini sıfırlamak için (re-renderda file input value tutmaz ama manuel temizlemek iyidir)
-            document.getElementById('file-upload').value = "";
+            // Input değerini sıfırlamak için
+            const fileInput = document.getElementById('file-upload');
+            if (fileInput) fileInput.value = "";
 
         } catch (error) {
             console.error('Upload error:', error);
@@ -144,37 +145,78 @@ const VoterListSettings = () => {
                             </button>
                         </div>
 
+                        {/* DETAYLI RAPORLAMA UI */}
                         {uploadResult && (
-                            <div className="mt-4">
-                                {uploadResult.stats && (
-                                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-md border border-green-200 dark:border-green-800">
-                                        <div className="flex">
-                                            <div className="ml-3">
-                                                <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
-                                                    İşlem Özeti
-                                                </h3>
-                                                <div className="mt-2 text-sm text-green-700 dark:text-green-300">
-                                                    <p>Toplam Kayıt: {uploadResult.stats.totalProcessed}</p>
-                                                    <p>Yeni Eklenen: {uploadResult.stats.upsertedCount}</p>
-                                                    <p>Güncellenen: {uploadResult.stats.modifiedCount}</p>
-                                                </div>
+                            <div className="mt-6 space-y-4">
+                                {uploadResult.globalStats && (
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-2">
+                                            Genel Özet
+                                        </h4>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">İşlenen Kayıt</span>
+                                                <span className="font-semibold text-gray-900 dark:text-white">{uploadResult.globalStats.totalProcessed}</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-green-600 dark:text-green-400">Yeni Eklenen</span>
+                                                <span className="font-semibold text-green-700 dark:text-green-300">{uploadResult.globalStats.upsertedCount}</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-blue-600 dark:text-blue-400">Güncellenen</span>
+                                                <span className="font-semibold text-blue-700 dark:text-blue-300">{uploadResult.globalStats.modifiedCount}</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-red-600 dark:text-red-400">Atlanan/Hatalı</span>
+                                                <span className="font-semibold text-red-700 dark:text-red-300">{uploadResult.globalStats.skippedRows}</span>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                {uploadResult.details && uploadResult.details.errors && uploadResult.details.errors.length > 0 && (
-                                    <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-md border border-red-200 dark:border-red-800">
-                                        <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
-                                            Hatalar / Uyarılar
-                                        </h3>
-                                        <ul className="list-disc pl-5 text-sm text-red-700 dark:text-red-300 space-y-1">
-                                            {uploadResult.details.errors.map((err, idx) => (
-                                                <li key={idx}>{err}</li>
-                                            ))}
-                                        </ul>
+                                {uploadResult.fileReports && uploadResult.fileReports.map((report, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`p-4 rounded-md border text-sm ${report.status === 'success'
+                                                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                                                : report.status === 'warning'
+                                                    ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                                                    : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <h5 className="font-bold text-gray-900 dark:text-gray-100">{report.fileName}</h5>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${report.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
+                                                    report.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
+                                                        'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                                                }`}>
+                                                {report.status === 'success' ? 'Başarılı' : report.status === 'warning' ? 'Uyarı' : 'Hata'}
+                                            </span>
+                                        </div>
+
+                                        <p className="mt-1 font-medium">{report.message}</p>
+
+                                        <div className="mt-2 text-xs space-y-1 opacity-90">
+                                            <div>Toplam Satır: {report.totalRows} | Geçerli: {report.validRows}</div>
+
+                                            {report.detectedColumns && Object.keys(report.detectedColumns).length > 0 ? (
+                                                <div className="mt-1 p-2 bg-white/50 dark:bg-black/20 rounded">
+                                                    <strong>Bulunan Sütunlar:</strong> {Object.entries(report.detectedColumns).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                                </div>
+                                            ) : (
+                                                <div className="mt-1 text-red-600 dark:text-red-400 font-bold">
+                                                    Sütun başlıkları eşleştirilemedi! Lütfen 'TC' başlığının olduğundan emin olun.
+                                                </div>
+                                            )}
+
+                                            {report.sampleIgnoredReason && (
+                                                <div className="mt-2 p-2 bg-red-100/50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded border border-red-200 dark:border-red-800">
+                                                    <strong>Örnek Hata:</strong> {report.sampleIgnoredReason}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
+                                ))}
                             </div>
                         )}
                     </div>

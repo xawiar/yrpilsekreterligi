@@ -30,18 +30,30 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
 
         console.log(`Toplam ${req.files.length} dosya yüklendi.`);
 
-        let totalProcessed = 0;
-        let totalMatched = 0;
-        let totalModified = 0;
-        let totalUpserted = 0;
-        const errors = [];
-        const processedFiles = [];
+        let globalStats = {
+            totalProcessed: 0,
+            matchedCount: 0,
+            modifiedCount: 0,
+            upsertedCount: 0,
+            skippedRows: 0
+        };
+
+        const fileReports = [];
 
         // Dosya döngüsü
         for (const file of req.files) {
-            try {
-                console.log(`Dosya işleniyor: ${file.originalname} (${file.size} bytes)`);
+            const report = {
+                fileName: file.originalname,
+                status: 'error', // success, error, warning
+                message: '',
+                detectedColumns: {},
+                totalRows: 0,
+                validRows: 0,
+                skippedRows: 0,
+                sampleIgnoredReason: null
+            };
 
+            try {
                 // Dosya uzantısı kontrolü
                 const isCsv = file.originalname.toLowerCase().endsWith('.csv');
 
@@ -58,11 +70,12 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                 const data = XLSX.utils.sheet_to_json(sheet);
 
                 if (!data || data.length === 0) {
-                    errors.push(`${file.originalname}: Dosya boş veya veri okunamadı`);
+                    report.message = 'Dosya boş veya veri okunamadı';
+                    fileReports.push(report);
                     continue;
                 }
 
-                console.log(`${file.originalname}: ${data.length} satır okundu`);
+                report.totalRows = data.length;
 
                 // Sütun Eşleştirme Tanımları
                 const mappings = {
@@ -81,18 +94,28 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                     if (foundKey) colMap[targetField] = foundKey;
                 }
 
+                report.detectedColumns = colMap;
+
                 if (!colMap.tc) {
-                    errors.push(`${file.originalname}: TC sütunu bulunamadı. (Mevcut başlıklar: ${Object.keys(firstRow).join(', ')})`);
+                    report.message = `TC sütunu bulunamadı. (Mevcut başlıklar: ${Object.keys(firstRow).join(', ')})`;
+                    fileReports.push(report);
                     continue;
                 }
 
                 // Bulk operations
-                const operations = data.map(row => {
+                const operations = data.map((row, index) => {
                     const tc = row[colMap.tc];
-                    if (!tc) return null;
 
+                    // TC var mı kontrol et
+                    if (!tc) {
+                        return { error: `Satır ${index + 1}: TC değeri boş` };
+                    }
+
+                    // TC temizle
                     const cleanTC = String(tc).replace(/\D/g, '');
-                    if (cleanTC.length < 10) return null;
+                    if (cleanTC.length < 10) {
+                        return { error: `Satır ${index + 1}: TC geçersiz (${tc} -> ${cleanTC})` };
+                    }
 
                     const fullName = colMap.fullName ? row[colMap.fullName] : '';
                     const phone = colMap.phone ? row[colMap.phone] : '';
@@ -103,6 +126,7 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                     return {
                         updateOne: {
                             filter: { tc: cleanTC },
+                            // Var olan kaydı güncellemek için
                             update: {
                                 $set: {
                                     fullName: String(fullName || '').trim(),
@@ -117,42 +141,52 @@ router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async 
                             upsert: true
                         }
                     };
-                }).filter(op => op !== null);
+                });
 
-                if (operations.length > 0) {
-                    const result = await Voter.bulkWrite(operations);
-                    totalProcessed += operations.length;
-                    totalMatched += result.matchedCount || 0;
-                    totalModified += result.modifiedCount || 0;
-                    totalUpserted += result.upsertedCount || 0;
-                    processedFiles.push(file.originalname);
+                // Hatalı ve geçerli kayıtları ayır
+                const validOperations = operations.filter(op => !op.error);
+                const errors = operations.filter(op => op.error);
+
+                report.validRows = validOperations.length;
+                report.skippedRows = errors.length;
+                if (errors.length > 0) {
+                    report.sampleIgnoredReason = errors[0].error;
+                }
+
+                globalStats.skippedRows += report.skippedRows;
+
+                if (validOperations.length > 0) {
+                    const result = await Voter.bulkWrite(validOperations);
+
+                    globalStats.totalProcessed += validOperations.length;
+                    globalStats.matchedCount += result.matchedCount || 0;
+                    globalStats.modifiedCount += result.modifiedCount || 0;
+                    globalStats.upsertedCount += result.upsertedCount || 0;
+
+                    report.status = 'success';
+                    report.message = `${validOperations.length} kayıt işlendi.`;
                 } else {
-                    errors.push(`${file.originalname}: Geçerli veri satırı bulunamadı`);
+                    report.status = 'warning';
+                    report.message = 'Hiçbir geçerli kayıt bulunamadı (TC hatalı veya filtreye takıldı).';
                 }
 
             } catch (fileErr) {
                 console.error(`Dosya hatası (${file.originalname}):`, fileErr);
-                errors.push(`${file.originalname}: Hata (${fileErr.message})`);
+                report.message = `Hata: ${fileErr.message}`;
             }
+
+            fileReports.push(report);
         }
 
         res.json({
-            message: processedFiles.length > 0 ? `${processedFiles.length} dosya işlendi` : 'Hiçbir dosya başarıyla işlenemedi',
-            details: {
-                processedFiles,
-                errors
-            },
-            stats: {
-                matchedCount: totalMatched,
-                modifiedCount: totalModified,
-                upsertedCount: totalUpserted,
-                totalProcessed
-            }
+            message: 'İşlem tamamlandı',
+            globalStats,
+            fileReports
         });
 
     } catch (error) {
         console.error('General upload error:', error);
-        res.status(500).json({ message: 'Yükleme sırasında hata oluştu', error: error.message });
+        res.status(500).json({ message: 'Yükleme sırasında genel hata oluştu', error: error.message });
     }
 });
 
