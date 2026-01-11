@@ -221,6 +221,11 @@ class FirebaseService {
         ? decryptObject(data, SENSITIVE_FIELDS)
         : data;
     } catch (error) {
+      // Offline hatası için özel handling - varsayılan değerler kullanılacak
+      if (error.code === 'unavailable' || error.message?.includes('offline') || error.message?.includes('Failed to get document because the client is offline')) {
+        console.warn(`Client is offline, cannot get document from ${collectionName}. Using defaults.`);
+        return null; // null döndür ki varsayılan değerler kullanılsın
+      }
       console.error(`Error getting document from ${collectionName}:`, error);
       throw error;
     }

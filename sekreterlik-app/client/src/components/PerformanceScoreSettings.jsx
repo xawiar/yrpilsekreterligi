@@ -46,7 +46,12 @@ const PerformanceScoreSettings = () => {
             });
           }
         } catch (error) {
-          console.warn('Performance score config not found, using defaults');
+          // Offline hatası için özel mesaj
+          if (error.code === 'unavailable' || error.message?.includes('offline')) {
+            console.warn('Client is offline, using default performance score settings');
+          } else {
+            console.warn('Performance score config not found, using defaults:', error);
+          }
         }
       }
     } catch (error) {
