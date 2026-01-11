@@ -43,8 +43,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
         <button
           onClick={() => setActiveTab('admin')}
           className={`${activeTab === 'admin'
-              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+            ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
             } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,8 +57,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('regions')}
             className={`${activeTab === 'regions'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -72,8 +72,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('positions')}
             className={`${activeTab === 'positions'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -87,8 +87,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('member-users')}
             className={`${activeTab === 'member-users'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,8 +102,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('districts')}
             className={`${activeTab === 'districts'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,8 +117,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('towns')}
             className={`${activeTab === 'towns'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,8 +132,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('neighborhoods')}
             className={`${activeTab === 'neighborhoods'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,8 +147,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('villages')}
             className={`${activeTab === 'villages'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -162,8 +162,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('stks')}
             className={`${activeTab === 'stks'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -177,8 +177,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('public-institutions')}
             className={`${activeTab === 'public-institutions'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,8 +192,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('mosques')}
             className={`${activeTab === 'mosques'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,8 +207,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('event-categories')}
             className={`${activeTab === 'event-categories'
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,8 +223,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('authorization')}
             className={`${activeTab === 'authorization'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -239,8 +239,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('bylaws')}
             className={`${activeTab === 'bylaws'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,8 +255,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('groq-api')}
             className={`${activeTab === 'groq-api'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -271,8 +271,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('firebase-config')}
             className={`${activeTab === 'firebase-config'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -287,8 +287,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('deployment-config')}
             className={`${activeTab === 'deployment-config'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -303,8 +303,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('sms-config')}
             className={`${activeTab === 'sms-config'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -319,8 +319,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('firebase-sync')}
             className={`${activeTab === 'firebase-sync'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -335,8 +335,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('polls')}
             className={`${activeTab === 'polls'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -351,8 +351,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('member-dashboard-analytics')}
             className={`${activeTab === 'member-dashboard-analytics'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -367,8 +367,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('app-branding')}
             className={`${activeTab === 'app-branding'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -383,8 +383,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('performance-score')}
             className={`${activeTab === 'performance-score'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -399,8 +399,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('seçim-ekle')}
             className={`${activeTab === 'seçim-ekle'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -415,14 +415,30 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           <button
             onClick={() => setActiveTab('api-keys')}
             className={`${activeTab === 'api-keys'
-                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
             API Key Yönetimi
+          </button>
+        )}
+
+        {/* Seçmen Listesi Yönetimi */}
+        {hasPermission('voter-list') && (
+          <button
+            onClick={() => setActiveTab('voter-list')}
+            className={`${activeTab === 'voter-list'
+              ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+            </svg>
+            Seçmen Listesi
           </button>
         )}
 
