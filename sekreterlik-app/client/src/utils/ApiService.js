@@ -6,8 +6,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 // Firebase kullanımı kontrolü - Environment variable ile kontrol edilir
 // Render.com'da bu değer 'true' (string) olarak set edilmeli
 const VITE_USE_FIREBASE_ENV = import.meta.env.VITE_USE_FIREBASE;
-const USE_FIREBASE = 
-  VITE_USE_FIREBASE_ENV === 'true' || 
+const USE_FIREBASE =
+  VITE_USE_FIREBASE_ENV === 'true' ||
   VITE_USE_FIREBASE_ENV === true ||
   String(VITE_USE_FIREBASE_ENV).toLowerCase() === 'true' ||
   // Production'da Render.com'da genellikle 'true' string olarak gelir
@@ -23,7 +23,7 @@ if (typeof window !== 'undefined') {
     HOSTNAME: window.location.hostname,
     WILL_USE_FIREBASE: USE_FIREBASE
   });
-  
+
   // Uyarı: Eğer Firebase kullanılması gerekiyorsa ama kullanılmıyorsa
   if (VITE_USE_FIREBASE_ENV && !USE_FIREBASE) {
     console.warn('[ApiService] WARNING: VITE_USE_FIREBASE is set but USE_FIREBASE is false!', {
@@ -70,11 +70,11 @@ class ApiService {
   // Helper method to get auth headers
   static getAuthHeaders(includeContentType = true) {
     const headers = {};
-    
+
     if (includeContentType) {
       headers['Content-Type'] = 'application/json';
     }
-    
+
     // In a real implementation, you would add the auth token here
     // For now, we'll just return the headers as is since the backend 
     // doesn't actually validate tokens in this demo
@@ -93,9 +93,9 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ username, password }),
     });
-    
+
     const data = await response.json();
-    
+
     // Even on 401, return the response data so AuthContext can check response.success
     // The backend returns { success: false, message: '...' } on 401
     return data;
@@ -149,9 +149,9 @@ class ApiService {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
-            username: adminInfo.admin.username, 
-            password 
+          body: JSON.stringify({
+            username: adminInfo.admin.username,
+            password
           }),
         });
         const result = await response.json();
@@ -270,7 +270,7 @@ class ApiService {
       });
       return response.json();
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/dashboard`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
@@ -283,7 +283,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getMembers(archived);
     }
-    
+
     const timestamp = Date.now();
     return this.fetchJsonWithRetry(`${API_BASE_URL}/members?archived=${archived}&_t=${timestamp}`);
   }
@@ -308,9 +308,9 @@ class ApiService {
         headers: this.getAuthHeaders(),
         body: JSON.stringify(memberData),
       });
-      
+
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         // If there are validation errors, include them in the error message
         let errorMessage = responseData.message || `HTTP ${response.status}: Unknown error`;
@@ -319,7 +319,7 @@ class ApiService {
         }
         throw new Error(errorMessage);
       }
-      
+
       return responseData;
     } catch (error) {
       console.error('Error in createMember:', error);
@@ -337,12 +337,12 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(memberData),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Üye güncellenirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -356,12 +356,12 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ stars }),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Yıldız güncellenirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -374,12 +374,12 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(false),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Üye arşivlenirken bir hata oluştu' }));
       throw new Error(errorData.message || 'Üye arşivlenirken bir hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -392,12 +392,12 @@ class ApiService {
       method: 'POST',
       headers: this.getAuthHeaders(false),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Üye geri yüklenirken bir hata oluştu' }));
       throw new Error(errorData.message || 'Üye geri yüklenirken bir hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -406,7 +406,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.previewImportMembersFromExcel(file);
     }
-    
+
     // Backend API için preview endpoint'i yoksa, dosyayı analiz et
     // Şimdilik Firebase kullanılıyorsa preview destekleniyor
     throw new Error('Preview özelliği sadece Firebase ile desteklenmektedir');
@@ -417,24 +417,24 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.importMembersFromExcel(file, previewData);
     }
-    
+
     // Backend API kullanılıyorsa
     // Create FormData object to send the file
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Send the file to the server
     const response = await fetch(`${API_BASE_URL}/members/import`, {
       method: 'POST',
       // Don't set Content-Type when sending FormData, browser will set it correctly
       body: formData,
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || 'Üyeler içe aktarılırken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -474,12 +474,12 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(meetingData),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || 'Toplantı oluşturulurken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -646,7 +646,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getMemberRegistrations();
     }
-    
+
     return this.fetchJsonWithRetry(`${API_BASE_URL}/member-registrations`);
   }
 
@@ -660,13 +660,13 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(registrationData),
     });
-    
+
     // Check if the response is ok
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
-    
+
     return response.json();
   }
 
@@ -680,13 +680,13 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(registrationData),
     });
-    
+
     // Check if the response is ok
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
-    
+
     return response.json();
   }
 
@@ -719,14 +719,14 @@ class ApiService {
         return [];
       }
     }
-    
+
     // Eğer Firebase kullanılmıyorsa (development mode) localhost:5000'e istek at
     // Ama production'da buraya asla gelmemeli
     if (typeof window !== 'undefined' && window.location.hostname.includes('render.com')) {
       console.error('[getDocuments] CRITICAL ERROR: Firebase should be enabled in production!');
       return [];
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/archive/documents`);
     if (!response.ok) {
       throw new Error('Belgeler getirilirken hata oluştu');
@@ -740,18 +740,18 @@ class ApiService {
       const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
       const FirebaseApiService = (await import('./FirebaseApiService')).default;
       const FirebaseService = (await import('../services/FirebaseService')).default;
-      
+
       const file = formData.get('document');
       const name = formData.get('name') || file.name;
       const description = formData.get('description') || '';
-      
+
       if (!file) {
         throw new Error('Dosya bulunamadı');
       }
-      
+
       // Firebase Storage'a yükle
       const storageUrl = await FirebaseStorageService.uploadArchiveDocument(name, file);
-      
+
       // Firestore'a kaydet
       const documentData = {
         name: name,
@@ -763,14 +763,14 @@ class ApiService {
         storage_url: storageUrl,
         uploaded_at: new Date().toISOString()
       };
-      
+
       const docId = await FirebaseService.create(
         FirebaseApiService.COLLECTIONS.ARCHIVE,
         null,
         documentData,
         false // Şifreleme yok
       );
-      
+
       return {
         id: docId,
         ...documentData
@@ -782,7 +782,7 @@ class ApiService {
         // Don't set Content-Type header when sending FormData
         body: formData,
       });
-      
+
       // Check if response is ok
       if (!response.ok) {
         // Try to parse error response as JSON
@@ -798,7 +798,7 @@ class ApiService {
           throw jsonError;
         }
       }
-      
+
       return response.json();
     } catch (error) {
       // Handle network errors or other fetch issues
@@ -836,12 +836,12 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(false),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Belge silinirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -855,13 +855,13 @@ class ApiService {
           const isArchived = m.archived === true || m.archived === 'true' || m.archived === 1 || m.archived === '1';
           return isArchived;
         });
-        
+
         let deletedCount = 0;
         for (const member of archivedMembers) {
           await FirebaseService.delete(FirebaseApiService.COLLECTIONS.MEMBERS, member.id);
           deletedCount++;
         }
-        
+
         return { success: true, message: `${deletedCount} arşivlenmiş üye temizlendi` };
       } catch (error) {
         console.error('Clear archived members error:', error);
@@ -872,12 +872,12 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Arşivlenmiş üyeler temizlenirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -890,13 +890,13 @@ class ApiService {
           const isArchived = m.archived === true || m.archived === 'true' || m.archived === 1 || m.archived === '1';
           return isArchived;
         });
-        
+
         let deletedCount = 0;
         for (const meeting of archivedMeetings) {
           await FirebaseService.delete(FirebaseApiService.COLLECTIONS.MEETINGS, meeting.id);
           deletedCount++;
         }
-        
+
         return { success: true, message: `${deletedCount} arşivlenmiş toplantı temizlendi` };
       } catch (error) {
         console.error('Clear archived meetings error:', error);
@@ -907,12 +907,12 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Arşivlenmiş toplantılar temizlenirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -925,13 +925,13 @@ class ApiService {
           const isArchived = e.archived === true || e.archived === 'true' || e.archived === 1 || e.archived === '1';
           return isArchived;
         });
-        
+
         let deletedCount = 0;
         for (const event of archivedEvents) {
           await FirebaseService.delete(FirebaseApiService.COLLECTIONS.EVENTS, event.id);
           deletedCount++;
         }
-        
+
         return { success: true, message: `${deletedCount} arşivlenmiş etkinlik temizlendi` };
       } catch (error) {
         console.error('Clear archived events error:', error);
@@ -969,12 +969,12 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Belgeler temizlenirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -989,7 +989,7 @@ class ApiService {
       MODE: import.meta.env.MODE,
       HOSTNAME: typeof window !== 'undefined' ? window.location.hostname : 'server'
     };
-    
+
     console.log('[ApiService.deleteArchivedMember] Called with:', firebaseCheck);
 
     // Firebase kullanılıyorsa KESİNLİKLE FirebaseApiService'i kullan
@@ -1008,7 +1008,7 @@ class ApiService {
     // UYARI: Firebase kullanılmıyorsa backend API'ye istek at
     console.warn('[ApiService.deleteArchivedMember] ⚠️ WARNING: Using backend API (Firebase disabled)!', `${API_BASE_URL}/archive/members/${id}`);
     console.warn('[ApiService.deleteArchivedMember] ⚠️ Environment check:', firebaseCheck);
-    
+
     // Sadece Firebase kullanılmıyorsa backend API'ye istek at
     const response = await fetch(`${API_BASE_URL}/archive/members/${id}`, {
       method: 'DELETE',
@@ -1032,12 +1032,12 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(false),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Arşivlenmiş toplantı silinirken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -1071,12 +1071,12 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(eventData),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || 'Etkinlik oluşturulurken hata oluştu');
     }
-    
+
     return response.json();
   }
 
@@ -1138,7 +1138,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getPersonalDocuments(memberId);
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/personal-documents/member/${memberId}`, {
       headers: this.getAuthHeaders(),
     });
@@ -1150,7 +1150,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.uploadPersonalDocument(memberId, documentName, file);
     }
-    
+
     const formData = new FormData();
     formData.append('document', file);
     formData.append('document_type', documentName); // documentName artık belge adı olarak kullanılıyor
@@ -1176,7 +1176,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.uploadMemberPhoto(memberId, file);
     }
-    
+
     const formData = new FormData();
     formData.append('photo', file);
     formData.append('memberId', memberId);
@@ -1202,7 +1202,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.downloadPersonalDocument(documentId);
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/personal-documents/download/${documentId}`, {
       headers: this.getAuthHeaders(),
     });
@@ -1220,7 +1220,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.deletePersonalDocument(documentId);
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/personal-documents/${documentId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
@@ -1993,7 +1993,7 @@ class ApiService {
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {
     console.log('[ApiService.getElectionResults] Called:', { electionId, ballotBoxId, USE_FIREBASE });
-    
+
     if (USE_FIREBASE) {
       console.log('[ApiService.getElectionResults] Using FirebaseApiService');
       try {
@@ -2010,7 +2010,7 @@ class ApiService {
     const params = new URLSearchParams();
     if (electionId) params.append('election_id', electionId);
     if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
-    
+
     const response = await fetch(`${API_BASE_URL}/election-results?${params}`);
     const result = await response.json();
     console.log('[ApiService.getElectionResults] Backend API result:', result?.length || 0, 'results');
@@ -2505,13 +2505,13 @@ class ApiService {
         headers: this.getAuthHeaders(),
         body: JSON.stringify(memberData),
       });
-      
+
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
       }
-      
+
       return responseData;
     } catch (error) {
       console.error('Error in createDistrictManagementMember:', error);
@@ -2529,13 +2529,13 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(memberData),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -2548,13 +2548,13 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -2579,9 +2579,9 @@ class ApiService {
         headers: this.getAuthHeaders(),
         body: JSON.stringify(memberData),
       });
-      
+
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         // Include detailed validation errors if available
         let errorMessage = responseData.message || `HTTP ${response.status}`;
@@ -2590,7 +2590,7 @@ class ApiService {
         }
         throw new Error(errorMessage);
       }
-      
+
       return responseData;
     } catch (error) {
       console.error('Error in createTownManagementMember:', error);
@@ -2608,13 +2608,13 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(memberData),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -2627,13 +2627,13 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -2700,7 +2700,7 @@ class ApiService {
       // Önce şifrelenmiş password'ları düzelt
       const fixResult = await FirebaseApiService.fixEncryptedPasswords();
       console.log('🔓 Encrypted passwords fix result:', fixResult);
-      
+
       // Sonra normal güncellemeyi yap
       return FirebaseApiService.updateAllCredentials();
     }
@@ -2719,7 +2719,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getVapidKey();
     }
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/push-subscriptions/vapid-key`);
       return response.json();
@@ -2737,7 +2737,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.subscribeToPush(subscriptionData);
     }
-    
+
     // If userId is not provided, try to get it from localStorage
     if (!subscriptionData.userId) {
       try {
@@ -2747,7 +2747,7 @@ class ApiService {
           const user = JSON.parse(userData);
           subscriptionData.userId = user?.id || user?.memberId || user?.uid;
         }
-        
+
         // Also try from window.userId (set by usePushNotifications hook)
         if (!subscriptionData.userId && typeof window !== 'undefined' && window.userId) {
           subscriptionData.userId = window.userId;
@@ -2756,7 +2756,7 @@ class ApiService {
         console.warn('Could not get userId from localStorage:', e);
       }
     }
-    
+
     // Validate subscription data
     if (!subscriptionData.subscription || !subscriptionData.subscription.endpoint) {
       return {
@@ -2764,7 +2764,7 @@ class ApiService {
         message: 'Subscription verisi eksik veya geçersiz'
       };
     }
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/push-subscriptions/subscribe`, {
         method: 'POST',
@@ -2774,16 +2774,16 @@ class ApiService {
         },
         body: JSON.stringify(subscriptionData),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: data.message || 'Bildirim aboneliği başarısız'
         };
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error subscribing to push:', error);
@@ -2799,7 +2799,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.unsubscribeFromPush();
     }
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/push-subscriptions/unsubscribe`, {
         method: 'DELETE',
@@ -2820,7 +2820,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.sendTestNotification(userId);
     }
-    
+
     // Try to get userId from localStorage if not provided
     if (!userId) {
       try {
@@ -2829,7 +2829,7 @@ class ApiService {
           const user = JSON.parse(userData);
           userId = user?.id || user?.memberId || user?.uid;
         }
-        
+
         // Also try from window.userId
         if (!userId && typeof window !== 'undefined' && window.userId) {
           userId = window.userId;
@@ -2838,7 +2838,7 @@ class ApiService {
         console.warn('Could not get userId from localStorage:', e);
       }
     }
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/push-subscriptions/test`, {
         method: 'POST',
@@ -2848,16 +2848,16 @@ class ApiService {
         },
         body: JSON.stringify({ userId }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: data.message || 'Test bildirimi gönderilemedi'
         };
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error sending test notification:', error);
@@ -3156,13 +3156,13 @@ class ApiService {
         headers: this.getAuthHeaders(),
         body: JSON.stringify(ballotBoxData),
       });
-      
+
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
       }
-      
+
       return responseData;
     } catch (error) {
       console.error('Error in createBallotBox:', error);
@@ -3180,13 +3180,13 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(ballotBoxData),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -3199,13 +3199,13 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -3258,13 +3258,13 @@ class ApiService {
         headers: this.getAuthHeaders(),
         body: JSON.stringify(observerData),
       });
-      
+
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
       }
-      
+
       return responseData;
     } catch (error) {
       console.error('Error in createBallotBoxObserver:', error);
@@ -3282,13 +3282,13 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(observerData),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -3301,13 +3301,13 @@ class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(responseData.message || `HTTP ${response.status}: ${responseData.message || 'Unknown error'}`);
     }
-    
+
     return responseData;
   }
 
@@ -3852,6 +3852,41 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/youth-branch-management/${id}`, {
       method: 'DELETE',
     });
+    return response.json();
+  }
+
+  // Voter List API
+  static async uploadVoterList(file) {
+    if (USE_FIREBASE) {
+      return { success: false, message: 'Firebase tarafında henüz desteklenmiyor' };
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/voters/upload`, {
+      method: 'POST',
+      headers: {
+        // Content-Type: multipart/form-data otomatik eklenir
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Dosya yükleme hatası');
+    }
+    return response.json();
+  }
+
+  static async searchVoters(query) {
+    if (USE_FIREBASE) {
+      return { success: false, message: 'Firebase tarafında henüz desteklenmiyor' };
+    }
+    const response = await fetch(`${API_BASE_URL}/voters/search?q=${encodeURIComponent(query)}`, {
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Arama hatası');
     return response.json();
   }
 }

@@ -92,6 +92,8 @@ const permissionsRouter = require('./routes/permissions');
 console.log('Permissions router imported');
 const bylawsRouter = require('./routes/bylaws');
 console.log('Bylaws router imported');
+const votersRouter = require('./routes/voters');
+console.log('Voters router imported');
 const syncRouter = require('./routes/sync');
 console.log('Sync router imported');
 const pollsRouter = require('./routes/polls');
@@ -130,6 +132,7 @@ const Admin = require('./models/Admin');
 const MemberUser = require('./models/MemberUser');
 const PersonalDocument = require('./models/PersonalDocument');
 const PositionPermission = require('./models/PositionPermission');
+const Voter = require('./models/Voter');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -156,20 +159,20 @@ envOrigins.forEach(origin => {
 
 // CLEAN CORS - Tek ve basit yapılandırma
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     // No origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     // Allowed origins kontrolü
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
+
     // Development'da localhost'a izin ver
     if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       return callback(null, true);
     }
-    
+
     // Production'da sadece allowed origins
     console.warn('❌ CORS blocked origin:', origin);
     return callback(new Error('CORS blocked: ' + origin));
@@ -188,18 +191,19 @@ Promise.all([
   MemberUser.init(),
   PersonalDocument.init(),
   PositionPermission.init(),
+  Voter.init(),
   MemberDashboardAnalytics.init(),
   Notification.init(),
   ApiKey.initTable(),
   connectToMongoDB()
 ]).then(() => {
   console.log('All models and MongoDB initialized');
-  
+
   // Delete expired notifications on startup and then every 24 hours
   Notification.deleteExpired().catch(err => {
     console.warn('Error deleting expired notifications on startup:', err);
   });
-  
+
   setInterval(() => {
     Notification.deleteExpired().catch(err => {
       console.warn('Error deleting expired notifications:', err);
@@ -208,12 +212,12 @@ Promise.all([
 
   // Scheduled notification service for planned meetings and events
   const ScheduledNotificationService = require('./services/scheduledNotificationService');
-  
+
   // Check scheduled notifications on startup
   ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
     console.warn('Error checking scheduled notifications on startup:', err);
   });
-  
+
   // Check scheduled notifications every 5 minutes
   setInterval(() => {
     ScheduledNotificationService.checkAndSendScheduledNotifications().catch(err => {
@@ -244,7 +248,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind CSS için gerekli
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // React için gerekli
       imgSrc: ["'self'", "data:", "blob:", "https:"], // Firebase Storage ve data URI için
-      connectSrc: process.env.NODE_ENV === 'production' 
+      connectSrc: process.env.NODE_ENV === 'production'
         ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com", "https://*.onrender.com"]
         : ["'self'", "http://localhost:5000", "http://127.0.0.1:5000", "https://*.firebaseio.com", "https://*.googleapis.com"],
       fontSrc: ["'self'", "data:"],
@@ -298,7 +302,7 @@ app.use((req, res, next) => {
           requestId: correlationId,
         })
       );
-    } catch (_) {}
+    } catch (_) { }
   });
 
   next();
@@ -352,6 +356,7 @@ app.use('/api/messages', messagesRouter);
 app.use('/api/mongo-messages', mongoMessagesRouter);
 app.use('/api/permissions', permissionsRouter);
 app.use('/api/bylaws', bylawsRouter);
+app.use('/api/voters', votersRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/polls', pollsRouter);
 app.use('/api/financial', financialRouter);
@@ -377,7 +382,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 
 // Main page route
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Sekreterlik Uygulaması API Server',
     version: '1.0.0',
     endpoints: {
@@ -468,14 +473,14 @@ app.listen(PORT, () => {
             stdio: 'ignore'
           });
           proc.unref();
-        } catch (_) {}
+        } catch (_) { }
       }, 24 * 60 * 60 * 1000);
-      
+
       // Check and end expired polls every hour
       setInterval(() => {
         PollController.checkAndEndExpiredPolls();
       }, 60 * 60 * 1000);
-      
+
       // Run immediately on startup
       PollController.checkAndEndExpiredPolls();
     } catch (e) {
