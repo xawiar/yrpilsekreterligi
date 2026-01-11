@@ -3856,12 +3856,20 @@ class ApiService {
   }
 
   // Voter List API
-  static async uploadVoterList(file) {
+  static async uploadVoterList(files) {
     if (USE_FIREBASE) {
       return { success: false, message: 'Firebase tarafında henüz desteklenmiyor' };
     }
     const formData = new FormData();
-    formData.append('file', file);
+
+    // Tek dosya (file object) veya Çoklu dosya (FileList/Array) kontrolü
+    if (files instanceof FileList || Array.isArray(files)) {
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+    } else {
+      formData.append('files', files); // Tek dosya fallback
+    }
 
     const response = await fetch(`${API_BASE_URL}/voters/upload`, {
       method: 'POST',

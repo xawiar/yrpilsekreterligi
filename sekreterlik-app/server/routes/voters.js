@@ -21,128 +21,138 @@ const findKey = (row, possibleKeys) => {
     });
 };
 
-// Excel Yükleme Endpoint'i
-router.post('/upload', authenticateToken, isAdmin, upload.single('file'), async (req, res) => {
+// Excel ve CSV Yükleme Endpoint'i (Çoklu Dosya)
+router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'Dosya yüklenmedi' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ message: 'Hiçbir dosya yüklenmedi' });
         }
 
-        console.log('Dosya yükleniyor:', req.file.originalname, 'Boyut:', req.file.size);
+        console.log(`Toplam ${req.files.length} dosya yüklendi.`);
 
-        // Dosya türüne göre okuma ayarları
-        let readOpts = { type: 'buffer', cellDates: true };
+        let totalProcessed = 0;
+        let totalMatched = 0;
+        let totalModified = 0;
+        let totalUpserted = 0;
+        const errors = [];
+        const processedFiles = [];
 
-        // CSV ise delimiter tahmin etmeye çalışabiliriz ama xlsx genelde iyi iş çıkarır.
-        // Gerekirse raw: true ile okuyup kendimiz parse edebiliriz ama şimdilik standart okuma.
+        // Dosya döngüsü
+        for (const file of req.files) {
+            try {
+                console.log(`Dosya işleniyor: ${file.originalname} (${file.size} bytes)`);
 
-        const workbook = XLSX.read(req.file.buffer, readOpts);
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+                // Dosya uzantısı kontrolü
+                const isCsv = file.originalname.toLowerCase().endsWith('.csv');
 
-        // Header'ı temizlemek için range ayarı yapılabilir ama default bırakalım
-        const data = XLSX.utils.sheet_to_json(sheet);
+                let workbook;
+                // CSV için özel okuma denemesi
+                if (isCsv) {
+                    workbook = XLSX.read(file.buffer, { type: 'buffer', codepage: 65001, raw: true });
+                } else {
+                    workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: true });
+                }
 
-        if (!data || data.length === 0) {
-            return res.status(400).json({ message: 'Dosya boş veya veri okunamadı' });
-        }
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const data = XLSX.utils.sheet_to_json(sheet);
 
-        console.log('Okunan satır sayısı:', data.length);
-        if (data.length > 0) {
-            console.log('İlk satır örneği (Header tespiti için):', JSON.stringify(data[0]));
-        }
+                if (!data || data.length === 0) {
+                    errors.push(`${file.originalname}: Dosya boş veya veri okunamadı`);
+                    continue;
+                }
 
-        // Sütun Eşleştirme Tanımları (Genişletilmiş)
-        const mappings = {
-            tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO'],
-            fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad', 'İsim', 'Tam Ad'],
-            phone: ['Telefon', 'Cep Tel', 'Cep Telefonu', 'Tel', 'Gsm', 'Mobil'],
-            district: ['İlçe', 'İlcesi', 'Semt'],
-            region: ['Bölge', 'Bolge', 'Seçim Bölgesi'],
-            role: ['Görev', 'Gorev', 'Ünvan', 'Unvan', 'Pozisyon']
-        };
+                console.log(`${file.originalname}: ${data.length} satır okundu`);
 
-        // İlk veri satırından hangi key'in hangisine denk geldiğini bulalım
-        // (Her satırda keyler değişmez ama yine de sağlam olsun diye ilk satıra bakıp map çıkarıyoruz)
-        const firstRow = data[0];
-        const colMap = {};
+                // Sütun Eşleştirme Tanımları
+                const mappings = {
+                    tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO', 'KIMLIK NO', 'KIMLIKNO'],
+                    fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad', 'İsim', 'Tam Ad', 'ADI SOYADI', 'AD'],
+                    phone: ['Telefon', 'Cep Tel', 'Cep Telefonu', 'Tel', 'Gsm', 'Mobil', 'TELEFON', 'CEP'],
+                    district: ['İlçe', 'İlcesi', 'Semt', 'ILCE', 'İLÇE'],
+                    region: ['Bölge', 'Bolge', 'Seçim Bölgesi', 'BOLGE', 'BÖLGE'],
+                    role: ['Görev', 'Gorev', 'Ünvan', 'Unvan', 'Pozisyon', 'GÖREV', 'Sorumluluk']
+                };
 
-        // Her hedef alan için (tc, fullName vs.) dosyadaki karşılığını bul
-        for (const [targetField, possibleHeaders] of Object.entries(mappings)) {
-            const foundKey = findKey(firstRow, possibleHeaders);
-            if (foundKey) {
-                colMap[targetField] = foundKey;
+                const firstRow = data[0];
+                const colMap = {};
+                for (const [targetField, possibleHeaders] of Object.entries(mappings)) {
+                    const foundKey = findKey(firstRow, possibleHeaders);
+                    if (foundKey) colMap[targetField] = foundKey;
+                }
+
+                if (!colMap.tc) {
+                    errors.push(`${file.originalname}: TC sütunu bulunamadı. (Mevcut başlıklar: ${Object.keys(firstRow).join(', ')})`);
+                    continue;
+                }
+
+                // Bulk operations
+                const operations = data.map(row => {
+                    const tc = row[colMap.tc];
+                    if (!tc) return null;
+
+                    const cleanTC = String(tc).replace(/\D/g, '');
+                    if (cleanTC.length < 10) return null;
+
+                    const fullName = colMap.fullName ? row[colMap.fullName] : '';
+                    const phone = colMap.phone ? row[colMap.phone] : '';
+                    const district = colMap.district ? row[colMap.district] : '';
+                    const region = colMap.region ? row[colMap.region] : '';
+                    const role = colMap.role ? row[colMap.role] : '';
+
+                    return {
+                        updateOne: {
+                            filter: { tc: cleanTC },
+                            update: {
+                                $set: {
+                                    fullName: String(fullName || '').trim(),
+                                    phone: String(phone || '').replace(/\s+/g, '').trim(),
+                                    district: String(district || '').trim(),
+                                    region: String(region || '').trim(),
+                                    role: String(role || '').trim(),
+                                    sourceFile: file.originalname,
+                                    updatedAt: new Date()
+                                }
+                            },
+                            upsert: true
+                        }
+                    };
+                }).filter(op => op !== null);
+
+                if (operations.length > 0) {
+                    const result = await Voter.bulkWrite(operations);
+                    totalProcessed += operations.length;
+                    totalMatched += result.matchedCount || 0;
+                    totalModified += result.modifiedCount || 0;
+                    totalUpserted += result.upsertedCount || 0;
+                    processedFiles.push(file.originalname);
+                } else {
+                    errors.push(`${file.originalname}: Geçerli veri satırı bulunamadı`);
+                }
+
+            } catch (fileErr) {
+                console.error(`Dosya hatası (${file.originalname}):`, fileErr);
+                errors.push(`${file.originalname}: Hata (${fileErr.message})`);
             }
         }
 
-        console.log('Sütun Eşleştirmesi:', colMap);
-
-        if (!colMap.tc) {
-            const foundHeaders = Object.keys(firstRow).join(', ');
-            return res.status(400).json({
-                message: `Zorunlu 'TC' sütunu bulunamadı.`,
-                details: `Dosyadaki başlıklar: ${foundHeaders}. Lütfen sütun adını 'TC', 'T.C.' veya 'TC NO' olarak düzeltin.`
-            });
-        }
-
-        // Bulk operations hazırlığı
-        const operations = data.map((row, index) => {
-            // Map kullanarak değerleri al
-            const tc = row[colMap.tc]; // TC zorunlu
-
-            // TC yoksa bu satırı atla
-            if (!tc) return null;
-
-            // Diğer alanları al (varsa)
-            const fullName = colMap.fullName ? row[colMap.fullName] : '';
-            const phone = colMap.phone ? row[colMap.phone] : '';
-            const district = colMap.district ? row[colMap.district] : '';
-            const region = colMap.region ? row[colMap.region] : '';
-            const role = colMap.role ? row[colMap.role] : '';
-
-            // TC temizle (sadece rakam kalsın)
-            const cleanTC = String(tc).replace(/\D/g, '');
-
-            if (cleanTC.length < 10) return null; // Geçersiz TC
-
-            return {
-                updateOne: {
-                    filter: { tc: cleanTC },
-                    update: {
-                        $set: {
-                            fullName: String(fullName || '').trim(),
-                            phone: String(phone || '').replace(/\s+/g, '').trim(), // Telefonu temizle
-                            district: String(district || '').trim(),
-                            region: String(region || '').trim(),
-                            role: String(role || '').trim(),
-                            sourceFile: req.file.originalname,
-                            updatedAt: new Date()
-                        }
-                    },
-                    upsert: true
-                }
-            };
-        }).filter(op => op !== null);
-
-        if (operations.length > 0) {
-            const result = await Voter.bulkWrite(operations);
-            console.log('BulkWrite Sonucu:', result);
-
-            res.json({
-                message: 'İşlem başarılı',
-                // Mongoose bulkWrite result yapısı
-                matchedCount: result.matchedCount || 0,
-                modifiedCount: result.modifiedCount || 0,
-                upsertedCount: result.upsertedCount || 0,
-                totalProcessed: operations.length
-            });
-        } else {
-            res.status(400).json({ message: 'İşlenecek geçerli veri bulunamadı. TC sütunlarını kontrol edin.' });
-        }
+        res.json({
+            message: processedFiles.length > 0 ? `${processedFiles.length} dosya işlendi` : 'Hiçbir dosya başarıyla işlenemedi',
+            details: {
+                processedFiles,
+                errors
+            },
+            stats: {
+                matchedCount: totalMatched,
+                modifiedCount: totalModified,
+                upsertedCount: totalUpserted,
+                totalProcessed
+            }
+        });
 
     } catch (error) {
-        console.error('Excel upload error:', error);
-        res.status(500).json({ message: 'Dosya işlenirken hata oluştu', error: error.message });
+        console.error('General upload error:', error);
+        res.status(500).json({ message: 'Yükleme sırasında hata oluştu', error: error.message });
     }
 });
 

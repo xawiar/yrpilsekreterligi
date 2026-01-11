@@ -4,7 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 
 const VoterListSettings = () => {
     const { showToast } = useToast();
-    const [file, setFile] = useState(null);
+    const [files, setFiles] = useState(null); // Tek dosya yerine files listesi
     const [uploading, setUploading] = useState(false);
     const [uploadResult, setUploadResult] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -13,25 +13,35 @@ const VoterListSettings = () => {
 
     // Dosya seçme handler
     const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            setFiles(e.target.files);
             setUploadResult(null); // Önceki sonucu temizle
         }
     };
 
     // Dosya yükleme handler
     const handleUpload = async () => {
-        if (!file) {
-            showToast('Lütfen bir dosya seçin', 'error');
+        if (!files || files.length === 0) {
+            showToast('Lütfen en az bir dosya seçin', 'error');
             return;
         }
 
         setUploading(true);
         try {
-            const result = await ApiService.uploadVoterList(file);
+            // ApiService artık FileList alıyor
+            const result = await ApiService.uploadVoterList(files);
             setUploadResult(result);
-            showToast('Seçmen listesi başarıyla yüklendi', 'success');
-            setFile(null); // Başarılıysa dosya seçimini temizle
+
+            if (result.details && result.details.errors && result.details.errors.length > 0) {
+                showToast(`${result.details.processedFiles.length} dosya işlendi, ${result.details.errors.length} dosyada hata var.`, 'warning');
+            } else {
+                showToast('Tüm dosyalar başarıyla yüklendi ve işlendi', 'success');
+            }
+
+            setFiles(null); // İşlem sonrası dosya seçimini temizle
+            // Input değerini sıfırlamak için (re-renderda file input value tutmaz ama manuel temizlemek iyidir)
+            document.getElementById('file-upload').value = "";
+
         } catch (error) {
             console.error('Upload error:', error);
             showToast(error.message, 'error');
@@ -68,8 +78,8 @@ const VoterListSettings = () => {
                         Seçmen Listesi Yükleme
                     </h3>
                     <div className="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
-                        <p>Excel dosyasını (.xlsx) yükleyerek seçmen verilerini güncelleyebilirsiniz.</p>
-                        <p className="mt-1 text-xs">Gerekli Sütunlar: TC, İsim Soyisim, Telefon, Bölge, İlçe, Görev</p>
+                        <p>Birden fazla Excel (.xlsx, .xls) veya CSV dosyasını aynı anda yükleyebilirsiniz.</p>
+                        <p className="mt-1 text-xs">Gerekli Sütunlar: TC (Zorunlu), İsim Soyisim, Telefon, Bölge, İlçe, Görev</p>
                     </div>
 
                     <div className="mt-5">
@@ -96,7 +106,7 @@ const VoterListSettings = () => {
                                         </svg>
                                         <div className="text-sm text-gray-600 dark:text-gray-400">
                                             <span className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
-                                                Dosya Seç
+                                                Dosyaları Seç
                                             </span>
                                             <input
                                                 id="file-upload"
@@ -104,12 +114,13 @@ const VoterListSettings = () => {
                                                 type="file"
                                                 className="sr-only"
                                                 accept=".xlsx, .xls, .csv"
+                                                multiple
                                                 onChange={handleFileChange}
                                             />
                                             <span className="pl-1">veya sürükle bırak</span>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {file ? `Seçilen: ${file.name}` : "XLSX, XLS veya CSV (Max 10MB)"}
+                                            {files && files.length > 0 ? `${files.length} dosya seçildi` : "XLSX, XLS veya CSV (Çoklu seçim)"}
                                         </p>
                                     </div>
                                 </label>
@@ -118,8 +129,8 @@ const VoterListSettings = () => {
                             <button
                                 type="button"
                                 onClick={handleUpload}
-                                disabled={!file || uploading}
-                                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${(!file || uploading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={!files || uploading}
+                                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${(!files || uploading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {uploading ? (
                                     <>
@@ -127,31 +138,43 @@ const VoterListSettings = () => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Yükleniyor...
+                                        İşleniyor...
                                     </>
                                 ) : 'Yükle ve İşle'}
                             </button>
                         </div>
 
                         {uploadResult && (
-                            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-md border border-green-200 dark:border-green-800">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
-                                            İşlem Başarılı
-                                        </h3>
-                                        <div className="mt-2 text-sm text-green-700 dark:text-green-300">
-                                            <p>Toplam İşlenen: {uploadResult.totalProcessed}</p>
-                                            <p>Yeni Eklenen: {uploadResult.upsertedCount}</p>
-                                            <p>Güncellenen: {uploadResult.modifiedCount}</p>
+                            <div className="mt-4">
+                                {uploadResult.stats && (
+                                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-md border border-green-200 dark:border-green-800">
+                                        <div className="flex">
+                                            <div className="ml-3">
+                                                <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                    İşlem Özeti
+                                                </h3>
+                                                <div className="mt-2 text-sm text-green-700 dark:text-green-300">
+                                                    <p>Toplam Kayıt: {uploadResult.stats.totalProcessed}</p>
+                                                    <p>Yeni Eklenen: {uploadResult.stats.upsertedCount}</p>
+                                                    <p>Güncellenen: {uploadResult.stats.modifiedCount}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
+
+                                {uploadResult.details && uploadResult.details.errors && uploadResult.details.errors.length > 0 && (
+                                    <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-md border border-red-200 dark:border-red-800">
+                                        <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                                            Hatalar / Uyarılar
+                                        </h3>
+                                        <ul className="list-disc pl-5 text-sm text-red-700 dark:text-red-300 space-y-1">
+                                            {uploadResult.details.errors.map((err, idx) => (
+                                                <li key={idx}>{err}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
