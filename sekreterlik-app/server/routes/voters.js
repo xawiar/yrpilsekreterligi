@@ -262,6 +262,16 @@ router.get('/search', authenticateToken, async (req, res) => {
             return res.json([]);
         }
 
+        // DB Bağlantı Kontrolü
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            console.error('[Search] MongoDB bağlantısı yok! State:', mongoose.connection.readyState);
+            return res.status(503).json({
+                message: 'Veritabanı bağlantısı kurulamadı. Lütfen MONGODB_URI ayarını kontrol edin.',
+                dbState: mongoose.connection.readyState
+            });
+        }
+
         const searchRegex = new RegExp(q, 'i');
 
         // Hem TC, hem İsim, hem Telefon araması
@@ -271,13 +281,20 @@ router.get('/search', authenticateToken, async (req, res) => {
                 { fullName: searchRegex },
                 { phone: searchRegex }
             ]
-        }).limit(50);
+        })
+            .limit(50)
+            .sort({ fullName: 1 }) // İsme göre sırala
+            .lean(); // Daha hızlı performans için
 
         res.json(voters);
 
     } catch (error) {
         console.error('Search error:', error);
-        res.status(500).json({ message: 'Arama sırasında hata oluştu' });
+        res.status(500).json({
+            message: 'Arama sırasında hata oluştu',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
