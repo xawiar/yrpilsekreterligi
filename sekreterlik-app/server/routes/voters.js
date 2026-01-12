@@ -77,16 +77,39 @@ router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), a
                 const isCsv = file.originalname.toLowerCase().endsWith('.csv');
 
                 let workbook;
-                // CSV için özel okuma denemesi (path kullanarak)
+                let data;
+                let usedEncoding = 'UTF-8';
+
+                // 1. İlk Deneme: UTF-8 (codepage: 65001)
                 if (isCsv) {
                     workbook = XLSX.readFile(file.path, { type: 'file', codepage: 65001, raw: true });
                 } else {
                     workbook = XLSX.readFile(file.path, { type: 'file', cellDates: true });
                 }
 
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                const data = XLSX.utils.sheet_to_json(sheet);
+                let sheetName = workbook.SheetNames[0];
+                let sheet = workbook.Sheets[sheetName];
+                data = XLSX.utils.sheet_to_json(sheet);
+
+                // 2. Kontrol ve İkinci Deneme: Windows-1254 (Turkish)
+                // Eğer data boşsa veya başlıklar bozuksa ( karakteri varsa) veya TC bulunamazsa
+                if (isCsv && data && data.length > 0) {
+                    const firstRowKeys = Object.keys(data[0]).join('');
+                    const hasReplacementChar = firstRowKeys.includes('') || firstRowKeys.includes('');
+
+                    // Basit bir kontrol: TC sütununu UTF-8 ile bulamıyorsak
+                    const tempFirstRow = data[0];
+                    const tempTcFound = findKey(tempFirstRow, ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO']);
+
+                    if (hasReplacementChar || !tempTcFound) {
+                        console.log(`[Encoding] ${file.originalname} dosyasında UTF-8 sorunu algılandı, Windows-1254 deneniyor...`);
+                        workbook = XLSX.readFile(file.path, { type: 'file', codepage: 1254, raw: true });
+                        sheetName = workbook.SheetNames[0];
+                        sheet = workbook.Sheets[sheetName];
+                        data = XLSX.utils.sheet_to_json(sheet);
+                        usedEncoding = 'Windows-1254';
+                    }
+                }
 
                 if (!data || data.length === 0) {
                     report.message = 'Dosya boş veya veri okunamadı';
