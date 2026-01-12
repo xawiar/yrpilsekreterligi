@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const XLSX = require('xlsx');
 const Voter = require('../models/Voter');
-const { authenticateToken, isAdmin } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const fs = require('fs');
 const path = require('path');
 
@@ -41,7 +41,7 @@ const findKey = (row, possibleKeys) => {
 };
 
 // Excel ve CSV Yükleme Endpoint'i (Çoklu Dosya)
-router.post('/upload', authenticateToken, isAdmin, upload.array('files'), async (req, res) => {
+router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: 'Hiçbir dosya yüklenmedi' });
