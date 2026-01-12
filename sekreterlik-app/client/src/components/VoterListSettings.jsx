@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
+import * as XLSX from 'xlsx';
 
 const VoterListSettings = () => {
     const { showToast } = useToast();
@@ -11,11 +12,52 @@ const VoterListSettings = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
 
+    // Preview State
+    const [previewData, setPreviewData] = useState([]);
+    const [previewColumns, setPreviewColumns] = useState([]);
+    const [previewFileName, setPreviewFileName] = useState('');
+
     // Dosya seçme handler
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            setFiles(e.target.files);
+            const selectedFiles = e.target.files;
+            setFiles(selectedFiles);
             setUploadResult(null); // Önceki sonucu temizle
+
+            // PREVIEW İÇİN İLK DOSYAYI OKU
+            try {
+                const firstFile = selectedFiles[0];
+                setPreviewFileName(firstFile.name);
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const bstr = evt.target.result;
+                    let workbook;
+
+                    // CSV Encoding kontrolü için basit mantık
+                    if (firstFile.name.toLowerCase().endsWith('.csv')) {
+                        workbook = XLSX.read(bstr, { type: 'binary', codepage: 65001 }); // UTF-8 dene
+                    } else {
+                        workbook = XLSX.read(bstr, { type: 'binary' });
+                    }
+
+                    const wsname = workbook.SheetNames[0];
+                    const ws = workbook.Sheets[wsname];
+                    const data = XLSX.utils.sheet_to_json(ws, { header: 1 }); // Array of arrays
+
+                    if (data && data.length > 0) {
+                        const headers = data[0];
+                        const rows = data.slice(1, 21); // İlk 20 satır (Header hariç)
+
+                        setPreviewColumns(headers);
+                        setPreviewData(rows);
+                    }
+                };
+                reader.readAsBinaryString(firstFile);
+
+            } catch (err) {
+                console.error("Preview error:", err);
+            }
         }
     };
 
@@ -31,6 +73,7 @@ const VoterListSettings = () => {
             // ApiService artık FileList alıyor
             const result = await ApiService.uploadVoterList(files);
             setUploadResult(result);
+            setPreviewData([]); // Upload başarılıysa preview'i temizle
 
             if (result.globalStats && result.globalStats.skippedRows > 0) {
                 showToast(`İşlem tamamlandı ancak ${result.globalStats.skippedRows} kayıt atlandı/hatalı.`, 'warning');
@@ -145,6 +188,42 @@ const VoterListSettings = () => {
                             </button>
                         </div>
 
+                        {/* PREVIEW SECTION */}
+                        {previewData.length > 0 && (
+                            <div className="mt-6">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-2">
+                                    Dosya Önizlemesi (İlk 20 Satır) - {previewFileName}
+                                </h4>
+                                <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-md">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-700/50">
+                                            <tr>
+                                                {previewColumns.map((col, idx) => (
+                                                    <th key={idx} scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                                                        {col}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {previewData.map((row, rIdx) => (
+                                                <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/30'}>
+                                                    {previewColumns.map((col, cIdx) => (
+                                                        <td key={cIdx} className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                                                            {row[cIdx] || ''}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    * Bu sadece önizlemedir. Yükle butonuna basana kadar veriler kaydedilmez.
+                                </p>
+                            </div>
+                        )}
+
                         {/* DETAYLI RAPORLAMA UI */}
                         {uploadResult && (
                             <div className="mt-6 space-y-4">
@@ -178,17 +257,17 @@ const VoterListSettings = () => {
                                     <div
                                         key={idx}
                                         className={`p-4 rounded-md border text-sm ${report.status === 'success'
-                                                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                                                : report.status === 'warning'
-                                                    ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-                                                    : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                                            ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                                            : report.status === 'warning'
+                                                ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                                                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
                                             }`}
                                     >
                                         <div className="flex justify-between items-start">
                                             <h5 className="font-bold text-gray-900 dark:text-gray-100">{report.fileName}</h5>
                                             <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${report.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
-                                                    report.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                                                        'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                                                report.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
+                                                    'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
                                                 }`}>
                                                 {report.status === 'success' ? 'Başarılı' : report.status === 'warning' ? 'Uyarı' : 'Hata'}
                                             </span>
