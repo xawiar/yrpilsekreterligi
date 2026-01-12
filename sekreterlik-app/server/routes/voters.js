@@ -120,17 +120,18 @@ router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), a
                 report.totalRows = data.length;
 
                 // Sütun Eşleştirme Tanımları
+                // Sütun Eşleştirme Tanımları
                 const mappings = {
-                    tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO', 'KIMLIK NO', 'KIMLIKNO'],
+                    tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO', 'KIMLIK NO', 'KIMLIKNO', 'TC KİMLİK NO', 'TC KIMLIK NO'],
                     fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad Soyadı', 'Isim Soyisim', 'Tam Ad', 'ADI SOYADI', 'AD SOYAD'],
-                    firstName: ['Ad', 'İsim', 'Adi', 'Isim', 'AD', 'ISIM'],
-                    lastName: ['Soyad', 'Soyisim', 'Soyadı', 'Soyadi', 'SOYAD', 'SOYISIM'],
+                    firstName: ['Ad', 'İsim', 'Adi', 'Isim', 'AD', 'ISIM', 'ADI'],
+                    lastName: ['Soyad', 'Soyisim', 'Soyadı', 'Soyadi', 'SOYAD', 'SOYISIM', 'SOYADI'],
                     phone: ['Telefon', 'Cep Tel', 'Cep Telefonu', 'Tel', 'Gsm', 'Mobil', 'TELEFON', 'CEP'],
-                    district: ['İlçe', 'İlcesi', 'Semt', 'ILCE', 'İLÇE'],
-                    province: ['İl', 'Sehir', 'Vilayet', 'Kent', 'IL', 'SEHIR'],
+                    district: ['İlçe', 'İlcesi', 'Semt', 'ILCE', 'İLÇE', 'NÜFUS İLÇESİ', 'NUFUS ILCESI', 'ADRES İLCE ADI', 'ADRES ILCE ADI'],
+                    province: ['İl', 'Sehir', 'Vilayet', 'Kent', 'IL', 'SEHIR', 'NÜFUS İLİ', 'NUFUS ILI', 'ADRES İL ADI', 'ADRES IL ADI'],
                     village: ['Köy', 'Koy', 'Köyü', 'Koyu', 'KOY', 'KOYU'],
-                    neighborhood: ['Mahalle', 'Mah', 'Mahallesi', 'MAHALLE', 'MAH'],
-                    birthDate: ['Doğum Tarihi', 'D.Tarihi', 'DTarihi', 'DogumTarihi', 'DOGUM TARIHI', 'DOGUMTARIHI'],
+                    neighborhood: ['Mahalle', 'Mah', 'Mahallesi', 'MAHALLE', 'MAH', 'ADRES MUHTARLIK ADI', 'MUHTARLIK ADI', 'MAHALLE/KÖY'],
+                    birthDate: ['Doğum Tarihi', 'D.Tarihi', 'DTarihi', 'DogumTarihi', 'DOGUM TARIHI', 'DOGUMTARIHI', 'DOĞUM TARİHİ'],
                     region: ['Bölge', 'Bolge', 'Seçim Bölgesi', 'BOLGE', 'BÖLGE'],
                     role: ['Görev', 'Gorev', 'Ünvan', 'Unvan', 'Pozisyon', 'GÖREV', 'Sorumluluk']
                 };
