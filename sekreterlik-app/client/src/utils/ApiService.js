@@ -3857,9 +3857,6 @@ class ApiService {
 
   // Voter List API
   static async uploadVoterList(files) {
-    if (USE_FIREBASE) {
-      return { success: false, message: 'Firebase tarafında henüz desteklenmiyor' };
-    }
     const formData = new FormData();
 
     // Tek dosya (file object) veya Çoklu dosya (FileList/Array) kontrolü
@@ -3888,9 +3885,6 @@ class ApiService {
   }
 
   static async searchVoters(query) {
-    if (USE_FIREBASE) {
-      return { success: false, message: 'Firebase tarafında henüz desteklenmiyor' };
-    }
     const response = await fetch(`${API_BASE_URL}/voters/search?q=${encodeURIComponent(query)}`, {
       headers: this.getAuthHeaders()
     });
