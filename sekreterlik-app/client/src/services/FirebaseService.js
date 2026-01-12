@@ -642,6 +642,141 @@ class FirebaseService {
       return false;
     }
   }
+
+  /**
+   * Seçmen listesi - Toplu yükleme (Excel/CSV)
+   * @param {Array} voters - Seçmen verileri array'i
+   * @returns {Promise<Object>} İşlem sonucu
+   */
+  static async uploadVoters(voters) {
+    try {
+      const isAuthenticated = await this.checkAuth();
+      if (!isAuthenticated) {
+        throw new Error('Kullanıcı giriş yapmamış. Lütfen önce giriş yapın.');
+      }
+
+      const collectionName = 'voters';
+      const collectionRef = collection(db, collectionName);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      // Batch işlemleri için (Firestore batch limit: 500)
+      const batchSize = 500;
+      for (let i = 0; i < voters.length; i += batchSize) {
+        const batch = voters.slice(i, i + batchSize);
+        
+        // Her voter için upsert işlemi
+        for (const voter of batch) {
+          try {
+            const tc = String(voter.tc || '').replace(/\D/g, '');
+            if (!tc || tc.length < 10) {
+              errorCount++;
+              errors.push(`Geçersiz TC: ${voter.tc}`);
+              continue;
+            }
+
+            // TC'yi doc ID olarak kullan (unique)
+            const docRef = doc(collectionRef, tc);
+            
+            const voterData = {
+              tc: tc,
+              fullName: String(voter.fullName || '').trim(),
+              phone: String(voter.phone || '').replace(/\s+/g, '').trim(),
+              district: String(voter.district || '').trim(),
+              region: String(voter.region || '').trim(),
+              role: String(voter.role || '').trim(),
+              province: String(voter.province || '').trim(),
+              city: String(voter.city || '').trim(),
+              village: String(voter.village || '').trim(),
+              neighborhood: String(voter.neighborhood || '').trim(),
+              birthDate: String(voter.birthDate || '').trim(),
+              sourceFile: voter.sourceFile || '',
+              updatedAt: serverTimestamp(),
+              _collection: collectionName,
+              _updatedBy: auth.currentUser?.uid || null
+            };
+
+            // Eğer createdAt yoksa ekle
+            const existingDoc = await getDoc(docRef);
+            if (!existingDoc.exists()) {
+              voterData.createdAt = serverTimestamp();
+              voterData._createdBy = auth.currentUser?.uid || null;
+            }
+
+            await setDoc(docRef, voterData, { merge: true });
+            successCount++;
+          } catch (err) {
+            errorCount++;
+            errors.push(`TC ${voter.tc}: ${err.message}`);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        globalStats: {
+          totalProcessed: voters.length,
+          upsertedCount: successCount,
+          skippedRows: errorCount
+        },
+        errors: errors.slice(0, 10) // İlk 10 hatayı göster
+      };
+    } catch (error) {
+      console.error('Firebase voter upload error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Seçmen arama
+   * @param {string} query - Arama sorgusu (TC, İsim, Telefon)
+   * @returns {Promise<Array>} Bulunan seçmenler
+   */
+  static async searchVoters(query) {
+    try {
+      const isAuthenticated = await this.checkAuth();
+      if (!isAuthenticated) {
+        throw new Error('Kullanıcı giriş yapmamış. Lütfen önce giriş yapın.');
+      }
+
+      if (!query || query.length < 2) {
+        return [];
+      }
+
+      const collectionName = 'voters';
+      const collectionRef = collection(db, collectionName);
+      
+      const searchLower = query.toLowerCase();
+      const allVoters = await getDocs(collectionRef);
+      
+      const results = [];
+      allVoters.forEach((doc) => {
+        const data = doc.data();
+        const tc = (data.tc || '').toLowerCase();
+        const fullName = (data.fullName || '').toLowerCase();
+        const phone = (data.phone || '').toLowerCase();
+        
+        if (tc.includes(searchLower) || 
+            fullName.includes(searchLower) || 
+            phone.includes(searchLower)) {
+          results.push({
+            id: doc.id,
+            ...data,
+            _id: doc.id // MongoDB uyumluluğu için
+          });
+        }
+      });
+
+      // İsme göre sırala ve limit uygula
+      results.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+      return results.slice(0, 50);
+    } catch (error) {
+      console.error('Firebase voter search error:', error);
+      throw error;
+    }
+  }
 }
 
 export default FirebaseService;

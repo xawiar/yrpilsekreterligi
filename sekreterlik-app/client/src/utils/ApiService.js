@@ -3857,6 +3857,155 @@ class ApiService {
 
   // Voter List API
   static async uploadVoterList(files) {
+    if (USE_FIREBASE) {
+      // Firebase kullanılıyorsa frontend'te Excel parse edip Firebase'e kaydet
+      const FirebaseService = (await import('../services/FirebaseService')).default;
+      const XLSX = await import('xlsx');
+      
+      const allVoters = [];
+      const fileReports = [];
+      let globalStats = {
+        totalProcessed: 0,
+        upsertedCount: 0,
+        skippedRows: 0
+      };
+
+      // Dosya listesini array'e çevir
+      const fileArray = files instanceof FileList 
+        ? Array.from(files) 
+        : Array.isArray(files) 
+          ? files 
+          : [files];
+
+      for (const file of fileArray) {
+        const report = {
+          fileName: file.name,
+          status: 'error',
+          message: '',
+          detectedColumns: {},
+          totalRows: 0,
+          validRows: 0,
+          skippedRows: 0,
+          sampleIgnoredReason: null
+        };
+
+        try {
+          const isCsv = file.name.toLowerCase().endsWith('.csv');
+          const arrayBuffer = await file.arrayBuffer();
+          
+          let workbook;
+          if (isCsv) {
+            workbook = XLSX.read(arrayBuffer, { type: 'array', codepage: 65001, raw: true });
+          } else {
+            workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+          }
+
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const data = XLSX.utils.sheet_to_json(sheet);
+
+          if (!data || data.length === 0) {
+            report.message = 'Dosya boş veya veri okunamadı';
+            fileReports.push(report);
+            continue;
+          }
+
+          report.totalRows = data.length;
+
+          // Sütun eşleştirme
+          const mappings = {
+            tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO', 'KIMLIK NO', 'KIMLIKNO'],
+            fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad', 'İsim', 'Tam Ad', 'ADI SOYADI', 'AD'],
+            phone: ['Telefon', 'Cep Tel', 'Cep Telefonu', 'Tel', 'Gsm', 'Mobil', 'TELEFON', 'CEP'],
+            district: ['İlçe', 'İlcesi', 'Semt', 'ILCE', 'İLÇE'],
+            region: ['Bölge', 'Bolge', 'Seçim Bölgesi', 'BOLGE', 'BÖLGE'],
+            role: ['Görev', 'Gorev', 'Ünvan', 'Unvan', 'Pozisyon', 'GÖREV', 'Sorumluluk']
+          };
+
+          const findKey = (row, possibleKeys) => {
+            const rowKeys = Object.keys(row);
+            return rowKeys.find(key => {
+              const normalizedKey = key.toLowerCase().replace(/\./g, '').replace(/\s+/g, '').trim();
+              return possibleKeys.some(pK => normalizedKey === pK.toLowerCase().replace(/\./g, '').replace(/\s+/g, '').trim()) || possibleKeys.includes(key);
+            });
+          };
+
+          const firstRow = data[0];
+          const colMap = {};
+          for (const [targetField, possibleHeaders] of Object.entries(mappings)) {
+            const foundKey = findKey(firstRow, possibleHeaders);
+            if (foundKey) colMap[targetField] = foundKey;
+          }
+
+          report.detectedColumns = colMap;
+
+          if (!colMap.tc) {
+            report.message = `TC sütunu bulunamadı. (Mevcut başlıklar: ${Object.keys(firstRow).join(', ')})`;
+            fileReports.push(report);
+            continue;
+          }
+
+          // Verileri parse et
+          const fileVoters = [];
+          const errors = [];
+          
+          data.forEach((row, index) => {
+            const tc = row[colMap.tc];
+            if (!tc) {
+              errors.push(`Satır ${index + 1}: TC değeri boş`);
+              return;
+            }
+
+            const cleanTC = String(tc).replace(/\D/g, '');
+            if (cleanTC.length < 10) {
+              errors.push(`Satır ${index + 1}: TC geçersiz (${tc})`);
+              return;
+            }
+
+            fileVoters.push({
+              tc: cleanTC,
+              fullName: colMap.fullName ? row[colMap.fullName] : '',
+              phone: colMap.phone ? row[colMap.phone] : '',
+              district: colMap.district ? row[colMap.district] : '',
+              region: colMap.region ? row[colMap.region] : '',
+              role: colMap.role ? row[colMap.role] : '',
+              sourceFile: file.name
+            });
+          });
+
+          report.validRows = fileVoters.length;
+          report.skippedRows = errors.length;
+          if (errors.length > 0) {
+            report.sampleIgnoredReason = errors[0];
+          }
+
+          allVoters.push(...fileVoters);
+          globalStats.totalProcessed += fileVoters.length;
+          globalStats.skippedRows += report.skippedRows;
+
+          report.status = 'success';
+          report.message = `${fileVoters.length} kayıt işlendi.`;
+        } catch (error) {
+          report.message = `Hata: ${error.message}`;
+        }
+
+        fileReports.push(report);
+      }
+
+      // Tüm voter'ları Firebase'e yükle
+      if (allVoters.length > 0) {
+        const result = await FirebaseService.uploadVoters(allVoters);
+        globalStats.upsertedCount = result.globalStats.upsertedCount;
+      }
+
+      return {
+        message: 'İşlem tamamlandı',
+        globalStats,
+        fileReports
+      };
+    }
+
+    // Backend kullanımı (MongoDB)
     const formData = new FormData();
 
     // Tek dosya (file object) veya Çoklu dosya (FileList/Array) kontrolü
@@ -3885,6 +4034,13 @@ class ApiService {
   }
 
   static async searchVoters(query) {
+    if (USE_FIREBASE) {
+      // Firebase kullanılıyorsa Firebase'den ara
+      const FirebaseService = (await import('../services/FirebaseService')).default;
+      return await FirebaseService.searchVoters(query);
+    }
+
+    // Backend kullanımı (MongoDB)
     const response = await fetch(`${API_BASE_URL}/voters/search?q=${encodeURIComponent(query)}`, {
       headers: this.getAuthHeaders()
     });
