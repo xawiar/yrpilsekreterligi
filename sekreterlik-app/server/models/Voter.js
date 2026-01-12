@@ -71,4 +71,46 @@ const voterSchema = new mongoose.Schema({
 // Arama performansı için text index
 voterSchema.index({ fullName: 'text', tc: 'text', phone: 'text' });
 
-module.exports = mongoose.model('Voter', voterSchema);
+const Voter = mongoose.model('Voter', voterSchema);
+
+// Init metodu - MongoDB bağlantısını kontrol eder
+Voter.init = async () => {
+  try {
+    // MongoDB bağlantısı kontrolü
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ Voter model: MongoDB bağlantısı aktif');
+      return Promise.resolve();
+    } else {
+      console.warn('⚠️ Voter model: MongoDB bağlantısı bekleniyor...');
+      // Bağlantı kurulana kadar bekle (max 10 saniye)
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('MongoDB bağlantısı zaman aşımına uğradı'));
+        }, 10000);
+        
+        const checkConnection = () => {
+          if (mongoose.connection.readyState === 1) {
+            clearTimeout(timeout);
+            console.log('✅ Voter model: MongoDB bağlantısı kuruldu');
+            resolve();
+          } else {
+            setTimeout(checkConnection, 500);
+          }
+        };
+        
+        mongoose.connection.once('connected', () => {
+          clearTimeout(timeout);
+          console.log('✅ Voter model: MongoDB bağlantısı kuruldu (event)');
+          resolve();
+        });
+        
+        checkConnection();
+      });
+    }
+  } catch (error) {
+    console.error('❌ Voter model init hatası:', error);
+    return Promise.reject(error);
+  }
+};
+
+module.exports = Voter;

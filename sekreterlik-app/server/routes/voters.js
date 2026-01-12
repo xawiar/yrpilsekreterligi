@@ -43,6 +43,16 @@ const findKey = (row, possibleKeys) => {
 // Excel ve CSV Yükleme Endpoint'i (Çoklu Dosya)
 router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), async (req, res) => {
     try {
+        // MongoDB bağlantı kontrolü
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            console.error('[Upload] MongoDB bağlantısı yok! State:', mongoose.connection.readyState);
+            return res.status(503).json({
+                message: 'Veritabanı bağlantısı kurulamadı. Lütfen MONGODB_URI ayarını kontrol edin.',
+                dbState: mongoose.connection.readyState
+            });
+        }
+
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: 'Hiçbir dosya yüklenmedi' });
         }
