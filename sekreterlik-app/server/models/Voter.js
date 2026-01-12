@@ -35,6 +35,29 @@ const voterSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    // ---- YENİ ALANLAR ----
+    province: {
+        type: String,
+        trim: true,
+        index: true
+    },
+    city: { // İl (Şehir)
+        type: String,
+        trim: true
+    },
+    village: { // Köy
+        type: String,
+        trim: true
+    },
+    neighborhood: { // Mahalle
+        type: String,
+        trim: true
+    },
+    birthDate: {
+        type: String,
+        trim: true
+    },
+    // ----------------------
     sourceFile: {
         type: String,
         trim: true

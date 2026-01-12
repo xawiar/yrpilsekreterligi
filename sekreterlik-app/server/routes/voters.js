@@ -99,9 +99,15 @@ router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), a
                 // Sütun Eşleştirme Tanımları
                 const mappings = {
                     tc: ['TC', 'T.C.', 'TC NO', 'TC KİMLİK', 'TCKİMLİK', 'KİMLİK NO', 'TCNO', 'KIMLIK NO', 'KIMLIKNO'],
-                    fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad', 'İsim', 'Tam Ad', 'ADI SOYADI', 'AD'],
+                    fullName: ['İsim Soyisim', 'Ad Soyad', 'Adı Soyadı', 'Ad Soyadı', 'Isim Soyisim', 'Tam Ad', 'ADI SOYADI', 'AD SOYAD'],
+                    firstName: ['Ad', 'İsim', 'Adi', 'Isim', 'AD', 'ISIM'],
+                    lastName: ['Soyad', 'Soyisim', 'Soyadı', 'Soyadi', 'SOYAD', 'SOYISIM'],
                     phone: ['Telefon', 'Cep Tel', 'Cep Telefonu', 'Tel', 'Gsm', 'Mobil', 'TELEFON', 'CEP'],
                     district: ['İlçe', 'İlcesi', 'Semt', 'ILCE', 'İLÇE'],
+                    province: ['İl', 'Sehir', 'Vilayet', 'Kent', 'IL', 'SEHIR'],
+                    village: ['Köy', 'Koy', 'Köyü', 'Koyu', 'KOY', 'KOYU'],
+                    neighborhood: ['Mahalle', 'Mah', 'Mahallesi', 'MAHALLE', 'MAH'],
+                    birthDate: ['Doğum Tarihi', 'D.Tarihi', 'DTarihi', 'DogumTarihi', 'DOGUM TARIHI', 'DOGUMTARIHI'],
                     region: ['Bölge', 'Bolge', 'Seçim Bölgesi', 'BOLGE', 'BÖLGE'],
                     role: ['Görev', 'Gorev', 'Ünvan', 'Unvan', 'Pozisyon', 'GÖREV', 'Sorumluluk']
                 };
@@ -136,9 +142,20 @@ router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), a
                         return { error: `Satır ${index + 1}: TC geçersiz (${tc} -> ${cleanTC})` };
                     }
 
-                    const fullName = colMap.fullName ? row[colMap.fullName] : '';
+                    // İsim Soyisim Birleştirme Mantığı
+                    let fullName = colMap.fullName ? row[colMap.fullName] : '';
+                    if (!fullName && colMap.firstName && colMap.lastName) {
+                        const first = row[colMap.firstName] || '';
+                        const last = row[colMap.lastName] || '';
+                        fullName = `${first} ${last}`.trim();
+                    }
+
                     const phone = colMap.phone ? row[colMap.phone] : '';
                     const district = colMap.district ? row[colMap.district] : '';
+                    const province = colMap.province ? row[colMap.province] : '';
+                    const village = colMap.village ? row[colMap.village] : '';
+                    const neighborhood = colMap.neighborhood ? row[colMap.neighborhood] : '';
+                    const birthDate = colMap.birthDate ? row[colMap.birthDate] : '';
                     const region = colMap.region ? row[colMap.region] : '';
                     const role = colMap.role ? row[colMap.role] : '';
 
@@ -151,6 +168,10 @@ router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), a
                                     fullName: String(fullName || '').trim(),
                                     phone: String(phone || '').replace(/\s+/g, '').trim(),
                                     district: String(district || '').trim(),
+                                    province: String(province || '').trim(),
+                                    village: String(village || '').trim(),
+                                    neighborhood: String(neighborhood || '').trim(),
+                                    birthDate: String(birthDate || '').trim(),
                                     region: String(region || '').trim(),
                                     role: String(role || '').trim(),
                                     sourceFile: file.originalname, // DB'de orijinal ismini tutuyoruz

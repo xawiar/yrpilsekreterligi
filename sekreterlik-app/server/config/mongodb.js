@@ -1,48 +1,39 @@
-const { MongoClient } = require('mongodb');
+const mongoose = require('mongoose');
 
-const MONGODB_URI = 'mongodb://localhost:27017';
-const DB_NAME = 'sekreterlik_messages';
-
-let client = null;
-let db = null;
+// MONGODB CONNECTION
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/sekreterlik_messages';
 
 const connectToMongoDB = async () => {
   try {
-    if (!client) {
-      client = new MongoClient(MONGODB_URI);
-      await client.connect();
-      console.log('MongoDB bağlantısı başarılı!');
+    // Mongoose connection options
+    const options = {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    };
+
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(MONGODB_URI, options);
+      console.log('✅ Mongoose: MongoDB bağlantısı başarılı!');
+    } else {
+      console.log('ℹ️ Mongoose: Zaten bağlı.');
     }
-    
-    if (!db) {
-      db = client.db(DB_NAME);
-    }
-    
-    return db;
+
+    return mongoose.connection;
   } catch (error) {
-    console.error('MongoDB bağlantı hatası:', error);
+    console.error('❌ Mongoose bağlantı hatası:', error);
+    // Retry logic or throw
     throw error;
   }
 };
 
-const getDB = () => {
-  if (!db) {
-    throw new Error('MongoDB bağlantısı kurulmamış!');
-  }
-  return db;
-};
-
 const closeConnection = async () => {
-  if (client) {
-    await client.close();
-    client = null;
-    db = null;
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
     console.log('MongoDB bağlantısı kapatıldı!');
   }
 };
 
 module.exports = {
   connectToMongoDB,
-  getDB,
   closeConnection
 };
