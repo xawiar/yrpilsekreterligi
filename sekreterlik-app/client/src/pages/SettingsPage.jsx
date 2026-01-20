@@ -28,7 +28,6 @@ import AppBrandingSettings from '../components/AppBrandingSettings';
 import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
 import SeçimEkleSettings from '../components/SeçimEkleSettings';
 import ApiKeySettings from '../components/ApiKeySettings';
-import VoterListSettings from '../components/VoterListSettings';
 import {
   SettingsHeader,
   SettingsSummaryCards,
@@ -86,7 +85,6 @@ const SettingsPage = ({ tab }) => {
       'app-branding': grantedPermissions.includes('manage_app_branding'),
       'app-branding': grantedPermissions.includes('manage_app_branding'),
       'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
-      'voter-list': isAdmin || grantedPermissions.includes('manage_voters'),
     };
 
     return permissionMap[tabName] || false;
@@ -178,8 +176,7 @@ const SettingsPage = ({ tab }) => {
         { id: 'firebase-sync', name: 'Firebase Sync', description: 'Firebase senkronizasyonu', permission: false },
         { id: 'performance-score', name: 'Performance Score', description: 'Performans skoru ayarları', permission: false },
         { id: 'performance-score', name: 'Performance Score', description: 'Performans skoru ayarları', permission: false },
-        { id: 'api-keys', name: 'API Keys', description: 'API anahtarları', permission: false },
-        { id: 'voter-list', name: 'Seçmen Listesi', description: 'Seçmen listesi yönetimi', permission: 'manage_voters' }
+        { id: 'api-keys', name: 'API Keys', description: 'API anahtarları', permission: false }
       );
     }
 
@@ -244,9 +241,8 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
                   {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
                   {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
-                  {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                   {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
-                  {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
+                  {/* VOTER LIST REMOVED AS REQUESTED */}
                 </>
               )}
             </div>
@@ -354,7 +350,6 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
                     {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                     {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
-                    {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
                   </>
                 )}
               </>
