@@ -21,8 +21,9 @@ build/
 .env.local
 .env.*.local
 
-# Server dosyaları (sadece client deploy edilecek)
-sekreterlik-app/server/
+# Server dosyaları (Vercel deploy için gerekli)
+# sekreterlik-app/server/ (BU SATIR KALDIRILDI)
+
 
 # Test files
 **/*.test.js

@@ -19,18 +19,11 @@
             "dest": "api/server.js"
         },
         {
-            "src": "/uploads/(.*)",
-            "dest": "sekreterlik-app/server/uploads/$1"
+            "handle": "filesystem"
         },
         {
             "src": "/(.*)",
-            "dest": "sekreterlik-app/client/$1"
-        }
-    ],
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "sekreterlik-app/client/index.html"
+            "dest": "/index.html"
         }
     ]
 }
