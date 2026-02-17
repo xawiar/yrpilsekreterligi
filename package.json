@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "İlçe Sekreterlik Uygulaması",
   "scripts": {
-    "build": "cd sekreterlik-app/client && npm install && npm run build",
+    "build": "cd sekreterlik-app/client && npx vite build",
     "vercel-build": "npm run build",
     "dev:client": "cd sekreterlik-app/client && npm run dev",
     "dev:server": "cd sekreterlik-app/server && npm run dev",
@@ -13,7 +13,13 @@
     "commit-and-push:helper": "git add -A && git commit -m \"Auto commit: $(date '+%Y-%m-%d %H:%M:%S')\" && bash scripts/auto-push.sh"
   },
   "dependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/parser": "^7.28.5",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
     "@sentry/node": "^10.22.0",
+    "@vitejs/plugin-react": "^3.1.0",
+    "autoprefixer": "^10.4.21",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",
@@ -30,7 +36,12 @@
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "pdf-parse": "^2.2.16",
+    "postcss": "^8.4.21",
     "sqlite3": "^5.1.7",
+    "tailwindcss": "^3.2.4",
+    "vite": "^4.1.1",
+    "vite-plugin-pwa": "^1.1.0",
+    "vite-plugin-remove-console": "^2.2.0",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   }

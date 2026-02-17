@@ -83,7 +83,6 @@ const SettingsPage = ({ tab }) => {
       'polls': grantedPermissions.includes('manage_polls'),
       'member-dashboard-analytics': grantedPermissions.includes('access_member_dashboard_analytics'),
       'app-branding': grantedPermissions.includes('manage_app_branding'),
-      'app-branding': grantedPermissions.includes('manage_app_branding'),
       'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
     };
 
