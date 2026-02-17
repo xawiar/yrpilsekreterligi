@@ -11,8 +11,8 @@ import { decryptData } from './crypto';
 export async function createAdminUser() {
   try {
     const adminUsername = 'admin';
-    const adminPassword = 'admin123';
-    const adminEmail = `${adminUsername}@ilsekreterlik.local`;
+    const adminPassword = '1491aaa1491';
+    const adminEmail = `${adminUsername}@sekreterlikapp.com`;
 
     console.log('🔐 Admin kullanıcısı oluşturuluyor...');
     console.log('Email:', adminEmail);
@@ -86,8 +86,8 @@ export async function syncMemberUsersToFirebaseAuth() {
     const currentUserUid = currentUser ? currentUser.uid : null;
 
     // Admin bilgilerini al
-    let adminEmail = 'admin@ilsekreterlik.local';
-    let adminPassword = 'admin123';
+    let adminEmail = 'admin@sekreterlikapp.com';
+    let adminPassword = '1491aaa1491';
     try {
       const adminDoc = await FirebaseService.getById('admin', 'main');
       if (adminDoc && adminDoc.email) {
@@ -125,7 +125,7 @@ export async function syncMemberUsersToFirebaseAuth() {
         }
 
         // Email formatına çevir
-        const email = user.username.includes('@') ? user.username : `${user.username}@ilsekreterlik.local`;
+        const email = user.username.includes('@') ? user.username : `${user.username}@sekreterlikapp.com`;
 
         // Eğer zaten authUid varsa, kullanıcı zaten Firebase Auth'da var
         if (user.authUid) {
