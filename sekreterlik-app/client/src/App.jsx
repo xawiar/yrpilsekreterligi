@@ -145,128 +145,128 @@ function RouterContent() {
   return (
     <div className="min-h-screen bg-neutral-50">
       <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-          <Route 
-            path="/login" 
+        <Routes>
+          <Route
+            path="/login"
             element={
               <PublicRoute>
                 <LoginPage />
               </PublicRoute>
-            } 
+            }
           />
-          {/* Debug/Admin Routes - Only accessible in development or by admin with debug flag */}
-          {(import.meta.env.DEV || (import.meta.env.VITE_ENABLE_DEBUG === 'true' && isLoggedIn && user?.role === 'admin')) && (
+          {/* Debug/Admin Routes - Temporarily enabled for initial setup */}
+          {true && (
             <>
-              <Route 
-                path="/create-admin" 
-                element={<CreateAdminPage />} 
+              <Route
+                path="/create-admin"
+                element={<CreateAdminPage />}
               />
-              <Route 
-                path="/check-admin" 
-                element={<CheckAdminPage />} 
+              <Route
+                path="/check-admin"
+                element={<CheckAdminPage />}
               />
-              <Route 
-                path="/debug-firebase" 
-                element={<DebugFirebasePage />} 
+              <Route
+                path="/debug-firebase"
+                element={<DebugFirebasePage />}
               />
-              <Route 
-                path="/firebase-test" 
-                element={<FirebaseTestPage />} 
+              <Route
+                path="/firebase-test"
+                element={<FirebaseTestPage />}
               />
             </>
           )}
-          <Route 
-            path="/clear-all-data" 
+          <Route
+            path="/clear-all-data"
             element={
               <AdminRoute>
                 <ClearAllDataPage />
               </AdminRoute>
-            } 
+            }
           />
-          <Route 
-            path="/firebase-auth-users" 
+          <Route
+            path="/firebase-auth-users"
             element={
               <AdminRoute>
                 <FirebaseAuthUsersPage />
               </AdminRoute>
-            } 
+            }
           />
-          
+
           {/* Member Dashboard Route */}
-          <Route 
-            path="/member-dashboard" 
+          <Route
+            path="/member-dashboard"
             element={
               <MemberRoute>
                 <MemberDashboardPage />
               </MemberRoute>
-            } 
+            }
           />
-          
+
           {/* District President Dashboard Route */}
-          <Route 
-            path="/district-president-dashboard" 
+          <Route
+            path="/district-president-dashboard"
             element={
               <DistrictPresidentRoute>
                 <DistrictPresidentDashboardPage />
               </DistrictPresidentRoute>
-            } 
+            }
           />
-          
+
           {/* Town President Dashboard Route */}
-          <Route 
-            path="/town-president-dashboard" 
+          <Route
+            path="/town-president-dashboard"
             element={
               <TownPresidentRoute>
                 <TownPresidentDashboardPage />
               </TownPresidentRoute>
-            } 
+            }
           />
-          
+
           {/* Chief Observer Routes */}
-          <Route 
-            path="/chief-observer-dashboard" 
-            element={<ChiefObserverDashboardPage />} 
+          <Route
+            path="/chief-observer-dashboard"
+            element={<ChiefObserverDashboardPage />}
           />
-          
+
           {/* Chief Observer Login - Artık /login?type=chief-observer olarak yönlendirilecek */}
-          <Route 
-            path="/chief-observer-login" 
+          <Route
+            path="/chief-observer-login"
             element={
               <PublicRoute>
                 <Navigate to="/login?type=chief-observer" replace />
               </PublicRoute>
-            } 
+            }
           />
 
           {/* Coordinator Routes */}
-          <Route 
-            path="/coordinator-dashboard" 
-            element={<CoordinatorDashboardPage />} 
+          <Route
+            path="/coordinator-dashboard"
+            element={<CoordinatorDashboardPage />}
           />
-          
+
           {/* Coordinator Login - Artık /login?type=coordinator olarak yönlendirilecek */}
-          <Route 
-            path="/coordinator-login" 
+          <Route
+            path="/coordinator-login"
             element={
               <PublicRoute>
                 <Navigate to="/login?type=coordinator" replace />
               </PublicRoute>
             }
           />
-          
+
           {/* Election Result Edit - Admin ve Coordinator erişebilir */}
-          <Route 
-            path="/election-results/:electionId/edit/:resultId" 
+          <Route
+            path="/election-results/:electionId/edit/:resultId"
             element={
               <CoordinatorRoute>
                 <ElectionResultEditPage />
               </CoordinatorRoute>
             }
           />
-          
+
           {/* Admin Routes */}
-          <Route 
-            path="/*" 
+          <Route
+            path="/*"
             element={
               <AdminRoute>
                 <div className="flex h-screen">
@@ -274,7 +274,7 @@ function RouterContent() {
                   <div className="hidden lg:block">
                     <Sidebar />
                   </div>
-                  
+
                   {/* Main Content Area */}
                   <div className="flex-1 flex flex-col">
                     {/* Mobile Header with Hamburger */}
@@ -292,14 +292,14 @@ function RouterContent() {
                         <div className="w-10"></div> {/* Spacer for centering */}
                       </div>
                     </div>
-                    
+
                     {/* Mobile Menu Overlay with Swipe Support */}
                     {isMobileMenuOpen && (
-                      <div 
-                        className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70 transition-opacity duration-300" 
+                      <div
+                        className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70 transition-opacity duration-300"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        <div 
+                        <div
                           className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-300"
                           onClick={(e) => e.stopPropagation()}
                           onTouchStart={(e) => {
@@ -328,7 +328,7 @@ function RouterContent() {
                         </div>
                       </div>
                     )}
-                    
+
                     <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-6">
                       <div className="w-full max-w-7xl mx-auto">
                         <Routes>
@@ -339,15 +339,15 @@ function RouterContent() {
                           <Route path="/teşkilat/gençlik-kolları" element={<GenclikKollarıPage />} />
                           <Route path="/districts" element={<Navigate to="/teşkilat/ilçeler" replace />} />
                           <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/districts/:id/members" element={<DistrictMembersPage />} />
-            <Route path="/districts/:id/details" element={<DistrictDetailsPage />} />
-            <Route path="/towns/:id/members" element={<TownMembersPage />} />
-            <Route path="/towns/:id/details" element={<TownDetailsPage />} />
-            <Route path="/election-preparation/*" element={<ElectionPreparationPage />} />
-            <Route path="/election-preparation/ballot-boxes/:id/details" element={<BallotBoxDetailsPage />} />
-            <Route path="/elections" element={<ElectionsListPage />} />
-            <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
-            <Route path="/bulk-sms" element={<BulkSmsPage />} />
+                          <Route path="/districts/:id/members" element={<DistrictMembersPage />} />
+                          <Route path="/districts/:id/details" element={<DistrictDetailsPage />} />
+                          <Route path="/towns/:id/members" element={<TownMembersPage />} />
+                          <Route path="/towns/:id/details" element={<TownDetailsPage />} />
+                          <Route path="/election-preparation/*" element={<ElectionPreparationPage />} />
+                          <Route path="/election-preparation/ballot-boxes/:id/details" element={<BallotBoxDetailsPage />} />
+                          <Route path="/elections" element={<ElectionsListPage />} />
+                          <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
+                          <Route path="/bulk-sms" element={<BulkSmsPage />} />
                           <Route path="/meetings" element={<MeetingsPage />} />
                           <Route path="/events" element={<EventsPage />} />
                           <Route path="/reports" element={<Navigate to="/" replace />} />
@@ -357,7 +357,7 @@ function RouterContent() {
                           <Route path="/settings/*" element={<SettingsPage />} />
                           <Route path="/sync-to-firebase" element={<SyncToFirebasePage />} />
                           <Route path="/remove-duplicate-meetings" element={<RemoveDuplicateMeetingsPage />} />
-                          
+
                           {/* STK Manager Routes */}
                           <Route path="/stk-management" element={
                             <STKManagerRoute>
@@ -372,10 +372,10 @@ function RouterContent() {
                         </Routes>
                       </div>
                     </main>
-                    
+
                     {/* Footer */}
                     <Footer />
-                    
+
                     {/* Mobile Bottom Navigation */}
                     <Suspense fallback={null}>
                       <MobileBottomNav />
@@ -386,7 +386,7 @@ function RouterContent() {
             }
           />
         </Routes>
-        
+
         {/* Floating Chatbot Button - Only show for admin users */}
         {isLoggedIn && user?.role === 'admin' && (
           <button
@@ -399,7 +399,7 @@ function RouterContent() {
             </svg>
           </button>
         )}
-        
+
         {/* Chatbot Modal - Only show for admin users */}
         {isLoggedIn && user?.role === 'admin' && (
           <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
@@ -432,25 +432,25 @@ function App() {
 
   return (
     <ErrorBoundary>
-    <ThemeProvider>
-      <AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
           <ToastProvider>
-        <Router
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-          <RouterContent />
-        </Router>
-        <PWANotification />
-        <AppInstallBanner />
-        <OfflineStatus />
-        {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
-        {/* <PerformanceMonitor /> */}
+            <Router
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <RouterContent />
+            </Router>
+            <PWANotification />
+            <AppInstallBanner />
+            <OfflineStatus />
+            {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
+            {/* <PerformanceMonitor /> */}
           </ToastProvider>
-      </AuthProvider>
-    </ThemeProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

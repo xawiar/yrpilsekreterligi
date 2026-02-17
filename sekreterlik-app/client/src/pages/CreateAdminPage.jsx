@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
+import {
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword 
+  signInWithEmailAndPassword
 } from "firebase/auth";
-import { 
-  doc, 
-  setDoc, 
-  getDoc 
+import {
+  doc,
+  setDoc,
+  getDoc
 } from "firebase/firestore";
 import { auth, db } from '../config/firebase';
 
@@ -35,7 +35,7 @@ function CreateAdminPage() {
 
     try {
       const adminUsername = 'admin';
-      const adminPassword = 'admin123';
+      const adminPassword = '1491aaa1491';
       const adminEmail = `${adminUsername}@ilsekreterlik.local`;
 
       let userCredential;
@@ -43,8 +43,8 @@ function CreateAdminPage() {
       try {
         // Firebase Auth'da kullanıcı oluştur
         userCredential = await createUserWithEmailAndPassword(
-          auth, 
-          adminEmail, 
+          auth,
+          adminEmail,
           adminPassword
         );
         setResult({ type: 'success', message: '✅ Firebase Authentication kullanıcısı oluşturuldu!' });
@@ -72,9 +72,9 @@ function CreateAdminPage() {
       }, { merge: true });
 
       console.log('✅ Admin bilgileri Firestore\'a kaydedildi!');
-      setResult({ 
-        type: 'success', 
-        message: '✅ Admin bilgileri Firestore\'a kaydedildi!' 
+      setResult({
+        type: 'success',
+        message: '✅ Admin bilgileri Firestore\'a kaydedildi!'
       });
 
       // Bağlantıyı test et
@@ -88,9 +88,9 @@ function CreateAdminPage() {
           password: adminPassword,
           uid: userCredential.user.uid
         });
-        setResult({ 
-          type: 'success', 
-          message: '🎉 Admin kullanıcısı başarıyla oluşturuldu ve bağlantı test edildi!' 
+        setResult({
+          type: 'success',
+          message: '🎉 Admin kullanıcısı başarıyla oluşturuldu ve bağlantı test edildi!'
         });
       } else {
         console.warn('⚠️ Admin dokümanı okunamadı');
@@ -98,9 +98,9 @@ function CreateAdminPage() {
 
     } catch (error) {
       console.error('Error:', error);
-      setResult({ 
-        type: 'error', 
-        message: `❌ Hata: ${error.message} (Code: ${error.code})` 
+      setResult({
+        type: 'error',
+        message: `❌ Hata: ${error.message} (Code: ${error.code})`
       });
     } finally {
       setLoading(false);
@@ -113,7 +113,7 @@ function CreateAdminPage() {
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           🔥 Firebase Admin Kullanıcısı Oluştur
         </h1>
-        
+
         <p className="text-gray-600 mb-6">
           Bu sayfa Firebase Authentication ve Firestore bağlantısını test eder ve ilk admin kullanıcısını oluşturur.
         </p>
@@ -137,11 +137,10 @@ function CreateAdminPage() {
         </button>
 
         {result && (
-          <div className={`mt-6 p-4 rounded-lg ${
-            result.type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' :
-            result.type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' :
-            'bg-blue-100 text-blue-800 border border-blue-300'
-          }`}>
+          <div className={`mt-6 p-4 rounded-lg ${result.type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' :
+              result.type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' :
+                'bg-blue-100 text-blue-800 border border-blue-300'
+            }`}>
             <p className="font-medium">{result.message}</p>
           </div>
         )}
@@ -171,8 +170,8 @@ function CreateAdminPage() {
             </div>
             <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
               <p className="text-yellow-800 text-sm">
-              ⚠️ <strong>Önemli:</strong> Production ortamında mutlaka şifreyi değiştirin!
-            </p>
+                ⚠️ <strong>Önemli:</strong> Production ortamında mutlaka şifreyi değiştirin!
+              </p>
             </div>
           </div>
         )}
