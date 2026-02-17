@@ -1,0 +1,36 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "sekreterlik-app/client/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
+        },
+        {
+            "src": "api/server.js",
+            "use": "@vercel/node"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "api/server.js"
+        },
+        {
+            "src": "/uploads/(.*)",
+            "dest": "sekreterlik-app/server/uploads/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "sekreterlik-app/client/$1"
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "sekreterlik-app/client/index.html"
+        }
+    ]
+}

@@ -454,37 +454,42 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Sunucu hatası', error: err.message });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  // Optional DB maintenance
-  if ((process.env.ENABLE_DB_MAINTENANCE || 'true') === 'true') {
-    try {
-      const db = require('./config/database');
-      // Weekly VACUUM (7 days)
-      setInterval(() => {
-        db.run('VACUUM');
-      }, 7 * 24 * 60 * 60 * 1000);
-      // Daily backup using script
-      setInterval(() => {
-        try {
-          const proc = spawn('node', ['scripts/backup-sqlite.js'], {
-            cwd: __dirname,
-            stdio: 'ignore'
-          });
-          proc.unref();
-        } catch (_) { }
-      }, 24 * 60 * 60 * 1000);
+// Start server - Only if not required as a module (e.g. by Vercel)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    // Optional DB maintenance
+    if ((process.env.ENABLE_DB_MAINTENANCE || 'true') === 'true') {
+      try {
+        const db = require('./config/database');
+        // Weekly VACUUM (7 days)
+        setInterval(() => {
+          db.run('VACUUM');
+        }, 7 * 24 * 60 * 60 * 1000);
+        // Daily backup using script
+        setInterval(() => {
+          try {
+            const proc = spawn('node', ['scripts/backup-sqlite.js'], {
+              cwd: __dirname,
+              stdio: 'ignore'
+            });
+            proc.unref();
+          } catch (_) { }
+        }, 24 * 60 * 60 * 1000);
 
-      // Check and end expired polls every hour
-      setInterval(() => {
+        // Check and end expired polls every hour
+        setInterval(() => {
+          PollController.checkAndEndExpiredPolls();
+        }, 60 * 60 * 1000);
+
+        // Run immediately on startup
         PollController.checkAndEndExpiredPolls();
-      }, 60 * 60 * 1000);
-
-      // Run immediately on startup
-      PollController.checkAndEndExpiredPolls();
-    } catch (e) {
-      console.warn('DB maintenance scheduling failed:', e.message);
+      } catch (e) {
+        console.warn('DB maintenance scheduling failed:', e.message);
+      }
     }
-  }
-});
+  });
+}
+
+// Export the app instance for Vercel serverless functions
+module.exports = app;
