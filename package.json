@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "İlçe Sekreterlik Uygulaması",
   "scripts": {
-    "build": "cd sekreterlik-app/client && npx vite build",
+    "build": "cd sekreterlik-app/client && npm install && npx vite build",
     "vercel-build": "npm run build",
     "dev:client": "cd sekreterlik-app/client && npm run dev",
     "dev:server": "cd sekreterlik-app/server && npm run dev",

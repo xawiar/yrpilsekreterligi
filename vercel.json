@@ -1,6 +1,18 @@
 {
     "version": 2,
-    "outputDirectory": "sekreterlik-app/client/dist",
+    "builds": [
+        {
+            "src": "package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "sekreterlik-app/client/dist"
+            }
+        },
+        {
+            "src": "api/server.js",
+            "use": "@vercel/node"
+        }
+    ],
     "rewrites": [
         {
             "source": "/api/(.*)",
