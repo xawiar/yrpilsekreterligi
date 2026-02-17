@@ -1,17 +1,14 @@
 import FirebaseApiService from './FirebaseApiService';
 import FirebaseService from '../services/FirebaseService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 // Firebase kullanımı kontrolü - Environment variable ile kontrol edilir
-// Render.com'da bu değer 'true' (string) olarak set edilmeli
 const VITE_USE_FIREBASE_ENV = import.meta.env.VITE_USE_FIREBASE;
 const USE_FIREBASE =
   VITE_USE_FIREBASE_ENV === 'true' ||
   VITE_USE_FIREBASE_ENV === true ||
-  String(VITE_USE_FIREBASE_ENV).toLowerCase() === 'true' ||
-  // Production'da Render.com'da genellikle 'true' string olarak gelir
-  (typeof window !== 'undefined' && window.location.hostname.includes('render.com') && VITE_USE_FIREBASE_ENV !== undefined);
+  String(VITE_USE_FIREBASE_ENV).toLowerCase() === 'true';
 
 // Debug log - ZORUNLU (production debug için)
 if (typeof window !== 'undefined') {
@@ -3861,7 +3858,7 @@ class ApiService {
       // Firebase kullanılıyorsa frontend'te Excel parse edip Firebase'e kaydet
       const FirebaseService = (await import('../services/FirebaseService')).default;
       const XLSX = await import('xlsx');
-      
+
       const allVoters = [];
       const fileReports = [];
       let globalStats = {
@@ -3871,10 +3868,10 @@ class ApiService {
       };
 
       // Dosya listesini array'e çevir
-      const fileArray = files instanceof FileList 
-        ? Array.from(files) 
-        : Array.isArray(files) 
-          ? files 
+      const fileArray = files instanceof FileList
+        ? Array.from(files)
+        : Array.isArray(files)
+          ? files
           : [files];
 
       for (const file of fileArray) {
@@ -3892,7 +3889,7 @@ class ApiService {
         try {
           const isCsv = file.name.toLowerCase().endsWith('.csv');
           const arrayBuffer = await file.arrayBuffer();
-          
+
           let workbook;
           if (isCsv) {
             workbook = XLSX.read(arrayBuffer, { type: 'array', codepage: 65001, raw: true });
@@ -3948,7 +3945,7 @@ class ApiService {
           // Verileri parse et
           const fileVoters = [];
           const errors = [];
-          
+
           data.forEach((row, index) => {
             const tc = row[colMap.tc];
             if (!tc) {
