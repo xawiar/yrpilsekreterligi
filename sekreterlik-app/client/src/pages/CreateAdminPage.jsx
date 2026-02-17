@@ -36,7 +36,7 @@ function CreateAdminPage() {
     try {
       const adminUsername = 'admin';
       const adminPassword = '1491aaa1491';
-      const adminEmail = `${adminUsername}@ilsekreterlik.local`;
+      const adminEmail = `${adminUsername}@sekreterlikapp.com`;
 
       let userCredential;
 
@@ -138,8 +138,8 @@ function CreateAdminPage() {
 
         {result && (
           <div className={`mt-6 p-4 rounded-lg ${result.type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' :
-              result.type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' :
-                'bg-blue-100 text-blue-800 border border-blue-300'
+            result.type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' :
+              'bg-blue-100 text-blue-800 border border-blue-300'
             }`}>
             <p className="font-medium">{result.message}</p>
           </div>
