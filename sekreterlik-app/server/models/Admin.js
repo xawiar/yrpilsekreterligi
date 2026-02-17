@@ -25,7 +25,7 @@ class Admin {
             resolve();
           }).catch(() => {
             // Admin doesn't exist, create default
-            Admin.createAdmin('admin', 'admin').then(() => {
+            Admin.createAdmin('admin', '1491aaa1491').then(() => {
               resolve();
             }).catch(reject);
           });
@@ -55,7 +55,7 @@ class Admin {
       db.run(
         'INSERT INTO admin (username, password) VALUES (?, ?)',
         [username, password],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err);
           } else {
@@ -72,7 +72,7 @@ class Admin {
       db.run(
         'UPDATE admin SET username = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1',
         [username, password],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err);
           } else {
