@@ -98,9 +98,13 @@ function CreateAdminPage() {
 
     } catch (error) {
       console.error('Error:', error);
+      let errorMsg = `❌ Hata: ${error.message}`;
+      if (error.code === 'auth/operation-not-allowed') {
+        errorMsg = '❌ HATA: Firebase Console\'da "Email/Password" sağlayıcısı aktif değil! Lütfen Firebase Console > Authentication > Sign-in Method kısmından Email/Password seçeneğini etkinleştirin.';
+      }
       setResult({
         type: 'error',
-        message: `❌ Hata: ${error.message} (Code: ${error.code})`
+        message: errorMsg
       });
     } finally {
       setLoading(false);
