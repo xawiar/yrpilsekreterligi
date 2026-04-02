@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import GroqService from '../services/GroqService';
 import GeminiService from '../services/GeminiService';
-import ChatGPTService from '../services/ChatGPTService';
-import DeepSeekService from '../services/DeepSeekService';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +15,7 @@ const Chatbot = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [siteData, setSiteData] = useState(null);
   const [bylawsText, setBylawsText] = useState('');
-  const [aiProvider, setAiProvider] = useState('groq'); // 'groq', 'gemini', 'chatgpt', 'deepseek'
+  const [aiProvider] = useState('gemini');
   const [showLimitInfo, setShowLimitInfo] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
   const messagesEndRef = useRef(null);
@@ -31,33 +28,13 @@ const Chatbot = ({ isOpen, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load AI provider
-  const loadAiProvider = async () => {
-    try {
-      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      if (USE_FIREBASE) {
-        try {
-          const configDoc = await FirebaseService.getById('ai_provider_config', 'main');
-          if (configDoc && configDoc.provider) {
-            setAiProvider(configDoc.provider);
-          }
-        } catch (error) {
-          console.warn('AI provider config not found, using default (groq)');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading AI provider:', error);
-    }
-  };
-
   // Load site data on mount (lazy load - only when chatbot is opened)
   useEffect(() => {
     if (isOpen && !siteData) {
       // Load data asynchronously without blocking UI
       Promise.all([
         loadSiteData(),
-        loadBylaws(),
-        loadAiProvider()
+        loadBylaws()
       ]).catch(error => {
         console.error('Error loading chatbot data:', error);
       });
@@ -423,6 +400,57 @@ const Chatbot = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Sadece resim dosyaları desteklenir');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Dosya boyutu 5MB\'dan küçük olmalıdır');
+      return;
+    }
+
+    setLoading(true);
+
+    // Add user message with image preview
+    const imageUrl = URL.createObjectURL(file);
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      role: 'user',
+      content: 'Görsel gönderildi',
+      imageUrl
+    }]);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+        try {
+          const response = await GeminiService.analyzeImage(base64, file.type, 'Bu görseli analiz et ve içeriğini açıkla');
+          setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: response }]);
+        } catch (error) {
+          setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: 'Görsel analiz edilirken hata oluştu: ' + error.message }]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      reader.onerror = () => {
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: 'Görsel okunurken hata oluştu' }]);
+        setLoading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: 'Görsel analiz edilirken hata oluştu: ' + error.message }]);
+      setLoading(false);
+    }
+
+    e.target.value = ''; // Reset file input
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
 
@@ -481,17 +509,7 @@ const Chatbot = ({ isOpen, onClose }) => {
       }
 
       if (siteData) {
-        // Seçilen AI servisine göre context builder kullan
-        let AIService;
-        if (aiProvider === 'gemini') {
-          AIService = GeminiService;
-        } else if (aiProvider === 'chatgpt') {
-          AIService = ChatGPTService;
-        } else if (aiProvider === 'deepseek') {
-          AIService = DeepSeekService;
-        } else {
-          AIService = GroqService; // Default: Groq
-        }
+        const AIService = GeminiService;
 
         const siteContext = AIService.buildSiteContext(siteData);
         context.push(...siteContext);
@@ -872,17 +890,39 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         `Chain of Thought: Önce soruyu anla, önceki konuşmaları kontrol et, sonra context'te ilgili bilgileri bul, sonra kendi görüşlerini ekle, sonra cevabı oluştur.`
       ];
 
-      // Seçilen AI servisine göre API çağrısı yap
-      let response;
-      if (aiProvider === 'gemini') {
-        response = await GeminiService.chat(userMessage, enhancedContext, conversationHistory);
-      } else if (aiProvider === 'chatgpt') {
-        response = await ChatGPTService.chat(userMessage, enhancedContext, conversationHistory);
-      } else if (aiProvider === 'deepseek') {
-        response = await DeepSeekService.chat(userMessage, enhancedContext, conversationHistory);
-      } else {
-        response = await GroqService.chat(userMessage, enhancedContext, conversationHistory); // Default: Groq
+      // Araç çağrıları için en güncel site verisini GeminiService'e aktar
+      GeminiService.setSiteData(siteData);
+
+      // Add a "typing" streaming message first
+      const typingMsgId = Date.now() + 1;
+      setMessages(prev => [...prev, { id: typingMsgId, role: 'assistant', content: '', isStreaming: true }]);
+
+      let finalResponse = '';
+      try {
+        finalResponse = await GeminiService.chatStream(
+          userMessage,
+          enhancedContext,
+          conversationHistory,
+          (chunk, fullText) => {
+            setMessages(prev => prev.map(msg =>
+              msg.id === typingMsgId ? { ...msg, content: fullText } : msg
+            ));
+          }
+        );
+
+        // Mark streaming as done
+        setMessages(prev => prev.map(msg =>
+          msg.id === typingMsgId ? { ...msg, isStreaming: false } : msg
+        ));
+      } catch (streamError) {
+        console.warn('Streaming failed, falling back to non-streaming:', streamError.message);
+        finalResponse = await GeminiService.chat(userMessage, enhancedContext, conversationHistory);
+        setMessages(prev => prev.map(msg =>
+          msg.id === typingMsgId ? { ...msg, content: finalResponse, isStreaming: false } : msg
+        ));
       }
+
+      const response = finalResponse;
 
       // Process response for report links
       let processedResponse = response;
@@ -966,17 +1006,20 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         }
       }
 
-      // Add assistant message
-      const newAssistantMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: processedResponse,
-        sentiment: sentimentResult,
-        visualization: visualizationData,
-        anomalies: anomalies.length > 0 ? anomalies.slice(0, 3) : null,
-        recommendations: recommendations.length > 0 ? recommendations.slice(0, 3) : null
-      };
-      setMessages(prev => [...prev, newAssistantMessage]);
+      // Finalize the streaming message with all post-processed data
+      setMessages(prev => prev.map(msg =>
+        msg.id === typingMsgId
+          ? {
+              ...msg,
+              content: processedResponse,
+              isStreaming: false,
+              sentiment: sentimentResult,
+              visualization: visualizationData,
+              anomalies: anomalies.length > 0 ? anomalies.slice(0, 3) : null,
+              recommendations: recommendations.length > 0 ? recommendations.slice(0, 3) : null
+            }
+          : msg
+      ));
     } catch (error) {
       console.error('Chat error:', error);
       setError(error.message || 'Mesaj gönderilirken hata oluştu');
@@ -1478,11 +1521,14 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
             >
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === 'user'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-red-500 text-white'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {message.imageUrl && (
+                  <img src={message.imageUrl} alt="Gönderilen görsel" className="max-w-full rounded-lg mb-2 max-h-48 object-contain" />
+                )}
+                <p className="text-sm whitespace-pre-wrap">{message.content}{message.isStreaming && <span className="inline-block w-1.5 h-4 ml-0.5 bg-current align-middle animate-pulse" />}</p>
 
                 {/* Görselleştirme: Grafikler */}
                 {message.role === 'assistant' && message.visualization && (
@@ -1664,7 +1710,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-3">
-                    <strong>Mevcut Servis:</strong> {aiProvider === 'groq' ? 'Groq' : aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'chatgpt' ? 'ChatGPT' : 'DeepSeek'}
+                    <strong>Mevcut Servis:</strong> Gemini
                   </p>
                   <p className="text-xs text-gray-500 mb-4">
                     API limitlerini kontrol etmek için aşağıdaki dashboard linklerini kullanabilirsiniz:
@@ -1746,6 +1792,19 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         {/* Input */}
         <form onSubmit={handleSend} className="p-4 border-t border-gray-200">
           <div className="flex space-x-2">
+            {/* Image upload button */}
+            <label className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors flex items-center">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={loading}
+              />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </label>
             <input
               type="text"
               value={input}

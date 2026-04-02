@@ -1,232 +1,307 @@
 /**
- * Google Gemini API Service
- * Gemini API ile chat completions için
+ * Gemini AI Service — Tek AI provider
+ * Gemini 2.0 Flash ile chat, function calling, streaming desteği
  */
 
-import GroqService from './GroqService';
+import { buildSiteContext, buildMemberContext, maskSensitiveData } from '../utils/aiContextBuilder';
+import { SYSTEM_PROMPT } from '../utils/aiPrompts';
+import { TOOL_DECLARATIONS, executeToolCall } from '../utils/aiTools';
 
 class GeminiService {
   static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-  
+  static STREAM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent';
+  static apiKey = null;
+  static rateLimitCounter = { count: 0, resetTime: 0 };
+  static _siteData = null;
+
   /**
-   * Gemini API ile chat completion
-   * @param {string} userMessage - Kullanıcı mesajı
-   * @param {Array} context - Site verileri ve tüzük bilgileri context'i
-   * @param {Array} conversationHistory - Konuşma geçmişi
-   * @returns {Promise<string>} AI yanıtı
+   * Araç çağrılarında kullanılacak site verisini sakla
+   */
+  static setSiteData(data) { this._siteData = data; }
+
+  /**
+   * API key'i al (Firebase veya env variable)
+   */
+  static async getApiKey() {
+    if (this.apiKey) return this.apiKey;
+
+    const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+    if (USE_FIREBASE) {
+      try {
+        const FirebaseService = (await import('../services/FirebaseService')).default;
+        const configDoc = await FirebaseService.getById('gemini_api_config', 'main');
+        if (configDoc?.api_key) {
+          let key = configDoc.api_key;
+          if (key.startsWith('U2FsdGVkX1')) {
+            const { decryptData } = await import('../utils/crypto');
+            key = decryptData(key);
+          }
+          this.apiKey = key;
+          return key;
+        }
+      } catch (e) {
+        console.warn('Firebase API key yüklenemedi, env variable kullanılıyor');
+      }
+    }
+
+    this.apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    return this.apiKey;
+  }
+
+  /**
+   * Rate limiting kontrolü (20 istek/dakika)
+   */
+  static checkRateLimit() {
+    const now = Date.now();
+    if (now > this.rateLimitCounter.resetTime) {
+      this.rateLimitCounter = { count: 0, resetTime: now + 60000 };
+    }
+    this.rateLimitCounter.count++;
+    if (this.rateLimitCounter.count > 20) {
+      throw new Error('Çok fazla istek gönderildi. Lütfen bir dakika bekleyin.');
+    }
+  }
+
+  /**
+   * Context builder delegasyonu
+   */
+  static buildSiteContext(siteData) {
+    return buildSiteContext(siteData);
+  }
+
+  static buildMemberContext(member, siteData) {
+    return buildMemberContext(member, siteData);
+  }
+
+  /**
+   * Konuşma geçmişini Gemini formatına çevir
+   */
+  static formatHistory(conversationHistory) {
+    if (!conversationHistory || conversationHistory.length === 0) return [];
+
+    return conversationHistory
+      .filter(msg => msg.role === 'user' || msg.role === 'assistant' || msg.role === 'model')
+      .map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content || msg.message || '' }]
+      }));
+  }
+
+  /**
+   * Ana chat fonksiyonu — Gemini native API
    */
   static async chat(userMessage, context = [], conversationHistory = []) {
     try {
-      // Önce Firebase'den API key'i al, yoksa environment variable'dan al
-      let apiKey = null;
-      
-      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      if (USE_FIREBASE) {
-        try {
-          const FirebaseService = (await import('../services/FirebaseService')).default;
-          const configDoc = await FirebaseService.getById('gemini_api_config', 'main');
-          if (configDoc && configDoc.api_key) {
-            // API key şifrelenmiş olabilir, decrypt et
-            if (configDoc.api_key.startsWith('U2FsdGVkX1')) {
-              const { decryptData } = await import('../utils/crypto');
-              apiKey = decryptData(configDoc.api_key);
-            } else {
-              apiKey = configDoc.api_key;
-            }
+      this.checkRateLimit();
+      const apiKey = await this.getApiKey();
+      if (!apiKey) {
+        throw new Error('Gemini API anahtarı bulunamadı. Lütfen Ayarlar > Chatbot API sayfasından API anahtarını girin veya VITE_GEMINI_API_KEY environment variable\'ını ayarlayın.');
+      }
+
+      // Context'i birleştir ve maskele
+      const contextText = Array.isArray(context) ? context.join('\n\n') : String(context);
+      const maskedContext = maskSensitiveData(contextText);
+      const maskedMessage = maskSensitiveData(userMessage);
+
+      // Gemini native format — systemInstruction ayrı alan
+      const requestBody = {
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT + '\n\n--- SİTE VERİLERİ ---\n\n' + maskedContext }]
+        },
+        contents: [
+          ...this.formatHistory(conversationHistory),
+          {
+            role: 'user',
+            parts: [{ text: maskedMessage }]
           }
-        } catch (error) {
-          console.warn('Firebase\'den Gemini API key alınamadı, environment variable kullanılıyor:', error);
+        ],
+        tools: [{
+          functionDeclarations: TOOL_DECLARATIONS
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 2048,
+          topP: 0.95,
+          topK: 40
         }
-      }
-      
-      // Eğer Firebase'de yoksa, environment variable'dan al
-      if (!apiKey) {
-        apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      }
-      
-      if (!apiKey) {
-        throw new Error('Gemini API key bulunamadı. Lütfen Ayarlar > Chatbot API sayfasından API anahtarını girin veya VITE_GEMINI_API_KEY environment variable\'ını ayarlayın.');
-      }
-
-      // Context'i token limitine göre kısalt (Gemini için daha yüksek limit var)
-      const MAX_CONTEXT_LENGTH = 100000; // Gemini için daha yüksek limit
-
-      // TC ve telefon numaralarını maskele - AI'ya gönderilmeden önce hassas verileri gizle
-      const maskSensitiveData = (text) => {
-        // TC kimlik numaralarını maskele (11 haneli sayılar)
-        text = text.replace(/\b\d{11}\b/g, '***TC GİZLİ***');
-        // Telefon numaralarını maskele (05XX ve 5XX formatları)
-        text = text.replace(/\b(05\d{2})\d{3}\d{4}\b/g, '$1*******');
-        text = text.replace(/\b(5\d{2})\d{3}\d{4}\b/g, '$1*******');
-        return text;
       };
 
-      let contextText = context.length > 0 ? maskSensitiveData(context.join('\n')) : 'Henüz context bilgisi yok.';
-      
-      // Eğer context çok büyükse, kısalt
-      if (contextText.length > MAX_CONTEXT_LENGTH) {
-        contextText = contextText.substring(0, MAX_CONTEXT_LENGTH) + '\n\n[Context kısaltıldı - token limiti nedeniyle]';
-        console.warn('Context çok büyük, kısaltıldı:', contextText.length, 'karakter');
-      }
-
-      // Few-shot examples for better training
-      const fewShotExamples = `
-ÖRNEK SORU-CEVAP ÇİFTLERİ (Bu örnekleri takip et):
-
-Soru: "Toplam kaç üye var?"
-Cevap: "Context'teki üye bilgilerine göre toplam X üye kayıtlı başkanım."
-
-Soru: "Ahmet'in katıldığı toplantılar neler?"
-Cevap: "Ahmet'in üye kartı bilgilerine göre, katıldığı toplantılar şunlar:
-- Toplantı 1 (Tarih: ...)
-- Toplantı 2 (Tarih: ...)
-Toplam X toplantıya katılmış başkanım."
-
-Soru: "Bu ay kaç toplantı yapıldı?"
-Cevap: "Bu ayın toplantı istatistiklerine göre X toplantı yapılmış başkanım. Ortalama katılım oranı %Y."
-
-Soru: "En aktif üyeler kimler?"
-Cevap: "Performans puanlarına göre en aktif üyeler:
-1. Üye Adı - X yıldız, Y puan
-2. Üye Adı - X yıldız, Y puan
-... başkanım."
-
-Soru: "Seçim sonuçları nasıl?"
-Cevap: "Seçim sonuçlarına göre:
-- Toplam X sandık sonucu girilmiş
-- En yüksek oy alan parti/aday: ...
-- Mahalle bazında toplam oylar: ...
-başkanım."
-
-Soru: "Tüzükte üyelik şartları neler?"
-Cevap: "Tüzük bilgilerine göre üyelik şartları şunlar:
-1. ...
-2. ...
-... başkanım."
-
-ÖNEMLİ: Bu örnekleri takip ederek benzer sorulara benzer formatlarda cevap ver.
-`;
-
-      // System prompt - AI'nın kimliği ve sınırları (geliştirilmiş - eğitim odaklı)
-      const systemPrompt = `Sen "Yeniden Refah Partisi Elazığ Sekreteri" adlı bir yapay zeka asistanısın. Görevin site içi bilgileri ve yüklenen siyasi parti tüzüğünü kullanarak kullanıcılara yardımcı olmaktır.
-
-${fewShotExamples}
-
-ÖNEMLİ KURALLAR (SOHBET MODU):
-1. Kullanıcı senin başkanındır. Her cevabının SONUNA mutlaka "başkanım" ekle.
-2. SADECE verilen context'i kullan - Context dışında bilgi uydurma.
-3. Site bilgileri ve tüzük dışında bilgi verme - Genel bilgi verme, sadece context'teki bilgileri kullan.
-4. Bilgi yoksa açıkça belirt: "Bu bilgiyi context'te bulamadım başkanım. Lütfen site içi bilgiler, site işlevleri veya tüzük ile ilgili sorular sorun."
-5. Eğer tüzük için web linki verilmişse, kullanıcıya tüzük hakkında sorular sorduğunda bu linki paylaşabilirsin: "Parti tüzüğü hakkında detaylı bilgi için şu linki ziyaret edebilirsiniz: [link] başkanım"
-6. Hassas bilgileri (TC, telefon, adres vb.) sadece yetkili kullanıcılar sorduğunda paylaş
-7. Türkçe, samimi ve sohbet eder gibi cevap ver - Çok formal olma, ama saygılı kal.
-8. Yanıtlarını kısa ve öz tut, gereksiz detay verme
-9. Sayısal sorular için (kaç üye var, kaç etkinlik yapıldı vb.) context'teki verileri kullanarak hesapla
-10. Site işlevleri hakkında sorular sorulduğunda (örnek: "sandık nasıl eklenir", "toplantı nasıl oluşturulur"), context'teki "SİTE İŞLEVLERİ VE KULLANIM KILAVUZU" bölümündeki bilgileri kullanarak adım adım açıkla
-11. Kullanıcılar site işlevlerini nasıl kullanacaklarını sorduğunda, hangi sayfaya gitmeleri gerektiğini, hangi butona tıklamaları gerektiğini ve hangi bilgileri girmeleri gerektiğini detaylıca anlat
-12. Tüm site sayfalarındaki tüm bilgilere erişimin var (üyeler, toplantılar, etkinlikler, mahalleler, köyler, sandıklar, müşahitler, temsilciler, sorumlular, STK'lar, camiler, arşiv belgeleri, kişisel belgeler, üye kayıtları, ziyaret sayıları, yönetim kurulu üyeleri, SEÇİMLER, SEÇİM SONUÇLARI, BAŞMÜŞAHİTLER, SANDIK TUTANAKLARI vb.)
-13. Seçim sonuçları hakkında sorular sorulduğunda, context'teki "SEÇİMLER" ve "SEÇİM SONUÇLARI" bölümlerindeki bilgileri kullan. Her seçim için sandık bazında oy sayıları, başmüşahit bilgileri ve tutanak durumları context'te mevcuttur.
-
-SOHBET MODU KURALLARI:
-- Önceki konuşmaları hatırla ve referans ver (örn: "Az önce bahsettiğiniz...", "Daha önce konuştuğumuz...")
-- Kendi görüşlerini ve yorumlarını ekle (örn: "Bence...", "Şöyle düşünüyorum...", "Önerim...")
-- Samimi ve sohbet eder gibi konuş, ama saygılı kal
-- Kullanıcı "önceki konu", "az önce", "daha önce" gibi ifadeler kullanırsa, önceki konuşmalara referans ver
-- Devam eden sohbet: Önceki mesajlarda bahsedilen konuları hatırla ve bağlantı kur
-- Sadece bilgi verme, aynı zamanda yorum yap ve öner
-
-GÖRSELLEŞTİRME KURALLARI:
-- Kullanıcı "grafik", "chart", "görsel", "görselleştir", "göster", "çiz", "tablo" gibi kelimeler kullanırsa, görselleştirme isteği olabilir
-- Görselleştirme isteklerinde: "Grafik oluşturuluyor..." gibi mesaj ver ve veriyi hazırla
-- Toplantı katılım grafiği: Son 10 toplantının katılım oranlarını göster
-- Üye performans grafiği: En yüksek performanslı 10 üyeyi göster
-- Etkinlik grafiği: Ay bazında etkinlik dağılımını göster
-
-DUYGU ANALİZİ KURALLARI:
-- Kullanıcının duygu durumunu dikkate al
-- Negatif duygu varsa: Daha destekleyici, empatik ve yardımcı ol
-- Pozitif duygu varsa: Coşkulu ve mutlu bir ton kullan
-- Endişeli duygu varsa: Güven verici ve açıklayıcı ol
-- Kızgın duygu varsa: Sakinleştirici ve profesyonel ol
-
-CEVAP FORMATI:
-- Soruya doğrudan cevap ver
-- Önceki konuşmaları hatırla ve referans ver
-- Kendi görüşlerini ve önerilerini ekle
-- Gerekirse liste formatında göster (1., 2., 3. şeklinde)
-- Sayısal veriler varsa açıkça belirt ve yorum yap
-- Context'teki bilgileri kullan, tahmin yapma
-- Samimi ama saygılı bir dil kullan
-- Her zaman "başkanım" ile bitir
-
-CONTEXT BİLGİLERİ:
-${contextText}`;
-
-      // Gemini API için mesaj formatı
-      // Konuşma geçmişini ve kullanıcı mesajını birleştir
-      const fullPrompt = `${systemPrompt}\n\nKullanıcı: ${userMessage}`;
-      
-      // Gemini API çağrısı - X-goog-api-key header kullan
-      const response = await fetch(this.API_URL, {
+      const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: fullPrompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.8, // Sohbet modu için biraz daha yaratıcı
-            maxOutputTokens: 2048
-          }
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        let errorMessage = errorData.error?.message || response.statusText;
-        
+        let errorMessage = errorData.error?.message || `API hatası: ${response.status}`;
+
         // 402 hatası için özel mesaj
         if (response.status === 402) {
-          errorMessage = 'Gemini API ücretsiz tier limiti aşıldı veya ödeme gerekiyor. Lütfen Google AI Studio\'dan hesabınızı kontrol edin veya başka bir AI servisi (Groq, DeepSeek) kullanın.';
+          errorMessage = 'Gemini API ücretsiz tier limiti aşıldı veya ödeme gerekiyor. Lütfen Google AI Studio\'dan hesabınızı kontrol edin.';
         }
-        
-        throw new Error(`Gemini API hatası: ${response.status} - ${errorMessage}`);
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      
-      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
-        return data.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('Gemini API yanıt formatı beklenmedik');
+      const candidate = data.candidates?.[0];
+      const content = candidate?.content;
+
+      // Function call kontrolü — Gemini bir araç çağırmak istiyorsa işle
+      if (content?.parts?.[0]?.functionCall) {
+        const functionCall = content.parts[0].functionCall;
+        const toolResult = await executeToolCall(functionCall.name, functionCall.args, this._siteData);
+
+        // Araç sonucunu Gemini'ye geri gönder; doğal dil yanıtı al
+        const followUpBody = {
+          systemInstruction: requestBody.systemInstruction,
+          contents: [
+            ...requestBody.contents,
+            { role: 'model', parts: [{ functionCall }] },
+            { role: 'user', parts: [{ functionResponse: { name: functionCall.name, response: { result: toolResult } } }] }
+          ],
+          generationConfig: requestBody.generationConfig
+        };
+
+        const followUpResponse = await fetch(`${this.API_URL}?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(followUpBody)
+        });
+
+        const followUpData = await followUpResponse.json();
+        return followUpData.candidates?.[0]?.content?.parts?.[0]?.text || toolResult;
       }
+
+      // Normal metin yanıtı
+      const text = content?.parts?.[0]?.text;
+
+      if (!text) throw new Error('Gemini yanıt üretemedi');
+      return text;
+
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.error('Gemini chat hatası:', error.message);
       throw error;
     }
   }
 
   /**
-   * Site verilerini context'e çevir (GroqService'ten alınan metod)
+   * Streaming chat — kelime kelime yanıt
    */
-  static buildSiteContext(siteData) {
-    // GroqService'ten buildSiteContext metodunu kullan
-    return GroqService.buildSiteContext(siteData);
+  static async chatStream(userMessage, context = [], conversationHistory = [], onChunk) {
+    try {
+      this.checkRateLimit();
+      const apiKey = await this.getApiKey();
+      if (!apiKey) throw new Error('Gemini API anahtarı bulunamadı');
+
+      const contextText = Array.isArray(context) ? context.join('\n\n') : String(context);
+      const maskedContext = maskSensitiveData(contextText);
+      const maskedMessage = maskSensitiveData(userMessage);
+
+      const requestBody = {
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT + '\n\n--- SİTE VERİLERİ ---\n\n' + maskedContext }]
+        },
+        contents: [
+          ...this.formatHistory(conversationHistory),
+          { role: 'user', parts: [{ text: maskedMessage }] }
+        ],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 2048,
+          topP: 0.95,
+          topK: 40
+        }
+      };
+
+      const response = await fetch(`${this.STREAM_URL}?key=${apiKey}&alt=sse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API hatası: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const json = JSON.parse(line.slice(6));
+              const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                fullText += text;
+                onChunk?.(text, fullText);
+              }
+            } catch (e) {
+              // Skip unparseable chunks
+            }
+          }
+        }
+      }
+
+      return fullText;
+
+    } catch (error) {
+      console.error('Gemini streaming hatası:', error.message);
+      throw error;
+    }
   }
 
   /**
-   * Üye bilgilerini context'e ekle (GroqService'ten alınan metod)
+   * Görüntü analizi (chatbot'ta fotoğraf gönderme)
    */
-  static buildMemberContext(members, searchTerm, siteData) {
-    // GroqService'ten buildMemberContext metodunu kullan
-    return GroqService.buildMemberContext(members, searchTerm, siteData);
+  static async analyzeImage(imageBase64, mimeType, prompt = 'Bu görseli analiz et') {
+    try {
+      this.checkRateLimit();
+      const apiKey = await this.getApiKey();
+      if (!apiKey) throw new Error('Gemini API anahtarı bulunamadı');
+
+      const requestBody = {
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT }]
+        },
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: maskSensitiveData(prompt) },
+            { inlineData: { mimeType, data: imageBase64 } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 2048
+        }
+      };
+
+      const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) throw new Error(`API hatası: ${response.status}`);
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Görsel analiz edilemedi';
+
+    } catch (error) {
+      console.error('Gemini görüntü analizi hatası:', error.message);
+      throw error;
+    }
   }
 }
 
 export default GeminiService;
-
