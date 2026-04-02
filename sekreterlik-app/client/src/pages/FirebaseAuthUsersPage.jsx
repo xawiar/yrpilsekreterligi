@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../config/firebase';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const FirebaseAuthUsersPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [authUsers, setAuthUsers] = useState([]);
   const [memberUsers, setMemberUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +61,8 @@ const FirebaseAuthUsersPage = () => {
   };
 
   const handleDeleteAuthUser = async (authUid, memberUserId, username) => {
-    if (!window.confirm(`Bu Firebase Auth kullanıcısını silmek istediğinize emin misiniz?\n\nUsername: ${username}\nAuth UID: ${authUid}`)) {
+    const confirmed = await confirm({ title: 'Auth Kullanıcısını Sil', message: `Bu Firebase Auth kullanıcısını silmek istediğinize emin misiniz?\n\nUsername: ${username}\nAuth UID: ${authUid}` });
+    if (!confirmed) {
       return;
     }
 
@@ -91,7 +97,7 @@ const FirebaseAuthUsersPage = () => {
           }
         }
 
-        alert('Firebase Auth kullanıcısı başarıyla silindi');
+        toast.success('Firebase Auth kullanıcısı başarıyla silindi');
         fetchAuthUsers(); // Listeyi yenile
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -100,14 +106,15 @@ const FirebaseAuthUsersPage = () => {
     } catch (err) {
       console.error('Error deleting auth user:', err);
       setError('Kullanıcı silinirken hata oluştu: ' + err.message);
-      alert('Hata: ' + err.message);
+      toast.error('Hata: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCleanupOrphanedAuthUsers = async () => {
-    if (!window.confirm('Firestore\'da olmayan ama Firebase Auth\'da olan kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- @ilsekreterlik.local email\'li kullanıcıları kontrol eder\n- Firestore/SQLite\'da authUid olmayan kullanıcıları siler\n- Admin kullanıcısını korur\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: 'Orphaned Kullanıcıları Temizle', message: 'Firestore\'da olmayan ama Firebase Auth\'da olan kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- @ilsekreterlik.local email\'li kullanıcıları kontrol eder\n- Firestore/SQLite\'da authUid olmayan kullanıcıları siler\n- Admin kullanıcısını korur\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -133,7 +140,7 @@ const FirebaseAuthUsersPage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`✅ Temizleme tamamlandı!\n\nSilinen: ${result.deleted} kullanıcı\nHata: ${result.errors || 0} kullanıcı`);
+        toast.success(`Temizleme tamamlandı! Silinen: ${result.deleted} kullanıcı, Hata: ${result.errors || 0} kullanıcı`);
         fetchAuthUsers(); // Listeyi yenile
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -142,7 +149,7 @@ const FirebaseAuthUsersPage = () => {
     } catch (err) {
       console.error('Error cleaning up orphaned auth users:', err);
       setError('Temizleme işlemi sırasında hata oluştu: ' + err.message);
-      alert('Hata: ' + err.message);
+      toast.error('Hata: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -302,6 +309,7 @@ const FirebaseAuthUsersPage = () => {
           </ul>
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

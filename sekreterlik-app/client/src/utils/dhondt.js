@@ -45,7 +45,17 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
   });
 
   // Bölümleri büyükten küçüğe sırala
-  quotients.sort((a, b) => b.quotient - a.quotient);
+  // Eşit quotient durumunda daha yüksek oyu olan parti önce gelir (deterministik sıralama)
+  quotients.sort((a, b) => {
+    const diff = b.quotient - a.quotient;
+    if (Math.abs(diff) < 1e-9) {
+      // Eşit quotient: oyu daha yüksek olan parti önce
+      const aVotes = votes.find(v => v.party === a.party)?.votes || 0;
+      const bVotes = votes.find(v => v.party === b.party)?.votes || 0;
+      return bVotes - aVotes;
+    }
+    return diff;
+  });
 
   // İlk totalSeats kadar bölümü al (en yüksek bölümler)
   const topQuotients = quotients.slice(0, totalSeats);
@@ -374,8 +384,9 @@ export const calculateProvincialAssemblySeats = (results, districtSeats, ballotB
  */
 export const applyThreshold = (votes, totalVotes, thresholdPercent = 7.0) => {
   if (!totalVotes || totalVotes <= 0) return false;
-  const threshold = (totalVotes * thresholdPercent) / 100;
-  return votes >= threshold;
+  // Floating point hatalarını önlemek için: votes * 100 >= totalVotes * thresholdPercent
+  // Bu sayede bölme işleminden kaçınılır
+  return (votes * 100) >= (totalVotes * thresholdPercent);
 };
 
 /**

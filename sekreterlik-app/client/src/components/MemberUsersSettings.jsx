@@ -4,8 +4,13 @@ import { decryptData } from '../utils/crypto';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import FirebaseService from '../services/FirebaseService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const MemberUsersSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [memberUsers, setMemberUsers] = useState([]);
   const [members, setMembers] = useState([]);
   const [towns, setTowns] = useState([]);
@@ -179,7 +184,8 @@ const MemberUsersSettings = () => {
   };
 
   const handleDeleteUser = async (userId, userName) => {
-    if (window.confirm(`${userName} kullanıcısını silmek istediğinizden emin misiniz?\n\nBu işlem:\n- Kullanıcıyı Firestore'dan siler\n- Backend servisi varsa Firebase Auth'dan da siler\n- Backend servisi yoksa Firebase Auth'da kalır (senkronizasyon ile temizlenebilir)`)) {
+    const confirmed = await confirm({ title: 'Kullanıcıyı Sil', message: `${userName} kullanıcısını silmek istediğinizden emin misiniz?\n\nBu işlem:\n- Kullanıcıyı Firestore'dan siler\n- Backend servisi varsa Firebase Auth'dan da siler\n- Backend servisi yoksa Firebase Auth'da kalır (senkronizasyon ile temizlenebilir)` });
+    if (confirmed) {
       try {
         const response = await ApiService.deleteMemberUser(userId);
         if (response.success) {
@@ -760,7 +766,8 @@ const MemberUsersSettings = () => {
 
   // Üye kullanıcılarını Firebase Auth'a kaydet
   const handleSyncToFirebaseAuth = async () => {
-    if (!window.confirm('Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Email ve displayName bilgilerini günceller\n- Backend servisi varsa: Firestore\'da olmayan ama Auth\'da olan kullanıcıları siler\n\nNot: Firebase Auth\'dan kullanıcı silme işlemi backend servisi gerektirir. Backend yoksa sadece kullanıcı oluşturma ve güncelleme yapılır.\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: 'Firebase Auth Senkronizasyonu', message: 'Üye kullanıcıları ile Firebase Auth\'ı senkronize etmek istediğinize emin misiniz?\n\nBu işlem:\n- Firestore\'da olan ama Auth\'da olmayan kullanıcıları oluşturur\n- Email ve displayName bilgilerini günceller\n- Backend servisi varsa: Firestore\'da olmayan ama Auth\'da olan kullanıcıları siler\n\nNot: Firebase Auth\'dan kullanıcı silme işlemi backend servisi gerektirir. Backend yoksa sadece kullanıcı oluşturma ve güncelleme yapılır.\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -1267,7 +1274,8 @@ const MemberUsersSettings = () => {
 
   // Geçersiz kullanıcıları bul ve temizle (silinmiş üyelere ait kullanıcılar)
   const handleCleanupOrphanedMemberUsers = async () => {
-    if (!window.confirm('Geçersiz kullanıcıları bulmak ve temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- member_users\'daki kullanıcıları members ile karşılaştırır\n- Silinmiş/arşivlenmiş üyelere ait kullanıcıları bulur\n- Bu kullanıcıları listeler ve onayla siler\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: 'Geçersiz Kullanıcıları Temizle', message: 'Geçersiz kullanıcıları bulmak ve temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- member_users\'daki kullanıcıları members ile karşılaştırır\n- Silinmiş/arşivlenmiş üyelere ait kullanıcıları bulur\n- Bu kullanıcıları listeler ve onayla siler\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -1316,8 +1324,9 @@ const MemberUsersSettings = () => {
       }).join('\n');
       
       const confirmMessage = `Bulunan geçersiz kullanıcılar (${orphanedUsers.length} adet):\n\n${userList}\n\nBu kullanıcıları silmek istediğinize emin misiniz?`;
-      
-      if (!window.confirm(confirmMessage)) {
+
+      const confirmedDelete = await confirm({ title: 'Geçersiz Kullanıcıları Sil', message: confirmMessage });
+      if (!confirmedDelete) {
         setMessage(`ℹ️ İşlem iptal edildi. ${orphanedUsers.length} geçersiz kullanıcı bulundu ama silinmedi.`);
         setMessageType('info');
         return;
@@ -1370,7 +1379,8 @@ const MemberUsersSettings = () => {
 
   // Gereksiz Firebase Auth kullanıcılarını temizle (orphaned users)
   const handleCleanupOrphanedAuthUsers = async () => {
-    if (!window.confirm('Firestore\'da olmayan ama Firebase Auth\'da olan gereksiz kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- @ilsekreterlik.local email\'li kullanıcıları kontrol eder\n- Firestore\'daki member_users\'da olmayan kullanıcıları Firebase Auth\'dan siler\n- Admin kullanıcısını korur\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: 'Gereksiz Auth Kullanıcılarını Temizle', message: 'Firestore\'da olmayan ama Firebase Auth\'da olan gereksiz kullanıcıları temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- @ilsekreterlik.local email\'li kullanıcıları kontrol eder\n- Firestore\'daki member_users\'da olmayan kullanıcıları Firebase Auth\'dan siler\n- Admin kullanıcısını korur\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -1456,7 +1466,8 @@ const MemberUsersSettings = () => {
 
   // Firestore'daki tüm authUid'leri temizle (Firebase Auth'da olmayan authUid'leri)
   const handleClearAuthUids = async () => {
-    if (!window.confirm('Firestore\'daki tüm authUid field\'larını temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- Tüm member_users dokümanlarındaki authUid field\'ını siler\n- Firebase Auth\'daki kullanıcıları SİLMEZ\n- Sadece Firestore\'daki referansları temizler\n\nSonrasında "Firebase Auth\'a Senkronize Et" butonuna tıklamanız gerekecek.\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: 'AuthUid\'leri Temizle', message: 'Firestore\'daki tüm authUid field\'larını temizlemek istediğinize emin misiniz?\n\nBu işlem:\n- Tüm member_users dokümanlarındaki authUid field\'ını siler\n- Firebase Auth\'daki kullanıcıları SİLMEZ\n- Sadece Firestore\'daki referansları temizler\n\nSonrasında "Firebase Auth\'a Senkronize Et" butonuna tıklamanız gerekecek.\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -1832,7 +1843,8 @@ const MemberUsersSettings = () => {
 
   // Tüm kullanıcıları oluştur (Temizlik YAPMA)
   const handleProcessAllUsers = async () => {
-    if (!window.confirm('Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. Üye kullanıcılarını oluşturur/günceller (TC ve telefon ile)\n2. İlçe Başkanı kullanıcılarını oluşturur/günceller\n3. Belde Başkanı kullanıcılarını oluşturur/günceller\n4. Müşahit kullanıcılarını oluşturur/günceller\n5. Sorumlu kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: 'Tüm Kullanıcıları Oluştur', message: 'Tüm kullanıcıları oluşturmak istediğinize emin misiniz?\n\nBu işlem:\n1. Üye kullanıcılarını oluşturur/günceller (TC ve telefon ile)\n2. İlçe Başkanı kullanıcılarını oluşturur/günceller\n3. Belde Başkanı kullanıcılarını oluşturur/günceller\n4. Müşahit kullanıcılarını oluşturur/günceller\n5. Sorumlu kullanıcılarını oluşturur/günceller\n\n⚠️ NOT: Bu işlem kullanıcıları SADECE OLUŞTURUR, silmez.\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -1955,11 +1967,13 @@ const MemberUsersSettings = () => {
 
   // Tüm üye kullanıcılarını sil
   const handleDeleteAllMemberUsers = async () => {
-    if (!window.confirm('⚠️ DİKKAT: Üye kullanıcıları sayfasındaki TÜM kullanıcıları silmek istediğinize emin misiniz?\n\nBu işlem:\n- Tüm member_users koleksiyonundaki kullanıcıları siler\n- Backend servisi varsa Firebase Auth\'daki kullanıcıları da siler\n- Admin kullanıcısını korur\n\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?')) {
+    const confirmed = await confirm({ title: '⚠️ TÜM Kullanıcıları Sil', message: '⚠️ DİKKAT: Üye kullanıcıları sayfasındaki TÜM kullanıcıları silmek istediğinize emin misiniz?\n\nBu işlem:\n- Tüm member_users koleksiyonundaki kullanıcıları siler\n- Backend servisi varsa Firebase Auth\'daki kullanıcıları da siler\n- Admin kullanıcısını korur\n\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?' });
+    if (!confirmed) {
       return;
     }
 
-    if (!window.confirm('Son bir kez daha onaylayın: TÜM kullanıcıları silmek istediğinize emin misiniz?')) {
+    const confirmedFinal = await confirm({ title: 'Son Onay', message: 'Son bir kez daha onaylayın: TÜM kullanıcıları silmek istediğinize emin misiniz?' });
+    if (!confirmedFinal) {
       return;
     }
 
@@ -2723,6 +2737,7 @@ const MemberUsersSettings = () => {
         </div>
       </div>
 
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

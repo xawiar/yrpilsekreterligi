@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -10,6 +11,7 @@ import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from '../components/mobile/NativeCard';
 
 const ReportsPage = () => {
+  const toast = useToast();
   const { user } = useAuth();
   const isAdmin = user && user.role === 'admin';
   const isDistrictPresident = user && user.role === 'district_president';
@@ -101,10 +103,10 @@ const ReportsPage = () => {
       await ApiService.setMemberStars(memberId, stars);
       // Refresh data to show updated stars
       await fetchReportsData();
-      alert('Yıldız başarıyla güncellendi');
+      toast.success('Yıldız başarıyla güncellendi');
     } catch (error) {
       console.error('Error saving stars:', error);
-      alert('Yıldız güncellenirken hata oluştu: ' + error.message);
+      toast.error('Yıldız güncellenirken hata oluştu: ' + error.message);
     } finally {
       setSavingStars(prev => ({ ...prev, [memberId]: false }));
     }

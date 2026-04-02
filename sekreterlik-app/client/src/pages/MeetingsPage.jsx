@@ -9,16 +9,21 @@ import CreateMeetingFromMinutes from '../components/CreateMeetingFromMinutes';
 import MeetingDetails from '../components/MeetingDetails';
 import MeetingForm from '../components/MeetingForm';
 import AttendanceUpdate from '../components/AttendanceUpdate';
-import { 
-  MeetingsHeader, 
-  MeetingsSummaryStatistics, 
-  MeetingsFilters, 
-  MeetingsTable 
+import {
+  MeetingsHeader,
+  MeetingsSummaryStatistics,
+  MeetingsFilters,
+  MeetingsTable
 } from '../components/Meetings';
 import { LoadingSpinner } from '../components/UI';
 import NativeMeetingsList from '../components/mobile/NativeMeetingsList';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const MeetingsPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [meetings, setMeetings] = useState([]);
   const [members, setMembers] = useState([]);
@@ -132,15 +137,15 @@ const MeetingsPage = () => {
   };
 
   const handleArchiveMeeting = async (id) => {
-    if (window.confirm('Bu toplantıyı arşivlemek istediğinize emin misiniz?')) {
-      try {
-        await ApiService.archiveMeeting(id);
-        fetchMeetings(); // Refresh the list
-        alert('Toplantı başarıyla arşivlendi');
-      } catch (error) {
-        console.error('Error archiving meeting:', error);
-        alert('Toplantı arşivlenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Toplantıyı Arşivle', message: 'Bu toplantıyı arşivlemek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.archiveMeeting(id);
+      fetchMeetings(); // Refresh the list
+      toast.success('Toplantı başarıyla arşivlendi');
+    } catch (error) {
+      console.error('Error archiving meeting:', error);
+      toast.error('Toplantı arşivlenirken hata oluştu: ' + error.message);
     }
   };
 
@@ -446,11 +451,12 @@ const MeetingsPage = () => {
           title="Tutanaktan Toplantı Oluştur"
           size="xl"
         >
-          <CreateMeetingFromMinutes 
+          <CreateMeetingFromMinutes
             onClose={closeCreateFromMinutesModal}
             onMeetingCreated={handleMeetingCreated}
           />
         </Modal>
+        <ConfirmDialog {...confirmDialogProps} />
       </>
     );
   }
@@ -566,11 +572,12 @@ const MeetingsPage = () => {
         title="Tutanaktan Toplantı Oluştur"
         size="xl"
       >
-        <CreateMeetingFromMinutes 
+        <CreateMeetingFromMinutes
           onClose={closeCreateFromMinutesModal}
           onMeetingCreated={handleMeetingCreated}
         />
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

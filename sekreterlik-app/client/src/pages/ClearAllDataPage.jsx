@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const ClearAllDataPage = () => {
   const { user, isLoggedIn } = useAuth();
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -44,12 +49,14 @@ const ClearAllDataPage = () => {
 
   const clearAllData = async () => {
     // Son bir kez onay al
-    const confirmed = window.confirm(
-      '⚠️ DİKKAT! Bu işlem TÜM VERİLERİ silecektir (Admin kullanıcısı hariç).\n\n' +
-      'Bu işlem GERİ ALINAMAZ!\n\n' +
-      'Devam etmek istediğinize emin misiniz?\n\n' +
-      'Son onay için tekrar "OK" tuşuna basın.'
-    );
+    const confirmed = await confirm({
+      title: '⚠️ TÜM VERİLERİ SİL',
+      message:
+        '⚠️ DİKKAT! Bu işlem TÜM VERİLERİ silecektir (Admin kullanıcısı hariç).\n\n' +
+        'Bu işlem GERİ ALINAMAZ!\n\n' +
+        'Devam etmek istediğinize emin misiniz?\n\n' +
+        'Son onay için tekrar "Evet" butonuna basın.'
+    });
 
     if (!confirmed) {
       return;
@@ -127,14 +134,12 @@ const ClearAllDataPage = () => {
       }
 
       setStatus(`✅ Tamamlandı! Toplam ${totalDeleted} kayıt silindi.`);
-      const resultsText = resultsList.join('\n');
-      
-      alert(`✅ Tamamlandı!\n\nToplam ${totalDeleted} kayıt silindi.\n\nDetaylar:\n${resultsText}`);
-      
+      toast.success(`Tamamlandı! Toplam ${totalDeleted} kayıt silindi.`);
+
     } catch (error) {
       console.error('Error clearing data:', error);
       setError('Veri temizlenirken hata oluştu: ' + error.message);
-      alert('Hata: ' + error.message);
+      toast.error('Hata: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -228,6 +233,7 @@ const ClearAllDataPage = () => {
           )}
         </button>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

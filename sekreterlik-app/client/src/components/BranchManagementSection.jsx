@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const BranchManagementSection = ({ branchType, memberRegion, memberId, management, setManagement }) => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -96,7 +101,8 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bu yönetim üyesini silmek istediğinizden emin misiniz?')) {
+    const confirmed = await confirm({ title: 'Yönetim Üyesini Sil', message: 'Bu yönetim üyesini silmek istediğinizden emin misiniz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -106,13 +112,11 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
       } else {
         await ApiService.deleteYouthBranchManagement(id);
       }
-      setMessage('Yönetim üyesi başarıyla silindi');
-      setMessageType('success');
+      toast.success('Yönetim üyesi başarıyla silindi');
       fetchManagement();
     } catch (error) {
       console.error('Error deleting management member:', error);
-      setMessage('Silme sırasında hata oluştu: ' + error.message);
-      setMessageType('error');
+      toast.error('Silme sırasında hata oluştu: ' + error.message);
     }
   };
 
@@ -313,6 +317,7 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
           Henüz yönetim üyesi eklenmemiş
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

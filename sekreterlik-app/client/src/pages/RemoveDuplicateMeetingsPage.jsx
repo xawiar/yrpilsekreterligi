@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 const RemoveDuplicateMeetingsPage = () => {
   const { user, isLoggedIn } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [duplicates, setDuplicates] = useState([]);
   const [results, setResults] = useState(null);
@@ -123,8 +125,8 @@ const RemoveDuplicateMeetingsPage = () => {
 
       // Duplicates listesini temizle
       setDuplicates([]);
-      
-      alert(`✅ İşlem tamamlandı!\n${deleted} toplantı silindi\n${errors} hata`);
+
+      toast.success(`İşlem tamamlandı! ${deleted} toplantı silindi, ${errors} hata.`);
     } catch (error) {
       console.error('❌ Remove duplicates error:', error);
       setError(`Çift toplantılar silinirken hata oluştu: ${error.message}`);

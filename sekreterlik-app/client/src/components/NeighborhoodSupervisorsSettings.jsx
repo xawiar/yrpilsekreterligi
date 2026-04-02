@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const NeighborhoodSupervisorsSettings = () => {
+  const { confirm, confirmDialogProps } = useConfirm();
   const [supervisors, setSupervisors] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -88,7 +91,8 @@ const NeighborhoodSupervisorsSettings = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Bu sorumluyu silmek istediğinizden emin misiniz?')) {
+    const confirmed = await confirm({ title: 'Sorumluyu Sil', message: 'Bu sorumluyu silmek istediğinizden emin misiniz?' });
+    if (confirmed) {
       try {
         await ApiService.deleteNeighborhoodSupervisor(id);
         fetchData();
@@ -330,6 +334,7 @@ const NeighborhoodSupervisorsSettings = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

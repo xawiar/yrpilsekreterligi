@@ -3,8 +3,13 @@ import * as XLSX from 'xlsx';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from './mobile/NativeCard';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const VillagesSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [villages, setVillages] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
@@ -316,19 +321,16 @@ const VillagesSettings = () => {
   };
 
   const handleDelete = async (village) => {
-    if (!window.confirm(`"${village.name}" köyünü silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Köy Sil', message: `"${village.name}" köyünü silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteVillage(village.id);
-      setMessage('Köy başarıyla silindi');
-      setMessageType('success');
+      toast.success('Köy başarıyla silindi');
       fetchData();
     } catch (error) {
       console.error('Error deleting village:', error);
-      setMessage(error.message || 'Köy silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Köy silinirken hata oluştu');
     }
   };
 
@@ -1153,6 +1155,7 @@ const VillagesSettings = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

@@ -5,6 +5,8 @@
 import React, { useState } from 'react';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmDialog from '../UI/ConfirmDialog';
 
 const NativeMeetingsList = ({ 
   meetings = [],
@@ -20,6 +22,7 @@ const NativeMeetingsList = ({
   calculateAttendanceStats = () => ({}),
   getAttendanceColor = () => ''
 }) => {
+  const { confirm, confirmDialogProps } = useConfirm();
   const [openMenuId, setOpenMenuId] = useState(null);
   // Filter meetings by search term
   const filteredMeetings = meetings.filter(meeting =>
@@ -242,10 +245,11 @@ const NativeMeetingsList = ({
                     )}
                     {onArchiveMeeting && (
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
                           if (onArchiveMeeting && meeting && meeting.id) {
-                            if (window.confirm('Bu toplantıyı arşivlemek istediğinize emin misiniz?')) {
+                            const confirmed = await confirm({ title: 'Toplantıyı Arşivle', message: 'Bu toplantıyı arşivlemek istediğinize emin misiniz?' });
+                            if (confirmed) {
                               onArchiveMeeting(meeting.id);
                               setOpenMenuId(null);
                             }
@@ -266,6 +270,7 @@ const NativeMeetingsList = ({
           })}
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

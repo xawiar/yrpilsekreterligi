@@ -7,10 +7,12 @@ import PersonalDocuments from './PersonalDocuments';
 import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 import { calculatePerformanceScore } from '../utils/performanceScore';
+import { useToast } from '../contexts/ToastContext';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
-  
+  const toast = useToast();
+
   // Early return if member is not provided
   if (!member || !member.id) {
     return (
@@ -473,10 +475,10 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       const updatedMember = { ...member, notes: notes };
       await ApiService.updateMember(member.id, updatedMember);
       setIsEditingNotes(false);
-      alert('Notlar başarıyla kaydedildi');
+      toast.success('Notlar başarıyla kaydedildi');
     } catch (error) {
       console.error('Error saving notes:', error);
-      alert('Notlar kaydedilirken hata oluştu: ' + error.message);
+      toast.error('Notlar kaydedilirken hata oluştu: ' + error.message);
     } finally {
       setIsSavingNotes(false);
     }
@@ -488,10 +490,10 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     try {
       await ApiService.setMemberStars(member.id, stars);
       setManualStars(stars);
-      alert('Yıldız başarıyla güncellendi');
+      toast.success('Yıldız başarıyla güncellendi');
     } catch (error) {
       console.error('Error saving stars:', error);
-      alert('Yıldız güncellenirken hata oluştu: ' + error.message);
+      toast.error('Yıldız güncellenirken hata oluştu: ' + error.message);
     } finally {
       setIsSavingStars(false);
     }
@@ -504,13 +506,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Lütfen sadece resim dosyası seçin');
+      toast.warning('Lütfen sadece resim dosyası seçin');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Dosya boyutu 5MB\'dan küçük olmalıdır');
+      toast.warning('Dosya boyutu 5MB\'dan küçük olmalıdır');
       return;
     }
 
@@ -522,13 +524,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       
       if (result.success) {
         setPhoto(result.photoUrl);
-        alert('Fotoğraf başarıyla yüklendi');
+        toast.success('Fotoğraf başarıyla yüklendi');
       } else {
         throw new Error(result.message || 'Fotoğraf yüklenirken hata oluştu');
       }
     } catch (error) {
       console.error('Photo upload error:', error);
-      alert('Fotoğraf yüklenirken hata oluştu: ' + error.message);
+      toast.error('Fotoğraf yüklenirken hata oluştu: ' + error.message);
     } finally {
       setIsUploading(false);
     }

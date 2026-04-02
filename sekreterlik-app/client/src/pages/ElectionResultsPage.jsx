@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 import PublicApiService from '../utils/PublicApiService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
@@ -191,6 +192,7 @@ const getWinningParty = (result, election) => {
 };
 
 const ElectionResultsPage = ({ readOnly = false }) => {
+  const toast = useToast();
   const { electionId } = useParams();
   const navigate = useNavigate();
   const [election, setElection] = useState(null);
@@ -1002,7 +1004,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       link.click();
     } catch (error) {
       console.error('PNG export error:', error);
-      alert('PNG oluşturulurken bir hata oluştu');
+      toast.error('PNG oluşturulurken bir hata oluştu');
     }
   };
 
@@ -1039,7 +1041,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       pdf.save(`${election?.name || 'seçim-sonuclari'}_grafik.pdf`);
     } catch (error) {
       console.error('PDF export error:', error);
-      alert('PDF oluşturulurken bir hata oluştu');
+      toast.error('PDF oluşturulurken bir hata oluştu');
     }
   };
 
@@ -1048,7 +1050,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
     try {
       const filtered = getFilteredResults();
       if (!filtered || filtered.length === 0) {
-        alert('Dışa aktarılacak veri bulunamadı');
+        toast.warning('Dışa aktarılacak veri bulunamadı');
         return;
       }
       const workbook = XLSX.utils.book_new();
@@ -1085,7 +1087,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       XLSX.writeFile(workbook, `${election?.name || 'seçim-sonuclari'}_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Excel export error:', error);
-      alert('Excel oluşturulurken bir hata oluştu');
+      toast.error('Excel oluşturulurken bir hata oluştu');
     }
   }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes]);
 

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const VillageRepresentativesSettings = () => {
+  const { confirm, confirmDialogProps } = useConfirm();
   const [representatives, setRepresentatives] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [villages, setVillages] = useState([]);
@@ -88,7 +91,8 @@ const VillageRepresentativesSettings = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Bu temsilciyi silmek istediğinizden emin misiniz?')) {
+    const confirmed = await confirm({ title: 'Temsilciyi Sil', message: 'Bu temsilciyi silmek istediğinizden emin misiniz?' });
+    if (confirmed) {
       try {
         await ApiService.deleteVillageRepresentative(id);
         fetchData();
@@ -330,6 +334,7 @@ const VillageRepresentativesSettings = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

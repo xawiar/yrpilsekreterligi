@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const BulkSmsPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [regions, setRegions] = useState([]);
   const [selectedRegions, setSelectedRegions] = useState([]);
   const [message, setMessage] = useState('');
@@ -54,7 +59,7 @@ const BulkSmsPage = () => {
       setRegions(regionsData || []);
     } catch (error) {
       console.error('Error loading regions:', error);
-      alert('Bölgeler yüklenirken hata oluştu');
+      toast.error('Bölgeler yüklenirken hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -240,27 +245,27 @@ const BulkSmsPage = () => {
 
   const handleSend = async () => {
     if (!message.trim()) {
-      alert('Lütfen mesaj metnini girin');
+      toast.warning('Lütfen mesaj metnini girin');
       return;
     }
 
     if (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents && !includeNeighborhoodRepresentatives && !includeVillageRepresentatives) {
-      alert('Lütfen en az bir bölge seçin veya müşahit/belde başkanı/temsilci seçeneklerinden birini işaretleyin');
+      toast.warning('Lütfen en az bir bölge seçin veya müşahit/belde başkanı/temsilci seçeneklerinden birini işaretleyin');
       return;
     }
 
     // İleri tarihli mesaj kontrolü
     if (isScheduled) {
       if (!scheduledDate) {
-        alert('Lütfen planlanan tarih ve saati girin');
+        toast.warning('Lütfen planlanan tarih ve saati girin');
         return;
       }
 
       const scheduledDateTime = new Date(scheduledDate);
       const now = new Date();
-      
+
       if (scheduledDateTime <= now) {
-        alert('Planlanan tarih gelecekte olmalıdır');
+        toast.warning('Planlanan tarih gelecekte olmalıdır');
         return;
       }
 
@@ -285,7 +290,7 @@ const BulkSmsPage = () => {
           });
 
           if (result.success) {
-            alert(`SMS başarıyla planlandı. ${new Date(scheduledDate).toLocaleString('tr-TR')} tarihinde gönderilecek.`);
+            toast.success(`SMS başarıyla planlandı. ${new Date(scheduledDate).toLocaleString('tr-TR')} tarihinde gönderilecek.`);
             setMessage('');
             setSelectedRegions([]);
             setIsScheduled(false);
@@ -297,12 +302,12 @@ const BulkSmsPage = () => {
             setIncludeVillageRepresentatives(false);
             await loadScheduledSms();
           } else {
-            alert('SMS planlanırken hata oluştu: ' + result.message);
+            toast.error('SMS planlanırken hata oluştu: ' + result.message);
           }
         }
       } catch (error) {
         console.error('Error scheduling SMS:', error);
-        alert('SMS planlanırken hata oluştu: ' + error.message);
+        toast.error('SMS planlanırken hata oluştu: ' + error.message);
       } finally {
         setSending(false);
       }
@@ -319,14 +324,16 @@ const BulkSmsPage = () => {
     if (includeNeighborhoodRepresentatives) recipientTypes.push('mahalle temsilcilerine');
     if (includeVillageRepresentatives) recipientTypes.push('köy temsilcilerine');
 
-    if (!window.confirm(`${recipientTypes.join(', ')} SMS göndermek istediğinize emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'SMS Gönder',
+      message: `${recipientTypes.join(', ')} SMS göndermek istediğinize emin misiniz?`
+    });
+    if (!confirmed) return;
 
     try {
       setSending(true);
       setResult(null);
-      
+
       const result = await ApiService.sendBulkSms(message, selectedRegions, [], {
         includeObservers,
         includeChiefObservers,
@@ -336,7 +343,7 @@ const BulkSmsPage = () => {
       });
       setResult(result);
       setShowResultModal(true);
-      
+
       if (result.success) {
         setMessage('');
         setSelectedRegions([]);
@@ -348,7 +355,7 @@ const BulkSmsPage = () => {
       }
     } catch (error) {
       console.error('Error sending bulk SMS:', error);
-      alert('SMS gönderilirken hata oluştu: ' + error.message);
+      toast.error('SMS gönderilirken hata oluştu: ' + error.message);
     } finally {
       setSending(false);
     }
@@ -751,19 +758,19 @@ const BulkSmsPage = () => {
                         </button>
                         <button
                           onClick={async () => {
-                            if (window.confirm('Bu planlanmış SMS\'i silmek istediğinize emin misiniz?')) {
-                              try {
-                                const result = await ApiService.deleteScheduledSms(sms.id);
-                                if (result.success) {
-                                  await loadScheduledSms();
-                                  alert('SMS silindi');
-                                } else {
-                                  alert('SMS silinirken hata oluştu: ' + result.message);
-                                }
-                              } catch (error) {
-                                console.error('Error deleting SMS:', error);
-                                alert('SMS silinirken hata oluştu: ' + error.message);
+                            const confirmed = await confirm({ title: 'SMS Sil', message: 'Bu planlanmış SMS\'i silmek istediğinize emin misiniz?' });
+                            if (!confirmed) return;
+                            try {
+                              const result = await ApiService.deleteScheduledSms(sms.id);
+                              if (result.success) {
+                                await loadScheduledSms();
+                                toast.success('SMS silindi');
+                              } else {
+                                toast.error('SMS silinirken hata oluştu: ' + result.message);
                               }
+                            } catch (error) {
+                              console.error('Error deleting SMS:', error);
+                              toast.error('SMS silinirken hata oluştu: ' + error.message);
                             }
                           }}
                           className="px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -772,19 +779,19 @@ const BulkSmsPage = () => {
                         </button>
                         <button
                           onClick={async () => {
-                            if (window.confirm('Bu planlanmış SMS\'i iptal etmek istediğinize emin misiniz?')) {
-                              try {
-                                const result = await ApiService.cancelScheduledSms(sms.id);
-                                if (result.success) {
-                                  await loadScheduledSms();
-                                  alert('SMS iptal edildi');
-                                } else {
-                                  alert('SMS iptal edilirken hata oluştu: ' + result.message);
-                                }
-                              } catch (error) {
-                                console.error('Error cancelling SMS:', error);
-                                alert('SMS iptal edilirken hata oluştu: ' + error.message);
+                            const confirmed = await confirm({ title: 'SMS İptal Et', message: 'Bu planlanmış SMS\'i iptal etmek istediğinize emin misiniz?' });
+                            if (!confirmed) return;
+                            try {
+                              const result = await ApiService.cancelScheduledSms(sms.id);
+                              if (result.success) {
+                                await loadScheduledSms();
+                                toast.success('SMS iptal edildi');
+                              } else {
+                                toast.error('SMS iptal edilirken hata oluştu: ' + result.message);
                               }
+                            } catch (error) {
+                              console.error('Error cancelling SMS:', error);
+                              toast.error('SMS iptal edilirken hata oluştu: ' + error.message);
                             }
                           }}
                           className="px-3 py-1 text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-700 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20"
@@ -826,16 +833,16 @@ const BulkSmsPage = () => {
               try {
                 const result = await ApiService.updateScheduledSms(editingSms.id, updatedData);
                 if (result.success) {
-                  alert('SMS başarıyla güncellendi');
+                  toast.success('SMS başarıyla güncellendi');
                   await loadScheduledSms();
                   setShowEditModal(false);
                   setEditingSms(null);
                 } else {
-                  alert('SMS güncellenirken hata oluştu: ' + result.message);
+                  toast.error('SMS güncellenirken hata oluştu: ' + result.message);
                 }
               } catch (error) {
                 console.error('Error updating SMS:', error);
-                alert('SMS güncellenirken hata oluştu: ' + error.message);
+                toast.error('SMS güncellenirken hata oluştu: ' + error.message);
               }
             }}
             onCancel={() => {
@@ -845,12 +852,15 @@ const BulkSmsPage = () => {
           />
         )}
       </Modal>
+
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };
 
 // Düzenleme Formu Komponenti
 const EditScheduledSmsForm = ({ sms, regions, onSave, onCancel }) => {
+  const toast = useToast();
   const [message, setMessage] = useState(sms.message || '');
   const [selectedRegions, setSelectedRegions] = useState(sms.regions || []);
   const [scheduledDate, setScheduledDate] = useState(
@@ -866,20 +876,20 @@ const EditScheduledSmsForm = ({ sms, regions, onSave, onCancel }) => {
     e.preventDefault();
     
     if (!message.trim()) {
-      alert('Lütfen mesaj metnini girin');
+      toast.warning('Lütfen mesaj metnini girin');
       return;
     }
 
     if (!scheduledDate) {
-      alert('Lütfen planlanan tarih ve saati girin');
+      toast.warning('Lütfen planlanan tarih ve saati girin');
       return;
     }
 
     const scheduledDateTime = new Date(scheduledDate);
     const now = new Date();
-    
+
     if (scheduledDateTime <= now) {
-      alert('Planlanan tarih gelecekte olmalıdır');
+      toast.warning('Planlanan tarih gelecekte olmalıdır');
       return;
     }
 

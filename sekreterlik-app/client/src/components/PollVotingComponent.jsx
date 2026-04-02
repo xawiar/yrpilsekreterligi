@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 
 const PollVotingComponent = ({ poll, memberId, onVote }) => {
+  const toast = useToast();
   const [selectedOption, setSelectedOption] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,7 +38,7 @@ const PollVotingComponent = ({ poll, memberId, onVote }) => {
       setError('');
       await ApiService.voteOnPoll(poll.id, selectedOption, memberId);
       setHasVoted(true);
-      alert('Oyunuz başarıyla kaydedildi');
+      toast.success('Oyunuz başarıyla kaydedildi');
       if (onVote) {
         onVote();
       }

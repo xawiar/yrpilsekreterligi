@@ -19,16 +19,21 @@ export const membersActions = {
     };
   },
 
-  handleArchiveMember: (ApiService, fetchMembers) => {
+  handleArchiveMember: (ApiService, fetchMembers, toast, confirmFn) => {
     return async (id) => {
-      if (window.confirm('Bu üyeyi arşivlemek istediğinize emin misiniz?')) {
+      const confirmed = confirmFn
+        ? await confirmFn({ title: 'Üyeyi Arşivle', message: 'Bu üyeyi arşivlemek istediğinize emin misiniz?' })
+        : window.confirm('Bu üyeyi arşivlemek istediğinize emin misiniz?');
+      if (confirmed) {
         try {
           await ApiService.archiveMember(id);
           fetchMembers(); // Refresh the list
-          alert('Üye başarıyla arşivlendi');
+          if (toast) toast.success('Üye başarıyla arşivlendi');
+          else alert('Üye başarıyla arşivlendi');
         } catch (error) {
           console.error('Error archiving member:', error);
-          alert('Üye arşivlenirken hata oluştu: ' + error.message);
+          if (toast) toast.error('Üye arşivlenirken hata oluştu: ' + error.message);
+          else alert('Üye arşivlenirken hata oluştu: ' + error.message);
         }
       }
     };
@@ -46,25 +51,28 @@ export const membersActions = {
     };
   },
 
-  handleImportExcel: (ApiService, fetchMembers) => {
+  handleImportExcel: (ApiService, fetchMembers, toast) => {
     return async (file) => {
       try {
         // Send the file to the server
         const result = await ApiService.importMembersFromExcel(file);
         fetchMembers(); // Refresh the list
         console.log('Members imported from Excel:', result);
-        alert(`${result.count} üye başarıyla içe aktarıldı.`);
+        if (toast) toast.success(`${result.count} üye başarıyla içe aktarıldı.`);
+        else alert(`${result.count} üye başarıyla içe aktarıldı.`);
         if (result.errors && result.errors.length > 0) {
-          alert('Hatalar oluştu:\n' + result.errors.join('\n'));
+          if (toast) toast.warning('Hatalar oluştu:\n' + result.errors.join('\n'));
+          else alert('Hatalar oluştu:\n' + result.errors.join('\n'));
         }
       } catch (error) {
         console.error('Error importing members from Excel:', error);
-        alert('Excel içe aktarımı sırasında bir hata oluştu: ' + error.message);
+        if (toast) toast.error('Excel içe aktarımı sırasında bir hata oluştu: ' + error.message);
+        else alert('Excel içe aktarımı sırasında bir hata oluştu: ' + error.message);
       }
     };
   },
 
-  handleExportExcel: (members, meetings, calculateMeetingStats) => {
+  handleExportExcel: (members, meetings, calculateMeetingStats, toast) => {
     return async () => {
       try {
         // XLSX kütüphanesini dinamik olarak yükle
@@ -132,7 +140,8 @@ export const membersActions = {
         console.log('Members exported to Excel');
       } catch (error) {
         console.error('Error exporting members to Excel:', error);
-        alert('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);
+        if (toast) toast.error('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);
+        else alert('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);
       }
     };
   },

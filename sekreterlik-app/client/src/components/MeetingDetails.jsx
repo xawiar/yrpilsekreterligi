@@ -4,8 +4,10 @@ import { stringify } from 'csv-stringify/browser/esm/sync'; // Import csv-string
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { isMobile } from '../utils/capacitorUtils';
+import { useToast } from '../contexts/ToastContext';
 
 const MeetingDetails = ({ meeting }) => {
+  const toast = useToast();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -148,7 +150,7 @@ const MeetingDetails = ({ meeting }) => {
     try {
       const element = document.getElementById('meeting-details-container');
       if (!element) {
-        alert('PDF oluşturulamadı: Sayfa içeriği bulunamadı');
+        toast.error('PDF oluşturulamadı: Sayfa içeriği bulunamadı');
         return;
       }
 
@@ -187,10 +189,10 @@ const MeetingDetails = ({ meeting }) => {
       // Save PDF
       pdf.save(`${meeting.name.replace(/\s+/g, '_')}_detaylar.pdf`);
       
-      alert('PDF başarıyla oluşturuldu ve indirildi!');
+      toast.success('PDF başarıyla oluşturuldu ve indirildi!');
     } catch (error) {
       console.error('PDF export error:', error);
-      alert('PDF oluşturulurken bir hata oluştu: ' + error.message);
+      toast.error('PDF oluşturulurken bir hata oluştu: ' + error.message);
     }
   };
 

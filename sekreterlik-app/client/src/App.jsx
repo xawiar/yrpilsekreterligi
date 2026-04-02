@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -78,6 +79,18 @@ const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
 const OfflineStatus = lazy(() => import('./components/OfflineStatus'));
 const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
 const Chatbot = lazy(() => import('./components/Chatbot'));
+
+// Page transition wrapper component
+const PageTransition = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.2, ease: 'easeOut' }}
+  >
+    {children}
+  </motion.div>
+);
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -331,45 +344,43 @@ function RouterContent() {
 
                     <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-6">
                       <div className="w-full max-w-7xl mx-auto">
-                        <Routes>
-                          <Route path="/members" element={<MembersPage />} />
-                          <Route path="/teşkilat" element={<TeşkilatPage />} />
-                          <Route path="/teşkilat/ilçeler" element={<DistrictsPage />} />
-                          <Route path="/teşkilat/kadın-kolları" element={<KadınKollarıPage />} />
-                          <Route path="/teşkilat/gençlik-kolları" element={<GenclikKollarıPage />} />
-                          <Route path="/districts" element={<Navigate to="/teşkilat/ilçeler" replace />} />
-                          <Route path="/calendar" element={<CalendarPage />} />
-                          <Route path="/districts/:id/members" element={<DistrictMembersPage />} />
-                          <Route path="/districts/:id/details" element={<DistrictDetailsPage />} />
-                          <Route path="/towns/:id/members" element={<TownMembersPage />} />
-                          <Route path="/towns/:id/details" element={<TownDetailsPage />} />
-                          <Route path="/election-preparation/*" element={<ElectionPreparationPage />} />
-                          <Route path="/election-preparation/ballot-boxes/:id/details" element={<BallotBoxDetailsPage />} />
-                          <Route path="/elections" element={<ElectionsListPage />} />
-                          <Route path="/election-results/:electionId" element={<ElectionResultsPage />} />
-                          <Route path="/bulk-sms" element={<BulkSmsPage />} />
-                          <Route path="/meetings" element={<MeetingsPage />} />
-                          <Route path="/events" element={<EventsPage />} />
-                          <Route path="/reports" element={<Navigate to="/" replace />} />
-                          <Route path="/" element={<ReportsPage />} />
-                          <Route path="/archive" element={<ArchivePage />} />
-                          <Route path="/management-chart" element={<ManagementChartPage />} />
-                          <Route path="/settings/*" element={<SettingsPage />} />
-                          <Route path="/sync-to-firebase" element={<SyncToFirebasePage />} />
-                          <Route path="/remove-duplicate-meetings" element={<RemoveDuplicateMeetingsPage />} />
+                        <AnimatePresence mode="wait">
+                          <Routes key={location.pathname}>
+                            <Route path="/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MembersPage /></Suspense></PageTransition>} />
+                            <Route path="/teşkilat" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TeşkilatPage /></Suspense></PageTransition>} />
+                            <Route path="/teşkilat/ilçeler" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictsPage /></Suspense></PageTransition>} />
+                            <Route path="/teşkilat/kadın-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><KadınKollarıPage /></Suspense></PageTransition>} />
+                            <Route path="/teşkilat/gençlik-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><GenclikKollarıPage /></Suspense></PageTransition>} />
+                            <Route path="/districts" element={<Navigate to="/teşkilat/ilçeler" replace />} />
+                            <Route path="/calendar" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><CalendarPage /></Suspense></PageTransition>} />
+                            <Route path="/districts/:id/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictMembersPage /></Suspense></PageTransition>} />
+                            <Route path="/districts/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictDetailsPage /></Suspense></PageTransition>} />
+                            <Route path="/towns/:id/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TownMembersPage /></Suspense></PageTransition>} />
+                            <Route path="/towns/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TownDetailsPage /></Suspense></PageTransition>} />
+                            <Route path="/election-preparation/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionPreparationPage /></Suspense></PageTransition>} />
+                            <Route path="/election-preparation/ballot-boxes/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BallotBoxDetailsPage /></Suspense></PageTransition>} />
+                            <Route path="/elections" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionsListPage /></Suspense></PageTransition>} />
+                            <Route path="/election-results/:electionId" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionResultsPage /></Suspense></PageTransition>} />
+                            <Route path="/bulk-sms" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BulkSmsPage /></Suspense></PageTransition>} />
+                            <Route path="/meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MeetingsPage /></Suspense></PageTransition>} />
+                            <Route path="/events" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><EventsPage /></Suspense></PageTransition>} />
+                            <Route path="/reports" element={<Navigate to="/" replace />} />
+                            <Route path="/" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ReportsPage /></Suspense></PageTransition>} />
+                            <Route path="/archive" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ArchivePage /></Suspense></PageTransition>} />
+                            <Route path="/management-chart" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ManagementChartPage /></Suspense></PageTransition>} />
+                            <Route path="/settings/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense></PageTransition>} />
+                            <Route path="/sync-to-firebase" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SyncToFirebasePage /></Suspense></PageTransition>} />
+                            <Route path="/remove-duplicate-meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><RemoveDuplicateMeetingsPage /></Suspense></PageTransition>} />
 
-                          {/* STK Manager Routes */}
-                          <Route path="/stk-management" element={
-                            <STKManagerRoute>
-                              <SettingsPage />
-                            </STKManagerRoute>
-                          } />
-                          <Route path="/stk-events" element={
-                            <STKManagerRoute>
-                              <EventsPage />
-                            </STKManagerRoute>
-                          } />
-                        </Routes>
+                            {/* STK Manager Routes */}
+                            <Route path="/stk-management" element={
+                              <PageTransition><Suspense fallback={<LoadingSpinner />}><STKManagerRoute><SettingsPage /></STKManagerRoute></Suspense></PageTransition>
+                            } />
+                            <Route path="/stk-events" element={
+                              <PageTransition><Suspense fallback={<LoadingSpinner />}><STKManagerRoute><EventsPage /></STKManagerRoute></Suspense></PageTransition>
+                            } />
+                          </Routes>
+                        </AnimatePresence>
                       </div>
                     </main>
 

@@ -3,8 +3,13 @@ import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import MemberDetails from '../components/MemberDetails';
 import BranchManagementSection from '../components/BranchManagementSection';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const KadınKollarıPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [regions, setRegions] = useState([]);
   const [selectedRegion, setSelectedRegion] = useState(() => {
     // Kayıtlı bölge seçimini yükle
@@ -93,7 +98,7 @@ const KadınKollarıPage = () => {
 
   const handleSetPresident = async (memberId) => {
     if (!selectedRegion) {
-      alert('Lütfen önce bir bölge seçin');
+      toast.warning('Lütfen önce bir bölge seçin');
       return;
     }
 
@@ -103,10 +108,10 @@ const KadınKollarıPage = () => {
         ...prev,
         [selectedRegion]: memberId
       }));
-      alert('Kadın kolları başkanı başarıyla atandı');
+      toast.success('Kadın kolları başkanı başarıyla atandı');
     } catch (error) {
       console.error('Error setting president:', error);
-      alert('Başkan atanırken hata oluştu: ' + error.message);
+      toast.error('Başkan atanırken hata oluştu: ' + error.message);
     }
   };
 
@@ -122,10 +127,10 @@ const KadınKollarıPage = () => {
         delete newPresidents[selectedRegion];
         return newPresidents;
       });
-      alert('Kadın kolları başkanlığı kaldırıldı');
+      toast.success('Kadın kolları başkanlığı kaldırıldı');
     } catch (error) {
       console.error('Error removing president:', error);
-      alert('Başkanlık kaldırılırken hata oluştu: ' + error.message);
+      toast.error('Başkanlık kaldırılırken hata oluştu: ' + error.message);
     }
   };
 
@@ -314,6 +319,7 @@ const KadınKollarıPage = () => {
           <MemberDetails member={selectedMember} meetings={[]} />
         </Modal>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

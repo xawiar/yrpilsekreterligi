@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const AdminSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [adminInfo, setAdminInfo] = useState({
     username: '',
     created_at: '',
@@ -77,9 +82,8 @@ const AdminSettings = () => {
   // handleUpdateAdminInfo artık kullanılmıyor, formlar ayrı ayrı handle ediliyor
 
   const handleRecalculateVisitCounts = async () => {
-    if (!window.confirm('Tüm ziyaret sayıları yeniden hesaplanacak. Bu işlem biraz zaman alabilir. Devam etmek istiyor musunuz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Ziyaret Sayılarını Yeniden Hesapla', message: 'Tüm ziyaret sayıları yeniden hesaplanacak. Bu işlem biraz zaman alabilir. Devam etmek istiyor musunuz?' });
+    if (!confirmed) return;
 
     try {
       setRecalculating(true);
@@ -429,6 +433,7 @@ const AdminSettings = () => {
           )}
         </button>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

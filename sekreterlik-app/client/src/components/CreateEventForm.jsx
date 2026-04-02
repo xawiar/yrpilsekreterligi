@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 
 const CreateEventForm = ({ onClose, onEventCreated, members }) => {
+  const toast = useToast();
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventLocation, setEventLocation] = useState('');
@@ -537,26 +539,26 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
     e.preventDefault();
     
     if (!selectedCategoryId) {
-      alert('Etkinlik kategorisi seçilmelidir');
+      toast.warning('Etkinlik kategorisi seçilmelidir');
       return;
     }
-    
+
     if (!eventDate) {
-      alert('Etkinlik tarihi ve saati zorunludur');
+      toast.warning('Etkinlik tarihi ve saati zorunludur');
       return;
     }
-    
+
     if (selectedLocationTypes.length === 0) {
-      alert('En az bir konum türü seçilmelidir');
+      toast.warning('En az bir konum türü seçilmelidir');
       return;
     }
 
     // Check if all selected location types have at least one selected location
-    const missingLocations = selectedLocationTypes.filter(type => 
+    const missingLocations = selectedLocationTypes.filter(type =>
       !selectedLocations[type] || selectedLocations[type].length === 0
     );
     if (missingLocations.length > 0) {
-      alert('Seçilen konum türleri için en az bir konum seçimi yapılmalıdır');
+      toast.warning('Seçilen konum türleri için en az bir konum seçimi yapılmalıdır');
       return;
     }
     
@@ -611,8 +613,8 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
       }
       
       // Show success message
-      alert('Etkinlik başarıyla oluşturuldu');
-      
+      toast.success('Etkinlik başarıyla oluşturuldu');
+
       // Call callbacks
       if (onEventCreated) {
         onEventCreated();
@@ -622,7 +624,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
       }
     } catch (error) {
       console.error('Error creating event:', error);
-      alert('Etkinlik oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Etkinlik oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 

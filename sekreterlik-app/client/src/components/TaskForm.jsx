@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../contexts/ToastContext';
 
 const TaskForm = ({ task, onClose, onTaskSaved }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     title: '',
     assignee: '',
@@ -34,7 +36,7 @@ const TaskForm = ({ task, onClose, onTaskSaved }) => {
     
     // Basic validation
     if (!formData.title || !formData.assignee || !formData.dueDate) {
-      alert('Görev başlığı, atanan kişi ve bitiş tarihi zorunludur');
+      toast.warning('Görev başlığı, atanan kişi ve bitiş tarihi zorunludur');
       return;
     }
     
@@ -47,7 +49,7 @@ const TaskForm = ({ task, onClose, onTaskSaved }) => {
       onClose();
     } catch (error) {
       console.error('Error saving task:', error);
-      alert('Görev kaydedilirken bir hata oluştu');
+      toast.error('Görev kaydedilirken bir hata oluştu');
     }
   };
 

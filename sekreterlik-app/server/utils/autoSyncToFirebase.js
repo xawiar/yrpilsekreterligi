@@ -1,32 +1,16 @@
 /**
  * Otomatik Firebase Sync Utility
  * Her SQLite işleminden sonra otomatik olarak Firebase'e de yazar
- * 
- * NOT: Bu utility şu anda basit bir HTTP endpoint çağrısı yapıyor.
- * İleride Firebase Admin SDK ile server-side sync yapılabilir.
+ * Firebase Admin SDK kullanarak server-side sync yapar
  */
 
-const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
+const { getAdmin } = require('../config/firebaseAdmin');
 
-// Client-side sync için HTTP endpoint (şimdilik basit yaklaşım)
-// İleride Firebase Admin SDK ile server-side sync yapılabilir
-async function initFirebaseAdmin() {
-  // Şimdilik basit bir kontrol
-  // İleride Firebase Admin SDK ile server-side sync yapılabilir
-  if (!USE_FIREBASE) {
-    return false;
-  }
-  
-  // Şimdilik otomatik sync devre dışı (client-side sync kullanılıyor)
-  // İleride Firebase Admin SDK ile server-side sync yapılabilir
-  return false;
-}
+const USE_FIREBASE = process.env.VITE_USE_FIREBASE !== 'false' && process.env.USE_FIREBASE !== 'false';
 
 /**
  * Veriyi Firebase'e otomatik olarak sync et
- * Şimdilik sadece log yazıyor, client-side sync kullanılıyor
- * İleride Firebase Admin SDK ile server-side sync yapılabilir
- * 
+ *
  * @param {string} collectionName - Collection adı
  * @param {string|number} docId - Doküman ID
  * @param {object} data - Sync edilecek veri
@@ -37,13 +21,48 @@ async function autoSyncToFirebase(collectionName, docId, data = null, operation 
     return { success: false, reason: 'Firebase kullanılmıyor' };
   }
 
-  // Şimdilik sadece log yazıyoruz
-  // İleride Firebase Admin SDK ile server-side sync yapılabilir
-  console.log(`📝 Otomatik Firebase sync: ${operation} ${collectionName}/${docId}`);
-  
-  // Client-side sync kullanılıyor, bu utility şimdilik sadece log yazıyor
-  // İleride Firebase Admin SDK ile server-side sync yapılabilir
-  return { success: true, note: 'Client-side sync kullanılıyor' };
+  const admin = getAdmin();
+  if (!admin) {
+    return { success: false, reason: 'Firebase Admin SDK başlatılamadı' };
+  }
+
+  try {
+    const db = admin.firestore();
+    const docRef = db.collection(collectionName).doc(String(docId));
+
+    switch (operation) {
+      case 'create':
+        await docRef.set({
+          ...data,
+          id: String(docId),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          _syncedFromServer: true
+        }, { merge: true });
+        break;
+
+      case 'update':
+        await docRef.set({
+          ...data,
+          id: String(docId),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          _syncedFromServer: true
+        }, { merge: true });
+        break;
+
+      case 'delete':
+        await docRef.delete();
+        break;
+
+      default:
+        return { success: false, reason: `Bilinmeyen operation: ${operation}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Firebase sync hatası (${operation} ${collectionName}/${docId}):`, error.message);
+    return { success: false, reason: error.message };
+  }
 }
 
 /**
@@ -80,9 +99,8 @@ const COLLECTION_MAP = {
  */
 async function syncAfterSqliteOperation(tableName, id, data = null, operation = 'update') {
   const collectionName = COLLECTION_MAP[tableName];
-  
+
   if (!collectionName) {
-    // Bu table için sync yok
     return { success: false, reason: 'Collection mapping bulunamadı' };
   }
 
@@ -91,7 +109,5 @@ async function syncAfterSqliteOperation(tableName, id, data = null, operation = 
 
 module.exports = {
   autoSyncToFirebase,
-  syncAfterSqliteOperation,
-  initFirebaseAdmin
+  syncAfterSqliteOperation
 };
-

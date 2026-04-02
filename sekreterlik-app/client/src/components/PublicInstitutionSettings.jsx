@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import Modal from './Modal';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const PublicInstitutionSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [publicInstitutions, setPublicInstitutions] = useState([]);
   const [visitCounts, setVisitCounts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -100,19 +105,16 @@ const PublicInstitutionSettings = () => {
   };
 
   const handleDelete = async (publicInstitution) => {
-    if (!window.confirm(`"${publicInstitution.name}" kamu kurumunu silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Kamu Kurumu Sil', message: `"${publicInstitution.name}" kamu kurumunu silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       await ApiService.deletePublicInstitution(publicInstitution.id);
-      setMessage('Kamu kurumu başarıyla silindi');
-      setMessageType('success');
+      toast.success('Kamu kurumu başarıyla silindi');
       fetchPublicInstitutions();
     } catch (error) {
       console.error('Error deleting Public Institution:', error);
-      setMessage(error.message || 'Kamu kurumu silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Kamu kurumu silinirken hata oluştu');
     }
   };
 
@@ -335,6 +337,7 @@ const PublicInstitutionSettings = () => {
           </div>
         )}
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

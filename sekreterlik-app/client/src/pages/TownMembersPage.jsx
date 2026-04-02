@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const TownMembersPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const { id } = useParams();
   const [town, setTown] = useState(null);
   const [district, setDistrict] = useState(null);
@@ -154,7 +159,7 @@ const TownMembersPage = () => {
       fetchMembers();
     } catch (error) {
       console.error('Error saving member:', error);
-      alert(`Hata: ${error.message || 'Üye kaydedilirken bir hata oluştu'}`);
+      toast.error(`Hata: ${error.message || 'Üye kaydedilirken bir hata oluştu'}`);
     }
   };
 
@@ -174,14 +179,14 @@ const TownMembersPage = () => {
   };
 
   const handleDelete = async (memberId) => {
-    if (window.confirm('Bu üyeyi silmek istediğinizden emin misiniz?')) {
-      try {
-        await ApiService.deleteTownManagementMember(memberId);
-        fetchMembers();
-      } catch (error) {
-        console.error('Error deleting member:', error);
-        alert(`Hata: ${error.message || 'Üye silinirken bir hata oluştu'}`);
-      }
+    const confirmed = await confirm({ title: 'Üye Sil', message: 'Bu üyeyi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.deleteTownManagementMember(memberId);
+      fetchMembers();
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      toast.error(`Hata: ${error.message || 'Üye silinirken bir hata oluştu'}`);
     }
   };
 
@@ -467,6 +472,8 @@ const TownMembersPage = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

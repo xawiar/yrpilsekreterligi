@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const AppBrandingSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -174,10 +179,10 @@ const AppBrandingSettings = () => {
       // Branding updated event'i gönder (diğer component'lerin güncellenmesi için)
       window.dispatchEvent(new Event('brandingUpdated'));
       
-      alert('Ayarlar kaydedildi! Uygulama güncellemesi için "Uygulama Güncelle" butonuna tıklayın.');
+      toast.success('Ayarlar kaydedildi! Uygulama güncellemesi için "Uygulama Güncelle" butonuna tıklayın.');
     } catch (error) {
       console.error('Error saving branding settings:', error);
-      alert('Ayarlar kaydedilirken hata oluştu: ' + error.message);
+      toast.error('Ayarlar kaydedilirken hata oluştu: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -333,15 +338,15 @@ const AppBrandingSettings = () => {
         // Branding updated event'i gönder
         window.dispatchEvent(new Event('brandingUpdated'));
         
-        alert('Uygulama güncellemesi başlatıldı! Tüm kullanıcılara bildirim gönderildi. Sayfa yenilenecek...');
+        toast.success('Uygulama güncellemesi başlatıldı! Tüm kullanıcılara bildirim gönderildi. Sayfa yenilenecek...');
         window.location.reload();
       } else {
-        alert('Service Worker desteklenmiyor. Sayfa yenilenecek...');
+        toast.warning('Service Worker desteklenmiyor. Sayfa yenilenecek...');
         window.location.reload();
       }
     } catch (error) {
       console.error('Error updating app:', error);
-      alert('Uygulama güncellenirken hata oluştu. Sayfa yenilenecek...');
+      toast.error('Uygulama güncellenirken hata oluştu. Sayfa yenilenecek...');
       window.location.reload();
     }
   };
@@ -521,6 +526,7 @@ const AppBrandingSettings = () => {
           Bu işlem tüm kullanıcılara güncelleme bildirimi gönderecektir.
         </p>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

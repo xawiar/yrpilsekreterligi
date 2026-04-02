@@ -8,16 +8,21 @@ import PlanEventForm from '../components/PlanEventForm';
 import EventDetails from '../components/EventDetails';
 import EventForm from '../components/EventForm';
 import AttendanceUpdate from '../components/AttendanceUpdate';
-import { 
-  EventsHeader, 
-  EventsSummaryStatistics, 
-  EventsFilters, 
-  EventsTable 
+import {
+  EventsHeader,
+  EventsSummaryStatistics,
+  EventsFilters,
+  EventsTable
 } from '../components/Events';
 import { LoadingSpinner } from '../components/UI';
 import NativeEventsList from '../components/mobile/NativeEventsList';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const EventsPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -178,15 +183,15 @@ const EventsPage = () => {
   };
 
   const handleArchiveEvent = async (id) => {
-    if (window.confirm('Bu etkinliği arşivlemek istediğinize emin misiniz?')) {
-      try {
-        await ApiService.archiveEvent(id);
-        fetchEvents(); // Refresh the list
-        alert('Etkinlik başarıyla arşivlendi');
-      } catch (error) {
-        console.error('Error archiving event:', error);
-        alert('Etkinlik arşivlenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Etkinliği Arşivle', message: 'Bu etkinliği arşivlemek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.archiveEvent(id);
+      fetchEvents(); // Refresh the list
+      toast.success('Etkinlik başarıyla arşivlendi');
+    } catch (error) {
+      console.error('Error archiving event:', error);
+      toast.error('Etkinlik arşivlenirken hata oluştu: ' + error.message);
     }
   };
 
@@ -321,7 +326,7 @@ const EventsPage = () => {
           size="xl"
         >
           {selectedEvent && (
-            <AttendanceUpdate 
+            <AttendanceUpdate
               event={selectedEvent}
               members={members}
               onClose={closeAttendanceModal}
@@ -329,6 +334,7 @@ const EventsPage = () => {
             />
           )}
         </Modal>
+        <ConfirmDialog {...confirmDialogProps} />
       </>
     );
   }
@@ -435,7 +441,7 @@ const EventsPage = () => {
         size="xl"
       >
         {selectedEvent && (
-          <AttendanceUpdate 
+          <AttendanceUpdate
             event={selectedEvent}
             members={members}
             onClose={closeAttendanceModal}
@@ -443,6 +449,7 @@ const EventsPage = () => {
           />
         )}
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

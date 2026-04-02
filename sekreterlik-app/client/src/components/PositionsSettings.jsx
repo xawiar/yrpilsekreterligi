@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const PositionsSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [positions, setPositions] = useState([]);
   const [newPosition, setNewPosition] = useState('');
   const [editingPosition, setEditingPosition] = useState(null);
@@ -38,21 +43,22 @@ const PositionsSettings = () => {
   };
 
   const handleDeletePosition = async (id) => {
-    if (window.confirm('Bu pozisyonu silmek istediğinize emin misiniz?')) {
+    const confirmed = await confirm({ title: 'Pozisyonu Sil', message: 'Bu pozisyonu silmek istediğinize emin misiniz?' });
+    if (confirmed) {
       try {
         const response = await ApiService.deletePosition(id);
-        
+
         // Check if the response contains an error message
         if (response.message && response.message.includes('kullanılıyor')) {
-          alert(response.message);
+          toast.warning(response.message);
           return;
         }
-        
+
         fetchPositions(); // Refresh the list
-        alert('Pozisyon başarıyla silindi');
+        toast.success('Pozisyon başarıyla silindi');
       } catch (error) {
         console.error('Error deleting position:', error);
-        alert('Pozisyon silinirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+        toast.error('Pozisyon silinirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
       }
     }
   };
@@ -78,10 +84,10 @@ const PositionsSettings = () => {
           } 
         }));
         
-        alert('Görev başarıyla güncellendi ve tüm üyeler güncellendi');
+        toast.success('Görev başarıyla güncellendi ve tüm üyeler güncellendi');
       } catch (error) {
         console.error('Error updating position:', error);
-        alert('Görev güncellenirken hata oluştu');
+        toast.error('Görev güncellenirken hata oluştu');
       }
     }
   };
@@ -173,6 +179,7 @@ const PositionsSettings = () => {
           )}
         </ul>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

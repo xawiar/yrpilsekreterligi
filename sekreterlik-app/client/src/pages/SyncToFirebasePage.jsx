@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 const SyncToFirebasePage = () => {
   const { user, isLoggedIn } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, table: '' });
   const [results, setResults] = useState([]);
@@ -215,7 +217,7 @@ const SyncToFirebasePage = () => {
       }
 
       setUpdatingMembers(false);
-      alert(`✅ Güncelleme tamamlandı!\n${updated} üye güncellendi\n${skipped} üye atlandı\n${errors} hata`);
+      toast.success(`Güncelleme tamamlandı! ${updated} üye güncellendi, ${skipped} üye atlandı, ${errors} hata`);
     } catch (error) {
       console.error('❌ Update error:', error);
       setError(`Üye güncelleme hatası: ${error.message}`);

@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import Modal from './Modal';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const STKSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [stks, setStks] = useState([]);
   const [visitCounts, setVisitCounts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -100,19 +105,16 @@ const STKSettings = () => {
   };
 
   const handleDelete = async (stk) => {
-    if (!window.confirm(`"${stk.name}" STK'sını silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'STK Sil', message: `"${stk.name}" STK'sını silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteSTK(stk.id);
-      setMessage('STK başarıyla silindi');
-      setMessageType('success');
+      toast.success('STK başarıyla silindi');
       fetchSTKs();
     } catch (error) {
       console.error('Error deleting STK:', error);
-      setMessage(error.message || 'STK silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'STK silinirken hata oluştu');
     }
   };
 
@@ -335,6 +337,7 @@ const STKSettings = () => {
           </div>
         )}
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

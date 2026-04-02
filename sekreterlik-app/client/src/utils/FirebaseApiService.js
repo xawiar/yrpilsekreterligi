@@ -89,7 +89,7 @@ class FirebaseApiService {
     try {
       // Firebase Auth ile giriş yap
       // Email formatına çevir (username@domain.com)
-      const email = username.includes('@') ? username : `${username}@sekreterlikapp.com`;
+      const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
 
       console.log('Firebase login attempt:', { username, email });
 
@@ -180,7 +180,7 @@ class FirebaseApiService {
                 if (memberUser.authUid) {
                   try {
                     // Eski email ile giriş yapmayı dene (Firestore'daki şifre ile)
-                    const oldEmail = memberUser.username.includes('@') ? memberUser.username : `${memberUser.username}@sekreterlikapp.com`;
+                    const oldEmail = memberUser.username.includes('@') ? memberUser.username : `${memberUser.username}@ilsekreterlik.local`;
                     userCredential = await signInWithEmailAndPassword(auth, oldEmail, firestorePassword);
                     user = userCredential.user;
                     console.log('✅ Firebase Auth login successful with existing user:', user.uid);

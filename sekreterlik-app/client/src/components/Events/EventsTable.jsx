@@ -124,7 +124,82 @@ const EventsTable = ({
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-3 p-3">
+        {events.map((event) => {
+          const stats = calculateAttendanceStats(event);
+          const eventLocations = getEventLocations(event);
+          const locationSummary = [
+            ...eventLocations.districts,
+            ...eventLocations.towns,
+            ...eventLocations.neighborhoods,
+            ...eventLocations.villages,
+            ...eventLocations.mosques,
+          ].join(', ') || '-';
+          return (
+            <div
+              key={event.id}
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 active:scale-[0.98] transition-transform"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{event.name}</p>
+                  {event.description && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{event.description}</p>
+                  )}
+                </div>
+                <span className="flex-shrink-0 text-lg font-bold text-green-600 dark:text-green-400">{stats.attendedCount}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                <span>{event.date}</span>
+                <span className="truncate max-w-[180px]">{locationSummary}</span>
+              </div>
+              <div className="mt-3 flex items-center space-x-3">
+                <button
+                  onClick={() => onShowEvent(event)}
+                  className="text-indigo-600 dark:text-indigo-400 p-1.5 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                  title="Göster"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onUpdateAttendance(event)}
+                  className="text-green-600 dark:text-green-400 p-1.5 rounded-full hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                  title="Katılım Güncelle"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onEditEvent(event)}
+                  className="text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  title="Düzenle"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onArchiveEvent(event.id)}
+                  className="text-orange-600 dark:text-orange-400 p-1.5 rounded-full hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                  title="Arşivle"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l6 6m0 0l6-6m-6 6V4" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
@@ -284,3 +359,4 @@ const EventsTable = ({
 };
 
 export default EventsTable;
+

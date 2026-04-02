@@ -3,9 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import Footer from '../components/Footer';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const TownPresidentDashboardPage = () => {
   const { user, logout } = useAuth();
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [town, setTown] = useState(null);
   const [managementMembers, setManagementMembers] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -267,9 +272,8 @@ const TownPresidentDashboardPage = () => {
   };
 
   const handleMemberDelete = async (memberId) => {
-    if (!window.confirm('Bu üyeyi silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Üyeyi Sil', message: 'Bu üyeyi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
     try {
       await ApiService.deleteTownManagementMember(memberId);
       fetchAllData();
@@ -328,9 +332,8 @@ const TownPresidentDashboardPage = () => {
   };
 
   const handleNeighborhoodDelete = async (neighborhoodId) => {
-    if (!window.confirm('Bu mahalleyi silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Mahalleyi Sil', message: 'Bu mahalleyi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
     try {
       await ApiService.deleteNeighborhood(neighborhoodId);
       fetchAllData();
@@ -388,9 +391,8 @@ const TownPresidentDashboardPage = () => {
   };
 
   const handleVillageDelete = async (villageId) => {
-    if (!window.confirm('Bu köyü silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Köyü Sil', message: 'Bu köyü silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
     try {
       await ApiService.deleteVillage(villageId);
       fetchAllData();
@@ -494,9 +496,8 @@ const TownPresidentDashboardPage = () => {
   };
 
   const handleRepresentativeDelete = async (representativeId, type) => {
-    if (!window.confirm('Bu temsilciyi silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Temsilciyi Sil', message: 'Bu temsilciyi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
     try {
       if (type === 'neighborhood') {
         await ApiService.deleteNeighborhoodRepresentative(representativeId);
@@ -585,9 +586,8 @@ const TownPresidentDashboardPage = () => {
   };
 
   const handleBallotBoxDelete = async (ballotBoxId) => {
-    if (!window.confirm('Bu sandığı silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Sandığı Sil', message: 'Bu sandığı silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
     try {
       await ApiService.deleteBallotBox(ballotBoxId);
       fetchAllData();
@@ -769,9 +769,8 @@ const TownPresidentDashboardPage = () => {
   };
 
   const handleObserverDelete = async (observerId) => {
-    if (!window.confirm('Bu müşahidi silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Müşahidi Sil', message: 'Bu müşahidi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
     try {
       await ApiService.deleteBallotBoxObserver(observerId);
       fetchAllData();
@@ -1951,6 +1950,7 @@ const TownPresidentDashboardPage = () => {
         </div>
       )}
       <Footer />
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

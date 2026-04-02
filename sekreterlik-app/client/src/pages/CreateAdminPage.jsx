@@ -36,7 +36,7 @@ function CreateAdminPage() {
     try {
       const adminUsername = 'admin';
       const adminPassword = '1491aaa1491';
-      const adminEmail = `${adminUsername}@sekreterlikapp.com`;
+      const adminEmail = `${adminUsername}@ilsekreterlik.local`;
 
       let userCredential;
 

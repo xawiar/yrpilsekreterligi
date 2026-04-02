@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 // Çoklu yetkilendirme seçenekleri - TÜM SAYFALAR (settings hariç)
 const AVAILABLE_PERMISSIONS = [
@@ -32,6 +35,8 @@ const AVAILABLE_PERMISSIONS = [
 ];
 
 const AuthorizationSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [selectedPosition, setSelectedPosition] = useState('');
   const [positionPermissions, setPositionPermissions] = useState({});
   const [loading, setLoading] = useState(false);
@@ -64,7 +69,7 @@ const AuthorizationSettings = () => {
     setLoading(true);
     try {
       await ApiService.setPermissionsForPosition(selectedPosition, positionPermissions[selectedPosition] || []);
-      alert('Yetkiler kaydedildi');
+      toast.success('Yetkiler kaydedildi');
       // Kaydedilen kısmı kaldır ve sayfayı yenile
       setSelectedPosition('');
       try {
@@ -74,21 +79,20 @@ const AuthorizationSettings = () => {
       // Tam istek: sayfayı yenile
       window.location.reload();
     } catch (e) {
-      alert('Hata: ' + e.message);
+      toast.error('Hata: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeletePermissions = async (posName) => {
-    if (!window.confirm(`"${posName}" görevinin tüm yetkilerini silmek istediğinize emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Yetkileri Sil', message: `"${posName}" görevinin tüm yetkilerini silmek istediğinize emin misiniz?` });
+    if (!confirmed) return;
     setLoading(true);
     try {
       // Boş array göndererek tüm yetkileri siliyoruz
       await ApiService.setPermissionsForPosition(posName, []);
-      alert('Yetkiler başarıyla silindi');
+      toast.success('Yetkiler başarıyla silindi');
       // Listeyi yenile
       try {
         const all = await ApiService.getAllPermissions();
@@ -97,24 +101,23 @@ const AuthorizationSettings = () => {
       // Sayfayı yenile
       window.location.reload();
     } catch (e) {
-      alert('Hata: ' + e.message);
+      toast.error('Hata: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCleanupInvalidAttendees = async () => {
-    if (!window.confirm('Tüm etkinliklerden geçersiz katılımcıları (null ve 1762645941232_qxutglj9a) temizlemek istediğinize emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Geçersiz Katılımcıları Temizle', message: 'Tüm etkinliklerden geçersiz katılımcıları (null ve 1762645941232_qxutglj9a) temizlemek istediğinize emin misiniz?' });
+    if (!confirmed) return;
     setCleaningUp(true);
     try {
       const result = await ApiService.cleanupInvalidAttendees();
-      alert(`Temizlik tamamlandı!\n${result.message}`);
+      toast.success(`Temizlik tamamlandı! ${result.message}`);
       // Sayfayı yenile
       window.location.reload();
     } catch (e) {
-      alert('Hata: ' + e.message);
+      toast.error('Hata: ' + e.message);
     } finally {
       setCleaningUp(false);
     }
@@ -238,6 +241,7 @@ const AuthorizationSettings = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

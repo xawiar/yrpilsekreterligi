@@ -3,8 +3,13 @@ import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from './mobile/NativeCard';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -676,19 +681,16 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bu seçimi silmek istediğinize emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Seçim Sil', message: 'Bu seçimi silmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteElection(id);
-      setMessage('Seçim başarıyla silindi');
-      setMessageType('success');
+      toast.success('Seçim başarıyla silindi');
       fetchElections();
     } catch (error) {
       console.error('Error deleting election:', error);
-      setMessage(error.message || 'Seçim silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Seçim silinirken hata oluştu');
     }
   };
 
@@ -776,19 +778,16 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
   };
   
   const handleDeleteAlliance = async (allianceId) => {
-    if (!window.confirm('Bu ittifakı silmek istediğinize emin misiniz?')) {
-      return;
-    }
-    
+    const confirmed = await confirm({ title: 'İttifak Sil', message: 'Bu ittifakı silmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+
     try {
       await ApiService.deleteAlliance(allianceId);
       setAlliances(alliances.filter(a => a.id !== allianceId));
-      setMessage('İttifak başarıyla silindi');
-      setMessageType('success');
+      toast.success('İttifak başarıyla silindi');
     } catch (error) {
       console.error('Error deleting alliance:', error);
-      setMessage(error.message || 'İttifak silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'İttifak silinirken hata oluştu');
     }
   };
   
@@ -3077,6 +3076,7 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
           </table>
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

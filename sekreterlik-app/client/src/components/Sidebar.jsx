@@ -3,10 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { getBrandingSettings } from '../utils/brandingLoader';
+import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 
 const Sidebar = ({ onMobileMenuClose }) => {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const { unreadCount } = useRealtimeNotifications(user?.id || user?.uid);
   const { isDarkMode, toggleTheme } = useTheme();
   const [branding, setBranding] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({
@@ -195,6 +197,22 @@ const Sidebar = ({ onMobileMenuClose }) => {
     <div className="flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-screen lg:rounded-r-2xl">
       {/* Desktop Header - Hidden on mobile */}
       <div className="hidden lg:flex flex-col items-center justify-center h-auto min-h-16 border-b border-gray-100 dark:border-gray-700 px-4 py-3">
+        <div className="w-full flex items-start justify-end mb-1">
+          <Link
+            to="/notifications"
+            className="relative p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+            title="Bildirimler"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </Link>
+        </div>
         {branding?.logoUrl ? (
           <img src={branding.logoUrl} alt="Logo" className="h-10 w-auto mb-2 object-contain" loading="lazy" decoding="async" />
         ) : null}
@@ -218,16 +236,33 @@ const Sidebar = ({ onMobileMenuClose }) => {
             {branding?.appName || 'Parti Sekreterliği'}
           </h1>
         </div>
-        {onMobileMenuClose && (
-          <button
-            onClick={onMobileMenuClose}
-            className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+        <div className="flex items-center space-x-1">
+          <Link
+            to="/notifications"
+            onClick={() => onMobileMenuClose && onMobileMenuClose()}
+            className="relative p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700"
+            title="Bildirimler"
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
             </svg>
-          </button>
-        )}
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-bold leading-none text-white bg-red-500 rounded-full">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </Link>
+          {onMobileMenuClose && (
+            <button
+              onClick={onMobileMenuClose}
+              className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       <nav className="flex-1 px-4 py-6 overflow-y-auto">
         <ul className="space-y-1">

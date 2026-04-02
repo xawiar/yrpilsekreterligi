@@ -43,7 +43,16 @@ function calculateDHondt(partyVotes, totalSeats) {
   });
 
   // Bölümleri büyükten küçüğe sırala
-  quotients.sort((a, b) => b.quotient - a.quotient);
+  // Eşit quotient durumunda daha yüksek oyu olan parti önce gelir (deterministik sıralama)
+  quotients.sort((a, b) => {
+    const diff = b.quotient - a.quotient;
+    if (Math.abs(diff) < 1e-9) {
+      const aVotes = votes.find(v => v.party === a.party)?.votes || 0;
+      const bVotes = votes.find(v => v.party === b.party)?.votes || 0;
+      return bVotes - aVotes;
+    }
+    return diff;
+  });
 
   // İlk totalSeats kadar bölümü al (en yüksek bölümler)
   const topQuotients = quotients.slice(0, totalSeats);
@@ -89,8 +98,21 @@ function calculateDHondtDetailed(partyVotes, totalSeats) {
   };
 }
 
+/**
+ * Seçim barajı uygular
+ * @param {number} votes - Partinin oy sayısı
+ * @param {number} totalVotes - Toplam oy sayısı
+ * @param {number} thresholdPercent - Baraj yüzdesi (varsayılan %7)
+ * @returns {boolean} - Barajı geçip geçmediği
+ */
+function applyThreshold(votes, totalVotes, thresholdPercent = 7.0) {
+  if (!totalVotes || totalVotes <= 0) return false;
+  return (votes * 100) >= (totalVotes * thresholdPercent);
+}
+
 module.exports = {
   calculateDHondt,
-  calculateDHondtDetailed
+  calculateDHondtDetailed,
+  applyThreshold
 };
 

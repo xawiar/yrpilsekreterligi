@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const TownOfficialsSettings = () => {
+  const { confirm, confirmDialogProps } = useConfirm();
   const [officials, setOfficials] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
@@ -116,7 +119,8 @@ const TownOfficialsSettings = () => {
   };
 
   const handleDelete = async (townId) => {
-    if (window.confirm('Bu beldenin yöneticilerini silmek istediğinizden emin misiniz?')) {
+    const confirmed = await confirm({ title: 'Yöneticileri Sil', message: 'Bu beldenin yöneticilerini silmek istediğinizden emin misiniz?' });
+    if (confirmed) {
       try {
         await ApiService.deleteTownOfficials(townId);
         fetchData();
@@ -465,6 +469,7 @@ const TownOfficialsSettings = () => {
           </table>
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

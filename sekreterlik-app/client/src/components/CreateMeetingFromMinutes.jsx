@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 
 const CreateMeetingFromMinutes = ({ onClose, onMeetingCreated }) => {
+  const toast = useToast();
   const [minutesText, setMinutesText] = useState('');
   const [parsedData, setParsedData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -152,7 +154,7 @@ const CreateMeetingFromMinutes = ({ onClose, onMeetingCreated }) => {
 
   const handleParse = () => {
     if (!minutesText.trim()) {
-      alert('Lütfen tutanak metnini girin');
+      toast.warning('Lütfen tutanak metnini girin');
       return;
     }
     
@@ -179,7 +181,7 @@ const CreateMeetingFromMinutes = ({ onClose, onMeetingCreated }) => {
     if (!parsedData) return;
     
     if (selectedRegions.length === 0) {
-      alert('Lütfen en az bir bölge seçin');
+      toast.warning('Lütfen en az bir bölge seçin');
       return;
     }
     
@@ -206,7 +208,7 @@ const CreateMeetingFromMinutes = ({ onClose, onMeetingCreated }) => {
       const response = await ApiService.createMeeting(meetingData);
       console.log('Meeting created from minutes:', response);
       
-      alert('Toplantı başarıyla oluşturuldu!');
+      toast.success('Toplantı başarıyla oluşturuldu!');
       
       if (onMeetingCreated) {
         onMeetingCreated();
@@ -216,7 +218,7 @@ const CreateMeetingFromMinutes = ({ onClose, onMeetingCreated }) => {
       }
     } catch (error) {
       console.error('Error creating meeting:', error);
-      alert('Toplantı oluşturulurken hata oluştu: ' + error.message);
+      toast.error('Toplantı oluşturulurken hata oluştu: ' + error.message);
     } finally {
       setLoading(false);
     }

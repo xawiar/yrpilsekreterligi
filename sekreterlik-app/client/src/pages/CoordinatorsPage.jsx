@@ -4,6 +4,9 @@ import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from '../components/mobile/NativeCard';
 import NativeButton from '../components/mobile/NativeButton';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const CoordinatorsPage = () => {
   const location = useLocation();
@@ -83,6 +86,8 @@ const CoordinatorsPage = () => {
 // Sorumlular Listesi Sayfası
 const CoordinatorsListPage = () => {
   const mobileView = isMobile(); // Hook'u component başında çağır
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCoordinator, setEditingCoordinator] = useState(null);
   const [coordinators, setCoordinators] = useState([]);
@@ -264,9 +269,8 @@ const CoordinatorsListPage = () => {
   };
 
   const handleDeleteCoordinator = async (id) => {
-    if (!window.confirm('Bu sorumluyu silmek istediğinize emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Sorumluyu Sil', message: 'Bu sorumluyu silmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -1269,6 +1273,7 @@ const CoordinatorsListPage = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };
@@ -1276,6 +1281,8 @@ const CoordinatorsListPage = () => {
 // Bölgeler Listesi Sayfası
 const RegionsListPage = () => {
   const mobileView = isMobile(); // Hook'u component başında çağır
+  const toast = useToast();
+  const { confirm: confirmRegion, confirmDialogProps: regionConfirmDialogProps } = useConfirm();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRegion, setEditingRegion] = useState(null);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -1521,9 +1528,8 @@ const RegionsListPage = () => {
   };
 
   const handleDeleteRegion = async (id) => {
-    if (!window.confirm('Bu bölgeyi silmek istediğinize emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirmRegion({ title: 'Bölgeyi Sil', message: 'Bu bölgeyi silmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -1997,6 +2003,7 @@ const RegionsListPage = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog {...regionConfirmDialogProps} />
     </div>
   );
 };

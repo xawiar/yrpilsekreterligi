@@ -13,8 +13,14 @@ import ExcelImportPreview from '../components/Members/ExcelImportPreview';
 import { calculateMeetingStats, getAttendanceColor, calculateSummaryStats, calculateMemberRegistrations } from '../components/Members/membersUtils';
 import LoadingState from '../components/Members/LoadingState';
 import NativeMembersList from '../components/mobile/NativeMembersList';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { Pagination } from '../components/UI';
 
 const MembersPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [members, setMembers] = useState([]);
   
   const [allMembers, setAllMembers] = useState([]); // Store all members for filtering
@@ -36,6 +42,8 @@ const MembersPage = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' }); // For sorting - default to name A-Z
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   const [filteredMembers, setFilteredMembers] = useState([]); // For filtered and sorted members
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
   const [excelImportPreview, setExcelImportPreview] = useState(null); // Excel import preview data
   const [excelImportFile, setExcelImportFile] = useState(null); // Excel file for import
   const [excelImportLoading, setExcelImportLoading] = useState(false); // Excel import loading state
@@ -144,6 +152,11 @@ const MembersPage = () => {
     setFilteredMembers(result);
   }, [allMembers, searchTerm, selectedRegion, sortConfig, meetings, memberRegistrations]);
 
+  // Reset to page 1 when search term or region filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRegion]);
+
   const fetchMembers = async () => {
     try {
       setLoading(true);
@@ -236,31 +249,30 @@ const MembersPage = () => {
       
       if (!member) {
         console.error('Member not found for ID:', memberId);
-        alert('Üye bulunamadı');
+        toast.error('Üye bulunamadı');
         return;
       }
-      
+
       setFormMode('edit');
       setSelectedMember(member);
       setIsFormModalOpen(true);
     } catch (error) {
       console.error('Error in handleEditMember:', error);
-      alert('Üye düzenleme penceresi açılırken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Üye düzenleme penceresi açılırken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 
   const handleArchiveMember = async (id) => {
-    if (!window.confirm('Bu üyeyi arşivlemek istediğinize emin misiniz?')) {
-      return;
-    }
-    
+    const confirmed = await confirm({ title: 'Üyeyi Arşivle', message: 'Bu üyeyi arşivlemek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+
     try {
       await ApiService.archiveMember(id);
       fetchMembers(); // Refresh the list
-      alert('Üye başarıyla arşivlendi');
+      toast.success('Üye başarıyla arşivlendi');
     } catch (error) {
       console.error('Error archiving member:', error);
-      alert('Üye arşivlenirken hata oluştu: ' + error.message);
+      toast.error('Üye arşivlenirken hata oluştu: ' + error.message);
     }
   };
 
@@ -286,12 +298,13 @@ const MembersPage = () => {
 
   const handleDeleteRegistration = async (id) => {
     if (!id) return;
-    if (!window.confirm('Bu kayıt silinsin mi?')) return;
+    const confirmed = await confirm({ title: 'Kaydı Sil', message: 'Bu kayıt silinsin mi?' });
+    if (!confirmed) return;
     try {
       await ApiService.deleteMemberRegistration(id);
       await fetchMemberRegistrations();
     } catch (e) {
-      alert('Silinirken hata: ' + e.message);
+      toast.error('Silinirken hata: ' + e.message);
     }
   };
 
@@ -323,16 +336,16 @@ const MembersPage = () => {
         member = await ApiService.getMemberById(stringId);
         if (!member) {
           console.error('Member not found for ID:', stringId);
-          alert('Üye bulunamadı');
+          toast.error('Üye bulunamadı');
           return;
         }
       }
-      
+
       setSelectedMember(member);
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error('Error fetching member details:', error);
-      alert('Üye detayları yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Üye detayları yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 
@@ -345,7 +358,7 @@ const MembersPage = () => {
       setExcelImportFile(file);
     } catch (error) {
       console.error('Error previewing Excel import:', error);
-      alert('Excel dosyası analiz edilirken hata oluştu: ' + error.message);
+      toast.error('Excel dosyası analiz edilirken hata oluştu: ' + error.message);
     } finally {
       setExcelImportLoading(false);
     }
@@ -366,13 +379,13 @@ const MembersPage = () => {
       setExcelImportFile(null);
       
       // Show success message
-      alert(`${result.count} üye başarıyla içe aktarıldı.`);
+      toast.success(`${result.count} üye başarıyla içe aktarıldı.`);
       if (result.errors && result.errors.length > 0) {
-        alert('Hatalar oluştu:\n' + result.errors.join('\n'));
+        toast.warning('Hatalar oluştu:\n' + result.errors.join('\n'));
       }
     } catch (error) {
       console.error('Error importing members from Excel:', error);
-      alert('Excel içe aktarımı sırasında bir hata oluştu: ' + error.message);
+      toast.error('Excel içe aktarımı sırasında bir hata oluştu: ' + error.message);
     } finally {
       setExcelImportLoading(false);
     }
@@ -450,7 +463,7 @@ const MembersPage = () => {
       console.log('Members exported to Excel');
     } catch (error) {
       console.error('Error exporting members to Excel:', error);
-      alert('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);
+      toast.error('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);
     }
   };
 
@@ -489,6 +502,12 @@ const MembersPage = () => {
   if (loading) {
     return <LoadingState />;
   }
+
+  const totalPages = Math.ceil(filteredMembers.length / ITEMS_PER_PAGE);
+  const paginatedMembers = filteredMembers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const mobileView = isMobile();
 
@@ -632,6 +651,7 @@ const MembersPage = () => {
             loading={excelImportLoading}
           />
         )}
+        <ConfirmDialog {...confirmDialogProps} />
       </>
     );
   }
@@ -653,8 +673,8 @@ const MembersPage = () => {
         regions={regions}
         onRegionChange={setSelectedRegion}
       />
-      <MembersTable 
-        members={filteredMembers}
+      <MembersTable
+        members={paginatedMembers}
         meetings={meetings}
         memberRegistrations={memberRegistrations}
         calculateMeetingStats={calculateMeetingStats}
@@ -672,10 +692,13 @@ const MembersPage = () => {
         viewMode={viewMode}
       />
 
-      <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-gray-500">Kayıt: {filteredMembers.length}</div>
-        <div />
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredMembers.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={setCurrentPage}
+      />
       
       <Modal
         isOpen={isDetailModalOpen}
@@ -800,6 +823,7 @@ const MembersPage = () => {
           loading={excelImportLoading}
         />
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

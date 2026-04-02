@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import * as XLSX from 'xlsx';
+import { useToast } from '../contexts/ToastContext';
 
 const NeighborhoodsPage = () => {
+  const toast = useToast();
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [neighborhoodRepresentatives, setNeighborhoodRepresentatives] = useState([]);
   const [neighborhoodSupervisors, setNeighborhoodSupervisors] = useState([]);
@@ -138,7 +140,7 @@ const NeighborhoodsPage = () => {
       setGroupNoInput('');
     } catch (error) {
       console.error('Error updating group no:', error);
-      alert('Grup numarası güncellenirken hata oluştu');
+      toast.error('Grup numarası güncellenirken hata oluştu');
     }
   };
 

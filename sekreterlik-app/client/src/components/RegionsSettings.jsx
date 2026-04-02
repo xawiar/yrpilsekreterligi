@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const RegionsSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [regions, setRegions] = useState([]);
   const [newRegion, setNewRegion] = useState('');
   const [editingRegion, setEditingRegion] = useState(null);
@@ -48,7 +53,7 @@ const RegionsSettings = () => {
         }, 200);
       } catch (error) {
         console.error('Error adding region:', error);
-        alert(error.message || 'Bölge eklenirken hata oluştu');
+        toast.error(error.message || 'Bölge eklenirken hata oluştu');
         // Refresh list on error
         await fetchRegions();
       }
@@ -64,8 +69,9 @@ const RegionsSettings = () => {
       idIsNull: id === null,
       idIsUndefined: id === undefined
     });
-    
-    if (window.confirm('Bu bölgeyi silmek istediğinize emin misiniz?')) {
+
+    const confirmed = await confirm({ title: 'Bölgeyi Sil', message: 'Bu bölgeyi silmek istediğinize emin misiniz?' });
+    if (confirmed) {
       // Store original state for rollback
       const originalRegions = [...regions];
       
@@ -152,7 +158,7 @@ const RegionsSettings = () => {
         setRegions(originalRegions);
         // Fetch fresh data
         await fetchRegions();
-        alert(error.message || 'Bölge silinirken hata oluştu');
+        toast.error(error.message || 'Bölge silinirken hata oluştu');
       }
     }
   };
@@ -191,14 +197,14 @@ const RegionsSettings = () => {
           } 
         }));
         
-        alert('Bölge başarıyla güncellendi ve tüm üyeler güncellendi');
+        toast.success('Bölge başarıyla güncellendi ve tüm üyeler güncellendi');
       } catch (error) {
         console.error('Error updating region:', error);
         // Revert on error
         setRegions(originalRegions);
         // Fetch fresh data
         await fetchRegions();
-        alert(error.message || 'Bölge güncellenirken hata oluştu');
+        toast.error(error.message || 'Bölge güncellenirken hata oluştu');
       }
     }
   };
@@ -299,7 +305,7 @@ const RegionsSettings = () => {
                         let safeId;
                         if (!region || !region.id) {
                           console.error('❌ Region veya region.id yok!', region);
-                          alert('Region ID bulunamadı! Console loglarına bakın.');
+                          toast.error('Region ID bulunamadı! Console loglarına bakın.');
                           return;
                         }
                         
@@ -339,6 +345,7 @@ const RegionsSettings = () => {
           )}
         </ul>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

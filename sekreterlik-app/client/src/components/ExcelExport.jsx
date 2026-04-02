@@ -1,7 +1,10 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
+import { useToast } from '../contexts/ToastContext';
 
 const ExcelExport = ({ data, filename, buttonText, className = "" }) => {
+  const toast = useToast();
+
   const exportToExcel = () => {
     try {
       // Create a new workbook
@@ -17,10 +20,10 @@ const ExcelExport = ({ data, filename, buttonText, className = "" }) => {
       XLSX.writeFile(workbook, `${filename}.xlsx`);
       
       // Show success message
-      alert(`${filename} başarıyla Excel dosyası olarak indirildi!`);
+      toast.success(`${filename} başarıyla Excel dosyası olarak indirildi!`);
     } catch (error) {
       console.error('Excel export error:', error);
-      alert('Excel dosyası oluşturulurken bir hata oluştu: ' + error.message);
+      toast.error('Excel dosyası oluşturulurken bir hata oluştu: ' + error.message);
     }
   };
 

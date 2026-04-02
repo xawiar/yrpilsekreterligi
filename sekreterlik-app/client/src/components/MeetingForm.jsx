@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { formatMemberName } from '../utils/nameFormatter';
 import { isMobile } from '../utils/capacitorUtils';
+import { useToast } from '../contexts/ToastContext';
 
 const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: '',
     regions: [],
@@ -160,7 +162,7 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
     
     // Basic validation
     if (!formData.name || !formData.date || formData.regions.length === 0) {
-      alert('Toplantı adı, tarih ve en az bir bölge zorunludur');
+      toast.warning('Toplantı adı, tarih ve en az bir bölge zorunludur');
       return;
     }
     
@@ -195,7 +197,7 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
       await ApiService.updateMeeting(meeting.id, meetingData);
       console.log('Meeting updated successfully');
       
-      alert('Toplantı başarıyla güncellendi');
+      toast.success('Toplantı başarıyla güncellendi');
       
       if (onMeetingSaved) {
         onMeetingSaved();
@@ -205,7 +207,7 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
       }
     } catch (error) {
       console.error('Error saving meeting:', error);
-      alert('Toplantı kaydedilirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Toplantı kaydedilirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 

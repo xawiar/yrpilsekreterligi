@@ -3,9 +3,14 @@ import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import { LoadingSpinner } from '../components/UI';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const PollsPage = () => {
   const { user } = useAuth();
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -34,7 +39,7 @@ const PollsPage = () => {
       setPolls(data || []);
     } catch (error) {
       console.error('Error fetching polls:', error);
-      alert('Anketler yüklenirken hata oluştu: ' + error.message);
+      toast.error('Anketler yüklenirken hata oluştu: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -82,17 +87,17 @@ const PollsPage = () => {
     
     // Validation
     if (!formData.title.trim()) {
-      alert('Başlık zorunludur');
+      toast.warning('Başlık zorunludur');
       return;
     }
-    
+
     if (formData.options.filter(opt => opt.trim()).length < 2) {
-      alert('En az 2 seçenek gerekir');
+      toast.warning('En az 2 seçenek gerekir');
       return;
     }
-    
+
     if (!formData.endDate || !formData.endTime) {
-      alert('Bitiş tarihi ve saati zorunludur');
+      toast.warning('Bitiş tarihi ve saati zorunludur');
       return;
     }
     
@@ -101,7 +106,7 @@ const PollsPage = () => {
       const now = new Date();
       
       if (endDateTime <= now) {
-        alert('Bitiş tarihi gelecekte olmalıdır');
+        toast.warning('Bitiş tarihi gelecekte olmalıdır');
         return;
       }
       
@@ -115,12 +120,12 @@ const PollsPage = () => {
       };
       
       await ApiService.createPoll(pollData);
-      alert('Anket başarıyla oluşturuldu');
+      toast.success('Anket başarıyla oluşturuldu');
       setIsCreateModalOpen(false);
       fetchPolls();
     } catch (error) {
       console.error('Error creating poll:', error);
-      alert('Anket oluşturulurken hata oluştu: ' + error.message);
+      toast.error('Anket oluşturulurken hata oluştu: ' + error.message);
     }
   };
 
@@ -132,33 +137,33 @@ const PollsPage = () => {
       setIsResultsModalOpen(true);
     } catch (error) {
       console.error('Error fetching poll results:', error);
-      alert('Sonuçlar yüklenirken hata oluştu: ' + error.message);
+      toast.error('Sonuçlar yüklenirken hata oluştu: ' + error.message);
     }
   };
 
   const handleEndPoll = async (pollId) => {
-    if (window.confirm('Bu anketi sonlandırmak istediğinize emin misiniz?')) {
-      try {
-        await ApiService.endPoll(pollId);
-        alert('Anket başarıyla sonlandırıldı');
-        fetchPolls();
-      } catch (error) {
-        console.error('Error ending poll:', error);
-        alert('Anket sonlandırılırken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Anketi Sonlandır', message: 'Bu anketi sonlandırmak istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.endPoll(pollId);
+      toast.success('Anket başarıyla sonlandırıldı');
+      fetchPolls();
+    } catch (error) {
+      console.error('Error ending poll:', error);
+      toast.error('Anket sonlandırılırken hata oluştu: ' + error.message);
     }
   };
 
   const handleDeletePoll = async (pollId) => {
-    if (window.confirm('Bu anketi silmek istediğinize emin misiniz?')) {
-      try {
-        await ApiService.deletePoll(pollId);
-        alert('Anket başarıyla silindi');
-        fetchPolls();
-      } catch (error) {
-        console.error('Error deleting poll:', error);
-        alert('Anket silinirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Anketi Sil', message: 'Bu anketi silmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.deletePoll(pollId);
+      toast.success('Anket başarıyla silindi');
+      fetchPolls();
+    } catch (error) {
+      console.error('Error deleting poll:', error);
+      toast.error('Anket silinirken hata oluştu: ' + error.message);
     }
   };
 
@@ -476,6 +481,7 @@ const PollsPage = () => {
           </div>
         )}
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

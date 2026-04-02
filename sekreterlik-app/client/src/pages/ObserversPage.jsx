@@ -3,8 +3,13 @@ import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import * as XLSX from 'xlsx';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const ObserversPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [observers, setObservers] = useState([]);
   const [ballotBoxes, setBallotBoxes] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -280,17 +285,17 @@ const ObserversPage = () => {
   };
 
   const handleDelete = async (observerId) => {
-    if (window.confirm('Bu müşahidi silmek istediğinizden emin misiniz?')) {
-      try {
-        setLoading(true);
-        await ApiService.deleteBallotBoxObserver(observerId);
-        await fetchData();
-      } catch (error) {
-        console.error('Error deleting observer:', error);
-        setError('Müşahit silinirken hata oluştu');
-      } finally {
-        setLoading(false);
-      }
+    const confirmed = await confirm({ title: 'Müşahidi Sil', message: 'Bu müşahidi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      await ApiService.deleteBallotBoxObserver(observerId);
+      await fetchData();
+    } catch (error) {
+      console.error('Error deleting observer:', error);
+      setError('Müşahit silinirken hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1268,6 +1273,7 @@ const ObserversPage = () => {
           </div>
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

@@ -4,7 +4,7 @@ const EditMemberButton = ({ onClick }) => {
   return (
     <button
       onClick={onClick}
-      className="text-blue-600 hover:text-blue-900 transition-colors p-1 rounded-full hover:bg-blue-50"
+      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-all active:scale-95 p-1 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30"
       title="Düzenle"
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from './mobile/NativeCard';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const TownsSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [towns, setTowns] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [members, setMembers] = useState([]);
@@ -295,27 +300,24 @@ const TownsSettings = () => {
   };
 
   const handleDelete = async (town) => {
-    if (!window.confirm(`"${town.name}" beldesini silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Belde Sil', message: `"${town.name}" beldesini silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       // Don't do optimistic update for deletion - wait for server confirmation
       // because deletion might fail due to dependencies
       const result = await ApiService.deleteTown(town.id);
-      
+
       // Success - remove from UI immediately
       setTowns(towns.filter(t => t.id !== town.id));
-      setMessage(result.message || 'Belde başarıyla silindi');
-      setMessageType('success');
-      
+      toast.success(result.message || 'Belde başarıyla silindi');
+
       // Fetch fresh data to ensure consistency
       await fetchData();
     } catch (error) {
       console.error('Error deleting town:', error);
       // Show error message to user
-      setMessage(error.message || 'Belde silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Belde silinirken hata oluştu');
       // Fetch fresh data to ensure UI is in sync
       await fetchData();
     }
@@ -862,6 +864,7 @@ const TownsSettings = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

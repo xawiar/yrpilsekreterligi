@@ -2,9 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 import Footer from '../components/Footer';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const DistrictPresidentDashboardPage = () => {
   const { user, logout } = useAuth();
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [district, setDistrict] = useState(null);
   const [managementMembers, setManagementMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +100,7 @@ const DistrictPresidentDashboardPage = () => {
       fetchManagementMembers();
     } catch (error) {
       console.error('Error saving member:', error);
-      alert('Üye kaydedilirken hata oluştu');
+      toast.error('Üye kaydedilirken hata oluştu');
     }
   };
 
@@ -114,16 +119,15 @@ const DistrictPresidentDashboardPage = () => {
   };
 
   const handleDelete = async (memberId) => {
-    if (!window.confirm('Bu üyeyi silmek istediğinizden emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Üyeyi Sil', message: 'Bu üyeyi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteDistrictManagementMember(memberId);
       fetchManagementMembers();
     } catch (error) {
       console.error('Error deleting member:', error);
-      alert('Üye silinirken hata oluştu');
+      toast.error('Üye silinirken hata oluştu');
     }
   };
 
@@ -415,6 +419,7 @@ const DistrictPresidentDashboardPage = () => {
         </div>
       )}
       <Footer />
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

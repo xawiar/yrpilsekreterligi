@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { formatMemberName } from '../utils/nameFormatter';
 import { isMobile } from '../utils/capacitorUtils';
+import { useToast } from '../contexts/ToastContext';
 
 const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
+  const toast = useToast();
   const [selectedRegions, setSelectedRegions] = useState([]);
   const [meetingName, setMeetingName] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
@@ -106,17 +108,17 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
     e.preventDefault();
     
     if (!meetingName.trim()) {
-      alert('Toplantı adı zorunludur');
+      toast.warning('Toplantı adı zorunludur');
       return;
     }
-    
+
     if (selectedRegions.length === 0) {
-      alert('En az bir bölge seçmelisiniz');
+      toast.warning('En az bir bölge seçmelisiniz');
       return;
     }
-    
+
     if (!meetingDate) {
-      alert('Toplantı tarihi ve saati zorunludur');
+      toast.warning('Toplantı tarihi ve saati zorunludur');
       return;
     }
     
@@ -153,7 +155,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
       console.log('Meeting created successfully:', response);
       
       // Show success message
-      alert('Toplantı başarıyla oluşturuldu');
+      toast.success('Toplantı başarıyla oluşturuldu');
       
       // Call callbacks
       if (onMeetingCreated) {
@@ -164,7 +166,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
       }
     } catch (error) {
       console.error('Error creating meeting:', error);
-      alert('Toplantı oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Toplantı oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     }
   };
 

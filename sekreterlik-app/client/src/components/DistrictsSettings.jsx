@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from './mobile/NativeCard';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const DistrictsSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [districts, setDistricts] = useState([]);
   const [districtOfficials, setDistrictOfficials] = useState([]);
   const [deputyInspectors, setDeputyInspectors] = useState({});
@@ -279,27 +284,24 @@ const DistrictsSettings = () => {
   };
 
   const handleDelete = async (district) => {
-    if (!window.confirm(`"${district.name}" ilçesini silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
-    
+    const confirmed = await confirm({ title: 'İlçe Sil', message: `"${district.name}" ilçesini silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
+
     try {
       // Don't do optimistic update for deletion - wait for server confirmation
       // because deletion might fail due to dependencies
       const result = await ApiService.deleteDistrict(district.id);
-      
+
       // Success - remove from UI
       setDistricts(districts.filter(d => d.id !== district.id));
-      setMessage(result.message || 'İlçe başarıyla silindi');
-      setMessageType('success');
-      
+      toast.success(result.message || 'İlçe başarıyla silindi');
+
       // Fetch fresh data to ensure consistency
       await fetchDistricts();
     } catch (error) {
       console.error('Error deleting district:', error);
       // Show error message to user
-      setMessage(error.message || 'İlçe silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'İlçe silinirken hata oluştu');
       // Fetch fresh data to ensure UI is in sync
       await fetchDistricts();
     }
@@ -823,6 +825,7 @@ const DistrictsSettings = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

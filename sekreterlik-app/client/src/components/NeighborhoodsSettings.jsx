@@ -3,8 +3,13 @@ import * as XLSX from 'xlsx';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from './mobile/NativeCard';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const NeighborhoodsSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
@@ -316,19 +321,16 @@ const NeighborhoodsSettings = () => {
   };
 
   const handleDelete = async (neighborhood) => {
-    if (!window.confirm(`"${neighborhood.name}" mahallesini silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Mahalle Sil', message: `"${neighborhood.name}" mahallesini silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteNeighborhood(neighborhood.id);
-      setMessage('Mahalle başarıyla silindi');
-      setMessageType('success');
+      toast.success('Mahalle başarıyla silindi');
       fetchData();
     } catch (error) {
       console.error('Error deleting neighborhood:', error);
-      setMessage(error.message || 'Mahalle silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Mahalle silinirken hata oluştu');
     }
   };
 
@@ -1153,6 +1155,7 @@ const NeighborhoodsSettings = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

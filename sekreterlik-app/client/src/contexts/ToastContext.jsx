@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import Toast from '../components/Toast';
+import { playNotificationSound } from '../utils/notificationSound';
 
 const ToastContext = createContext();
 
@@ -29,10 +30,12 @@ export const ToastProvider = ({ children }) => {
   }, [showToast]);
 
   const error = useCallback((message, duration) => {
+    playNotificationSound();
     return showToast(message, 'error', duration);
   }, [showToast]);
 
   const warning = useCallback((message, duration) => {
+    playNotificationSound();
     return showToast(message, 'warning', duration);
   }, [showToast]);
 

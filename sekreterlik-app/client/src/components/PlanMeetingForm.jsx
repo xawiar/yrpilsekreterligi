@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 
 const PlanMeetingForm = ({ onClose, onMeetingPlanned, regions }) => {
+  const toast = useToast();
   const [meetingName, setMeetingName] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
@@ -21,17 +23,17 @@ const PlanMeetingForm = ({ onClose, onMeetingPlanned, regions }) => {
     e.preventDefault();
     
     if (!meetingName.trim()) {
-      alert('Toplantı adı zorunludur');
+      toast.warning('Toplantı adı zorunludur');
       return;
     }
-    
+
     if (!meetingDate) {
-      alert('Toplantı tarihi ve saati zorunludur');
+      toast.warning('Toplantı tarihi ve saati zorunludur');
       return;
     }
-    
+
     if (selectedRegions.length === 0) {
-      alert('En az bir bölge seçilmelidir');
+      toast.warning('En az bir bölge seçilmelidir');
       return;
     }
 
@@ -46,14 +48,14 @@ const PlanMeetingForm = ({ onClose, onMeetingPlanned, regions }) => {
       };
       
       await ApiService.createMeeting(meetingData);
-      alert('Toplantı başarıyla planlandı');
+      toast.success('Toplantı başarıyla planlandı');
       if (onMeetingPlanned) {
         onMeetingPlanned();
       }
       onClose();
     } catch (error) {
       console.error('Error planning meeting:', error);
-      alert('Toplantı planlanırken hata oluştu: ' + error.message);
+      toast.error('Toplantı planlanırken hata oluştu: ' + error.message);
     }
   };
 

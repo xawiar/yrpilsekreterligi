@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
 
 const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
+  const toast = useToast();
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventLocation, setEventLocation] = useState('');
@@ -154,17 +156,17 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
     e.preventDefault();
     
     if (!selectedCategoryId) {
-      alert('Etkinlik kategorisi seçilmelidir');
+      toast.warning('Etkinlik kategorisi seçilmelidir');
       return;
     }
-    
+
     if (!eventDate) {
-      alert('Etkinlik tarihi ve saati zorunludur');
+      toast.warning('Etkinlik tarihi ve saati zorunludur');
       return;
     }
-    
+
     if (selectedLocationTypes.length === 0) {
-      alert('En az bir konum türü seçilmelidir');
+      toast.warning('En az bir konum türü seçilmelidir');
       return;
     }
 
@@ -192,28 +194,28 @@ const PlanEventForm = ({ onClose, onEventPlanned, members }) => {
           // QUIC hatası gibi uyarılar varsa göster ama devam et
           console.warn('Etkinlik oluşturuldu ancak uyarı var:', response.warning);
         }
-        alert('Etkinlik başarıyla planlandı');
+        toast.success('Etkinlik başarıyla planlandı');
         if (onEventPlanned) {
           onEventPlanned();
         }
         onClose();
       } else {
-        alert('Etkinlik planlanırken hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
+        toast.error('Etkinlik planlanırken hata oluştu: ' + (response.message || 'Bilinmeyen hata'));
       }
     } catch (error) {
       console.error('Error planning event:', error);
-      
+
       // QUIC hatası genellikle network sorunlarından kaynaklanır
       // Ancak işlem başarılı olabilir
       if (error.message && error.message.includes('QUIC')) {
         console.warn('⚠️ QUIC protokol hatası, ancak etkinlik kaydedilmiş olabilir');
-        alert('Etkinlik planlandı (bağlantı uyarısı alındı, lütfen kontrol edin)');
+        toast.warning('Etkinlik planlandı (bağlantı uyarısı alındı, lütfen kontrol edin)');
         if (onEventPlanned) {
           onEventPlanned();
         }
         onClose();
       } else {
-        alert('Etkinlik planlanırken hata oluştu: ' + error.message);
+        toast.error('Etkinlik planlanırken hata oluştu: ' + error.message);
       }
     }
   };

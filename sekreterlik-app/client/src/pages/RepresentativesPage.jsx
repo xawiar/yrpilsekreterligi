@@ -5,8 +5,13 @@ import { decryptData } from '../utils/crypto';
 import CryptoJS from 'crypto-js';
 import * as XLSX from 'xlsx';
 import Modal from '../components/Modal';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const RepresentativesPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [neighborhoodRepresentatives, setNeighborhoodRepresentatives] = useState([]);
   const [villageRepresentatives, setVillageRepresentatives] = useState([]);
   const [neighborhoodVisitCounts, setNeighborhoodVisitCounts] = useState({});
@@ -704,19 +709,18 @@ const RepresentativesPage = () => {
             <button
               onClick={async () => {
                 if (!smsMessage.trim()) {
-                  alert('Lütfen mesaj metnini girin');
+                  toast.warning('Lütfen mesaj metnini girin');
                   return;
                 }
 
                 const reps = activeTab === 'neighborhood' ? filteredNeighborhoodReps : filteredVillageReps;
                 if (reps.length === 0) {
-                  alert('Gönderilecek temsilci bulunamadı');
+                  toast.warning('Gönderilecek temsilci bulunamadı');
                   return;
                 }
 
-                if (!window.confirm(`${reps.length} temsilciye SMS göndermek istediğinize emin misiniz?`)) {
-                  return;
-                }
+                const confirmed = await confirm({ title: 'SMS Gönder', message: `${reps.length} temsilciye SMS göndermek istediğinize emin misiniz?` });
+                if (!confirmed) return;
 
                 try {
                   setSendingSms(true);
@@ -756,6 +760,7 @@ const RepresentativesPage = () => {
           </div>
         </div>
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const PersonalDocuments = ({ memberId }) => {
   const { user } = useAuth();
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -104,7 +109,8 @@ const PersonalDocuments = ({ memberId }) => {
   };
 
   const handleDelete = async (documentId) => {
-    if (!window.confirm('Bu belgeyi silmek istediğinizden emin misiniz?')) {
+    const confirmed = await confirm({ title: 'Belgeyi Sil', message: 'Bu belgeyi silmek istediğinizden emin misiniz?' });
+    if (!confirmed) {
       return;
     }
 
@@ -309,6 +315,7 @@ const PersonalDocuments = ({ memberId }) => {
           {documents.length}/5 belge yüklenmiş
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

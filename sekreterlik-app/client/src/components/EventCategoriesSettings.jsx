@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const EventCategoriesSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -102,19 +107,16 @@ const EventCategoriesSettings = () => {
   };
 
   const handleDelete = async (category) => {
-    if (!window.confirm(`"${category.name}" etkinlik kategorisini silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Etkinlik Kategorisi Sil', message: `"${category.name}" etkinlik kategorisini silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteEventCategory(category.id);
-      setMessage('Etkinlik kategorisi başarıyla silindi');
-      setMessageType('success');
+      toast.success('Etkinlik kategorisi başarıyla silindi');
       fetchCategories();
     } catch (error) {
       console.error('Error deleting event category:', error);
-      setMessage(error.message || 'Etkinlik kategorisi silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Etkinlik kategorisi silinirken hata oluştu');
     }
   };
 
@@ -271,6 +273,7 @@ const EventCategoriesSettings = () => {
           )}
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

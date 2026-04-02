@@ -3,8 +3,10 @@ import ApiService from '../utils/ApiService';
 import { stringify } from 'csv-stringify/browser/esm/sync';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useToast } from '../contexts/ToastContext';
 
 const EventDetails = ({ event, members }) => {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [neighborhoodRepresentatives, setNeighborhoodRepresentatives] = useState([]);
   const [neighborhoodSupervisors, setNeighborhoodSupervisors] = useState([]);
@@ -249,7 +251,7 @@ const EventDetails = ({ event, members }) => {
     try {
       const element = document.getElementById('event-details-container');
       if (!element) {
-        alert('PDF oluşturulamadı: Sayfa içeriği bulunamadı');
+        toast.error('PDF oluşturulamadı: Sayfa içeriği bulunamadı');
         return;
       }
 
@@ -288,10 +290,10 @@ const EventDetails = ({ event, members }) => {
       // Save PDF
       pdf.save(`${event.name.replace(/\s+/g, '_')}_detaylar.pdf`);
       
-      alert('PDF başarıyla oluşturuldu ve indirildi!');
+      toast.success('PDF başarıyla oluşturuldu ve indirildi!');
     } catch (error) {
       console.error('PDF export error:', error);
-      alert('PDF oluşturulurken bir hata oluştu: ' + error.message);
+      toast.error('PDF oluşturulurken bir hata oluştu: ' + error.message);
     }
   };
 

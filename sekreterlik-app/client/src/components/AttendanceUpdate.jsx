@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
+import { useToast } from '../contexts/ToastContext';
 
 const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdated }) => {
+  const toast = useToast();
   const [attendance, setAttendance] = useState({});
 
   // Function to get member name by ID
@@ -94,7 +96,7 @@ const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdate
       onClose();
     } catch (error) {
       console.error('Error updating attendance:', error);
-      alert('Yoklama güncellenirken bir hata oluştu');
+      toast.error('Yoklama güncellenirken bir hata oluştu');
     }
   };
 

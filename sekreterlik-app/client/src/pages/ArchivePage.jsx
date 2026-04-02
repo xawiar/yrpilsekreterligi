@@ -3,20 +3,25 @@ import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import MemberDetails from '../components/MemberDetails';
 import MeetingDetails from '../components/MeetingDetails';
-import { 
-  ArchiveHeader, 
-  SummaryStatistics, 
-  ArchiveTabs, 
-  DocumentsTable, 
-  ArchivedMembersTable, 
+import {
+  ArchiveHeader,
+  SummaryStatistics,
+  ArchiveTabs,
+  DocumentsTable,
+  ArchivedMembersTable,
   ArchivedMeetingsTable,
   ArchivedEventsTable
 } from '../components/Archive';
 import MemberDocumentsTable from '../components/Archive/MemberDocumentsTable';
 import DocumentUploadForm from '../components/Archive/DocumentUploadForm';
 import { LoadingSpinner } from '../components/UI';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const ArchivePage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [documents, setDocuments] = useState([]);
   const [memberDocuments, setMemberDocuments] = useState([]);
   const [archivedMembers, setArchivedMembers] = useState([]);
@@ -167,7 +172,7 @@ const ArchivePage = () => {
     e.preventDefault();
     
     if (!selectedFile) {
-      alert('Lütfen bir dosya seçin');
+      toast.warning('Lütfen bir dosya seçin');
       return;
     }
 
@@ -186,8 +191,8 @@ const ArchivePage = () => {
       
       // Close modal and reset form
       closeUploadModal();
-      
-      alert('Belge başarıyla yüklendi');
+
+      toast.success('Belge başarıyla yüklendi');
     } catch (error) {
       console.error('Error uploading document:', error);
       // More detailed error handling
@@ -195,7 +200,7 @@ const ArchivePage = () => {
       if (error.message) {
         errorMessage = error.message;
       }
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -219,145 +224,145 @@ const ArchivePage = () => {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading document:', error);
-      alert('Belge indirilirken hata oluştu: ' + error.message);
+      toast.error('Belge indirilirken hata oluştu: ' + error.message);
     }
   };
 
   const handleDeleteDocument = async (id, isMemberDocument = false) => {
-    if (window.confirm('Bu belgeyi silmek istediğinize emin misiniz?')) {
-      try {
-        if (isMemberDocument) {
-          await ApiService.deletePersonalDocument(id);
-          // Refresh member documents list
-          await fetchMemberDocuments();
-        } else {
-          await ApiService.deleteDocument(id);
-          // Refresh documents list
-          await fetchDocuments();
-        }
-        alert('Belge başarıyla silindi');
-      } catch (error) {
-        console.error('Error deleting document:', error);
-        alert('Belge silinirken hata oluştu: ' + error.message);
+    const confirmed = await confirm({ title: 'Belgeyi Sil', message: 'Bu belgeyi silmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      if (isMemberDocument) {
+        await ApiService.deletePersonalDocument(id);
+        // Refresh member documents list
+        await fetchMemberDocuments();
+      } else {
+        await ApiService.deleteDocument(id);
+        // Refresh documents list
+        await fetchDocuments();
       }
+      toast.success('Belge başarıyla silindi');
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Belge silinirken hata oluştu: ' + error.message);
     }
   };
 
   const handleDeleteArchivedMember = async (id) => {
-    if (window.confirm('Bu arşivlenmiş üyeyi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.deleteArchivedMember(id);
-        // Refresh archived members list
-        await fetchArchivedData();
-        alert('Arşivlenmiş üye başarıyla silindi');
-      } catch (error) {
-        console.error('Error deleting archived member:', error);
-        alert('Arşivlenmiş üye silinirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Üyeyi Kalıcı Sil', message: 'Bu arşivlenmiş üyeyi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.deleteArchivedMember(id);
+      // Refresh archived members list
+      await fetchArchivedData();
+      toast.success('Arşivlenmiş üye başarıyla silindi');
+    } catch (error) {
+      console.error('Error deleting archived member:', error);
+      toast.error('Arşivlenmiş üye silinirken hata oluştu: ' + error.message);
     }
   };
 
   const handleRestoreMember = async (id) => {
-    if (window.confirm('Bu üyeyi geri yüklemek istediğinize emin misiniz?')) {
-      try {
-        await ApiService.restoreMember(id);
-        // Refresh archived members list
-        await fetchArchivedData();
-        alert('Üye başarıyla geri yüklendi');
-      } catch (error) {
-        console.error('Error restoring member:', error);
-        alert('Üye geri yüklenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Üyeyi Geri Yükle', message: 'Bu üyeyi geri yüklemek istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.restoreMember(id);
+      // Refresh archived members list
+      await fetchArchivedData();
+      toast.success('Üye başarıyla geri yüklendi');
+    } catch (error) {
+      console.error('Error restoring member:', error);
+      toast.error('Üye geri yüklenirken hata oluştu: ' + error.message);
     }
   };
 
   const handleDeleteArchivedMeeting = async (id) => {
-    if (window.confirm('Bu arşivlenmiş toplantıyı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.deleteArchivedMeeting(id);
-        // Refresh archived meetings list
-        await fetchArchivedData();
-        // Also refresh regular meetings list to update statistics
-        await fetchMeetings();
-        alert('Arşivlenmiş toplantı başarıyla silindi');
-      } catch (error) {
-        console.error('Error deleting archived meeting:', error);
-        alert('Arşivlenmiş toplantı silinirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Toplantıyı Kalıcı Sil', message: 'Bu arşivlenmiş toplantıyı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.deleteArchivedMeeting(id);
+      // Refresh archived meetings list
+      await fetchArchivedData();
+      // Also refresh regular meetings list to update statistics
+      await fetchMeetings();
+      toast.success('Arşivlenmiş toplantı başarıyla silindi');
+    } catch (error) {
+      console.error('Error deleting archived meeting:', error);
+      toast.error('Arşivlenmiş toplantı silinirken hata oluştu: ' + error.message);
     }
   };
 
   const handleDeleteArchivedEvent = async (id) => {
-    if (window.confirm('Bu arşivlenmiş etkinliği kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.deleteEvent(id);
-        // Refresh archived events list
-        await fetchArchivedData();
-        // Note: EventsPage will automatically refresh when navigated to due to cache-busting
-        alert('Arşivlenmiş etkinlik başarıyla silindi');
-      } catch (error) {
-        console.error('Error deleting archived event:', error);
-        alert('Arşivlenmiş etkinlik silinirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Etkinliği Kalıcı Sil', message: 'Bu arşivlenmiş etkinliği kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.deleteEvent(id);
+      // Refresh archived events list
+      await fetchArchivedData();
+      // Note: EventsPage will automatically refresh when navigated to due to cache-busting
+      toast.success('Arşivlenmiş etkinlik başarıyla silindi');
+    } catch (error) {
+      console.error('Error deleting archived event:', error);
+      toast.error('Arşivlenmiş etkinlik silinirken hata oluştu: ' + error.message);
     }
   };
 
   // Clear archived members
   const handleClearArchivedMembers = async () => {
-    if (window.confirm('Arşivlenmiş tüm üyeleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.clearArchivedMembers();
-        // Refresh archived members list
-        await fetchArchivedData();
-        alert('Arşivlenmiş üyeler başarıyla temizlendi');
-      } catch (error) {
-        console.error('Error clearing archived members:', error);
-        alert('Arşivlenmiş üyeler temizlenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Tüm Arşivlenen Üyeleri Sil', message: 'Arşivlenmiş tüm üyeleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.clearArchivedMembers();
+      // Refresh archived members list
+      await fetchArchivedData();
+      toast.success('Arşivlenmiş üyeler başarıyla temizlendi');
+    } catch (error) {
+      console.error('Error clearing archived members:', error);
+      toast.error('Arşivlenmiş üyeler temizlenirken hata oluştu: ' + error.message);
     }
   };
 
   // Clear archived meetings
   const handleClearArchivedMeetings = async () => {
-    if (window.confirm('Arşivlenmiş tüm toplantıları silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.clearArchivedMeetings();
-        // Refresh archived meetings list
-        await fetchArchivedData();
-        alert('Arşivlenmiş toplantılar başarıyla temizlendi');
-      } catch (error) {
-        console.error('Error clearing archived meetings:', error);
-        alert('Arşivlenmiş toplantılar temizlenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Tüm Arşivlenen Toplantıları Sil', message: 'Arşivlenmiş tüm toplantıları silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.clearArchivedMeetings();
+      // Refresh archived meetings list
+      await fetchArchivedData();
+      toast.success('Arşivlenmiş toplantılar başarıyla temizlendi');
+    } catch (error) {
+      console.error('Error clearing archived meetings:', error);
+      toast.error('Arşivlenmiş toplantılar temizlenirken hata oluştu: ' + error.message);
     }
   };
 
   // Clear documents
   const handleClearDocuments = async () => {
-    if (window.confirm('Tüm belgeleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.clearDocuments();
-        // Refresh documents list
-        await fetchDocuments();
-        alert('Tüm belgeler başarıyla temizlendi');
-      } catch (error) {
-        console.error('Error clearing documents:', error);
-        alert('Belgeler temizlenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Tüm Belgeleri Sil', message: 'Tüm belgeleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.clearDocuments();
+      // Refresh documents list
+      await fetchDocuments();
+      toast.success('Tüm belgeler başarıyla temizlendi');
+    } catch (error) {
+      console.error('Error clearing documents:', error);
+      toast.error('Belgeler temizlenirken hata oluştu: ' + error.message);
     }
   };
 
   // Clear archived events
   const handleClearArchivedEvents = async () => {
-    if (window.confirm('Arşivlenmiş tüm etkinlikleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      try {
-        await ApiService.clearArchivedEvents();
-        await fetchArchivedData();
-        alert('Arşivlenmiş etkinlikler başarıyla temizlendi');
-      } catch (error) {
-        console.error('Error clearing archived events:', error);
-        alert('Arşivlenmiş etkinlikler temizlenirken hata oluştu: ' + error.message);
-      }
+    const confirmed = await confirm({ title: 'Tüm Arşivlenen Etkinlikleri Sil', message: 'Arşivlenmiş tüm etkinlikleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
+    try {
+      await ApiService.clearArchivedEvents();
+      await fetchArchivedData();
+      toast.success('Arşivlenmiş etkinlikler başarıyla temizlendi');
+    } catch (error) {
+      console.error('Error clearing archived events:', error);
+      toast.error('Arşivlenmiş etkinlikler temizlenirken hata oluştu: ' + error.message);
     }
   };
 
@@ -494,6 +499,7 @@ const ArchivePage = () => {
           <MeetingDetails meeting={selectedItem} />
         )}
       </Modal>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

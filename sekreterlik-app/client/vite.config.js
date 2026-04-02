@@ -147,7 +147,6 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          'ui-vendor': ['bootstrap'],
           'chart-vendor': ['recharts'],
           'export-vendor': ['xlsx', 'jspdf']
         }
@@ -167,13 +166,11 @@ export default defineConfig({
   },
   
   optimizeDeps: {
-    include: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'crypto-js', 'bootstrap-icons']
+    include: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'crypto-js']
   },
   
   resolve: {
-    alias: {
-      'bootstrap-icons': 'bootstrap-icons/font/bootstrap-icons.css'
-    }
+    alias: {}
   },
   
   // Preview ayarları (build test için)

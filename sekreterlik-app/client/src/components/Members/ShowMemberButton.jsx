@@ -4,7 +4,7 @@ const ShowMemberButton = ({ onClick }) => {
   return (
     <button
       onClick={onClick}
-      className="text-indigo-600 hover:text-indigo-900 transition-colors p-1 rounded-full hover:bg-indigo-50"
+      className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-all active:scale-95 p-1 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
       title="Göster"
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

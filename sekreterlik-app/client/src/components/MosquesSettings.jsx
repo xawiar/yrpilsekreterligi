@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const MosquesSettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [mosques, setMosques] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
@@ -182,19 +187,16 @@ const MosquesSettings = () => {
   };
 
   const handleDelete = async (mosque) => {
-    if (!window.confirm(`"${mosque.name}" camisini silmek istediğinizden emin misiniz?`)) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Cami Sil', message: `"${mosque.name}" camisini silmek istediğinizden emin misiniz?` });
+    if (!confirmed) return;
 
     try {
       await ApiService.deleteMosque(mosque.id);
-      setMessage('Cami başarıyla silindi');
-      setMessageType('success');
+      toast.success('Cami başarıyla silindi');
       fetchData();
     } catch (error) {
       console.error('Error deleting mosque:', error);
-      setMessage(error.message || 'Cami silinirken hata oluştu');
-      setMessageType('error');
+      toast.error(error.message || 'Cami silinirken hata oluştu');
     }
   };
 
@@ -498,6 +500,7 @@ const MosquesSettings = () => {
           )}
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

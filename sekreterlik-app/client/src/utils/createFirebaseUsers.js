@@ -12,7 +12,7 @@ export async function createAdminUser() {
   try {
     const adminUsername = 'admin';
     const adminPassword = '1491aaa1491';
-    const adminEmail = `${adminUsername}@sekreterlikapp.com`;
+    const adminEmail = `${adminUsername}@ilsekreterlik.local`;
 
     console.log('🔐 Admin kullanıcısı oluşturuluyor...');
     console.log('Email:', adminEmail);
@@ -86,7 +86,7 @@ export async function syncMemberUsersToFirebaseAuth() {
     const currentUserUid = currentUser ? currentUser.uid : null;
 
     // Admin bilgilerini al
-    let adminEmail = 'admin@sekreterlikapp.com';
+    let adminEmail = 'admin@ilsekreterlik.local';
     let adminPassword = '1491aaa1491';
     try {
       const adminDoc = await FirebaseService.getById('admin', 'main');
@@ -125,7 +125,7 @@ export async function syncMemberUsersToFirebaseAuth() {
         }
 
         // Email formatına çevir
-        const email = user.username.includes('@') ? user.username : `${user.username}@sekreterlikapp.com`;
+        const email = user.username.includes('@') ? user.username : `${user.username}@ilsekreterlik.local`;
 
         // Eğer zaten authUid varsa, kullanıcı zaten Firebase Auth'da var
         if (user.authUid) {

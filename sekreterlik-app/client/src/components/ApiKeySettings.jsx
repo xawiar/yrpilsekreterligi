@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const ApiKeySettings = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [apiKeys, setApiKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -110,9 +115,8 @@ const ApiKeySettings = () => {
   };
 
   const handleDeactivate = async (id) => {
-    if (!window.confirm('Bu API key\'i deaktif etmek istediğinize emin misiniz?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'API Key Deaktif Et', message: 'Bu API key\'i deaktif etmek istediğinize emin misiniz?' });
+    if (!confirmed) return;
 
     try {
       setError('');
@@ -142,9 +146,8 @@ const ApiKeySettings = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bu API key\'i silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'API Key Sil', message: 'Bu API key\'i silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
+    if (!confirmed) return;
 
     try {
       setError('');
@@ -433,6 +436,7 @@ const ApiKeySettings = () => {
           </pre>
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

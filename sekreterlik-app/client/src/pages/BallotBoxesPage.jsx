@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import * as XLSX from 'xlsx';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const BallotBoxesPage = () => {
+  const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [ballotBoxes, setBallotBoxes] = useState([]);
   const [observers, setObservers] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -191,17 +196,17 @@ const BallotBoxesPage = () => {
   };
 
   const handleDelete = async (ballotBoxId) => {
-    if (window.confirm('Bu sandığı silmek istediğinizden emin misiniz?')) {
-      try {
-        setLoading(true);
-        await ApiService.deleteBallotBox(ballotBoxId);
-        await fetchBallotBoxes();
-      } catch (error) {
-        console.error('Error deleting ballot box:', error);
-        setError('Sandık silinirken hata oluştu');
-      } finally {
-        setLoading(false);
-      }
+    const confirmed = await confirm({ title: 'Sandığı Sil', message: 'Bu sandığı silmek istediğinizden emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      await ApiService.deleteBallotBox(ballotBoxId);
+      await fetchBallotBoxes();
+    } catch (error) {
+      console.error('Error deleting ballot box:', error);
+      setError('Sandık silinirken hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1609,6 +1614,7 @@ const BallotBoxesPage = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };
