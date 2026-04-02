@@ -391,7 +391,7 @@ function RouterContent() {
         {isLoggedIn && user?.role === 'admin' && (
           <button
             onClick={() => setIsChatbotOpen(!isChatbotOpen)}
-            className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
+            className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
             aria-label="AI Chatbot'u Aç"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
