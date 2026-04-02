@@ -9,6 +9,12 @@
       }
     ]
   },
+  "firestore": {
+    "rules": "sekreterlik-app/firestore.rules"
+  },
+  "storage": {
+    "rules": "sekreterlik-app/storage.rules"
+  },
   "functions": [
     {
       "source": "functions",
