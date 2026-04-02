@@ -17,7 +17,7 @@ import MosquesSettings from '../components/MosquesSettings';
 import EventCategoriesSettings from '../components/EventCategoriesSettings';
 import AuthorizationSettings from '../components/AuthorizationSettings';
 import BylawsSettings from '../components/BylawsSettings';
-import GeminiApiSettings from '../components/GroqApiSettings';
+import GeminiApiSettings from '../components/GeminiApiSettings';
 import FirebaseConfigSettings from '../components/FirebaseConfigSettings';
 import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import SmsSettings from '../components/SmsSettings';
