@@ -839,6 +839,42 @@ const MemberDashboardPage = () => {
     );
   }
 
+  if (currentView === 'ballot-boxes') {
+    if (!hasViewPermission('ballot-boxes')) return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 pb-24 lg:pb-8">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mb-4 flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            Geri Dön
+          </button>
+          <BallotBoxesPage />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'observers') {
+    if (!hasViewPermission('observers')) return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 pb-24 lg:pb-8">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="mb-4 flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            Geri Dön
+          </button>
+          <ObserversPage />
+        </div>
+      </div>
+    );
+  }
+
   // Default dashboard view
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">

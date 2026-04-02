@@ -11,12 +11,12 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'create_meeting', label: 'Toplantı Oluşturma' },
   { key: 'create_event', label: 'Etkinlik Oluşturma' },
   { key: 'add_stk', label: 'STK Ekleme' },
+  { key: 'manage_stk', label: 'STK Yönetimi', description: 'STK ekleme, düzenleme ve silme' },
   { key: 'add_public_institution', label: 'Kamu Kurumu Ekleme' },
   { key: 'add_ballot_box', label: 'Sandık Ekleme' },
   { key: 'add_observer', label: 'Müşahit Ekleme' },
   
   // Sayfa Erişim Yetkileri (Tüm sayfalar - settings hariç)
-  { key: 'access_dashboard', label: 'Dashboard Sayfası Erişimi' },
   { key: 'access_members_page', label: 'Üyeler Sayfası Erişimi' },
   { key: 'access_meetings_page', label: 'Toplantılar Sayfası Erişimi' },
   { key: 'access_events_page', label: 'Etkinlikler Sayfası Erişimi' },
@@ -31,7 +31,6 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'access_neighborhoods_page', label: 'Mahalleler Sayfası Erişimi' },
   { key: 'access_villages_page', label: 'Köyler Sayfası Erişimi' },
   { key: 'access_groups_page', label: 'Gruplar Sayfası Erişimi' },
-  { key: 'access_bulk_sms_page', label: 'Toplu SMS Sayfası Erişimi' },
 ];
 
 const AuthorizationSettings = () => {
