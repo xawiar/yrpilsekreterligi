@@ -15,11 +15,7 @@ function encryptField(plaintext) {
   if (plaintext === null || plaintext === undefined) return null;
 
   if (!KEY) {
-    if (!keyMissingLogged) {
-      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
-      keyMissingLogged = true;
-    }
-    return plaintext;
+    throw new Error('FIELD_ENCRYPTION_KEY tanımlı değil — şifreleme yapılamaz');
   }
 
   const iv = crypto.randomBytes(12);
@@ -33,10 +29,7 @@ function decryptField(ciphertext) {
   if (!ciphertext) return null;
 
   if (!KEY) {
-    if (!keyMissingLogged) {
-      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
-      keyMissingLogged = true;
-    }
+    // Decrypt'te throw etme — mevcut şifresiz veriyi olduğu gibi döndür
     return ciphertext;
   }
 

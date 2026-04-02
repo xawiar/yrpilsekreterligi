@@ -49,9 +49,9 @@ const router = express.Router();
 console.log('Members router initialized');
 
 // IMPORTANT: Specific routes must be defined BEFORE parameterized routes
-// Test endpoint
-router.get('/test-import', (req, res) => {
-  console.log('GET /test-import route called');
+// Test endpoint — sadece authenticated kullanıcılar
+const { authenticateToken } = require('../middleware/auth');
+router.get('/test-import', authenticateToken, (req, res) => {
   res.json({ message: 'Test import endpoint working' });
 });
 

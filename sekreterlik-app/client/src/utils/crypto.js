@@ -18,11 +18,7 @@ export function encryptData(data) {
   if (data === null || data === undefined) return null;
 
   if (!ENCRYPTION_KEY) {
-    if (!keyMissingLogged) {
-      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
-      keyMissingLogged = true;
-    }
-    return data;
+    throw new Error('VITE_ENCRYPTION_KEY tanımlı değil — şifreleme yapılamaz');
   }
 
   try {
@@ -74,10 +70,7 @@ export function decryptData(encryptedData) {
   if (!encryptedData) return null;
 
   if (!ENCRYPTION_KEY) {
-    if (!keyMissingLogged) {
-      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
-      keyMissingLogged = true;
-    }
+    // Decrypt'te throw etme — mevcut şifresiz veriyi olduğu gibi döndür
     return encryptedData;
   }
 

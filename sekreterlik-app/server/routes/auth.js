@@ -1207,8 +1207,7 @@ router.post('/update-firebase-auth-user', async (req, res) => {
       authUid: authUid || 'null',
       email: email || 'null',
       oldEmail: oldEmail || 'null',
-      passwordLength: password?.length || 0,
-      passwordPreview: password ? password.substring(0, 3) + '***' : 'null'
+      passwordLength: password?.length || 0
     });
     
     const { getAdmin } = require('../config/firebaseAdmin');
