@@ -4,7 +4,7 @@
  */
 
 import { buildSiteContext, buildMemberContext, maskSensitiveData } from '../utils/aiContextBuilder';
-import { SYSTEM_PROMPT } from '../utils/aiPrompts';
+import { buildSystemPrompt } from '../utils/aiPrompts';
 import { TOOL_DECLARATIONS, executeToolCall } from '../utils/aiTools';
 
 class GeminiService {
@@ -106,7 +106,7 @@ class GeminiService {
       // Gemini native format — systemInstruction ayrı alan
       const requestBody = {
         systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT + '\n\n--- SİTE VERİLERİ ---\n\n' + maskedContext }]
+          parts: [{ text: buildSystemPrompt(maskedContext, conversationHistory) }]
         },
         contents: [
           ...this.formatHistory(conversationHistory),
@@ -201,7 +201,7 @@ class GeminiService {
 
       const requestBody = {
         systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT + '\n\n--- SİTE VERİLERİ ---\n\n' + maskedContext }]
+          parts: [{ text: buildSystemPrompt(maskedContext, conversationHistory) }]
         },
         contents: [
           ...this.formatHistory(conversationHistory),
@@ -272,7 +272,7 @@ class GeminiService {
 
       const requestBody = {
         systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
+          parts: [{ text: buildSystemPrompt('', []) }]
         },
         contents: [{
           role: 'user',

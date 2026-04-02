@@ -1027,7 +1027,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       // 402 hatası için özel mesaj
       let errorContent = 'Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.';
       if (error.message && error.message.includes('402')) {
-        errorContent = error.message + '\n\n💡 Çözüm: Ayarlar > Chatbot API sayfasından başka bir AI servisi (Groq, Gemini, DeepSeek) seçebilirsiniz.';
+        errorContent = error.message + '\n\n💡 Çözüm: Ayarlar > Gemini AI sayfasından API anahtarınızı güncelleyebilirsiniz.';
       } else if (error.message) {
         errorContent = error.message;
       }
@@ -1718,22 +1718,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
 
                   <div className="space-y-2">
                     <a
-                      href="https://console.groq.com/usage"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-indigo-900">Groq Console</span>
-                        <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-indigo-700 mt-1">Ücretsiz tier: 12,000 TPM (Tokens Per Minute)</p>
-                    </a>
-
-                    <a
-                      href="https://aistudio.google.com/app/apikey"
+                      href="https://aistudio.google.com/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -1746,42 +1731,12 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                       </div>
                       <p className="text-xs text-blue-700 mt-1">Gemini API kullanım ve limit bilgileri</p>
                     </a>
-
-                    <a
-                      href="https://platform.openai.com/usage"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-green-900">OpenAI Platform</span>
-                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-green-700 mt-1">ChatGPT API kullanım ve limit bilgileri</p>
-                    </a>
-
-                    <a
-                      href="https://platform.deepseek.com/usage"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-purple-900">DeepSeek Platform</span>
-                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-purple-700 mt-1">DeepSeek API kullanım ve limit bilgileri</p>
-                    </a>
                   </div>
                 </div>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-xs text-yellow-800">
-                    <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar {'>'} Chatbot API sayfasından başka bir servis seçebilirsiniz.
+                    <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar {'>'} Gemini AI sayfasından API anahtarınızı güncelleyebilirsiniz.
                   </p>
                 </div>
               </div>

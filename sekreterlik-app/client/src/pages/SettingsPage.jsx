@@ -17,7 +17,7 @@ import MosquesSettings from '../components/MosquesSettings';
 import EventCategoriesSettings from '../components/EventCategoriesSettings';
 import AuthorizationSettings from '../components/AuthorizationSettings';
 import BylawsSettings from '../components/BylawsSettings';
-import GroqApiSettings from '../components/GroqApiSettings';
+import GeminiApiSettings from '../components/GroqApiSettings';
 import FirebaseConfigSettings from '../components/FirebaseConfigSettings';
 import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import SmsSettings from '../components/SmsSettings';
@@ -75,7 +75,7 @@ const SettingsPage = ({ tab }) => {
       'event-categories': grantedPermissions.includes('manage_event_categories'),
       'authorization': false, // Admin only
       'bylaws': grantedPermissions.includes('manage_bylaws'),
-      'groq-api': false, // Admin only
+      'gemini-api': false, // Admin only
       'firebase-config': false, // Admin only
       'deployment-config': false, // Admin only
       'sms-config': false, // Admin only
@@ -168,7 +168,7 @@ const SettingsPage = ({ tab }) => {
     // Admin-only tabs
     if (isAdmin) {
       tabs.push(
-        { id: 'groq-api', name: 'Groq API', description: 'Groq API ayarları', permission: false },
+        { id: 'gemini-api', name: 'Gemini AI', description: 'Gemini AI API ayarları', permission: false },
         { id: 'firebase-config', name: 'Firebase Config', description: 'Firebase yapılandırması', permission: false },
         { id: 'deployment-config', name: 'Deployment Config', description: 'Deployment ayarları', permission: false },
         { id: 'sms-config', name: 'SMS Config', description: 'SMS ayarları', permission: false },
@@ -230,7 +230,7 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'event-categories' && hasPermission('event-categories') && <EventCategoriesSettings />}
                   {activeTab === 'authorization' && hasPermission('authorization') && <AuthorizationSettings />}
                   {activeTab === 'bylaws' && hasPermission('bylaws') && <BylawsSettings />}
-                  {activeTab === 'groq-api' && hasPermission('groq-api') && <GroqApiSettings />}
+                  {activeTab === 'gemini-api' && hasPermission('gemini-api') && <GeminiApiSettings />}
                   {activeTab === 'firebase-config' && hasPermission('firebase-config') && <FirebaseConfigSettings />}
                   {activeTab === 'deployment-config' && hasPermission('deployment-config') && <DeploymentConfigSettings />}
                   {activeTab === 'sms-config' && hasPermission('sms-config') && <SmsSettings />}
@@ -338,7 +338,7 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'event-categories' && hasPermission('event-categories') && <EventCategoriesSettings />}
                     {activeTab === 'authorization' && hasPermission('authorization') && <AuthorizationSettings />}
                     {activeTab === 'bylaws' && hasPermission('bylaws') && <BylawsSettings />}
-                    {activeTab === 'groq-api' && hasPermission('groq-api') && <GroqApiSettings />}
+                    {activeTab === 'gemini-api' && hasPermission('gemini-api') && <GeminiApiSettings />}
                     {activeTab === 'firebase-config' && hasPermission('firebase-config') && <FirebaseConfigSettings />}
                     {activeTab === 'deployment-config' && hasPermission('deployment-config') && <DeploymentConfigSettings />}
                     {activeTab === 'sms-config' && hasPermission('sms-config') && <SmsSettings />}

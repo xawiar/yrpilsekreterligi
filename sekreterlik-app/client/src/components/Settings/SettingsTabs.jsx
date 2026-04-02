@@ -20,7 +20,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
       'event-categories': grantedPermissions.includes('manage_event_categories'),
       'authorization': false, // Admin only
       'bylaws': grantedPermissions.includes('manage_bylaws'),
-      'groq-api': false, // Admin only
+      'gemini-api': false, // Admin only
       'firebase-config': false, // Admin only
       'deployment-config': false, // Admin only
       'sms-config': false, // Admin only
@@ -250,11 +250,11 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           </button>
         )}
 
-        {/* Groq Chatbot API - Admin only */}
-        {hasPermission('groq-api') && (
+        {/* Gemini AI API - Admin only */}
+        {hasPermission('gemini-api') && (
           <button
-            onClick={() => setActiveTab('groq-api')}
-            className={`${activeTab === 'groq-api'
+            onClick={() => setActiveTab('gemini-api')}
+            className={`${activeTab === 'gemini-api'
               ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
@@ -262,7 +262,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Chatbot API
+            Gemini AI
           </button>
         )}
 
