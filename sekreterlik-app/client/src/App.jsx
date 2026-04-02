@@ -239,7 +239,11 @@ function RouterContent() {
           {/* Chief Observer Routes */}
           <Route
             path="/chief-observer-dashboard"
-            element={<ChiefObserverDashboardPage />}
+            element={
+              <ChiefObserverRoute>
+                <ChiefObserverDashboardPage />
+              </ChiefObserverRoute>
+            }
           />
 
           {/* Chief Observer Login - Artık /login?type=chief-observer olarak yönlendirilecek */}
@@ -255,7 +259,11 @@ function RouterContent() {
           {/* Coordinator Routes */}
           <Route
             path="/coordinator-dashboard"
-            element={<CoordinatorDashboardPage />}
+            element={
+              <CoordinatorRoute>
+                <CoordinatorDashboardPage />
+              </CoordinatorRoute>
+            }
           />
 
           {/* Coordinator Login - Artık /login?type=coordinator olarak yönlendirilecek */}

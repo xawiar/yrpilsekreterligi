@@ -133,31 +133,44 @@ const LoginEnhanced = () => {
         
         // Show success animation
         setShowSuccess(true);
-        
-        // Wait a moment to show success animation, then navigate
-        setTimeout(() => {
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
-            try {
-              const userData = JSON.parse(savedUser);
-              if (userData.role === 'admin') {
-                navigate('/', { replace: true });
-              } else if (userData.role === 'member') {
-                navigate('/member-dashboard', { replace: true });
-              } else if (userData.role === 'district_president') {
-                navigate('/district-president-dashboard', { replace: true });
-              } else if (userData.role === 'town_president') {
-                navigate('/town-president-dashboard', { replace: true });
-              } else {
-                navigate('/', { replace: true });
-              }
-            } catch (e) {
-              navigate('/', { replace: true });
-            }
-          } else {
-            navigate('/', { replace: true });
+
+        // Navigate immediately using data already saved to localStorage by login()
+        const savedUser = localStorage.getItem('user');
+        let role = null;
+        if (savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            role = userData.role || userData.userRole || userData.user_type;
+          } catch (e) {
+            // ignore parse error
           }
-        }, 500);
+        }
+        switch (role) {
+          case 'admin':
+            navigate('/', { replace: true });
+            break;
+          case 'member':
+            navigate('/member-dashboard', { replace: true });
+            break;
+          case 'district_president':
+            navigate('/district-president-dashboard', { replace: true });
+            break;
+          case 'town_president':
+            navigate('/town-president-dashboard', { replace: true });
+            break;
+          case 'chief_observer':
+            navigate('/chief-observer-dashboard', { replace: true });
+            break;
+          case 'provincial_coordinator':
+          case 'district_supervisor':
+          case 'region_supervisor':
+          case 'institution_supervisor':
+            navigate('/coordinator-dashboard', { replace: true });
+            break;
+          default:
+            navigate('/', { replace: true });
+            break;
+        }
       } else {
         setError('Geçersiz kullanıcı adı veya şifre');
       }
@@ -241,7 +254,7 @@ const LoginEnhanced = () => {
   const mobileView = isMobile();
   
   return (
-    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center ${mobileView ? 'p-4' : 'py-8 px-4 sm:px-6 lg:px-8'} relative overflow-hidden`}>
+    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center ${mobileView ? 'p-4' : 'py-8 px-4 sm:px-6 lg:px-8'} relative overflow-hidden`}>
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
@@ -261,7 +274,7 @@ const LoginEnhanced = () => {
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className={`${mobileView ? 'flex-1 flex flex-col' : 'mt-8'} bg-white/80 backdrop-blur-xl ${mobileView ? 'py-6 px-5 rounded-3xl' : 'py-8 px-6 rounded-2xl'} ${mobileView ? 'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/20' : 'shadow-2xl border border-gray-200'} sm:px-10 relative overflow-hidden`}
+          className={`${mobileView ? 'flex-1 flex flex-col' : 'mt-8'} bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl ${mobileView ? 'py-6 px-5 rounded-3xl' : 'py-8 px-6 rounded-2xl'} ${mobileView ? 'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/20 dark:border-gray-700' : 'shadow-2xl border border-gray-200 dark:border-gray-700'} sm:px-10 relative overflow-hidden`}
           style={{
             boxShadow: mobileView 
               ? '0 20px 60px -15px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2) inset, 0 1px 0 rgba(255,255,255,0.5) inset'
@@ -272,7 +285,7 @@ const LoginEnhanced = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-transparent pointer-events-none"></div>
             
             {/* Tab Navigation */}
-            <div className={`mb-6 flex space-x-1 ${mobileView ? 'bg-gradient-to-r from-gray-100/80 to-gray-100/60 backdrop-blur-sm' : 'bg-gray-100'} rounded-xl p-1.5 shadow-inner border border-white/50`}>
+            <div className={`mb-6 flex space-x-1 ${mobileView ? 'bg-gradient-to-r from-gray-100/80 to-gray-100/60 dark:from-gray-700/80 dark:to-gray-700/60 backdrop-blur-sm' : 'bg-gray-100 dark:bg-gray-700'} rounded-xl p-1.5 shadow-inner border border-white/50 dark:border-gray-600`}>
               <button
                 type="button"
                 onClick={() => {
@@ -284,8 +297,8 @@ const LoginEnhanced = () => {
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'admin-member'
-                    ? 'bg-white text-indigo-600 shadow-md shadow-indigo-500/20 transform scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-md shadow-indigo-500/20 transform scale-105'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50'
                 }`}
               >
                 Admin / Üye
@@ -301,8 +314,8 @@ const LoginEnhanced = () => {
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'chief-observer'
-                    ? 'bg-white text-indigo-600 shadow-md shadow-indigo-500/20 transform scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-md shadow-indigo-500/20 transform scale-105'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50'
                 }`}
               >
                 Başmüşahit
@@ -318,8 +331,8 @@ const LoginEnhanced = () => {
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'coordinator'
-                    ? 'bg-white text-indigo-600 shadow-md shadow-indigo-500/20 transform scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-md shadow-indigo-500/20 transform scale-105'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50'
                 }`}
               >
                 Sorumlu
@@ -332,13 +345,13 @@ const LoginEnhanced = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 className="text-center py-10"
               >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/40 mb-4">
+                  <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Giriş Başarılı!</h3>
-                <p className="text-gray-600">Yönlendiriliyorsunuz...</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Giriş Başarılı!</h3>
+                <p className="text-gray-600 dark:text-gray-400">Yönlendiriliyorsunuz...</p>
               </motion.div>
             ) : activeTab === 'admin-member' ? (
               <>
@@ -377,12 +390,12 @@ const LoginEnhanced = () => {
                 )}
                 
                 <div>
-                  <label htmlFor="ballotNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="ballotNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Sandık Numarası
                   </label>
                   <div className="mt-1 relative rounded-xl shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
@@ -391,7 +404,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={ballotNumber}
                       onChange={(e) => setBallotNumber(e.target.value)}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="Örn: 1001"
                       required
                     />
@@ -399,12 +412,12 @@ const LoginEnhanced = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="tc" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="tc" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     TC Kimlik Numarası
                   </label>
                   <div className="mt-1 relative rounded-xl shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                       </svg>
                     </div>
@@ -413,7 +426,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={tc}
                       onChange={(e) => setTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="11 haneli TC kimlik numaranız"
                       maxLength={11}
                       required
@@ -429,9 +442,9 @@ const LoginEnhanced = () => {
                       type="checkbox"
                       checked={rememberChiefObserver}
                       onChange={(e) => setRememberChiefObserver(e.target.checked)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
                     />
-                    <label htmlFor="remember-chief-observer" className="ml-2 block text-sm text-gray-900">
+                    <label htmlFor="remember-chief-observer" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
                       Beni hatırla
                     </label>
                   </div>
@@ -477,12 +490,12 @@ const LoginEnhanced = () => {
                 )}
                 
                 <div>
-                  <label htmlFor="coordinatorTc" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="coordinatorTc" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     TC Kimlik Numarası
                   </label>
                   <div className="mt-1 relative rounded-xl shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                       </svg>
                     </div>
@@ -491,7 +504,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={coordinatorTc}
                       onChange={(e) => setCoordinatorTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="11 haneli TC kimlik numaranız"
                       maxLength={11}
                       required
@@ -500,12 +513,12 @@ const LoginEnhanced = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="coordinatorPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="coordinatorPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Telefon Numarası
                   </label>
                   <div className="mt-1 relative rounded-xl shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                     </div>
@@ -514,7 +527,7 @@ const LoginEnhanced = () => {
                       type="tel"
                       value={coordinatorPhone}
                       onChange={(e) => setCoordinatorPhone(e.target.value.replace(/\D/g, ''))}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="Telefon numaranız"
                       required
                     />
@@ -529,9 +542,9 @@ const LoginEnhanced = () => {
                       type="checkbox"
                       checked={rememberCoordinator}
                       onChange={(e) => setRememberCoordinator(e.target.checked)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
                     />
-                    <label htmlFor="remember-coordinator" className="ml-2 block text-sm text-gray-900">
+                    <label htmlFor="remember-coordinator" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
                       Beni hatırla
                     </label>
                   </div>

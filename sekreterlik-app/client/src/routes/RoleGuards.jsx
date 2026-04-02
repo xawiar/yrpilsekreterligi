@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 // Loading component
@@ -110,25 +110,36 @@ export const TownPresidentRoleRoute = ({ children }) => {
   return <Navigate to="/login" />;
 };
 
-// Public route component - Sadece loading kontrolü yapar
-// NOT: Yönlendirme yapmıyor - login sayfası kendi içinde kontrol edecek
+// Public route component - Redirects all logged-in users to their appropriate dashboard
 export const PublicRoute = ({ children }) => {
-  const { loading, isLoggedIn, userRole, user } = useAuth();
-  const location = useLocation();
-  
-  // Sadece loading kontrolü
+  const { loading, isLoggedIn, userRole } = useAuth();
+
   if (loading) {
     return <LoadingScreen />;
   }
-  
-  // Login sayfasındaysak ve zaten giriş yapılmışsa yönlendir
-  if (location.pathname === '/login') {
-    if (userRole === 'chief_observer' && isLoggedIn && user) {
-      return <Navigate to="/chief-observer-dashboard" replace />;
+
+  if (isLoggedIn) {
+    switch (userRole) {
+      case 'admin':
+        return <Navigate to="/" replace />;
+      case 'member':
+        return <Navigate to="/member-dashboard" replace />;
+      case 'district_president':
+        return <Navigate to="/district-president-dashboard" replace />;
+      case 'town_president':
+        return <Navigate to="/town-president-dashboard" replace />;
+      case 'chief_observer':
+        return <Navigate to="/chief-observer-dashboard" replace />;
+      case 'provincial_coordinator':
+      case 'district_supervisor':
+      case 'region_supervisor':
+      case 'institution_supervisor':
+        return <Navigate to="/coordinator-dashboard" replace />;
+      default:
+        return <Navigate to="/" replace />;
     }
   }
-  
-  // Children'ı göster - yönlendirme yapmadan
+
   return children;
 };
 

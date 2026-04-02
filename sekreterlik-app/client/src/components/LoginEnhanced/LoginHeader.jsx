@@ -36,20 +36,20 @@ const LoginHeader = () => {
         </div>
       </motion.div>
       
-      <motion.h2 
+      <motion.h2
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.3 }}
-        className="text-3xl font-bold text-gray-900 mb-2"
+        className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2"
       >
         Parti Sekreterliği Sistemi
       </motion.h2>
-      
-      <motion.p 
+
+      <motion.p
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.4 }}
-        className="text-gray-600"
+        className="text-gray-600 dark:text-gray-400"
       >
         Devam etmek için giriş yapın
       </motion.p>

@@ -42,12 +42,12 @@ const LoginForm = ({
       </AnimatePresence>
       
       <div>
-        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Kullanıcı Adı
         </label>
         <div className="mt-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
           </div>
@@ -60,7 +60,7 @@ const LoginForm = ({
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200/60 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:shadow-lg focus:shadow-indigo-500/20 text-sm transition-all bg-white/90 backdrop-blur-sm"
+            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:shadow-lg focus:shadow-indigo-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
             style={{
               boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
             }}
@@ -70,12 +70,12 @@ const LoginForm = ({
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Şifre
         </label>
         <div className="mt-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
           </div>
@@ -88,7 +88,7 @@ const LoginForm = ({
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200/60 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:shadow-lg focus:shadow-indigo-500/20 text-sm transition-all bg-white/90 backdrop-blur-sm"
+            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:shadow-lg focus:shadow-indigo-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
             style={{
               boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
             }}
@@ -98,7 +98,7 @@ const LoginForm = ({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
             >
               {showPassword ? (
                 <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -124,15 +124,15 @@ const LoginForm = ({
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
             Beni hatırla
           </label>
         </div>
 
         <div className="text-sm">
-          <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+          <a href="#" className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors">
             Şifrenizi mi unuttunuz?
           </a>
         </div>
