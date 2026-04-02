@@ -254,12 +254,12 @@ const LoginEnhanced = () => {
   const mobileView = isMobile();
   
   return (
-    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center ${mobileView ? 'p-4' : 'py-8 px-4 sm:px-6 lg:px-8'} relative overflow-hidden`}>
+    <div className={`${mobileView ? 'h-screen' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center ${mobileView ? 'p-4' : 'py-8 px-4 sm:px-6 lg:px-8'} relative overflow-hidden`}>
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-green-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-teal-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
       
       <motion.div 
@@ -297,7 +297,7 @@ const LoginEnhanced = () => {
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'admin-member'
-                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-md shadow-indigo-500/20 transform scale-105'
+                    ? 'bg-white dark:bg-gray-600 text-emerald-600 dark:text-emerald-400 shadow-md shadow-emerald-500/20 transform scale-105'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50'
                 }`}
               >
@@ -314,7 +314,7 @@ const LoginEnhanced = () => {
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'chief-observer'
-                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-md shadow-indigo-500/20 transform scale-105'
+                    ? 'bg-white dark:bg-gray-600 text-emerald-600 dark:text-emerald-400 shadow-md shadow-emerald-500/20 transform scale-105'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50'
                 }`}
               >
@@ -331,7 +331,7 @@ const LoginEnhanced = () => {
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'coordinator'
-                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-md shadow-indigo-500/20 transform scale-105'
+                    ? 'bg-white dark:bg-gray-600 text-emerald-600 dark:text-emerald-400 shadow-md shadow-emerald-500/20 transform scale-105'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-600/50'
                 }`}
               >
@@ -404,7 +404,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={ballotNumber}
                       onChange={(e) => setBallotNumber(e.target.value)}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="Örn: 1001"
                       required
                     />
@@ -426,7 +426,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={tc}
                       onChange={(e) => setTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="11 haneli TC kimlik numaranız"
                       maxLength={11}
                       required
@@ -442,7 +442,7 @@ const LoginEnhanced = () => {
                       type="checkbox"
                       checked={rememberChiefObserver}
                       onChange={(e) => setRememberChiefObserver(e.target.checked)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-gray-600 rounded"
                     />
                     <label htmlFor="remember-chief-observer" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
                       Beni hatırla
@@ -456,7 +456,7 @@ const LoginEnhanced = () => {
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={chiefObserverLoading}
-                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {chiefObserverLoading ? (
                       <div className="flex items-center">
@@ -504,7 +504,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={coordinatorTc}
                       onChange={(e) => setCoordinatorTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="11 haneli TC kimlik numaranız"
                       maxLength={11}
                       required
@@ -527,7 +527,7 @@ const LoginEnhanced = () => {
                       type="tel"
                       value={coordinatorPhone}
                       onChange={(e) => setCoordinatorPhone(e.target.value.replace(/\D/g, ''))}
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="Telefon numaranız"
                       required
                     />
@@ -542,7 +542,7 @@ const LoginEnhanced = () => {
                       type="checkbox"
                       checked={rememberCoordinator}
                       onChange={(e) => setRememberCoordinator(e.target.checked)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-gray-600 rounded"
                     />
                     <label htmlFor="remember-coordinator" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
                       Beni hatırla
@@ -556,7 +556,7 @@ const LoginEnhanced = () => {
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={coordinatorLoading}
-                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {coordinatorLoading ? (
                       <div className="flex items-center">
