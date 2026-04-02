@@ -95,15 +95,17 @@ const ChiefObserverDashboardPage = () => {
         setElections(activeElections);
 
         // Her seçim için sonuç kontrolü yap
+        const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
+        const resultPromises = activeElections.map(election =>
+          ApiService.getElectionResults(election.id, ballotBoxId)
+            .then(results => ({ election, results }))
+            .catch(() => ({ election, results: [] }))
+        );
+        const allResults = await Promise.all(resultPromises);
         const resultsMap = {};
-        for (const election of activeElections) {
-          try {
-            const results = await ApiService.getElectionResults(election.id, user.ballotBoxId || user.ballot_box_id);
-            if (results && results.length > 0) {
-              resultsMap[election.id] = results[0];
-            }
-          } catch (e) {
-            // Sonuç yoksa devam et
+        for (const { election, results } of allResults) {
+          if (results && results.length > 0) {
+            resultsMap[election.id] = results[0];
           }
         }
         setElectionResults(resultsMap);
@@ -425,7 +427,7 @@ const ChiefObserverDashboardPage = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
             <div className="flex items-center justify-between">
               <div>

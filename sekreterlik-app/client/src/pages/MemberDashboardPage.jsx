@@ -186,6 +186,13 @@ const MemberDashboardPage = () => {
     }
   }, [currentView]);
 
+  // Redirect to dashboard if current view no longer has permission (CRITICAL 4)
+  useEffect(() => {
+    if (currentView !== 'dashboard' && !hasViewPermission(currentView)) {
+      setCurrentView('dashboard');
+    }
+  }, [currentView, grantedPermissions]);
+
 
   // Start analytics session
   const startAnalyticsSession = async () => {
@@ -419,7 +426,6 @@ const MemberDashboardPage = () => {
   if (currentView === 'stk-management') {
     // Yetki kontrolü
     if (!hasViewPermission('stk-management')) {
-      setViewWithPermission('dashboard');
       return null;
     }
 
@@ -453,7 +459,6 @@ const MemberDashboardPage = () => {
   // Public Institution Management view
   if (currentView === 'public-institution-management') {
     if (!hasViewPermission('public-institution-management')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -486,7 +491,6 @@ const MemberDashboardPage = () => {
   // STK Events view
   if (currentView === 'stk-events') {
     if (!hasViewPermission('stk-events')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -519,7 +523,6 @@ const MemberDashboardPage = () => {
   // Add Member view
   if (currentView === 'add-member') {
     if (!hasViewPermission('add-member')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -559,7 +562,6 @@ const MemberDashboardPage = () => {
   // Create Meeting view
   if (currentView === 'create-meeting') {
     if (!hasViewPermission('create-meeting')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -597,6 +599,9 @@ const MemberDashboardPage = () => {
 
   // Embedded Pages via permissions
   if (currentView === 'members-page') {
+    if (!hasViewPermission('members-page')) {
+      return null;
+    }
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -615,7 +620,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'meetings-page') {
     if (!hasViewPermission('meetings-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -636,7 +640,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'calendar-page') {
     if (!hasViewPermission('calendar-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -657,7 +660,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'districts-page') {
     if (!hasViewPermission('districts-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -678,7 +680,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'events-page') {
     if (!hasViewPermission('events-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -699,7 +700,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'archive-page') {
     if (!hasViewPermission('archive-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -720,7 +720,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'management-chart-page') {
     if (!hasViewPermission('management-chart-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -741,7 +740,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'election-preparation-page') {
     if (!hasViewPermission('election-preparation-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -762,7 +760,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'representatives-page') {
     if (!hasViewPermission('representatives-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -783,7 +780,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'neighborhoods-page') {
     if (!hasViewPermission('neighborhoods-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -804,7 +800,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'villages-page') {
     if (!hasViewPermission('villages-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -825,7 +820,6 @@ const MemberDashboardPage = () => {
   }
   if (currentView === 'groups-page') {
     if (!hasViewPermission('groups-page')) {
-      setViewWithPermission('dashboard');
       return null;
     }
     return (
@@ -1353,8 +1347,7 @@ const MemberDashboardPage = () => {
             grantedPermissions.includes('access_representatives_page') ||
             grantedPermissions.includes('access_neighborhoods_page') ||
             grantedPermissions.includes('access_villages_page') ||
-            grantedPermissions.includes('access_groups_page') ||
-            grantedPermissions.includes('access_bulk_sms_page')) && (
+            grantedPermissions.includes('access_groups_page')) && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-900 dark:to-sky-800">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -1533,8 +1526,8 @@ const MemberDashboardPage = () => {
                     </button>
                   )}
                   {grantedPermissions.includes('access_groups_page') && (
-                    <button 
-                      onClick={() => setViewWithPermission('groups-page')} 
+                    <button
+                      onClick={() => setViewWithPermission('groups-page')}
                       className="group p-4 bg-gradient-to-r from-violet-50 to-violet-100 dark:from-violet-900 dark:to-violet-800 rounded-xl border border-violet-200 dark:border-violet-700 hover:from-violet-100 hover:to-violet-200 dark:hover:from-violet-800 dark:hover:to-violet-700 transition-all duration-200 hover:shadow-md text-left"
                     >
                       <div className="flex items-center space-x-3">
@@ -1547,38 +1540,19 @@ const MemberDashboardPage = () => {
                       </div>
                     </button>
                   )}
-                  {grantedPermissions.includes('access_election_preparation_page') && (
-                    <button 
-                      onClick={() => setViewWithPermission('election-preparation-page')} 
-                      className="group p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 rounded-xl border border-red-200 dark:border-red-700 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800 dark:hover:to-red-700 transition-all duration-200 hover:shadow-md text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-red-500 dark:bg-red-600 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">Seçim Hazırlık</span>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_bulk_sms_page') && (
-                    <button
-                      onClick={() => navigate('/bulk-sms')} 
-                      className="group p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 rounded-xl border border-pink-200 dark:border-pink-700 hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800 dark:hover:to-pink-700 transition-all duration-200 hover:shadow-md text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-pink-500 dark:bg-pink-600 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                        </div>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">Toplu SMS</span>
-                      </div>
-                    </button>
-                  )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Empty state when user has no permissions */}
+          {grantedPermissions.length === 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <h3 className="mt-3 text-lg font-medium text-gray-900 dark:text-gray-100">Henüz yetki atanmamış</h3>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Yöneticinizle iletişime geçerek sayfa erişim yetkisi talep edebilirsiniz.</p>
             </div>
           )}
 

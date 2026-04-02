@@ -189,14 +189,16 @@ const getWinningParty = (result, election) => {
   return null;
 };
 
+const COORDINATOR_ROLES = ['admin', 'provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
+
 /**
  * Sorumlu Dashboard Sayfası - Modern, Animasyonlu, Mobile Uyumlu
- * 
+ *
  * Coordinator'ların sorumlu olduğu sandıkları gösterir ve seçim sonuçlarını görüntüleyebilir/düzenleyebilir.
  */
 const CoordinatorDashboardPage = () => {
   const navigate = useNavigate();
-  const { isLoggedIn, userRole, user, logout } = useAuth();
+  const { isLoggedIn, userRole, user, logout, loading: authLoading } = useAuth();
   
   // State management
   const [ballotBoxes, setBallotBoxes] = useState([]);
@@ -219,22 +221,19 @@ const CoordinatorDashboardPage = () => {
   const [modalPhoto, setModalPhoto] = useState(null);
   const [modalTitle, setModalTitle] = useState('');
 
-  // Coordinator rolleri
-  const coordinatorRoles = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'];
-
-  // Authentication kontrolü - loading state'ini kontrol et
+  // Authentication kontrolü - auth loading state'ini kontrol et
   useEffect(() => {
-    // Loading tamamlanmadan yönlendirme yapma
-    if (loading) return;
-    
-    if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user) {
+    // Auth loading tamamlanmadan yönlendirme yapma
+    if (authLoading) return;
+
+    if (!isLoggedIn || !COORDINATOR_ROLES.includes(userRole) || !user) {
       navigate('/login?type=coordinator', { replace: true });
     }
-  }, [isLoggedIn, userRole, user, navigate, loading]);
+  }, [isLoggedIn, userRole, user, navigate, authLoading]);
 
   // Dashboard verilerini yükle - useCallback ile sarmalıyoruz pull-to-refresh için
   const loadData = useCallback(async () => {
-    if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user || !user.coordinatorId) return;
+    if (!isLoggedIn || !COORDINATOR_ROLES.includes(userRole) || !user || !user.coordinatorId) return;
 
     let isMounted = true;
 
@@ -288,7 +287,7 @@ const CoordinatorDashboardPage = () => {
   }, [user, isLoggedIn, userRole]);
 
   useEffect(() => {
-    if (!isLoggedIn || !coordinatorRoles.includes(userRole) || !user || !user.coordinatorId) return;
+    if (!isLoggedIn || !COORDINATOR_ROLES.includes(userRole) || !user || !user.coordinatorId) return;
     loadData();
   }, [loadData, isLoggedIn, userRole, user]);
 
@@ -357,7 +356,7 @@ const CoordinatorDashboardPage = () => {
       result.objection_protocol_photo || result.objectionProtocolPhoto);
   }, []);
 
-  if (!user || !coordinatorRoles.includes(userRole)) {
+  if (!user || !COORDINATOR_ROLES.includes(userRole)) {
     return null;
   }
 
@@ -366,7 +365,7 @@ const CoordinatorDashboardPage = () => {
   // Pull-to-refresh for mobile
   const { isRefreshing, pullProgress } = usePullToRefresh(
     loadData,
-    { disabled: !mobileView || !isLoggedIn || !coordinatorRoles.includes(userRole) || !user || !user.coordinatorId }
+    { disabled: !mobileView || !isLoggedIn || !COORDINATOR_ROLES.includes(userRole) || !user || !user.coordinatorId }
   );
 
   // Loading state
@@ -951,14 +950,22 @@ const CoordinatorDashboardPage = () => {
           title={modalTitle}
         >
           <div className="max-w-4xl mx-auto">
-            <img 
-              src={modalPhoto} 
+            <img
+              src={modalPhoto}
               alt={modalTitle}
               className="w-full h-auto rounded-lg"
               onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/800x600?text=Resim+Yüklenemedi';
+                e.target.style.display = 'none';
+                const fallback = e.target.nextSibling;
+                if (fallback) fallback.style.display = 'flex';
               }}
             />
+            <div
+              className="items-center justify-center h-96 bg-gray-100 dark:bg-gray-700 rounded-lg"
+              style={{ display: 'none' }}
+            >
+              <p className="text-gray-500 dark:text-gray-400">Resim yüklenemedi</p>
+            </div>
           </div>
         </Modal>
       )}

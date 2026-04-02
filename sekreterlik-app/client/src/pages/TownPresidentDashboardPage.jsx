@@ -25,7 +25,7 @@ const TownPresidentDashboardPage = () => {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [currentView, setCurrentView] = useState('dashboard');
-  
+
   // Management Members
   const [showAddMemberForm, setShowAddMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
@@ -93,7 +93,7 @@ const TownPresidentDashboardPage = () => {
       setLoading(true);
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       let response;
-      
+
       if (USE_FIREBASE) {
         const townData = await ApiService.getTownById(user.townId);
         if (townData && townData.success) {
@@ -124,7 +124,7 @@ const TownPresidentDashboardPage = () => {
       } else {
         response = await ApiService.getTownById(user.townId);
       }
-      
+
       if (response && response.success) {
         setTown(response.town);
       } else if (response && !response.success) {
@@ -171,17 +171,17 @@ const TownPresidentDashboardPage = () => {
       ]);
 
       // Filter neighborhoods and villages by town
-      const townNeighborhoods = neighborhoodsData.filter(n => 
+      const townNeighborhoods = neighborhoodsData.filter(n =>
         n.town_id && String(n.town_id) === String(user.townId)
       );
-      const townVillages = villagesData.filter(v => 
+      const townVillages = villagesData.filter(v =>
         v.town_id && String(v.town_id) === String(user.townId)
       );
 
       // Filter representatives by town neighborhoods/villages
       const townNeighborhoodIds = new Set(townNeighborhoods.map(n => String(n.id)));
       const townVillageIds = new Set(townVillages.map(v => String(v.id)));
-      
+
       const townNeighborhoodReps = representativesData.filter(rep =>
         rep.neighborhood_id && townNeighborhoodIds.has(String(rep.neighborhood_id))
       );
@@ -415,14 +415,14 @@ const TownPresidentDashboardPage = () => {
     e.preventDefault();
     try {
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      
+
       if (representativeType === 'neighborhood') {
         if (!representativeFormData.neighborhood_id) {
           setMessage('Mahalle seçimi gereklidir');
           setMessageType('error');
           return;
         }
-        
+
         const representativeData = {
           name: representativeFormData.name.trim(),
           tc: representativeFormData.tc.trim(),
@@ -444,7 +444,7 @@ const TownPresidentDashboardPage = () => {
           setMessageType('error');
           return;
         }
-        
+
         const representativeData = {
           name: representativeFormData.name.trim(),
           tc: representativeFormData.tc.trim(),
@@ -461,7 +461,7 @@ const TownPresidentDashboardPage = () => {
           setMessage('Köy temsilcisi başarıyla eklendi');
         }
       }
-      
+
       setShowAddRepresentativeForm(false);
       setEditingRepresentative(null);
       setRepresentativeFormData({
@@ -533,7 +533,7 @@ const TownPresidentDashboardPage = () => {
     e.preventDefault();
     try {
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      
+
       if (!ballotBoxFormData.neighborhood_id && !ballotBoxFormData.village_id) {
         setMessage('Mahalle veya köy seçimi gereklidir');
         setMessageType('error');
@@ -556,7 +556,7 @@ const TownPresidentDashboardPage = () => {
         await ApiService.createBallotBox(ballotBoxData);
         setMessage('Sandık başarıyla eklendi');
       }
-      
+
       setShowAddBallotBoxForm(false);
       setEditingBallotBox(null);
       setBallotBoxFormData({
@@ -613,7 +613,7 @@ const TownPresidentDashboardPage = () => {
     e.preventDefault();
     try {
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      
+
       if (!observerFormData.ballot_box_id) {
         setMessage('Sandık seçimi gereklidir');
         setMessageType('error');
@@ -622,7 +622,7 @@ const TownPresidentDashboardPage = () => {
 
       // Get ballot box to get location info
       const selectedBallotBox = ballotBoxes.find(bb => String(bb.id) === String(observerFormData.ballot_box_id));
-      
+
       const observerData = {
         tc: observerFormData.tc.trim(),
         name: observerFormData.name.trim(),
@@ -638,7 +638,7 @@ const TownPresidentDashboardPage = () => {
       if (editingObserver) {
         await ApiService.updateBallotBoxObserver(editingObserver.id, observerData);
         setMessage('Müşahit başarıyla güncellendi');
-        
+
         // Başmüşahit güncellenirken, sandık numarası eklendiyse kullanıcı adını güncelle
         if (observerData.is_chief_observer) {
           try {
@@ -658,11 +658,11 @@ const TownPresidentDashboardPage = () => {
               if (selectedBallotBox && selectedBallotBox.ballot_number) {
                 const ballotNumber = String(selectedBallotBox.ballot_number);
                 const memberUsers = await ApiService.getMemberUsers();
-                const existingUser = memberUsers.find(u => 
-                  String(u.memberId) === String(member.id) && 
+                const existingUser = memberUsers.find(u =>
+                  String(u.memberId) === String(member.id) &&
                   (u.username === tc || u.username === ballotNumber)
                 );
-                
+
                 if (existingUser) {
                   await ApiService.updateMemberUser(existingUser.id, ballotNumber, tc);
                   console.log(`✅ Başmüşahit kullanıcı adı güncellendi: TC -> Sandık No: ${ballotNumber}`);
@@ -673,7 +673,7 @@ const TownPresidentDashboardPage = () => {
               } else {
                 const memberUsers = await ApiService.getMemberUsers();
                 const existingUser = memberUsers.find(u => String(u.memberId) === String(member.id));
-                
+
                 if (!existingUser) {
                   await ApiService.createMemberUser(member.id, tc, tc);
                   console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: TC: ${tc}`);
@@ -690,7 +690,7 @@ const TownPresidentDashboardPage = () => {
       } else {
         await ApiService.createBallotBoxObserver(observerData);
         setMessage('Müşahit başarıyla eklendi');
-        
+
         // Başmüşahit eklenirken kullanıcı oluştur
         if (observerData.is_chief_observer) {
           try {
@@ -737,7 +737,7 @@ const TownPresidentDashboardPage = () => {
           }
         }
       }
-      
+
       setShowAddObserverForm(false);
       setEditingObserver(null);
       setObserverFormData({
@@ -791,10 +791,10 @@ const TownPresidentDashboardPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-600 border-t-transparent mx-auto"></div>
-          <p className="mt-6 text-lg text-gray-600 font-medium">Belde bilgileri yükleniyor...</p>
+          <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 font-medium">Belde bilgileri yükleniyor...</p>
         </div>
       </div>
     );
@@ -802,15 +802,15 @@ const TownPresidentDashboardPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Hata</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Hata</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
           <button
             onClick={fetchTownData}
             className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -823,9 +823,9 @@ const TownPresidentDashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-lg border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4 sm:py-6 lg:py-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -836,15 +836,15 @@ const TownPresidentDashboardPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
                     {user.chairmanName}
                   </h1>
-                  <p className="text-sm sm:text-base text-gray-600">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                     {town?.name} Belde Başkanı
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-3">
                 <button
                   onClick={logout}
@@ -859,7 +859,7 @@ const TownPresidentDashboardPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-1 overflow-x-auto">
             <button
@@ -867,7 +867,7 @@ const TownPresidentDashboardPage = () => {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 currentView === 'dashboard'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Yönetim Kurulu
@@ -877,7 +877,7 @@ const TownPresidentDashboardPage = () => {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 currentView === 'neighborhoods'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Mahalleler
@@ -887,7 +887,7 @@ const TownPresidentDashboardPage = () => {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 currentView === 'villages'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Köyler
@@ -897,7 +897,7 @@ const TownPresidentDashboardPage = () => {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 currentView === 'representatives'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Temsilciler
@@ -907,7 +907,7 @@ const TownPresidentDashboardPage = () => {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 currentView === 'ballotBoxes'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Sandıklar
@@ -917,7 +917,7 @@ const TownPresidentDashboardPage = () => {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 currentView === 'observers'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Müşahitler
@@ -946,19 +946,19 @@ const TownPresidentDashboardPage = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Town Info Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
           <div className="px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-600">
             <h2 className="text-xl font-bold text-white">Belde Bilgileri</h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Belde Adı</h3>
-                <p className="text-gray-600">{town?.name}</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Belde Adı</h3>
+                <p className="text-gray-600 dark:text-gray-400">{town?.name}</p>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Bağlı Olduğu İlçe</h3>
-                <p className="text-gray-600">{town?.districtName}</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Bağlı Olduğu İlçe</h3>
+                <p className="text-gray-600 dark:text-gray-400">{town?.districtName}</p>
               </div>
             </div>
           </div>
@@ -966,19 +966,19 @@ const TownPresidentDashboardPage = () => {
 
         {/* Dashboard View - Management Members */}
         {currentView === 'dashboard' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Yönetim Kurulu Üyeleri</h2>
                 <button
                   onClick={() => setShowAddMemberForm(true)}
-                  className="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                 >
                   Yeni Üye Ekle
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="mb-6">
                 <input
@@ -986,28 +986,28 @@ const TownPresidentDashboardPage = () => {
                   placeholder="Üye ara..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
 
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Görev</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">TC</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ad Soyad</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Görev</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Telefon</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredMembers.map((member) => (
-                      <tr key={member.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{member.tc}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{member.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.position}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.phone}</td>
+                      <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{member.tc}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{member.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{member.position}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{member.phone}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                           <button
                             onClick={() => handleMemberEdit(member)}
@@ -1024,6 +1024,13 @@ const TownPresidentDashboardPage = () => {
                         </td>
                       </tr>
                     ))}
+                    {filteredMembers.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Kayıt bulunamadı
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1033,38 +1040,38 @@ const TownPresidentDashboardPage = () => {
 
         {/* Neighborhoods View */}
         {currentView === 'neighborhoods' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Mahalleler</h2>
                 <button
                   onClick={() => setShowAddNeighborhoodForm(true)}
-                  className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                 >
                   Yeni Mahalle Ekle
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mahalle Adı</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grup No</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temsilci</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mahalle Adı</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grup No</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temsilci</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {neighborhoods.map((neighborhood) => {
                       const rep = neighborhoodRepresentatives.find(r => String(r.neighborhood_id) === String(neighborhood.id));
                       return (
-                        <tr key={neighborhood.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{neighborhood.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{neighborhood.group_no || '-'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{rep?.name || 'Atanmamış'}</td>
+                        <tr key={neighborhood.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{neighborhood.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{neighborhood.group_no || '-'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rep?.name || 'Atanmamış'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                             <button
                               onClick={() => handleNeighborhoodEdit(neighborhood)}
@@ -1082,6 +1089,13 @@ const TownPresidentDashboardPage = () => {
                         </tr>
                       );
                     })}
+                    {neighborhoods.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Kayıt bulunamadı
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1091,38 +1105,38 @@ const TownPresidentDashboardPage = () => {
 
         {/* Villages View */}
         {currentView === 'villages' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Köyler</h2>
                 <button
                   onClick={() => setShowAddVillageForm(true)}
-                  className="px-4 py-2 bg-white text-green-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="px-4 py-2 bg-white text-green-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                 >
                   Yeni Köy Ekle
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Köy Adı</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grup No</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temsilci</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Köy Adı</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grup No</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temsilci</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {villages.map((village) => {
                       const rep = villageRepresentatives.find(r => String(r.village_id) === String(village.id));
                       return (
-                        <tr key={village.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{village.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{village.group_no || '-'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{rep?.name || 'Atanmamış'}</td>
+                        <tr key={village.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{village.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{village.group_no || '-'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rep?.name || 'Atanmamış'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                             <button
                               onClick={() => handleVillageEdit(village)}
@@ -1140,6 +1154,13 @@ const TownPresidentDashboardPage = () => {
                         </tr>
                       );
                     })}
+                    {villages.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Kayıt bulunamadı
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1149,7 +1170,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Representatives View */}
         {currentView === 'representatives' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-yellow-500 to-orange-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Temsilciler</h2>
@@ -1159,7 +1180,7 @@ const TownPresidentDashboardPage = () => {
                       setRepresentativeType('neighborhood');
                       setShowAddRepresentativeForm(true);
                     }}
-                    className="px-4 py-2 bg-white text-yellow-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    className="px-4 py-2 bg-white text-yellow-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                   >
                     Mahalle Temsilcisi Ekle
                   </button>
@@ -1168,14 +1189,14 @@ const TownPresidentDashboardPage = () => {
                       setRepresentativeType('village');
                       setShowAddRepresentativeForm(true);
                     }}
-                    className="px-4 py-2 bg-white text-yellow-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    className="px-4 py-2 bg-white text-yellow-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                   >
                     Köy Temsilcisi Ekle
                   </button>
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="mb-4">
                 <div className="flex space-x-2">
@@ -1184,7 +1205,7 @@ const TownPresidentDashboardPage = () => {
                     className={`px-4 py-2 rounded-lg font-medium ${
                       representativeType === 'neighborhood'
                         ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                     }`}
                   >
                     Mahalle Temsilcileri
@@ -1194,7 +1215,7 @@ const TownPresidentDashboardPage = () => {
                     className={`px-4 py-2 rounded-lg font-medium ${
                       representativeType === 'village'
                         ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                     }`}
                   >
                     Köy Temsilcileri
@@ -1203,25 +1224,25 @@ const TownPresidentDashboardPage = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ad Soyad</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">TC</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Telefon</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {representativeType === 'neighborhood' ? 'Mahalle' : 'Köy'}
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {(representativeType === 'neighborhood' ? neighborhoodRepresentatives : villageRepresentatives).map((rep) => (
-                      <tr key={rep.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{rep.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{rep.tc}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{rep.phone || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <tr key={rep.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{rep.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rep.tc}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rep.phone || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {representativeType === 'neighborhood' ? rep.neighborhood_name : rep.village_name}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -1240,6 +1261,13 @@ const TownPresidentDashboardPage = () => {
                         </td>
                       </tr>
                     ))}
+                    {(representativeType === 'neighborhood' ? neighborhoodRepresentatives : villageRepresentatives).length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Kayıt bulunamadı
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1249,48 +1277,48 @@ const TownPresidentDashboardPage = () => {
 
         {/* Ballot Boxes View */}
         {currentView === 'ballotBoxes' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Sandıklar</h2>
                 <button
                   onClick={() => setShowAddBallotBoxForm(true)}
-                  className="px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                 >
                   Yeni Sandık Ekle
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sandık No</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kurum Adı</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mahalle/Köy</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Başmüşahit</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sandık No</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kurum Adı</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mahalle/Köy</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Başmüşahit</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {ballotBoxes.map((ballotBox) => {
-                      const chiefObserver = observers.find(obs => 
+                      const chiefObserver = observers.find(obs =>
                         String(obs.ballot_box_id) === String(ballotBox.id) && obs.is_chief_observer
                       );
-                      const location = ballotBox.neighborhood_id 
+                      const location = ballotBox.neighborhood_id
                         ? neighborhoods.find(n => String(n.id) === String(ballotBox.neighborhood_id))?.name
                         : ballotBox.village_id
                         ? villages.find(v => String(v.id) === String(ballotBox.village_id))?.name
                         : '-';
-                      
+
                       return (
-                        <tr key={ballotBox.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ballotBox.ballot_number}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ballotBox.institution_name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{chiefObserver?.name || 'Atanmamış'}</td>
+                        <tr key={ballotBox.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{ballotBox.ballot_number}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{ballotBox.institution_name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{location}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{chiefObserver?.name || 'Atanmamış'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                             <button
                               onClick={() => handleBallotBoxEdit(ballotBox)}
@@ -1308,6 +1336,13 @@ const TownPresidentDashboardPage = () => {
                         </tr>
                       );
                     })}
+                    {ballotBoxes.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Kayıt bulunamadı
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1317,50 +1352,50 @@ const TownPresidentDashboardPage = () => {
 
         {/* Observers View */}
         {currentView === 'observers' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Müşahitler</h2>
                 <button
                   onClick={() => setShowAddObserverForm(true)}
-                  className="px-4 py-2 bg-white text-teal-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="px-4 py-2 bg-white text-teal-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-100 transition-colors font-medium"
                 >
                   Yeni Müşahit Ekle
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sandık</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tip</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ad Soyad</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">TC</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Telefon</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sandık</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tip</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {observers.map((observer) => {
                       const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(observer.ballot_box_id));
                       return (
-                        <tr key={observer.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{observer.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{observer.tc}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{observer.phone || '-'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <tr key={observer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{observer.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{observer.tc}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{observer.phone || '-'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {ballotBox ? `${ballotBox.ballot_number} - ${ballotBox.institution_name}` : '-'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {observer.is_chief_observer ? (
                               <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                 Başmüşahit
                               </span>
                             ) : (
-                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                                 Müşahit
                               </span>
                             )}
@@ -1382,6 +1417,13 @@ const TownPresidentDashboardPage = () => {
                         </tr>
                       );
                     })}
+                    {observers.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Kayıt bulunamadı
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1392,92 +1434,92 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Management Member Modal */}
       {showAddMemberForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {editingMember ? 'Üye Düzenle' : 'Yeni Üye Ekle'}
               </h3>
             </div>
-            
+
             <form onSubmit={handleMemberSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">TC Kimlik No *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No *</label>
                   <input
                     type="text"
                     name="tc"
                     value={memberFormData.tc}
                     onChange={handleMemberInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad Soyad *</label>
                   <input
                     type="text"
                     name="name"
                     value={memberFormData.name}
                     onChange={handleMemberInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bölge *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bölge *</label>
                   <input
                     type="text"
                     name="region"
                     value={memberFormData.region}
                     onChange={handleMemberInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Görev *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Görev *</label>
                   <input
                     type="text"
                     name="position"
                     value={memberFormData.position}
                     onChange={handleMemberInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
                   <input
                     type="text"
                     name="phone"
                     value={memberFormData.phone}
                     onChange={handleMemberInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-posta</label>
                   <input
                     type="email"
                     name="email"
                     value={memberFormData.email}
                     onChange={handleMemberInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adres</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
                 <textarea
                   name="address"
                   value={memberFormData.address}
                   onChange={handleMemberInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -1494,7 +1536,7 @@ const TownPresidentDashboardPage = () => {
                       email: ''
                     });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   İptal
                 </button>
@@ -1512,37 +1554,37 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Neighborhood Modal */}
       {showAddNeighborhoodForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {editingNeighborhood ? 'Mahalle Düzenle' : 'Yeni Mahalle Ekle'}
               </h3>
             </div>
-            
+
             <form onSubmit={handleNeighborhoodSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mahalle Adı *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mahalle Adı *</label>
                 <input
                   type="text"
                   name="name"
                   value={neighborhoodFormData.name}
                   onChange={handleNeighborhoodInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grup No</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grup No</label>
                 <input
                   type="number"
                   name="group_no"
                   value={neighborhoodFormData.group_no}
                   onChange={handleNeighborhoodInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -1551,7 +1593,7 @@ const TownPresidentDashboardPage = () => {
                     setEditingNeighborhood(null);
                     setNeighborhoodFormData({ name: '', group_no: '' });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   İptal
                 </button>
@@ -1569,37 +1611,37 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Village Modal */}
       {showAddVillageForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {editingVillage ? 'Köy Düzenle' : 'Yeni Köy Ekle'}
               </h3>
             </div>
-            
+
             <form onSubmit={handleVillageSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Köy Adı *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Köy Adı *</label>
                 <input
                   type="text"
                   name="name"
                   value={villageFormData.name}
                   onChange={handleVillageInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grup No</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grup No</label>
                 <input
                   type="number"
                   name="group_no"
                   value={villageFormData.group_no}
                   onChange={handleVillageInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -1608,7 +1650,7 @@ const TownPresidentDashboardPage = () => {
                     setEditingVillage(null);
                     setVillageFormData({ name: '', group_no: '' });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   İptal
                 </button>
@@ -1626,29 +1668,29 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Representative Modal */}
       {showAddRepresentativeForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {editingRepresentative ? `${representativeType === 'neighborhood' ? 'Mahalle' : 'Köy'} Temsilcisi Düzenle` : `Yeni ${representativeType === 'neighborhood' ? 'Mahalle' : 'Köy'} Temsilcisi Ekle`}
               </h3>
             </div>
-            
+
             <form onSubmit={handleRepresentativeSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad Soyad *</label>
                   <input
                     type="text"
                     name="name"
                     value={representativeFormData.name}
                     onChange={handleRepresentativeInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">TC Kimlik No *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No *</label>
                   <input
                     type="text"
                     name="tc"
@@ -1656,28 +1698,28 @@ const TownPresidentDashboardPage = () => {
                     onChange={handleRepresentativeInputChange}
                     required
                     maxLength={11}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
                   <input
                     type="text"
                     name="phone"
                     value={representativeFormData.phone}
                     onChange={handleRepresentativeInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 {representativeType === 'neighborhood' ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mahalle *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mahalle *</label>
                     <select
                       name="neighborhood_id"
                       value={representativeFormData.neighborhood_id}
                       onChange={handleRepresentativeInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="">Mahalle Seçin</option>
                       {neighborhoods.map(n => (
@@ -1687,13 +1729,13 @@ const TownPresidentDashboardPage = () => {
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Köy *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Köy *</label>
                     <select
                       name="village_id"
                       value={representativeFormData.village_id}
                       onChange={handleRepresentativeInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="">Köy Seçin</option>
                       {villages.map(v => (
@@ -1703,12 +1745,12 @@ const TownPresidentDashboardPage = () => {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Üye (Opsiyonel)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Üye (Opsiyonel)</label>
                   <select
                     name="member_id"
                     value={representativeFormData.member_id}
                     onChange={handleRepresentativeInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">Üye Seçin</option>
                     {members.map(m => (
@@ -1717,7 +1759,7 @@ const TownPresidentDashboardPage = () => {
                   </select>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -1733,7 +1775,7 @@ const TownPresidentDashboardPage = () => {
                       member_id: ''
                     });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   İptal
                 </button>
@@ -1751,45 +1793,45 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Ballot Box Modal */}
       {showAddBallotBoxForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {editingBallotBox ? 'Sandık Düzenle' : 'Yeni Sandık Ekle'}
               </h3>
             </div>
-            
+
             <form onSubmit={handleBallotBoxSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sandık Numarası *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sandık Numarası *</label>
                   <input
                     type="text"
                     name="ballot_number"
                     value={ballotBoxFormData.ballot_number}
                     onChange={handleBallotBoxInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kurum Adı *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kurum Adı *</label>
                   <input
                     type="text"
                     name="institution_name"
                     value={ballotBoxFormData.institution_name}
                     onChange={handleBallotBoxInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mahalle</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mahalle</label>
                   <select
                     name="neighborhood_id"
                     value={ballotBoxFormData.neighborhood_id}
                     onChange={handleBallotBoxInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">Mahalle Seçin</option>
                     {neighborhoods.map(n => (
@@ -1798,12 +1840,12 @@ const TownPresidentDashboardPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Köy</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Köy</label>
                   <select
                     name="village_id"
                     value={ballotBoxFormData.village_id}
                     onChange={handleBallotBoxInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">Köy Seçin</option>
                     {villages.map(v => (
@@ -1812,8 +1854,8 @@ const TownPresidentDashboardPage = () => {
                   </select>
                 </div>
               </div>
-              <p className="text-sm text-gray-500">Not: Mahalle veya köy seçimi gereklidir.</p>
-              
+              <p className="text-sm text-gray-500 dark:text-gray-400">Not: Mahalle veya köy seçimi gereklidir.</p>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -1827,7 +1869,7 @@ const TownPresidentDashboardPage = () => {
                       village_id: ''
                     });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   İptal
                 </button>
@@ -1845,29 +1887,29 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Observer Modal */}
       {showAddObserverForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {editingObserver ? 'Müşahit Düzenle' : 'Yeni Müşahit Ekle'}
               </h3>
             </div>
-            
+
             <form onSubmit={handleObserverSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad Soyad *</label>
                   <input
                     type="text"
                     name="name"
                     value={observerFormData.name}
                     onChange={handleObserverInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">TC Kimlik No *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No *</label>
                   <input
                     type="text"
                     name="tc"
@@ -1875,28 +1917,28 @@ const TownPresidentDashboardPage = () => {
                     onChange={handleObserverInputChange}
                     required
                     maxLength={11}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon *</label>
                   <input
                     type="text"
                     name="phone"
                     value={observerFormData.phone}
                     onChange={handleObserverInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sandık *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sandık *</label>
                   <select
                     name="ballot_box_id"
                     value={observerFormData.ballot_box_id}
                     onChange={handleObserverInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">Sandık Seçin</option>
                     {ballotBoxes.map(bb => (
@@ -1915,11 +1957,11 @@ const TownPresidentDashboardPage = () => {
                       onChange={handleObserverInputChange}
                       className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">Başmüşahit</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Başmüşahit</span>
                   </label>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -1934,7 +1976,7 @@ const TownPresidentDashboardPage = () => {
                       is_chief_observer: false
                     });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   İptal
                 </button>
