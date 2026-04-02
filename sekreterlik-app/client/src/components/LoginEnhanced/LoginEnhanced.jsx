@@ -52,12 +52,12 @@ const LoginEnhanced = () => {
   // Load saved credentials on mount
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
-    const savedPassword = localStorage.getItem('rememberedPassword');
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
-    
-    if (savedRememberMe && savedUsername && savedPassword) {
+    // Eski şifre varsa temizle (güvenlik iyileştirmesi - şifre artık saklanmıyor)
+    localStorage.removeItem('rememberedPassword');
+
+    if (savedRememberMe && savedUsername) {
       setUsername(savedUsername);
-      setPassword(savedPassword);
       setRememberMe(true);
     }
     
@@ -72,14 +72,14 @@ const LoginEnhanced = () => {
       setRememberChiefObserver(true);
     }
     
-    // Load saved Coordinator credentials
+    // Load saved Coordinator credentials (sadece TC saklanır, telefon asla saklanmaz)
     const savedCoordinatorTc = localStorage.getItem('rememberedCoordinatorTc');
-    const savedCoordinatorPhone = localStorage.getItem('rememberedCoordinatorPhone');
     const savedRememberCoordinator = localStorage.getItem('rememberCoordinator') === 'true';
-    
-    if (savedRememberCoordinator && savedCoordinatorTc && savedCoordinatorPhone) {
+    // Eski telefon varsa temizle (güvenlik iyileştirmesi)
+    localStorage.removeItem('rememberedCoordinatorPhone');
+
+    if (savedRememberCoordinator && savedCoordinatorTc) {
       setCoordinatorTc(savedCoordinatorTc);
-      setCoordinatorPhone(savedCoordinatorPhone);
       setRememberCoordinator(true);
     }
     
@@ -120,16 +120,16 @@ const LoginEnhanced = () => {
       const success = await login(username, password);
       
       if (success) {
-        // Handle remember me functionality
+        // Handle remember me functionality (sadece kullanıcı adı saklanır, şifre asla saklanmaz)
         if (rememberMe) {
           localStorage.setItem('rememberedUsername', username);
-          localStorage.setItem('rememberedPassword', password);
           localStorage.setItem('rememberMe', 'true');
         } else {
           localStorage.removeItem('rememberedUsername');
-          localStorage.removeItem('rememberedPassword');
           localStorage.removeItem('rememberMe');
         }
+        // Şifre hiçbir zaman localStorage'da saklanmaz
+        localStorage.removeItem('rememberedPassword');
         
         // Show success animation
         setShowSuccess(true);
@@ -213,16 +213,16 @@ const LoginEnhanced = () => {
       const result = await ApiService.loginCoordinator(coordinatorTc.trim(), coordinatorPhone.trim());
       
       if (result.success) {
-        // Handle remember me functionality
+        // Handle remember me functionality (sadece TC saklanır, telefon asla saklanmaz)
         if (rememberCoordinator) {
           localStorage.setItem('rememberedCoordinatorTc', coordinatorTc.trim());
-          localStorage.setItem('rememberedCoordinatorPhone', coordinatorPhone.trim());
           localStorage.setItem('rememberCoordinator', 'true');
         } else {
           localStorage.removeItem('rememberedCoordinatorTc');
-          localStorage.removeItem('rememberedCoordinatorPhone');
           localStorage.removeItem('rememberCoordinator');
         }
+        // Telefon numarası hiçbir zaman localStorage'da saklanmaz
+        localStorage.removeItem('rememberedCoordinatorPhone');
         
         // Set user in AuthContext (localStorage is managed automatically)
         setUserFromLogin(result.user);

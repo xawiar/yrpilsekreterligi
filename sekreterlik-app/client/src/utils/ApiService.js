@@ -47,18 +47,27 @@ class ApiService {
   }
 
   static async fetchJsonWithRetry(url, options = {}, retryOnce = true) {
+    // Merge auth headers if not already present
+    const mergedOptions = {
+      ...options,
+      headers: {
+        ...this.getAuthHeaders(),
+        ...(options.headers || {}),
+      },
+    };
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(url, mergedOptions);
+      if (res.status === 401) { this.handleResponse(res); }
       if (!res.ok && retryOnce && (res.status === 429 || res.status >= 500)) {
         await new Promise(r => setTimeout(r, 400));
-        const res2 = await fetch(url, options);
+        const res2 = await fetch(url, mergedOptions);
         return res2.json();
       }
       return res.json();
     } catch (e) {
       if (retryOnce) {
         await new Promise(r => setTimeout(r, 400));
-        const res3 = await fetch(url, options);
+        const res3 = await fetch(url, mergedOptions);
         return res3.json();
       }
       throw e;
@@ -72,10 +81,24 @@ class ApiService {
       headers['Content-Type'] = 'application/json';
     }
 
-    // In a real implementation, you would add the auth token here
-    // For now, we'll just return the headers as is since the backend 
-    // doesn't actually validate tokens in this demo
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     return headers;
+  }
+
+  // 401 auto-logout helper
+  static handleResponse(response) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('isLoggedIn');
+      window.location.href = '/login';
+      throw new Error('Oturum süresi doldu');
+    }
+    return response;
   }
 
   // Auth API
@@ -92,6 +115,10 @@ class ApiService {
     });
 
     const data = await response.json();
+
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
 
     // Even on 401, return the response data so AuthContext can check response.success
     // The backend returns { success: false, message: '...' } on 401
@@ -115,7 +142,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getAdminInfo();
     }
-    const response = await fetch(`${API_BASE_URL}/auth/admin`);
+    const response = await fetch(`${API_BASE_URL}/auth/admin`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -172,7 +199,7 @@ class ApiService {
         return { success: false, users: [], message: 'Üye kullanıcıları alınırken hata oluştu' };
       }
     }
-    const response = await fetch(`${API_BASE_URL}/auth/member-users`);
+    const response = await fetch(`${API_BASE_URL}/auth/member-users`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -290,7 +317,7 @@ class ApiService {
       return FirebaseApiService.getMemberById(id);
     }
 
-    const response = await fetch(`${API_BASE_URL}/members/${id}`);
+    const response = await fetch(`${API_BASE_URL}/members/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -424,6 +451,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/members/import`, {
       method: 'POST',
       // Don't set Content-Type when sending FormData, browser will set it correctly
+      headers: this.getAuthHeaders(false),
       body: formData,
     });
 
@@ -457,7 +485,7 @@ class ApiService {
       return FirebaseApiService.getMeetingById(id);
     }
 
-    const response = await fetch(`${API_BASE_URL}/meetings/${id}`);
+    const response = await fetch(`${API_BASE_URL}/meetings/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -724,7 +752,7 @@ class ApiService {
       return [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/archive/documents`);
+    const response = await fetch(`${API_BASE_URL}/archive/documents`, { headers: this.getAuthHeaders() });
     if (!response.ok) {
       throw new Error('Belgeler getirilirken hata oluştu');
     }
@@ -777,6 +805,7 @@ class ApiService {
       const response = await fetch(`${API_BASE_URL}/archive/documents`, {
         method: 'POST',
         // Don't set Content-Type header when sending FormData
+        headers: this.getAuthHeaders(false),
         body: formData,
       });
 
@@ -812,7 +841,7 @@ class ApiService {
       // TODO: Firebase Storage ile document download implementasyonu
       throw new Error('Firebase Storage ile belge indirme henüz implement edilmedi');
     }
-    const response = await fetch(`${API_BASE_URL}/archive/documents/${id}/download`);
+    const response = await fetch(`${API_BASE_URL}/archive/documents/${id}/download`, { headers: this.getAuthHeaders(false) });
     if (!response.ok) {
       throw new Error('Belge indirilemedi');
     }
@@ -1054,7 +1083,7 @@ class ApiService {
       return FirebaseApiService.getEventById(id);
     }
 
-    const response = await fetch(`${API_BASE_URL}/events/${id}`);
+    const response = await fetch(`${API_BASE_URL}/events/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1154,9 +1183,7 @@ class ApiService {
 
     const response = await fetch(`${API_BASE_URL}/personal-documents/member/${memberId}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
+      headers: this.getAuthHeaders(false),
       body: formData,
     });
 
@@ -1180,9 +1207,7 @@ class ApiService {
 
     const response = await fetch(`${API_BASE_URL}/members/upload-photo`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
+      headers: this.getAuthHeaders(false),
       body: formData,
     });
 
@@ -1239,7 +1264,7 @@ class ApiService {
 
     // Add cache-busting parameter to ensure fresh data
     const timestamp = Date.now();
-    const response = await fetch(`${API_BASE_URL}/districts?_t=${timestamp}`);
+    const response = await fetch(`${API_BASE_URL}/districts?_t=${timestamp}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1248,7 +1273,7 @@ class ApiService {
       return FirebaseApiService.getDistrictById(districtId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/districts/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/districts/${districtId}`, { headers: this.getAuthHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -1305,7 +1330,7 @@ class ApiService {
 
     // Add cache-busting parameter to ensure fresh data
     const timestamp = Date.now();
-    const response = await fetch(`${API_BASE_URL}/towns?_t=${timestamp}`);
+    const response = await fetch(`${API_BASE_URL}/towns?_t=${timestamp}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1314,7 +1339,7 @@ class ApiService {
       return FirebaseApiService.getTownById ? FirebaseApiService.getTownById(townId) : FirebaseService.getById('towns', townId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/towns/${townId}`);
+    const response = await fetch(`${API_BASE_URL}/towns/${townId}`, { headers: this.getAuthHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -1327,7 +1352,7 @@ class ApiService {
       return towns ? towns.filter(t => t.district_id === districtId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/towns/district/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/towns/district/${districtId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1379,7 +1404,7 @@ class ApiService {
       return FirebaseApiService.getNeighborhoods();
     }
 
-    const response = await fetch(`${API_BASE_URL}/neighborhoods`);
+    const response = await fetch(`${API_BASE_URL}/neighborhoods`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1389,7 +1414,7 @@ class ApiService {
       return neighborhoods ? neighborhoods.filter(n => n.district_id === districtId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/neighborhoods/district/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/neighborhoods/district/${districtId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1437,7 +1462,7 @@ class ApiService {
       return FirebaseApiService.getVillages();
     }
 
-    const response = await fetch(`${API_BASE_URL}/villages`);
+    const response = await fetch(`${API_BASE_URL}/villages`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1447,7 +1472,7 @@ class ApiService {
       return villages ? villages.filter(v => v.district_id === districtId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/villages/district/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/villages/district/${districtId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1495,7 +1520,7 @@ class ApiService {
       return FirebaseApiService.getSTKs();
     }
 
-    const response = await fetch(`${API_BASE_URL}/stks`);
+    const response = await fetch(`${API_BASE_URL}/stks`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1543,7 +1568,7 @@ class ApiService {
       return FirebaseApiService.getPublicInstitutions();
     }
 
-    const response = await fetch(`${API_BASE_URL}/public-institutions`);
+    const response = await fetch(`${API_BASE_URL}/public-institutions`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1591,7 +1616,7 @@ class ApiService {
       return FirebaseApiService.getMosques();
     }
 
-    const response = await fetch(`${API_BASE_URL}/mosques`);
+    const response = await fetch(`${API_BASE_URL}/mosques`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1601,7 +1626,7 @@ class ApiService {
       return mosques ? mosques.filter(m => m.district_id === districtId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/mosques/district/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/mosques/district/${districtId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1649,7 +1674,7 @@ class ApiService {
       return FirebaseApiService.getEventCategories();
     }
 
-    const response = await fetch(`${API_BASE_URL}/event-categories`);
+    const response = await fetch(`${API_BASE_URL}/event-categories`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1697,7 +1722,7 @@ class ApiService {
       return FirebaseApiService.getElections();
     }
 
-    const response = await fetch(`${API_BASE_URL}/elections`);
+    const response = await fetch(`${API_BASE_URL}/elections`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -1707,12 +1732,8 @@ class ApiService {
       return FirebaseApiService.getAlliances(electionId);
     }
 
-    const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/alliances/election/${electionId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        ...this.getAuthHeaders()
-      }
+      headers: this.getAuthHeaders()
     });
     return response.json();
   }
@@ -1722,12 +1743,8 @@ class ApiService {
       return FirebaseApiService.getAlliance(id);
     }
 
-    const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/alliances/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        ...this.getAuthHeaders()
-      }
+      headers: this.getAuthHeaders()
     });
     return response.json();
   }
@@ -1737,13 +1754,9 @@ class ApiService {
       return FirebaseApiService.createAlliance(allianceData);
     }
 
-    const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/alliances`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        ...this.getAuthHeaders()
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(allianceData)
     });
     return response.json();
@@ -1754,13 +1767,9 @@ class ApiService {
       return FirebaseApiService.updateAlliance(id, allianceData);
     }
 
-    const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/alliances/${id}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        ...this.getAuthHeaders()
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(allianceData)
     });
     return response.json();
@@ -1771,13 +1780,9 @@ class ApiService {
       return FirebaseApiService.deleteAlliance(id);
     }
 
-    const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/alliances/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        ...this.getAuthHeaders()
-      }
+      headers: this.getAuthHeaders(false)
     });
     return response.json();
   }
@@ -2008,7 +2013,7 @@ class ApiService {
     if (electionId) params.append('election_id', electionId);
     if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
 
-    const response = await fetch(`${API_BASE_URL}/election-results?${params}`);
+    const response = await fetch(`${API_BASE_URL}/election-results?${params}`, { headers: this.getAuthHeaders() });
     const result = await response.json();
     console.log('[ApiService.getElectionResults] Backend API result:', result?.length || 0, 'results');
     return result;
@@ -2019,7 +2024,7 @@ class ApiService {
       return FirebaseApiService.getElectionResultById(id);
     }
 
-    const response = await fetch(`${API_BASE_URL}/election-results/${id}`);
+    const response = await fetch(`${API_BASE_URL}/election-results/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2116,7 +2121,7 @@ class ApiService {
       return FirebaseApiService.getNeighborhoodRepresentatives();
     }
 
-    const response = await fetch(`${API_BASE_URL}/neighborhood-representatives`);
+    const response = await fetch(`${API_BASE_URL}/neighborhood-representatives`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2126,7 +2131,7 @@ class ApiService {
       return representatives ? representatives.filter(r => r.neighborhood_id === neighborhoodId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/neighborhood-representatives/neighborhood/${neighborhoodId}`);
+    const response = await fetch(`${API_BASE_URL}/neighborhood-representatives/neighborhood/${neighborhoodId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2174,7 +2179,7 @@ class ApiService {
       return FirebaseApiService.getVillageRepresentatives();
     }
 
-    const response = await fetch(`${API_BASE_URL}/village-representatives`);
+    const response = await fetch(`${API_BASE_URL}/village-representatives`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2184,7 +2189,7 @@ class ApiService {
       return representatives ? representatives.filter(r => r.village_id === villageId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/village-representatives/village/${villageId}`);
+    const response = await fetch(`${API_BASE_URL}/village-representatives/village/${villageId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2232,7 +2237,7 @@ class ApiService {
       return FirebaseApiService.getNeighborhoodSupervisors();
     }
 
-    const response = await fetch(`${API_BASE_URL}/neighborhood-supervisors`);
+    const response = await fetch(`${API_BASE_URL}/neighborhood-supervisors`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2243,7 +2248,7 @@ class ApiService {
       return supervisors ? supervisors.filter(s => String(s.neighborhood_id) === String(neighborhoodId)) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/neighborhood-supervisors/neighborhood/${neighborhoodId}`);
+    const response = await fetch(`${API_BASE_URL}/neighborhood-supervisors/neighborhood/${neighborhoodId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2291,7 +2296,7 @@ class ApiService {
       return FirebaseApiService.getVillageSupervisors();
     }
 
-    const response = await fetch(`${API_BASE_URL}/village-supervisors`);
+    const response = await fetch(`${API_BASE_URL}/village-supervisors`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2302,7 +2307,7 @@ class ApiService {
       return supervisors ? supervisors.filter(s => String(s.village_id) === String(villageId)) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/village-supervisors/village/${villageId}`);
+    const response = await fetch(`${API_BASE_URL}/village-supervisors/village/${villageId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2355,7 +2360,7 @@ class ApiService {
         return [];
       }
     }
-    const response = await fetch(`${API_BASE_URL}/district-officials`);
+    const response = await fetch(`${API_BASE_URL}/district-officials`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2364,7 +2369,7 @@ class ApiService {
       return FirebaseApiService.getDistrictOfficials(districtId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/district-officials/district/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/district-officials/district/${districtId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2403,7 +2408,7 @@ class ApiService {
         return [];
       }
     }
-    const response = await fetch(`${API_BASE_URL}/districts/${districtId}/deputy-inspectors`);
+    const response = await fetch(`${API_BASE_URL}/districts/${districtId}/deputy-inspectors`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2411,7 +2416,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getAllDistrictDeputyInspectors();
     }
-    const response = await fetch(`${API_BASE_URL}/district-deputy-inspectors`);
+    const response = await fetch(`${API_BASE_URL}/district-deputy-inspectors`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2427,7 +2432,7 @@ class ApiService {
         return [];
       }
     }
-    const response = await fetch(`${API_BASE_URL}/town-officials`);
+    const response = await fetch(`${API_BASE_URL}/town-officials`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2436,7 +2441,7 @@ class ApiService {
       return FirebaseApiService.getTownOfficials(townId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/town-officials/town/${townId}`);
+    const response = await fetch(`${API_BASE_URL}/town-officials/town/${townId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2469,7 +2474,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getTownDeputyInspectors(townId);
     }
-    const response = await fetch(`${API_BASE_URL}/towns/${townId}/deputy-inspectors`);
+    const response = await fetch(`${API_BASE_URL}/towns/${townId}/deputy-inspectors`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2477,7 +2482,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getAllTownDeputyInspectors();
     }
-    const response = await fetch(`${API_BASE_URL}/town-deputy-inspectors`);
+    const response = await fetch(`${API_BASE_URL}/town-deputy-inspectors`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2487,7 +2492,7 @@ class ApiService {
       return FirebaseApiService.getDistrictManagementMembers(districtId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/district-management-members/district/${districtId}`);
+    const response = await fetch(`${API_BASE_URL}/district-management-members/district/${districtId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2561,7 +2566,7 @@ class ApiService {
       return FirebaseApiService.getTownManagementMembers(townId);
     }
 
-    const response = await fetch(`${API_BASE_URL}/town-management-members/town/${townId}`);
+    const response = await fetch(`${API_BASE_URL}/town-management-members/town/${townId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2640,7 +2645,7 @@ class ApiService {
       return FirebaseApiService.getBallotBoxes();
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-boxes`);
+    const response = await fetch(`${API_BASE_URL}/ballot-boxes`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2650,7 +2655,7 @@ class ApiService {
       return ballotBoxes ? ballotBoxes.filter(b => b.neighborhood_id === neighborhoodId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-boxes/neighborhood/${neighborhoodId}`);
+    const response = await fetch(`${API_BASE_URL}/ballot-boxes/neighborhood/${neighborhoodId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2660,7 +2665,7 @@ class ApiService {
       return ballotBoxes ? ballotBoxes.filter(b => b.village_id === villageId) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-boxes/village/${villageId}`);
+    const response = await fetch(`${API_BASE_URL}/ballot-boxes/village/${villageId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2669,7 +2674,7 @@ class ApiService {
       return FirebaseApiService.getBallotBoxById(id);
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-boxes/${id}`);
+    const response = await fetch(`${API_BASE_URL}/ballot-boxes/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2678,7 +2683,7 @@ class ApiService {
       return FirebaseApiService.getBallotBoxById(id);
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-boxes/${id}`);
+    const response = await fetch(`${API_BASE_URL}/ballot-boxes/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2703,9 +2708,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/auth/update-all-credentials`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.getAuthHeaders(),
     });
     return response.json();
   }
@@ -2718,7 +2721,7 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/push-subscriptions/vapid-key`);
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/vapid-key`, { headers: this.getAuthHeaders() });
       return response.json();
     } catch (error) {
       console.error('Error getting VAPID key:', error);
@@ -2907,7 +2910,7 @@ class ApiService {
     if (service === FirebaseApiService) {
       return await FirebaseApiService.getMemberAnalytics(memberId);
     }
-    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/member/${memberId}`);
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/member/${memberId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -2916,7 +2919,7 @@ class ApiService {
     if (service === FirebaseApiService) {
       return await FirebaseApiService.getMemberAnalyticsSummary(memberId);
     }
-    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/member/${memberId}/summary`);
+    const response = await fetch(`${API_BASE_URL}/member-dashboard-analytics/member/${memberId}/summary`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3002,7 +3005,7 @@ class ApiService {
   }
 
   static async getAllPushSubscriptions() {
-    const response = await fetch(`${API_BASE_URL}/push-subscriptions/all`);
+    const response = await fetch(`${API_BASE_URL}/push-subscriptions/all`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3032,7 +3035,7 @@ class ApiService {
 
     const res = await fetch(`${API_BASE_URL}/permissions/${encodeURIComponent(position)}`, {
       method: 'POST',
-      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify({ permissions })
     });
     if (!res.ok) {
@@ -3070,12 +3073,12 @@ class ApiService {
   }
 
   static async getGroupMessages(groupId, limit = 50, offset = 0) {
-    const response = await fetch(`${API_BASE_URL}/mongo-messages/group/${groupId}?limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${API_BASE_URL}/mongo-messages/group/${groupId}?limit=${limit}&offset=${offset}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
   static async getUserMessages(limit = 50, offset = 0) {
-    const response = await fetch(`${API_BASE_URL}/mongo-messages/user?limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${API_BASE_URL}/mongo-messages/user?limit=${limit}&offset=${offset}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3088,7 +3091,7 @@ class ApiService {
   }
 
   static async getUnreadCount() {
-    const response = await fetch(`${API_BASE_URL}/messages/unread-count`);
+    const response = await fetch(`${API_BASE_URL}/messages/unread-count`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3111,12 +3114,12 @@ class ApiService {
   }
 
   static async getAllMessageGroups() {
-    const response = await fetch(`${API_BASE_URL}/messages/groups`);
+    const response = await fetch(`${API_BASE_URL}/messages/groups`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
   static async getMessageGroupById(id) {
-    const response = await fetch(`${API_BASE_URL}/messages/groups/${id}`);
+    const response = await fetch(`${API_BASE_URL}/messages/groups/${id}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3138,7 +3141,7 @@ class ApiService {
   }
 
   static async getOrCreateGeneralGroup() {
-    const response = await fetch(`${API_BASE_URL}/mongo-messages/groups/general/get-or-create`);
+    const response = await fetch(`${API_BASE_URL}/mongo-messages/groups/general/get-or-create`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3212,7 +3215,7 @@ class ApiService {
       return FirebaseApiService.getBallotBoxObservers();
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-box-observers`);
+    const response = await fetch(`${API_BASE_URL}/ballot-box-observers`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3223,7 +3226,7 @@ class ApiService {
       return observers ? observers.filter(o => String(o.ballot_box_id) === String(ballotBoxId)) : [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-box-observers/ballot-box/${ballotBoxId}`);
+    const response = await fetch(`${API_BASE_URL}/ballot-box-observers/ballot-box/${ballotBoxId}`, { headers: this.getAuthHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -3237,7 +3240,7 @@ class ApiService {
       return observers ? observers.find(o => String(o.id) === String(id)) : null;
     }
 
-    const response = await fetch(`${API_BASE_URL}/ballot-box-observers/${id}`);
+    const response = await fetch(`${API_BASE_URL}/ballot-box-observers/${id}`, { headers: this.getAuthHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -3318,7 +3321,7 @@ class ApiService {
   }
 
   static async getVisitCount(locationType, locationId) {
-    const response = await fetch(`${API_BASE_URL}/visits/count/${locationType}/${locationId}`);
+    const response = await fetch(`${API_BASE_URL}/visits/count/${locationType}/${locationId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3326,7 +3329,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getAllVisitCounts(locationType);
     }
-    const response = await fetch(`${API_BASE_URL}/visits/counts/${locationType}`);
+    const response = await fetch(`${API_BASE_URL}/visits/counts/${locationType}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3771,7 +3774,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getWomenBranchManagement(memberId);
     }
-    const response = await fetch(`${API_BASE_URL}/women-branch-management/${memberId}`);
+    const response = await fetch(`${API_BASE_URL}/women-branch-management/${memberId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3781,7 +3784,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/women-branch-management`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
     return response.json();
@@ -3793,7 +3796,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/women-branch-management/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
     return response.json();
@@ -3805,6 +3808,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/women-branch-management/${id}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders(false),
     });
     return response.json();
   }
@@ -3814,7 +3818,7 @@ class ApiService {
     if (USE_FIREBASE) {
       return FirebaseApiService.getYouthBranchManagement(memberId);
     }
-    const response = await fetch(`${API_BASE_URL}/youth-branch-management/${memberId}`);
+    const response = await fetch(`${API_BASE_URL}/youth-branch-management/${memberId}`, { headers: this.getAuthHeaders() });
     return response.json();
   }
 
@@ -3824,7 +3828,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/youth-branch-management`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
     return response.json();
@@ -3836,7 +3840,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/youth-branch-management/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
     return response.json();
@@ -3848,6 +3852,7 @@ class ApiService {
     }
     const response = await fetch(`${API_BASE_URL}/youth-branch-management/${id}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders(false),
     });
     return response.json();
   }
@@ -4016,10 +4021,8 @@ class ApiService {
 
     const response = await fetch(`${API_BASE_URL}/voters/upload`, {
       method: 'POST',
-      headers: {
-        // Content-Type: multipart/form-data otomatik eklenir
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
+      // Don't set Content-Type for FormData; browser sets it with boundary
+      headers: this.getAuthHeaders(false),
       body: formData
     });
 

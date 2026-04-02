@@ -3,13 +3,12 @@ const router = express.Router();
 const Admin = require('../models/Admin');
 const MemberUser = require('../models/MemberUser');
 const db = require('../config/database');
+const { generateToken } = require('../middleware/auth');
 
 // Login endpoint
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  
-  console.log('Login attempt:', { username, password });
-  
+
   try {
     if (!username || !password) {
       console.log('Missing credentials');
@@ -24,10 +23,9 @@ router.post('/login', async (req, res) => {
     console.log('Admin validation result:', isAdminValid);
     
     if (isAdminValid) {
-      console.log('Admin login successful');
-      // Generate a simple token (in a real app, use JWT)
-      const token = 'simple-auth-token';
-      
+      const admin = await Admin.getAdmin();
+      const token = generateToken({ id: admin.id, username: admin.username, role: 'admin', type: 'admin' });
+
       res.json({
         success: true,
         token,
@@ -43,15 +41,11 @@ router.post('/login', async (req, res) => {
     // Then try member user login (including district and town presidents)
     // Normalize password: remove all non-digit characters (phone numbers are stored as digits only)
     const normalizedPassword = password.replace(/\D/g, '');
-    console.log('Trying member user login with:', { username, originalPassword: password, normalizedPassword });
     const memberUser = await MemberUser.getUserByCredentialsUpdated(username, normalizedPassword);
     console.log('Member user validation result:', memberUser ? 'Found' : 'Not found');
     
     if (memberUser) {
-      // Generate a simple token (in a real app, use JWT)
-      const token = 'simple-auth-token';
-      
-      let userRole = 'member';
+      let userRole = memberUser.user_type || 'member';
       let userData = {
         username,
         name: memberUser.name || memberUser.chairman_name,
@@ -106,7 +100,9 @@ router.post('/login', async (req, res) => {
           // Coordinator bulunamazsa normal member olarak devam et
         }
       }
-      
+
+      const token = generateToken({ id: memberUser.id, username: memberUser.username, role: memberUser.user_type || 'member', type: memberUser.user_type || 'member', memberId: memberUser.member_id });
+
       res.json({
         success: true,
         token,
@@ -133,9 +129,7 @@ router.post('/login', async (req, res) => {
 // Coordinator Login endpoint (TC and phone)
 router.post('/login-coordinator', async (req, res) => {
   const { tc, phone } = req.body;
-  
-  console.log('Coordinator login attempt:', { tc, phone });
-  
+
   try {
     if (!tc || !phone) {
       return res.status(400).json({
@@ -162,9 +156,8 @@ router.post('/login-coordinator', async (req, res) => {
         });
       }
 
-      // Generate a simple token
-      const token = 'simple-auth-token';
-      
+      const token = generateToken({ id: coordinator.id, username: coordinator.username || coordinator.tc, role: coordinator.role || 'coordinator', type: coordinator.role || 'coordinator' });
+
       res.json({
         success: true,
         token,
@@ -1088,8 +1081,7 @@ router.post('/update-firebase-auth-password', async (req, res) => {
     console.log('🔐 Firebase Auth password update request received:', {
       authUid: authUid || 'null',
       email: email || 'null',
-      passwordLength: password?.length || 0,
-      passwordPreview: password ? password.substring(0, 3) + '***' : 'null'
+      passwordLength: password?.length || 0
     });
     
     if (!password) {

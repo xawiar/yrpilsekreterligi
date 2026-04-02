@@ -1,29 +1,65 @@
-// Simple authentication middleware for demo purposes
-// In a real application, you would implement proper JWT authentication
+const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_ENCRYPTION_KEY;
+
+let jwtSecretMissing = false;
+if (!JWT_SECRET) {
+  jwtSecretMissing = true;
+  console.error('🔴 KRİTİK: JWT_SECRET ve VITE_ENCRYPTION_KEY ortam değişkenleri tanımlı değil! Token oluşturma devre dışı.');
+}
+
+/**
+ * JWT token doğrulama middleware'i
+ * Authorization: Bearer <token> header'ından token alır ve doğrular
+ */
 const authenticateToken = (req, res, next) => {
-  // For demo purposes, we'll allow all requests to pass through
-  // In a real application, you would verify the JWT token here
-  
-  // Set a default user for demo purposes
-  // In a real app, this would come from JWT token verification
-  req.user = {
-    id: 4, // Use a real user ID from member_users table
-    username: 'admin',
-    role: 'admin',
-    type: 'admin'
-  };
-  
-  next();
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Yetkilendirme token\'ı gerekli' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = {
+      id: decoded.id,
+      username: decoded.username,
+      role: decoded.role || decoded.type || 'member',
+      type: decoded.type || decoded.role || 'member',
+    };
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Token süresi dolmuş, tekrar giriş yapın' });
+    }
+    return res.status(401).json({ success: false, message: 'Geçersiz token' });
+  }
 };
 
+/**
+ * Admin rolü kontrolü — authenticateToken'dan sonra kullanılmalı
+ */
 const requireAdmin = (req, res, next) => {
-  // For demo purposes, we'll allow all requests to pass through
-  // In a real application, you would check if user is admin
   if (!req.user || (req.user.role !== 'admin' && req.user.type !== 'admin')) {
-    return res.status(403).json({ message: 'Admin yetkisi gerekli' });
+    return res.status(403).json({ success: false, message: 'Bu işlem için admin yetkisi gerekli' });
   }
   next();
 };
 
-module.exports = { authenticateToken, requireAdmin };
+/**
+ * JWT token oluştur
+ */
+const generateToken = (payload) => {
+  if (jwtSecretMissing) {
+    throw new Error('JWT_SECRET tanımlı değil. Token oluşturulamıyor.');
+  }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+};
+
+module.exports = {
+  authenticateToken,
+  requireAdmin,
+  generateToken,
+  JWT_SECRET,
+};

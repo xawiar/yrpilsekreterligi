@@ -2,10 +2,15 @@ const express = require('express');
 const router = express.Router();
 const VisitController = require('../controllers/VisitController');
 
+const ALLOWED_LOCATION_TYPES = ['district', 'town', 'neighborhood', 'village', 'stk', 'public_institution', 'mosque', 'event'];
+
 // Increment visit count for a location
 router.post('/increment/:locationType/:locationId', async (req, res) => {
+  const { locationType, locationId } = req.params;
+  if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+    return res.status(400).json({ error: 'Geçersiz lokasyon tipi' });
+  }
   try {
-    const { locationType, locationId } = req.params;
     const result = await VisitController.incrementVisit(locationType, locationId);
     res.json(result);
   } catch (error) {
@@ -16,8 +21,11 @@ router.post('/increment/:locationType/:locationId', async (req, res) => {
 
 // Get visit count for a location
 router.get('/count/:locationType/:locationId', async (req, res) => {
+  const { locationType, locationId } = req.params;
+  if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+    return res.status(400).json({ error: 'Geçersiz lokasyon tipi' });
+  }
   try {
-    const { locationType, locationId } = req.params;
     const visitCount = await VisitController.getVisitCount(locationType, locationId);
     res.json({ visitCount });
   } catch (error) {
@@ -28,8 +36,11 @@ router.get('/count/:locationType/:locationId', async (req, res) => {
 
 // Get all visit counts for a location type
 router.get('/counts/:locationType', async (req, res) => {
+  const { locationType } = req.params;
+  if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+    return res.status(400).json({ error: 'Geçersiz lokasyon tipi' });
+  }
   try {
-    const { locationType } = req.params;
     const visits = await VisitController.getAllVisitCounts(locationType);
     res.json(visits);
   } catch (error) {
@@ -40,8 +51,11 @@ router.get('/counts/:locationType', async (req, res) => {
 
 // Reset visit count for a location
 router.post('/reset/:locationType/:locationId', async (req, res) => {
+  const { locationType, locationId } = req.params;
+  if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+    return res.status(400).json({ error: 'Geçersiz lokasyon tipi' });
+  }
   try {
-    const { locationType, locationId } = req.params;
     const result = await VisitController.resetVisitCount(locationType, locationId);
     res.json(result);
   } catch (error) {

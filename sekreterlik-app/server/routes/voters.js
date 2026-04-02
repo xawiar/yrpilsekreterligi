@@ -26,9 +26,24 @@ const storage = multer.diskStorage({
     }
 });
 
+// Sadece Excel ve CSV dosyalarına izin ver
+const fileFilter = (req, file, cb) => {
+    const allowedMimes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'text/csv'
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Sadece Excel ve CSV dosyaları kabul edilir'), false);
+    }
+};
+
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // Limit 50MB olsun
+    limits: { fileSize: 10 * 1024 * 1024 }, // Limit 10MB (50MB'dan düşürüldü)
+    fileFilter: fileFilter
 });
 
 // Yardımcı fonksiyon: Sütun adını normalize et ve eşleşen anahtarı bul
@@ -260,7 +275,7 @@ router.post('/upload', authenticateToken, requireAdmin, upload.array('files'), a
 
     } catch (error) {
         console.error('General upload error:', error);
-        res.status(500).json({ message: 'Yükleme sırasında genel hata oluştu', error: error.message });
+        res.status(500).json({ message: 'Yükleme sırasında genel hata oluştu' });
     }
 });
 
@@ -301,9 +316,7 @@ router.get('/search', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Search error:', error);
         res.status(500).json({
-            message: 'Arama sırasında hata oluştu',
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            message: 'Arama sırasında hata oluştu'
         });
     }
 });

@@ -4,9 +4,10 @@ const db = require('../config/database');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { decryptField } = require('../utils/crypto');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 // Get all data from SQLite for Firebase sync
-router.get('/all', async (req, res) => {
+router.get('/all', authenticateToken, requireAdmin, async (req, res) => {
   try {
     console.log('📤 SQLite verileri Firebase sync için hazırlanıyor...');
     
@@ -355,7 +356,7 @@ router.get('/all', async (req, res) => {
 });
 
 // Endpoint: Masaüstündeki database'den TC ve telefonları çekip Firebase için hazırla
-router.get('/desktop-members', async (req, res) => {
+router.get('/desktop-members', authenticateToken, requireAdmin, async (req, res) => {
   try {
     console.log('📥 Masaüstü database\'den üye verileri alınıyor...');
     

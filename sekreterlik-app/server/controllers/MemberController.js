@@ -58,7 +58,7 @@ class MemberController {
       res.json(decrypted);
     } catch (error) {
       console.error('Error getting members:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -81,7 +81,7 @@ class MemberController {
       });
     } catch (error) {
       console.error('Error getting member by ID:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -172,7 +172,7 @@ class MemberController {
       });
     } catch (error) {
       console.error('Error creating member in backend:', error); // Debug log
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -321,7 +321,7 @@ class MemberController {
       });
     } catch (error) {
       console.error('Error updating member:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -352,7 +352,7 @@ class MemberController {
       res.json({ message: 'Üye arşivlendi', member: archivedMember });
     } catch (error) {
       console.error('Error archiving member:', error);
-      res.status(500).json({ message: 'Üye arşivlenirken hata oluştu: ' + error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -386,7 +386,7 @@ class MemberController {
       });
     } catch (error) {
       console.error('Error setting manual stars:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -417,7 +417,7 @@ class MemberController {
       res.json({ message: 'Üye geri yüklendi', member: restoredMember });
     } catch (error) {
       console.error('Error restoring member:', error);
-      res.status(500).json({ message: 'Üye geri yüklenirken hata oluştu: ' + error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -592,7 +592,7 @@ class MemberController {
       });
     } catch (error) {
       console.error('Excel import error:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -603,7 +603,7 @@ class MemberController {
       // For now, we'll just return a success message
       res.json({ message: 'Üyeler başarıyla dışa aktarıldı' });
     } catch (error) {
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -656,7 +656,7 @@ class MemberController {
       });
     } catch (error) {
       console.error('Photo upload error:', error);
-      res.status(500).json({ message: 'Fotoğraf yüklenirken hata oluştu: ' + error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -682,7 +682,7 @@ class MemberController {
       res.json({ message: 'Tüm üyeler arşivlendi' });
     } catch (error) {
       console.error('Error in archiveAll:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 

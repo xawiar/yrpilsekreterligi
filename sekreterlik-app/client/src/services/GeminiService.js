@@ -50,7 +50,18 @@ class GeminiService {
 
       // Context'i token limitine göre kısalt (Gemini için daha yüksek limit var)
       const MAX_CONTEXT_LENGTH = 100000; // Gemini için daha yüksek limit
-      let contextText = context.length > 0 ? context.join('\n') : 'Henüz context bilgisi yok.';
+
+      // TC ve telefon numaralarını maskele - AI'ya gönderilmeden önce hassas verileri gizle
+      const maskSensitiveData = (text) => {
+        // TC kimlik numaralarını maskele (11 haneli sayılar)
+        text = text.replace(/\b\d{11}\b/g, '***TC GİZLİ***');
+        // Telefon numaralarını maskele (05XX ve 5XX formatları)
+        text = text.replace(/\b(05\d{2})\d{3}\d{4}\b/g, '$1*******');
+        text = text.replace(/\b(5\d{2})\d{3}\d{4}\b/g, '$1*******');
+        return text;
+      };
+
+      let contextText = context.length > 0 ? maskSensitiveData(context.join('\n')) : 'Henüz context bilgisi yok.';
       
       // Eğer context çok büyükse, kısalt
       if (contextText.length > MAX_CONTEXT_LENGTH) {

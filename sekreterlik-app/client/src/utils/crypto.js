@@ -1,8 +1,13 @@
 import CryptoJS from 'crypto-js';
 
-// Encryption key - production'da environment variable'dan alınmalı
-const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 
-  'ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security-minimum-32-characters';
+// Encryption key - must be set via VITE_ENCRYPTION_KEY environment variable
+const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || null;
+
+if (!ENCRYPTION_KEY) {
+  console.error('[crypto] 🔴 KRİTİK: VITE_ENCRYPTION_KEY tanımlı değil! Veriler şifrelenmeden saklanıyor.');
+}
+
+let keyMissingLogged = false;
 
 /**
  * Veriyi şifreler
@@ -11,7 +16,15 @@ const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY ||
  */
 export function encryptData(data) {
   if (data === null || data === undefined) return null;
-  
+
+  if (!ENCRYPTION_KEY) {
+    if (!keyMissingLogged) {
+      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
+      keyMissingLogged = true;
+    }
+    return data;
+  }
+
   try {
     const dataString = typeof data === 'string' ? data : JSON.stringify(data);
     const encrypted = CryptoJS.AES.encrypt(dataString, ENCRYPTION_KEY).toString();
@@ -59,7 +72,15 @@ function isEncrypted(data) {
  */
 export function decryptData(encryptedData) {
   if (!encryptedData) return null;
-  
+
+  if (!ENCRYPTION_KEY) {
+    if (!keyMissingLogged) {
+      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
+      keyMissingLogged = true;
+    }
+    return encryptedData;
+  }
+
   // Eğer string değilse, olduğu gibi döndür
   if (typeof encryptedData !== 'string') {
     return encryptedData;

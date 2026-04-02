@@ -35,7 +35,7 @@ class MeetingController {
       res.json(processedMeetings);
     } catch (error) {
       console.error('Error getting meetings:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -59,7 +59,7 @@ class MeetingController {
       res.json(processedMeeting);
     } catch (error) {
       console.error('Error getting meeting by ID:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -140,7 +140,7 @@ class MeetingController {
       res.status(201).json(newMeeting);
     } catch (error) {
       console.error('Error creating meeting:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -191,7 +191,7 @@ class MeetingController {
       res.json(updatedMeeting);
     } catch (error) {
       console.error('Error updating meeting:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -216,7 +216,7 @@ class MeetingController {
       res.json({ message: 'Toplantı arşivlendi', meeting: archivedMeeting });
     } catch (error) {
       console.error('Error archiving meeting:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -237,7 +237,7 @@ class MeetingController {
       
       res.json({ message: 'Yoklama güncellendi', meeting });
     } catch (error) {
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -257,7 +257,7 @@ class MeetingController {
       
       res.json({ message: 'Mazeret bilgisi güncellendi', meeting });
     } catch (error) {
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -278,7 +278,7 @@ class MeetingController {
       
       res.json({ message: 'Tüm toplantılar arşivlendi' });
     } catch (error) {
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 }

@@ -1,9 +1,14 @@
 const db = require('../config/database');
 const { collections } = require('../config/database');
 
+const ALLOWED_LOCATION_TYPES = ['district', 'town', 'neighborhood', 'village', 'stk', 'public_institution', 'mosque', 'event'];
+
 class VisitController {
   // Increment visit count for a location
   static async incrementVisit(locationType, locationId) {
+    if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+      throw new Error('Geçersiz lokasyon tipi');
+    }
     try {
       const tableName = `${locationType}_visits`;
       const idColumn = `${locationType}_id`;
@@ -63,6 +68,9 @@ class VisitController {
 
   // Get visit count for a location
   static async getVisitCount(locationType, locationId) {
+    if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+      throw new Error('Geçersiz lokasyon tipi');
+    }
     try {
       const tableName = `${locationType}_visits`;
       const idColumn = `${locationType}_id`;
@@ -81,6 +89,9 @@ class VisitController {
 
   // Get all visit counts for a location type
   static async getAllVisitCounts(locationType) {
+    if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+      throw new Error('Geçersiz lokasyon tipi');
+    }
     try {
       const tableName = `${locationType}_visits`;
       const locationTable = locationType === 'event' ? 'events' : `${locationType}s`;
@@ -101,6 +112,9 @@ class VisitController {
 
   // Reset visit count for a location
   static async resetVisitCount(locationType, locationId) {
+    if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+      throw new Error('Geçersiz lokasyon tipi');
+    }
     try {
       const tableName = `${locationType}_visits`;
       const idColumn = `${locationType}_id`;
@@ -131,6 +145,9 @@ class VisitController {
 
   // Decrement visit count for a location
   static async decrementVisit(locationType, locationId) {
+    if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
+      throw new Error('Geçersiz lokasyon tipi');
+    }
     try {
       const tableName = `${locationType}_visits`;
       const idColumn = `${locationType}_id`;

@@ -1,17 +1,21 @@
 const webpush = require('web-push');
 
-// VAPID keys
+// VAPID keys from environment variables
 const vapidKeys = {
-  publicKey: 'BO9vjwvHvLDxeP-H2IY92hsQlWGYTCW7NpX3M0GAyooyTbT30Y_0q_ahIsomr38bsL2Nbh7DHEZKMD7YTsiEYf8',
-  privateKey: 'qeBR6H6KXMWnJWdva1oXIRlWfYB04p4CnM-oAXVQWzA'
+  publicKey: process.env.VAPID_PUBLIC_KEY,
+  privateKey: process.env.VAPID_PRIVATE_KEY
 };
 
-// Configure web-push
-webpush.setVapidDetails(
-  'mailto:admin@sekreterlik.com',
-  vapidKeys.publicKey,
-  vapidKeys.privateKey
-);
+// Configure web-push only if both keys are present
+if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+  console.warn('[pushNotificationService] VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY is missing. Push notification setup will be skipped.');
+} else {
+  webpush.setVapidDetails(
+    'mailto:admin@sekreterlik.com',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+  );
+}
 
 class PushNotificationService {
   // Send notification to a single user

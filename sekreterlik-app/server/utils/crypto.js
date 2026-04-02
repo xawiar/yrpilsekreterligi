@@ -2,13 +2,26 @@ const crypto = require('crypto');
 
 const ALGO = 'aes-256-gcm';
 const KEY_HEX = (process.env.FIELD_ENCRYPTION_KEY || '').trim();
+
 if (!KEY_HEX) {
-  console.warn('[crypto] FIELD_ENCRYPTION_KEY missing; using insecure default for development');
+  console.error('[crypto] 🔴 KRİTİK: FIELD_ENCRYPTION_KEY tanımlı değil! Veriler şifrelenmeden saklanıyor.');
 }
-const KEY = Buffer.from(KEY_HEX || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex');
+
+const KEY = KEY_HEX ? Buffer.from(KEY_HEX, 'hex') : null;
+
+let keyMissingLogged = false;
 
 function encryptField(plaintext) {
   if (plaintext === null || plaintext === undefined) return null;
+
+  if (!KEY) {
+    if (!keyMissingLogged) {
+      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
+      keyMissingLogged = true;
+    }
+    return plaintext;
+  }
+
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALGO, KEY, iv);
   const enc = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
@@ -18,6 +31,15 @@ function encryptField(plaintext) {
 
 function decryptField(ciphertext) {
   if (!ciphertext) return null;
+
+  if (!KEY) {
+    if (!keyMissingLogged) {
+      console.error('[crypto] 🔴 KRİTİK: Şifreleme anahtarı tanımlı değil! Veriler şifrelenmeden saklanıyor.');
+      keyMissingLogged = true;
+    }
+    return ciphertext;
+  }
+
   try {
     const [ivB64, tagB64, dataB64] = String(ciphertext).split('.');
     if (!ivB64 || !tagB64 || !dataB64) return ciphertext; // already plaintext

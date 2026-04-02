@@ -1,311 +1,118 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Authentication helper function
+
+    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Admin kontrolü - admin collection'ında admin dokümanını kontrol et
+
     function isAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/admin/main) &&
-             get(/databases/$(database)/documents/admin/main).data.uid == request.auth.uid;
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/admin/main) &&
+        get(/databases/$(database)/documents/admin/main).data.uid == request.auth.uid;
     }
-    
-    // Tüm collection'lar için genel kurallar
-    // Authenticated kullanıcılar okuyabilir ve yazabilir
-    
-    // Members Collection
+
+    // Admin settings - admin only
+    match /admin/{document} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Members - admin write, authenticated read
     match /members/{memberId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow create, update: if isAdmin() ||
+        (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
+      allow delete: if isAdmin();
     }
-    
-    // Meetings Collection
+
+    // Member users - admin only (contains credentials)
+    match /member_users/{userId} {
+      allow read: if isAdmin() ||
+        (isAuthenticated() && resource.data.authUid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Meetings, Events - admin and presidents can write
     match /meetings/{meetingId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow write: if isAdmin() ||
+        (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
     }
-    
-    // Events Collection
+
     match /events/{eventId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow write: if isAdmin() ||
+        (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
     }
-    
-    // Tasks Collection
-    match /tasks/{taskId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Admin Collection
-    match /admin/{adminId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Member Users Collection
-    match /member_users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Member Registrations Collection
-    match /member_registrations/{registrationId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Regions Collection
-    match /regions/{regionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Positions Collection
-    match /positions/{positionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Districts Collection
-    match /districts/{districtId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Towns Collection
-    match /towns/{townId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Neighborhoods Collection
-    match /neighborhoods/{neighborhoodId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Villages Collection
-    match /villages/{villageId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // STKs Collection
-    match /stks/{stkId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Mosques Collection
-    match /mosques/{mosqueId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Event Categories Collection
-    match /event_categories/{categoryId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Neighborhood Representatives Collection
-    match /neighborhood_representatives/{repId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Village Representatives Collection
-    match /village_representatives/{repId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Neighborhood Supervisors Collection
-    match /neighborhood_supervisors/{supervisorId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Village Supervisors Collection
-    match /village_supervisors/{supervisorId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // District Officials Collection
-    match /district_officials/{officialId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Town Officials Collection
-    match /town_officials/{officialId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // District Management Members Collection
-    match /district_management_members/{memberId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Town Management Members Collection
-    match /town_management_members/{memberId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Ballot Boxes Collection
-    match /ballot_boxes/{ballotBoxId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Ballot Box Observers Collection
-    match /ballot_box_observers/{observerId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Messages Collection
-    match /messages/{messageId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Message Groups Collection
-    match /message_groups/{groupId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Personal Documents Collection
-    match /personal_documents/{documentId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Archive Collection
-    match /archive/{archiveId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Position Permissions Collection
-    match /position_permissions/{permissionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
-    }
-    
-    // Notifications Collection
-    // Kullanıcılar sadece kendi notification'larını okuyabilir
-    // Admin tüm notification'ları oluşturabilir
+
+    // Notifications - owner read, admin write
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (
-        resource.data.memberId == request.auth.uid ||
-        resource.data.memberId == null ||
-        !resource.data.memberId
-      );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        resource.data.memberId == request.auth.uid ||
-        resource.data.memberId == null ||
-        !resource.data.memberId
-      );
-      allow delete: if isAuthenticated() && (
-        resource.data.memberId == request.auth.uid ||
-        resource.data.memberId == null ||
-        !resource.data.memberId
-      );
+      allow read: if isAuthenticated() &&
+        (resource.data.memberId == request.auth.uid || resource.data.memberId == null);
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() &&
+        (resource.data.memberId == request.auth.uid || resource.data.memberId == null);
+      allow delete: if isAdmin() ||
+        (isAuthenticated() && resource.data.memberId == request.auth.uid);
     }
-    
-    // Polls Collection
+
+    // Personal documents - owner + admin
+    match /personal_documents/{docId} {
+      allow read: if isAdmin() ||
+        (isAuthenticated() && resource.data.memberId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Election results - admin + coordinators can write
+    match /election_results/{resultId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() ||
+        (isAuthenticated() && request.auth.token.role in ['chief_observer', 'provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor']);
+    }
+
+    // Polls - authenticated read, admin create/delete
     match /polls/{pollId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow create, delete: if isAdmin();
       allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
     }
-    
-    // Poll Votes Collection
+
     match /poll_votes/{voteId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
-    
-    // Diğer tüm collection'lar için varsayılan kural
-    match /{document=**} {
-      allow read, write: if isAuthenticated();
+
+    // AI config - admin only
+    match /groq_api_config/{doc} {
+      allow read, write: if isAdmin();
+    }
+    match /gemini_api_config/{doc} {
+      allow read, write: if isAdmin();
+    }
+    match /chatgpt_api_config/{doc} {
+      allow read, write: if isAdmin();
+    }
+    match /deepseek_api_config/{doc} {
+      allow read, write: if isAdmin();
+    }
+    match /sms_config/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // Audit logs - admin only
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Organization data - admin write only, authenticated read
+    match /{collection}/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

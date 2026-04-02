@@ -70,3 +70,6 @@ direct-import-test.js
 *.temp
 
 # Force rebuild
+
+# Render env variables (contains secrets, never commit)
+RENDER_ENV_VARIABLES.txt

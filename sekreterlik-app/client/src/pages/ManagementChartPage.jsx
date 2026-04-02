@@ -201,7 +201,7 @@ const ManagementChartPage = () => {
                   <h3 className="text-xl font-bold text-white mb-2">{formatMemberName(member.name)}</h3>
                   <p className="text-red-100 text-sm mb-1">{member.position}</p>
                   <p className="text-red-200 text-xs">Bölge: {member.region || 'Belirtilmemiş'}</p>
-                  <p className="text-red-200 text-xs">TC: {member.tc}</p>
+                  <p className="text-red-200 text-xs">TC: {member.tc ? `${member.tc.slice(0, 3)}*****${member.tc.slice(-2)}` : 'Belirtilmemiş'}</p>
                 </div>
               </div>
             ))}
@@ -245,7 +245,7 @@ const ManagementChartPage = () => {
                   <h3 className="text-xl font-bold text-white mb-2">{formatMemberName(member.name)}</h3>
                   <p className="text-indigo-100 text-sm mb-1">{member.position}</p>
                   <p className="text-indigo-200 text-xs">Bölge: {member.region || 'Belirtilmemiş'}</p>
-                  <p className="text-indigo-200 text-xs">TC: {member.tc}</p>
+                  <p className="text-indigo-200 text-xs">TC: {member.tc ? `${member.tc.slice(0, 3)}*****${member.tc.slice(-2)}` : 'Belirtilmemiş'}</p>
                 </div>
               </div>
             ))}
@@ -295,7 +295,7 @@ const ManagementChartPage = () => {
                           <h3 className="font-medium text-gray-900">{formatMemberName(member.name)}</h3>
                           <p className="text-sm text-gray-500 mt-1">{member.position}</p>
                           <p className="text-xs text-gray-400 mt-1">Bölge: {member.region || 'Belirtilmemiş'}</p>
-                          <p className="text-xs text-gray-400 mt-1">TC: {member.tc}</p>
+                          <p className="text-xs text-gray-400 mt-1">TC: {member.tc ? `${member.tc.slice(0, 3)}*****${member.tc.slice(-2)}` : 'Belirtilmemiş'}</p>
                         </div>
                       </div>
                     </div>
@@ -344,7 +344,7 @@ const ManagementChartPage = () => {
                           <h3 className="font-medium text-gray-900">{formatMemberName(member.name)}</h3>
                           <p className="text-sm text-gray-500 mt-1">{member.position}</p>
                           <p className="text-xs text-gray-400 mt-1">Bölge: {member.region || 'Belirtilmemiş'}</p>
-                          <p className="text-xs text-gray-400 mt-1">TC: {member.tc}</p>
+                          <p className="text-xs text-gray-400 mt-1">TC: {member.tc ? `${member.tc.slice(0, 3)}*****${member.tc.slice(-2)}` : 'Belirtilmemiş'}</p>
                         </div>
                       </div>
                     </div>

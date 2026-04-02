@@ -4,10 +4,43 @@ const MemberController = require('../controllers/MemberController');
 
 // Set up multer for file uploads - support both single and multiple file uploads
 const storage = multer.memoryStorage();
-const upload = multer({ 
+
+// Sadece Excel ve CSV dosyalarına izin ver (import için)
+const excelFileFilter = (req, file, cb) => {
+  const allowedMimes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv'
+  ];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Sadece Excel ve CSV dosyaları kabul edilir'), false);
+  }
+};
+
+const upload = multer({
   storage: storage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: excelFileFilter
+});
+
+// Fotoğraf yükleme için ayrı multer yapılandırması
+const photoUpload = multer({
+  storage: multer.diskStorage({
+    destination: 'uploads/photos/',
+    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Sadece resim dosyaları (JPEG, PNG, GIF, WebP) kabul edilir'), false);
+    }
   }
 });
 
@@ -39,7 +72,7 @@ router.get('/export', (req, res) => {
 });
 
 // Upload member photo
-router.post('/upload-photo', upload.single('photo'), (req, res) => {
+router.post('/upload-photo', photoUpload.single('photo'), (req, res) => {
   console.log('POST /upload-photo route called');
   MemberController.uploadPhoto(req, res);
 });

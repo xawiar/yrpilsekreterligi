@@ -167,8 +167,8 @@ function RouterContent() {
               </PublicRoute>
             }
           />
-          {/* Debug/Admin Routes - Temporarily enabled for initial setup */}
-          {true && (
+          {/* Debug/Admin Routes - Only available in development mode */}
+          {import.meta.env.DEV && (
             <>
               <Route
                 path="/create-admin"

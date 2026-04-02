@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const dbPath = path.join(__dirname, '..', 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
@@ -25,7 +26,8 @@ class Admin {
             resolve();
           }).catch(() => {
             // Admin doesn't exist, create default
-            Admin.createAdmin('admin', '1491aaa1491').then(() => {
+            const hashedPassword = bcrypt.hashSync('1491aaa1491', 10);
+            Admin.createAdmin('admin', hashedPassword).then(() => {
               resolve();
             }).catch(reject);
           });
@@ -67,16 +69,17 @@ class Admin {
   }
 
   // Update admin credentials
-  static updateAdmin(username, password) {
+  static async updateAdmin(username, password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
     return new Promise((resolve, reject) => {
       db.run(
         'UPDATE admin SET username = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1',
-        [username, password],
+        [username, hashedPassword],
         function (err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ username, password });
+            resolve({ username, password: hashedPassword });
           }
         }
       );
@@ -84,18 +87,44 @@ class Admin {
   }
 
   // Verify admin credentials
-  static verifyAdmin(username, password) {
+  static async verifyAdmin(username, password) {
     return new Promise((resolve, reject) => {
       db.get(
-        'SELECT * FROM admin WHERE username = ? AND password = ?',
-        [username, password],
-        (err, row) => {
+        'SELECT * FROM admin WHERE username = ?',
+        [username],
+        async (err, admin) => {
           if (err) {
             reject(err);
-          } else if (row) {
-            resolve(true);
-          } else {
+            return;
+          }
+          if (!admin) {
             resolve(false);
+            return;
+          }
+          try {
+            const isValid = await bcrypt.compare(password, admin.password);
+            if (isValid) {
+              resolve(true);
+              return;
+            }
+            // Backward compatible: check plaintext match and migrate
+            if (password === admin.password) {
+              const hashed = await bcrypt.hash(password, 10);
+              db.run('UPDATE admin SET password = ? WHERE id = ?', [hashed, admin.id]);
+              resolve(true);
+              return;
+            }
+            resolve(false);
+          } catch (compareErr) {
+            // If bcrypt.compare throws (e.g. plaintext stored), fall back to direct comparison
+            if (password === admin.password) {
+              bcrypt.hash(password, 10).then(hashed => {
+                db.run('UPDATE admin SET password = ? WHERE id = ?', [hashed, admin.id]);
+              });
+              resolve(true);
+            } else {
+              resolve(false);
+            }
           }
         }
       );

@@ -115,7 +115,8 @@ console.log('Public API router imported');
 const PollController = require('./controllers/PollController');
 
 // Import middleware
-const { authenticateToken } = require('./middleware/auth');
+const { authenticateToken, requireAdmin } = require('./middleware/auth');
+const { validateInput } = require('./middleware/security');
 const { recordRequest, renderMetrics } = require('./utils/metrics');
 const { rateLimit, createRateLimiter } = require('./middleware/rateLimit');
 const { cache } = require('./middleware/cache');
@@ -161,7 +162,13 @@ envOrigins.forEach(origin => {
 app.use(cors({
   origin: function (origin, callback) {
     // No origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+    // Production'da origin zorunlu - sunucu-sunucu isteklerini sadece dev'de izin ver
+    if (!origin) {
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      return callback(new Error('Origin required'));
+    }
 
     // Allowed origins kontrolü
     if (allowedOrigins.includes(origin)) {
@@ -246,7 +253,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind CSS için gerekli
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // React için gerekli
+      scriptSrc: ["'self'", "'unsafe-inline'"], // React için gerekli ('unsafe-eval' kaldırıldı - güvenlik iyileştirmesi)
       imgSrc: ["'self'", "data:", "blob:", "https:"], // Firebase Storage ve data URI için
       connectSrc: process.env.NODE_ENV === 'production'
         ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com", "https://*.onrender.com"]
@@ -272,6 +279,8 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 // Basic rate limiting (apply to all APIs)
 app.use('/api', rateLimit);
+// Global input validation (XSS, SQL injection, path traversal)
+app.use(validateInput);
 // Stricter login limiter: 10 req / 5 minutes per IP
 const loginLimiter = createRateLimiter({ windowMs: 5 * 60 * 1000, max: 10 });
 
@@ -317,54 +326,54 @@ app.use('/api/auth', (req, res, next) => {
   if (req.path === '/login') return loginLimiter(req, res, next);
   return next();
 }, authRouter);
-app.use('/api/members', cache(60), membersRouter);
-app.use('/api/meetings', cache(60), meetingsRouter);
-app.use('/api/regions', cache(10), regionsRouter);
-app.use('/api/positions', cache(10), positionsRouter);
-app.use('/api/tasks', tasksRouter);
-app.use('/api/member-registrations', memberRegistrationsRouter);
-app.use('/api/archive', archiveRouter);
-app.use('/api/events', cache(60), eventsRouter);
-app.use('/api/personal-documents', personalDocumentsRouter);
-app.use('/api/districts', cache(10), districtsRouter);
-app.use('/api/towns', cache(10), townsRouter);
-app.use('/api/neighborhoods', neighborhoodsRouter);
-app.use('/api/villages', villagesRouter);
-app.use('/api/stks', stksRouter);
-app.use('/api/public-institutions', publicInstitutionsRouter);
-app.use('/api/mosques', mosquesRouter);
-app.use('/api/event-categories', eventCategoriesRouter);
-app.use('/api/neighborhood-representatives', neighborhoodRepresentativesRouter);
-app.use('/api/village-representatives', villageRepresentativesRouter);
-app.use('/api/neighborhood-supervisors', neighborhoodSupervisorsRouter);
-app.use('/api/village-supervisors', villageSupervisorsRouter);
-app.use('/api/district-officials', districtOfficialsRouter);
-app.use('/api/town-officials', townOfficialsRouter);
-app.use('/api/visits', visitsRouter);
-app.use('/api/district-deputy-inspectors', districtDeputyInspectorsRouter);
-app.use('/api/town-deputy-inspectors', townDeputyInspectorsRouter);
-app.use('/api/district-management-members', districtManagementMembersRouter);
-app.use('/api/town-management-members', townManagementMembersRouter);
-app.use('/api/ballot-boxes', ballotBoxesRouter);
-app.use('/api/ballot-box-observers', ballotBoxObserversRouter);
-app.use('/api/elections', electionsRouter);
-app.use('/api/election-results', electionResultsRouter);
-app.use('/api/alliances', alliancesRouter);
-app.use('/api/election-coordinators', electionCoordinatorsRouter);
-app.use('/api/election-regions', electionRegionsRouter);
-app.use('/api/messages', messagesRouter);
-app.use('/api/mongo-messages', mongoMessagesRouter);
-app.use('/api/permissions', permissionsRouter);
-app.use('/api/bylaws', bylawsRouter);
-app.use('/api/voters', votersRouter);
-app.use('/api/sync', syncRouter);
-app.use('/api/polls', pollsRouter);
-app.use('/api/financial', financialRouter);
-app.use('/api/push-subscriptions', pushSubscriptionsRouter);
-app.use('/api/member-dashboard-analytics', memberDashboardAnalyticsRouter);
-app.use('/api/dashboard', dashboardRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/api-keys', apiKeysRouter);
+app.use('/api/members', authenticateToken, cache(60), membersRouter);
+app.use('/api/meetings', authenticateToken, cache(60), meetingsRouter);
+app.use('/api/regions', authenticateToken, cache(10), regionsRouter);
+app.use('/api/positions', authenticateToken, cache(10), positionsRouter);
+app.use('/api/tasks', authenticateToken, tasksRouter);
+app.use('/api/member-registrations', authenticateToken, memberRegistrationsRouter);
+app.use('/api/archive', authenticateToken, archiveRouter);
+app.use('/api/events', authenticateToken, cache(60), eventsRouter);
+app.use('/api/personal-documents', authenticateToken, personalDocumentsRouter);
+app.use('/api/districts', authenticateToken, cache(10), districtsRouter);
+app.use('/api/towns', authenticateToken, cache(10), townsRouter);
+app.use('/api/neighborhoods', authenticateToken, neighborhoodsRouter);
+app.use('/api/villages', authenticateToken, villagesRouter);
+app.use('/api/stks', authenticateToken, stksRouter);
+app.use('/api/public-institutions', authenticateToken, publicInstitutionsRouter);
+app.use('/api/mosques', authenticateToken, mosquesRouter);
+app.use('/api/event-categories', authenticateToken, eventCategoriesRouter);
+app.use('/api/neighborhood-representatives', authenticateToken, neighborhoodRepresentativesRouter);
+app.use('/api/village-representatives', authenticateToken, villageRepresentativesRouter);
+app.use('/api/neighborhood-supervisors', authenticateToken, neighborhoodSupervisorsRouter);
+app.use('/api/village-supervisors', authenticateToken, villageSupervisorsRouter);
+app.use('/api/district-officials', authenticateToken, districtOfficialsRouter);
+app.use('/api/town-officials', authenticateToken, townOfficialsRouter);
+app.use('/api/visits', authenticateToken, visitsRouter);
+app.use('/api/district-deputy-inspectors', authenticateToken, districtDeputyInspectorsRouter);
+app.use('/api/town-deputy-inspectors', authenticateToken, townDeputyInspectorsRouter);
+app.use('/api/district-management-members', authenticateToken, districtManagementMembersRouter);
+app.use('/api/town-management-members', authenticateToken, townManagementMembersRouter);
+app.use('/api/ballot-boxes', authenticateToken, ballotBoxesRouter);
+app.use('/api/ballot-box-observers', authenticateToken, ballotBoxObserversRouter);
+app.use('/api/elections', authenticateToken, electionsRouter);
+app.use('/api/election-results', authenticateToken, electionResultsRouter);
+app.use('/api/alliances', authenticateToken, alliancesRouter);
+app.use('/api/election-coordinators', authenticateToken, electionCoordinatorsRouter);
+app.use('/api/election-regions', authenticateToken, electionRegionsRouter);
+app.use('/api/messages', authenticateToken, messagesRouter);
+app.use('/api/mongo-messages', authenticateToken, mongoMessagesRouter);
+app.use('/api/permissions', authenticateToken, permissionsRouter);
+app.use('/api/bylaws', authenticateToken, bylawsRouter);
+app.use('/api/voters', authenticateToken, votersRouter);
+app.use('/api/sync', authenticateToken, syncRouter);
+app.use('/api/polls', authenticateToken, pollsRouter);
+app.use('/api/financial', authenticateToken, financialRouter);
+app.use('/api/push-subscriptions', authenticateToken, pushSubscriptionsRouter);
+app.use('/api/member-dashboard-analytics', authenticateToken, memberDashboardAnalyticsRouter);
+app.use('/api/dashboard', authenticateToken, dashboardRouter);
+app.use('/api/notifications', authenticateToken, notificationsRouter);
+app.use('/api/api-keys', authenticateToken, apiKeysRouter);
 // Public election results routes - NO AUTHENTICATION REQUIRED
 app.use('/api/public/election-results', require('./routes/publicElectionResults'));
 
@@ -397,8 +406,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// Test routes at the very end
-app.get('/test', (req, res) => {
+// Test routes (protected)
+app.get('/test', authenticateToken, (req, res) => {
   console.log('Simple test route called');
   res.json({ message: 'Simple test route working!' });
 });
@@ -429,13 +438,13 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Prometheus metrics endpoint
-app.get('/api/metrics', (req, res) => {
+// Prometheus metrics endpoint - Admin only
+app.get('/api/metrics', authenticateToken, requireAdmin, (req, res) => {
   res.setHeader('Content-Type', 'text/plain; version=0.0.4');
   res.send(renderMetrics());
 });
 
-app.get('/api/test', (req, res) => {
+app.get('/api/test', authenticateToken, (req, res) => {
   console.log('Test route called');
   res.json({ message: 'Test route working!' });
 });
@@ -451,7 +460,7 @@ app.use((err, req, res, next) => {
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err);
   }
-  res.status(500).json({ message: 'Sunucu hatası', error: err.message });
+  res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
 });
 
 // Start server - Only if not required as a module (e.g. by Vercel)

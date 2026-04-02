@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const dbPath = path.join(__dirname, '..', 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
@@ -43,16 +44,17 @@ class MemberUser {
   }
 
   // Create user for a member
-  static createMemberUser(memberId, username, password) {
+  static async createMemberUser(memberId, username, password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
     return new Promise((resolve, reject) => {
       db.run(
         'INSERT INTO member_users (member_id, username, password) VALUES (?, ?, ?)',
-        [memberId, username, password],
+        [memberId, username, hashedPassword],
         function(err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ id: this.lastID, member_id: memberId, username, password });
+            resolve({ id: this.lastID, member_id: memberId, username, password: hashedPassword });
           }
         }
       );
@@ -60,18 +62,44 @@ class MemberUser {
   }
 
   // Get user by username and password
-  static getUserByCredentials(username, password) {
+  static async getUserByCredentials(username, password) {
     return new Promise((resolve, reject) => {
       db.get(
-        'SELECT mu.*, m.name, m.region, m.position FROM member_users mu JOIN members m ON mu.member_id = m.id WHERE mu.username = ? AND mu.password = ? AND mu.is_active = 1',
-        [username, password],
-        (err, row) => {
+        'SELECT mu.*, m.name, m.region, m.position FROM member_users mu JOIN members m ON mu.member_id = m.id WHERE mu.username = ? AND mu.is_active = 1',
+        [username],
+        async (err, user) => {
           if (err) {
             reject(err);
-          } else if (row) {
-            resolve(row);
-          } else {
+            return;
+          }
+          if (!user) {
             resolve(null);
+            return;
+          }
+          try {
+            const isValid = await bcrypt.compare(password, user.password);
+            if (isValid) {
+              resolve(user);
+              return;
+            }
+            // Backward compatible migration
+            if (password === user.password) {
+              const hashed = await bcrypt.hash(password, 10);
+              db.run('UPDATE member_users SET password = ? WHERE id = ?', [hashed, user.id]);
+              resolve(user);
+              return;
+            }
+            resolve(null);
+          } catch (compareErr) {
+            // If bcrypt.compare throws (e.g. plaintext stored), fall back to direct comparison
+            if (password === user.password) {
+              bcrypt.hash(password, 10).then(hashed => {
+                db.run('UPDATE member_users SET password = ? WHERE id = ?', [hashed, user.id]);
+              });
+              resolve(user);
+            } else {
+              resolve(null);
+            }
           }
         }
       );
@@ -103,13 +131,13 @@ class MemberUser {
   static getAllMemberUsers() {
     return new Promise((resolve, reject) => {
       db.all(
-        `SELECT mu.*, 
+        `SELECT mu.*,
          COALESCE(m.name, mu.chairman_name) as name,
          COALESCE(m.region, mu.region) as region,
          COALESCE(m.position, mu.position) as position
-         FROM member_users mu 
-         LEFT JOIN members m ON mu.member_id = m.id 
-         WHERE mu.member_id IS NULL 
+         FROM member_users mu
+         LEFT JOIN members m ON mu.member_id = m.id
+         WHERE mu.member_id IS NULL
             OR (mu.member_id IS NOT NULL AND m.id IS NOT NULL AND m.archived = 0)
          ORDER BY mu.created_at DESC`,
         (err, rows) => {
@@ -155,16 +183,17 @@ class MemberUser {
   }
 
   // Update user credentials
-  static updateUserCredentials(userId, username, password) {
+  static async updateUserCredentials(userId, username, password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
     return new Promise((resolve, reject) => {
       db.run(
         'UPDATE member_users SET username = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [username, password, userId],
+        [username, hashedPassword, userId],
         function(err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ id: userId, username, password });
+            resolve({ id: userId, username, password: hashedPassword });
           }
         }
       );
@@ -219,7 +248,7 @@ class MemberUser {
   // Normalize username by converting to lowercase and replacing Turkish characters
   static normalizeUsername(name) {
     if (!name) return '';
-    
+
     return name
       .toLowerCase()
       .replace(/ç/g, 'c')
@@ -239,22 +268,23 @@ class MemberUser {
   }
 
   // Create user for district president
-  static createDistrictPresidentUser(districtId, districtName, chairmanName, chairmanPhone) {
+  static async createDistrictPresidentUser(districtId, districtName, chairmanName, chairmanPhone) {
+    const username = MemberUser.normalizeUsername(districtName);
+    const password = chairmanPhone.replace(/\D/g, '');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     return new Promise((resolve, reject) => {
-      const username = MemberUser.normalizeUsername(districtName);
-      const password = chairmanPhone.replace(/\D/g, '');
-      
       db.run(
         'INSERT INTO member_users (username, password, user_type, district_id, chairman_name) VALUES (?, ?, ?, ?, ?)',
-        [username, password, 'district_president', districtId, chairmanName],
+        [username, hashedPassword, 'district_president', districtId, chairmanName],
         function(err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ 
-              id: this.lastID, 
-              username, 
-              password, 
+            resolve({
+              id: this.lastID,
+              username,
+              password: hashedPassword,
               user_type: 'district_president',
               district_id: districtId,
               chairman_name: chairmanName
@@ -266,22 +296,23 @@ class MemberUser {
   }
 
   // Create user for town president
-  static createTownPresidentUser(townId, townName, chairmanName, chairmanPhone) {
+  static async createTownPresidentUser(townId, townName, chairmanName, chairmanPhone) {
+    const username = MemberUser.normalizeUsername(townName);
+    const password = chairmanPhone.replace(/\D/g, '');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     return new Promise((resolve, reject) => {
-      const username = MemberUser.normalizeUsername(townName);
-      const password = chairmanPhone.replace(/\D/g, '');
-      
       db.run(
         'INSERT INTO member_users (username, password, user_type, town_id, chairman_name) VALUES (?, ?, ?, ?, ?)',
-        [username, password, 'town_president', townId, chairmanName],
+        [username, hashedPassword, 'town_president', townId, chairmanName],
         function(err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ 
-              id: this.lastID, 
-              username, 
-              password, 
+            resolve({
+              id: this.lastID,
+              username,
+              password: hashedPassword,
               user_type: 'town_president',
               town_id: townId,
               chairman_name: chairmanName
@@ -293,25 +324,51 @@ class MemberUser {
   }
 
   // Get user by credentials (updated to handle all user types)
-  static getUserByCredentialsUpdated(username, password) {
+  static async getUserByCredentialsUpdated(username, password) {
     return new Promise((resolve, reject) => {
       db.get(`
-        SELECT mu.*, 
+        SELECT mu.*,
                m.name, m.region, m.position,
                d.name as district_name,
                t.name as town_name
-        FROM member_users mu 
-        LEFT JOIN members m ON mu.member_id = m.id 
+        FROM member_users mu
+        LEFT JOIN members m ON mu.member_id = m.id
         LEFT JOIN districts d ON mu.district_id = d.id
         LEFT JOIN towns t ON mu.town_id = t.id
-        WHERE mu.username = ? AND mu.password = ? AND mu.is_active = 1
-      `, [username, password], (err, row) => {
+        WHERE mu.username = ? AND mu.is_active = 1
+      `, [username], async (err, user) => {
         if (err) {
           reject(err);
-        } else if (row) {
-          resolve(row);
-        } else {
+          return;
+        }
+        if (!user) {
           resolve(null);
+          return;
+        }
+        try {
+          const isValid = await bcrypt.compare(password, user.password);
+          if (isValid) {
+            resolve(user);
+            return;
+          }
+          // Backward compatible migration
+          if (password === user.password) {
+            const hashed = await bcrypt.hash(password, 10);
+            db.run('UPDATE member_users SET password = ? WHERE id = ?', [hashed, user.id]);
+            resolve(user);
+            return;
+          }
+          resolve(null);
+        } catch (compareErr) {
+          // If bcrypt.compare throws (e.g. plaintext stored), fall back to direct comparison
+          if (password === user.password) {
+            bcrypt.hash(password, 10).then(hashed => {
+              db.run('UPDATE member_users SET password = ? WHERE id = ?', [hashed, user.id]);
+            });
+            resolve(user);
+          } else {
+            resolve(null);
+          }
         }
       });
     });
@@ -322,11 +379,11 @@ class MemberUser {
     return new Promise((resolve, reject) => {
       // Normalize phone: remove all non-digit characters
       const normalizedPhone = phone.replace(/\D/g, '');
-      
+
       db.get(`
-        SELECT mu.*, 
+        SELECT mu.*,
                ec.name, ec.role, ec.parent_coordinator_id, ec.district_id, ec.institution_name
-        FROM member_users mu 
+        FROM member_users mu
         INNER JOIN election_coordinators ec ON mu.coordinator_id = ec.id
         WHERE ec.tc = ? AND ec.phone = ? AND mu.is_active = 1
       `, [tc, normalizedPhone], (err, row) => {
@@ -342,22 +399,23 @@ class MemberUser {
   }
 
   // Update district president user credentials when district info changes
-  static updateDistrictPresidentUser(districtId, districtName, chairmanName, chairmanPhone) {
+  static async updateDistrictPresidentUser(districtId, districtName, chairmanName, chairmanPhone) {
+    const newUsername = MemberUser.normalizeUsername(districtName);
+    const newPassword = chairmanPhone.replace(/\D/g, '');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
     return new Promise((resolve, reject) => {
-      const newUsername = MemberUser.normalizeUsername(districtName);
-      const newPassword = chairmanPhone.replace(/\D/g, '');
-      
       db.run(
         'UPDATE member_users SET username = ?, password = ?, chairman_name = ?, updated_at = CURRENT_TIMESTAMP WHERE user_type = ? AND district_id = ?',
-        [newUsername, newPassword, chairmanName, 'district_president', districtId],
+        [newUsername, hashedPassword, chairmanName, 'district_president', districtId],
         function(err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ 
-              id: this.lastID, 
-              username: newUsername, 
-              password: newPassword, 
+            resolve({
+              id: this.lastID,
+              username: newUsername,
+              password: hashedPassword,
               user_type: 'district_president',
               district_id: districtId,
               chairman_name: chairmanName
@@ -369,26 +427,27 @@ class MemberUser {
   }
 
   // Update town president user credentials when town info changes
-  static updateTownPresidentUser(townId, townName, chairmanName, chairmanPhone) {
+  static async updateTownPresidentUser(townId, townName, chairmanName, chairmanPhone) {
+    const newUsername = MemberUser.normalizeUsername(townName);
+    const newPassword = chairmanPhone.replace(/\D/g, '');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    console.log(`Updating town president user: townId=${townId}, newUsername=${newUsername}`);
+
     return new Promise((resolve, reject) => {
-      const newUsername = MemberUser.normalizeUsername(townName);
-      const newPassword = chairmanPhone.replace(/\D/g, '');
-      
-      console.log(`Updating town president user: townId=${townId}, newUsername=${newUsername}, newPassword=${newPassword}`);
-      
       db.run(
         'UPDATE member_users SET username = ?, password = ?, chairman_name = ?, updated_at = CURRENT_TIMESTAMP WHERE user_type = ? AND town_id = ?',
-        [newUsername, newPassword, chairmanName, 'town_president', townId],
+        [newUsername, hashedPassword, chairmanName, 'town_president', townId],
         function(err) {
           if (err) {
             console.error('Error updating town president user:', err);
             reject(err);
           } else {
             console.log(`Town president user updated successfully. Rows affected: ${this.changes}`);
-            resolve({ 
-              id: this.lastID, 
-              username: newUsername, 
-              password: newPassword, 
+            resolve({
+              id: this.lastID,
+              username: newUsername,
+              password: hashedPassword,
               user_type: 'town_president',
               town_id: townId,
               chairman_name: chairmanName
@@ -400,22 +459,23 @@ class MemberUser {
   }
 
   // Update member user credentials when member info changes
-  static updateMemberUser(memberId, tc, phone) {
+  static async updateMemberUser(memberId, tc, phone) {
+    const newUsername = tc;
+    const newPassword = phone.replace(/\D/g, '');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
     return new Promise((resolve, reject) => {
-      const newUsername = tc;
-      const newPassword = phone.replace(/\D/g, '');
-      
       db.run(
         'UPDATE member_users SET username = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE member_id = ?',
-        [newUsername, newPassword, memberId],
+        [newUsername, hashedPassword, memberId],
         function(err) {
           if (err) {
             reject(err);
           } else {
-            resolve({ 
-              id: this.lastID, 
-              username: newUsername, 
-              password: newPassword, 
+            resolve({
+              id: this.lastID,
+              username: newUsername,
+              password: hashedPassword,
               member_id: memberId
             });
           }

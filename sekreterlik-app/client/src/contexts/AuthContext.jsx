@@ -178,6 +178,7 @@ export const AuthProvider = ({ children }) => {
       const response = await ApiService.login(username, password);
       
       if (response.success) {
+        if (response.token) { localStorage.setItem('token', response.token); }
         setUser(response.user);
         setIsLoggedIn(true);
         // localStorage'a kullanıcı bilgilerini kaydet (centralized)
@@ -200,11 +201,13 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(false);
     setError(null);
     // localStorage'dan kullanıcı bilgilerini temizle (centralized)
+    localStorage.removeItem('token');
     saveToLocalStorage(null, false);
   };
 
   // Set user directly (for loginChiefObserver and similar cases)
-  const setUserFromLogin = (userData) => {
+  const setUserFromLogin = (userData, token) => {
+    if (token) { localStorage.setItem('token', token); }
     setUser(userData);
     setIsLoggedIn(true);
     saveToLocalStorage(userData, true);

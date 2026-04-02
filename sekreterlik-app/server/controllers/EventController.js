@@ -35,7 +35,7 @@ class EventController {
       res.json(processedEvents);
     } catch (error) {
       console.error('Error getting events:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -58,7 +58,7 @@ class EventController {
       res.json(processedEvent);
     } catch (error) {
       console.error('Error getting event by ID:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -127,7 +127,7 @@ class EventController {
       res.status(201).json(newEvent);
     } catch (error) {
       console.error('Error creating event:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -164,7 +164,7 @@ class EventController {
       res.json(updatedEvent);
     } catch (error) {
       console.error('Error updating event:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -183,7 +183,7 @@ class EventController {
       res.json({ message: 'Etkinlik başarıyla arşivlendi' });
     } catch (error) {
       console.error('Error archiving event:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 
@@ -232,7 +232,7 @@ class EventController {
       res.json({ message: 'Etkinlik başarıyla silindi' });
     } catch (error) {
       console.error('Error deleting event:', error);
-      res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }
 }
