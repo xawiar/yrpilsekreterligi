@@ -384,6 +384,8 @@ export const calculateProvincialAssemblySeats = (results, districtSeats, ballotB
  */
 export const applyThreshold = (votes, totalVotes, thresholdPercent = 7.0) => {
   if (!totalVotes || totalVotes <= 0) return false;
+  // Geçersiz baraj değerlerini reddet: 0 veya negatif baraj anlamsız, >=100 hiçbir partiyi geçiremez
+  if (thresholdPercent <= 0 || thresholdPercent >= 100) return false;
   // Floating point hatalarını önlemek için: votes * 100 >= totalVotes * thresholdPercent
   // Bu sayede bölme işleminden kaçınılır
   return (votes * 100) >= (totalVotes * thresholdPercent);

@@ -593,7 +593,30 @@ db.serialize(() => {
       console.error('Error adding voter_count column to ballot_boxes:', err);
     }
   });
-  
+
+  // SQLite does not support adding CHECK constraints to existing tables via ALTER TABLE.
+  // Enforce the 400-voter limit using triggers so the DB itself rejects invalid rows
+  // regardless of which code path writes them.
+  db.run(`CREATE TRIGGER IF NOT EXISTS trg_ballot_boxes_voter_count_insert
+    BEFORE INSERT ON ballot_boxes
+    FOR EACH ROW
+    WHEN NEW.voter_count IS NOT NULL AND (NEW.voter_count < 1 OR NEW.voter_count > 400)
+    BEGIN
+      SELECT RAISE(ABORT, 'Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)');
+    END`, (err) => {
+    if (err) console.error('Error creating ballot_boxes insert trigger:', err);
+  });
+
+  db.run(`CREATE TRIGGER IF NOT EXISTS trg_ballot_boxes_voter_count_update
+    BEFORE UPDATE ON ballot_boxes
+    FOR EACH ROW
+    WHEN NEW.voter_count IS NOT NULL AND (NEW.voter_count < 1 OR NEW.voter_count > 400)
+    BEGIN
+      SELECT RAISE(ABORT, 'Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)');
+    END`, (err) => {
+    if (err) console.error('Error creating ballot_boxes update trigger:', err);
+  });
+
   // Add region_name column to ballot_box_observers table if it doesn't exist
   db.run(`ALTER TABLE ballot_box_observers ADD COLUMN region_name TEXT`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
@@ -643,6 +666,8 @@ db.serialize(() => {
     provincial_assembly_parties TEXT,
     municipal_council_parties TEXT,
     baraj_percent REAL DEFAULT 7.0,
+    round INTEGER DEFAULT 1,
+    first_round_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     closed_at DATETIME
@@ -652,6 +677,18 @@ db.serialize(() => {
   db.run(`ALTER TABLE elections ADD COLUMN baraj_percent REAL DEFAULT 7.0`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
       console.error('Error adding baraj_percent column:', err);
+    }
+  });
+
+  // Add round and first_round_id columns if they don't exist (for existing databases)
+  db.run(`ALTER TABLE elections ADD COLUMN round INTEGER DEFAULT 1`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding round column:', err);
+    }
+  });
+  db.run(`ALTER TABLE elections ADD COLUMN first_round_id INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding first_round_id column:', err);
     }
   });
 

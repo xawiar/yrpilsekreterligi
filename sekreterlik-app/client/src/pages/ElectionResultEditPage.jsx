@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import ElectionResultForm from '../components/ElectionResultForm';
+import OfflineIndicator from '../components/OfflineIndicator';
 
 const ElectionResultEditPage = () => {
   const { electionId, resultId } = useParams();
@@ -145,7 +146,18 @@ const ElectionResultEditPage = () => {
             {!showForm ? (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Seçim Sonuç Verileri</h2>
-                
+
+                {result?.approval_status && result.approval_status !== 'approved' && (
+                  <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
+                    result.approval_status === 'pending'
+                      ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800'
+                      : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+                  }`}>
+                    {result.approval_status === 'pending' ? '⏳ Bu sonuç henüz onaylanmamış' : '❌ Bu sonuç reddedilmiş'}
+                    {result.rejection_reason && <p className="mt-1 text-xs">{result.rejection_reason}</p>}
+                  </div>
+                )}
+
                 {/* Check if data exists */}
                 {result.used_votes || result.valid_votes || result.invalid_votes ? (
                   <div className="space-y-4 mb-6">
@@ -214,6 +226,7 @@ const ElectionResultEditPage = () => {
           </div>
         </div>
       </div>
+      <OfflineIndicator />
     </div>
   );
 };

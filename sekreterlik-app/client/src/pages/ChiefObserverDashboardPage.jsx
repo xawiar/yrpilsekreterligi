@@ -5,6 +5,7 @@ import ElectionResultForm from '../components/ElectionResultForm';
 import { useAuth } from '../contexts/AuthContext';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeChiefObserverDashboard from '../components/mobile/NativeChiefObserverDashboard';
+import OfflineIndicator from '../components/OfflineIndicator';
 
 /**
  * Başmüşahit Dashboard Sayfası - Modern, Animasyonlu, Mobile Uyumlu
@@ -621,6 +622,11 @@ const ChiefObserverDashboardPage = () => {
                                   <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium">
                                     {getTypeLabel(election.type)}
                                   </span>
+                                  {election.type === 'cb' && election.round && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                                      {election.round === 1 ? '1. Tur' : '2. Tur'}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
@@ -950,6 +956,7 @@ const ChiefObserverDashboardPage = () => {
           animation: fadeIn 0.5s ease-out;
         }
       `}</style>
+      <OfflineIndicator />
     </div>
   );
 };

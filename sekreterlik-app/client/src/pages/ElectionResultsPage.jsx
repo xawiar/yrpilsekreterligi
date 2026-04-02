@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
 import PublicApiService from '../utils/PublicApiService';
+import OfflineIndicator from '../components/OfflineIndicator';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -1417,8 +1418,13 @@ const ElectionResultsPage = ({ readOnly = false }) => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center flex-wrap gap-2">
             {election.name} - Seçim Sonuçları
+            {election.type === 'cb' && election.round && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                {election.round === 1 ? '1. Tur' : '2. Tur'}
+              </span>
+            )}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {election.date ? new Date(election.date).toLocaleDateString('tr-TR') : '-'}
@@ -3070,6 +3076,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
           </div>
         </div>
       )}
+      <OfflineIndicator />
     </div>
   );
 };

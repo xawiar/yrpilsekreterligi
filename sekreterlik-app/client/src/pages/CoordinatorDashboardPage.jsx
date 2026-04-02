@@ -855,8 +855,13 @@ const CoordinatorDashboardPage = () => {
                 {/* Seçim Bilgisi */}
                 {election && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    {election.name}
+                    <span>{election.name}</span>
                     {election.date && ` - ${new Date(election.date).toLocaleDateString('tr-TR')}`}
+                    {election.type === 'cb' && election.round && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                        {election.round === 1 ? '1. Tur' : '2. Tur'}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

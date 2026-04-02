@@ -143,6 +143,22 @@ class ElectionController {
         return res.status(404).json({ message: 'Seçim bulunamadı' });
       }
 
+      // Seçim durumu geçiş kontrolü
+      if (electionData.status && electionData.status !== oldElection.status) {
+        const allowedTransitions = {
+          'draft': ['active'],
+          'active': ['closed'],
+          'closed': []
+        };
+        const currentStatus = oldElection.status || 'draft';
+        const allowed = allowedTransitions[currentStatus] || [];
+        if (!allowed.includes(electionData.status)) {
+          return res.status(400).json({
+            message: `Seçim durumu '${currentStatus}' → '${electionData.status}' geçişi yapılamaz`
+          });
+        }
+      }
+
       const sql = `UPDATE elections 
                    SET name = ?, date = ?, type = ?, status = ?, voter_count = ?, 
                        cb_candidates = ?, parties = ?, independent_cb_candidates = ?, 
@@ -228,6 +244,22 @@ class ElectionController {
       const oldElection = await db.get('SELECT * FROM elections WHERE id = ?', [id]);
       if (!oldElection) {
         return res.status(404).json({ message: 'Seçim bulunamadı' });
+      }
+
+      // Seçim durumu geçiş kontrolü
+      if (status !== oldElection.status) {
+        const allowedTransitions = {
+          'draft': ['active'],
+          'active': ['closed'],
+          'closed': []
+        };
+        const currentStatus = oldElection.status || 'draft';
+        const allowed = allowedTransitions[currentStatus] || [];
+        if (!allowed.includes(status)) {
+          return res.status(400).json({
+            message: `Seçim durumu '${currentStatus}' → '${status}' geçişi yapılamaz`
+          });
+        }
       }
 
       const sql = `UPDATE elections 

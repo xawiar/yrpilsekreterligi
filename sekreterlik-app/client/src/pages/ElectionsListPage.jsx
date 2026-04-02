@@ -102,9 +102,16 @@ const ElectionsListPage = () => {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1">
                     {election.name}
                   </h3>
-                  <span className="ml-2 px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded text-xs font-medium whitespace-nowrap">
-                    {getTypeLabel(election.type)}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded text-xs font-medium whitespace-nowrap">
+                      {getTypeLabel(election.type)}
+                    </span>
+                    {election.type === 'cb' && election.round && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                        {election.round === 1 ? '1. Tur' : '2. Tur'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-3">

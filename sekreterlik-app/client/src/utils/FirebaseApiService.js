@@ -4239,6 +4239,7 @@ class FirebaseApiService {
         null,
         {
           ...electionData,
+          round: electionData.round || 1,
           date: electionData.date ? new Date(electionData.date).toISOString() : null
         },
         false // Şifreleme yok
@@ -4250,8 +4251,102 @@ class FirebaseApiService {
     }
   }
 
+  static async createSecondRound(firstRoundElectionId) {
+    try {
+      // 1. Get first round election
+      const firstRound = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, firstRoundElectionId, false);
+      if (!firstRound || firstRound.type !== 'cb') {
+        return { success: false, message: '2. tur sadece Cumhurbaşkanlığı seçimlerinde oluşturulabilir' };
+      }
+      const roundNum = parseInt(firstRound.round) || 1;
+      if (roundNum !== 1) {
+        return { success: false, message: 'Bu seçim zaten 2. tur veya daha sonrası' };
+      }
+
+      // 2. Get first round results to find top 2 candidates
+      const results = await this.getElectionResults(firstRoundElectionId);
+      const approvedResults = (results || []).filter(r => r.approval_status !== 'rejected');
+
+      // Aggregate CB votes across all ballot boxes
+      const candidateVotes = {};
+      approvedResults.forEach(result => {
+        if (result.cb_votes && typeof result.cb_votes === 'object') {
+          Object.entries(result.cb_votes).forEach(([candidate, votes]) => {
+            candidateVotes[candidate] = (candidateVotes[candidate] || 0) + (parseInt(votes) || 0);
+          });
+        }
+      });
+
+      // Sort by votes descending, take top 2 (exclude 'Diğer')
+      const sortedCandidates = Object.entries(candidateVotes)
+        .filter(([name]) => name !== 'Diğer')
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 2)
+        .map(([name]) => name);
+
+      if (sortedCandidates.length < 2) {
+        return { success: false, message: '2. tur için en az 2 aday gerekli' };
+      }
+
+      // 3. Check if any candidate has already won outright (salt çoğunluk)
+      // Anayasa madde 101: "geçerli oyların salt çoğunluğunu" = > %50 (strictly more than half)
+      // Örnek: 100 geçerli oy → 51 oy gerekli, 101 geçerli oy → 51 oy gerekli, 200 geçerli oy → 101 oy gerekli
+      // Math.floor(totalValid / 2) + 1 doğru sonuç verir hem çift hem tek toplam için:
+      //   100 → floor(50) + 1 = 51  ✓
+      //   101 → floor(50) + 1 = 51  ✓
+      //   200 → floor(100) + 1 = 101 ✓
+      const totalValid = approvedResults.reduce((sum, r) => sum + (parseInt(r.valid_votes) || 0), 0);
+      const topCandidateVotes = candidateVotes[sortedCandidates[0]] || 0;
+      const majorityThreshold = Math.floor(totalValid / 2) + 1;
+      if (totalValid > 0 && topCandidateVotes >= majorityThreshold) {
+        return { success: false, message: `${sortedCandidates[0]} salt çoğunluğu almış (${topCandidateVotes}/${totalValid} oy, gerekli: ${majorityThreshold}), 2. tur gerekli değil` };
+      }
+
+      // 4. Create 2nd round election
+      const secondRoundData = {
+        name: firstRound.name + ' (2. Tur)',
+        type: 'cb',
+        date: '',
+        status: 'draft',
+        round: 2,
+        first_round_id: firstRoundElectionId,
+        cb_candidates: sortedCandidates,
+        independent_cb_candidates: [],
+        parties: firstRound.parties || [],
+        voter_count: firstRound.voter_count,
+        baraj_percent: 0,
+      };
+
+      const docId = await FirebaseService.create(this.COLLECTIONS.ELECTIONS, null, secondRoundData, false);
+      return {
+        success: true,
+        election: { id: docId, ...secondRoundData },
+        message: `2. tur oluşturuldu: ${sortedCandidates.join(' vs ')}`
+      };
+    } catch (error) {
+      console.error('Create second round error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
   static async updateElection(id, electionData) {
     try {
+      // Seçim durumu geçiş kontrolü
+      if (electionData.status) {
+        const currentElection = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, id, false);
+        const currentStatus = currentElection?.status;
+        const allowedTransitions = {
+          'draft': ['active'],
+          'active': ['closed'],
+          'closed': [] // closed'dan geri dönüş yok
+        };
+
+        if (currentStatus && allowedTransitions[currentStatus] !== undefined &&
+            !allowedTransitions[currentStatus].includes(electionData.status)) {
+          return { success: false, message: `Seçim durumu '${currentStatus}' → '${electionData.status}' geçişi yapılamaz` };
+        }
+      }
+
       await FirebaseService.update(
         this.COLLECTIONS.ELECTIONS,
         id,
@@ -4451,8 +4546,45 @@ class FirebaseApiService {
     }
   }
 
+  static validateVoteData(data) {
+    const errors = [];
+    const totalVoters = parseInt(data.total_voters) || 0;
+    const usedVotes = parseInt(data.used_votes) || 0;
+    const validVotes = parseInt(data.valid_votes) || 0;
+    const invalidVotes = parseInt(data.invalid_votes) || 0;
+
+    if (totalVoters < 0 || usedVotes < 0 || validVotes < 0 || invalidVotes < 0) {
+      errors.push('Oy değerleri negatif olamaz');
+    }
+    if (usedVotes > totalVoters) {
+      errors.push('Kullanılan oy toplam seçmenden fazla olamaz');
+    }
+    if (validVotes + invalidVotes !== usedVotes) {
+      errors.push('Geçerli + Geçersiz oylar kullanılan oy sayısına eşit olmalı');
+    }
+
+    // Check party vote totals for each category present (only when category has data)
+    const voteCategories = ['cb_votes', 'mv_votes', 'mayor_votes', 'municipal_council_votes', 'provincial_assembly_votes'];
+    voteCategories.forEach(cat => {
+      if (data[cat] && typeof data[cat] === 'object' && Object.keys(data[cat]).length > 0) {
+        const total = Object.values(data[cat]).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+        if (total !== validVotes) {
+          errors.push(`Parti oy toplamı (${total}) geçerli oy sayısından (${validVotes}) farklı`);
+        }
+      }
+    });
+
+    return errors;
+  }
+
   static async createElectionResult(resultData) {
     try {
+      // Vote data validation
+      const validationErrors = FirebaseApiService.validateVoteData(resultData);
+      if (validationErrors.length > 0) {
+        return { success: false, errors: validationErrors, message: validationErrors.join(', ') };
+      }
+
       // Determine approval status: if filled by AI, it needs approval, otherwise auto-approved
       const filledByAI = resultData.filled_by_ai === true || resultData.filled_by_ai === 1;
       const approvalStatus = filledByAI ? 'pending' : (resultData.approval_status || 'approved');
@@ -4494,6 +4626,12 @@ class FirebaseApiService {
 
   static async updateElectionResult(id, resultData) {
     try {
+      // Vote data validation
+      const validationErrors = FirebaseApiService.validateVoteData(resultData);
+      if (validationErrors.length > 0) {
+        return { success: false, errors: validationErrors, message: validationErrors.join(', ') };
+      }
+
       // Get old data for audit
       const oldResult = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
 
@@ -4984,6 +5122,9 @@ class FirebaseApiService {
 
   static async createBallotBox(ballotBoxData) {
     try {
+      if (ballotBoxData.voter_count && parseInt(ballotBoxData.voter_count) > 400) {
+        return { success: false, message: 'Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)' };
+      }
       const docId = await FirebaseService.create(this.COLLECTIONS.BALLOT_BOXES, null, ballotBoxData);
       return { success: true, id: docId, message: 'Sandık oluşturuldu' };
     } catch (error) {
@@ -4994,6 +5135,9 @@ class FirebaseApiService {
 
   static async updateBallotBox(id, ballotBoxData) {
     try {
+      if (ballotBoxData.voter_count && parseInt(ballotBoxData.voter_count) > 400) {
+        return { success: false, message: 'Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)' };
+      }
       await FirebaseService.update(this.COLLECTIONS.BALLOT_BOXES, id, ballotBoxData);
       return { success: true, message: 'Sandık güncellendi' };
     } catch (error) {
@@ -8436,10 +8580,31 @@ class FirebaseApiService {
    */
   static async createAlliance(allianceData) {
     try {
+      const electionId = String(allianceData.election_id || allianceData.electionId);
+      const partyIds = Array.isArray(allianceData.party_ids) ? allianceData.party_ids : (allianceData.partyIds || []);
+
+      // Bir parti birden fazla ittifakta olamaz — aynı seçimdeki mevcut ittifakları kontrol et
+      if (partyIds.length > 0) {
+        const existingAlliances = await FirebaseService.getAll(this.COLLECTIONS.ALLIANCES, {
+          where: [{ field: 'election_id', operator: '==', value: electionId }]
+        });
+
+        for (const partyId of partyIds) {
+          const partyName = typeof partyId === 'string' ? partyId : partyId.name;
+          const conflict = existingAlliances.find(a => {
+            const pids = a.party_ids || a.partyIds || [];
+            return pids.some(p => (typeof p === 'string' ? p : p.name) === partyName);
+          });
+          if (conflict) {
+            return { success: false, message: `${partyName} zaten "${conflict.name}" ittifakında. Bir parti birden fazla ittifakta olamaz.` };
+          }
+        }
+      }
+
       const alliance = {
-        election_id: String(allianceData.election_id || allianceData.electionId),
+        election_id: electionId,
         name: allianceData.name,
-        party_ids: Array.isArray(allianceData.party_ids) ? allianceData.party_ids : (allianceData.partyIds || []),
+        party_ids: partyIds,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -8474,6 +8639,26 @@ class FirebaseApiService {
       }
       if (allianceData.party_ids !== undefined) {
         updateData.party_ids = Array.isArray(allianceData.party_ids) ? allianceData.party_ids : [];
+      }
+
+      // Bir parti birden fazla ittifakta olamaz — güncelleme sırasında çakışma kontrolü
+      if (updateData.party_ids && updateData.party_ids.length > 0 && updateData.election_id) {
+        const existingAlliances = await FirebaseService.getAll(this.COLLECTIONS.ALLIANCES, {
+          where: [{ field: 'election_id', operator: '==', value: updateData.election_id }]
+        });
+        // Güncellenen ittifakı hariç tut
+        const otherAlliances = existingAlliances.filter(a => String(a.id) !== String(id));
+
+        for (const partyId of updateData.party_ids) {
+          const partyName = typeof partyId === 'string' ? partyId : partyId.name;
+          const conflict = otherAlliances.find(a => {
+            const pids = a.party_ids || a.partyIds || [];
+            return pids.some(p => (typeof p === 'string' ? p : p.name) === partyName);
+          });
+          if (conflict) {
+            return { success: false, message: `${partyName} zaten "${conflict.name}" ittifakında. Bir parti birden fazla ittifakta olamaz.` };
+          }
+        }
       }
 
       await FirebaseService.update(this.COLLECTIONS.ALLIANCES, String(id), updateData);

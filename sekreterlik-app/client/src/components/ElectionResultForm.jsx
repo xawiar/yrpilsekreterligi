@@ -7,6 +7,7 @@ import { optimizeImage } from '../utils/imageOptimizer';
 import { useAuth } from '../contexts/AuthContext';
 import uploadQueue from '../utils/UploadQueue';
 import ProtocolOCRService from '../services/ProtocolOCRService';
+import { queueOfflineResult } from '../utils/offlineQueue';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
   const { userRole, user } = useAuth();
@@ -746,6 +747,30 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         setSaving(false);
         return;
       }
+    }
+
+    // Çevrimdışı kontrolü — internet yoksa IndexedDB kuyruğuna kaydet
+    if (!navigator.onLine) {
+      try {
+        const offlineData = {
+          ...formData,
+          ballot_box_id: ballotBoxId,
+          ballot_number: ballotNumber || formData.ballot_number,
+          filled_by_ai: formData.filled_by_ai || false,
+        };
+        await queueOfflineResult(offlineData);
+        setMessage('Çevrimdışı — Sonuç yerel olarak kaydedildi. İnternet bağlantısı sağlandığında otomatik olarak gönderilecek.');
+        setMessageType('warning');
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, 2500);
+      } catch (offlineErr) {
+        setMessage('Çevrimdışı kayıt sırasında hata oluştu. Lütfen tekrar deneyin.');
+        setMessageType('error');
+      } finally {
+        setSaving(false);
+      }
+      return;
     }
 
     try {

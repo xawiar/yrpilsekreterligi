@@ -116,6 +116,15 @@ class BallotBoxController {
       const errors = [];
       if (!ballot_number) errors.push('Sandık numarası zorunludur');
       if (!institution_name) errors.push('Kurum adı zorunludur');
+      if (voter_count !== undefined && voter_count !== null && voter_count !== '') {
+        const voterCountInt = parseInt(voter_count);
+        if (isNaN(voterCountInt) || voterCountInt < 1) {
+          errors.push('Seçmen sayısı en az 1 olmalıdır');
+        } else if (voterCountInt > 400) {
+          // Seçim Kanunu: Bir sandıkta en fazla 400 kayıtlı seçmen olabilir
+          errors.push('Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)');
+        }
+      }
 
       if (errors.length > 0) {
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
@@ -168,6 +177,15 @@ class BallotBoxController {
       // district_id, neighborhood_id, village_id opsiyonel - validation'ı kaldırıyoruz
       if (neighborhood_id && village_id) {
         errors.push('Hem mahalle hem köy seçilemez');
+      }
+      if (voter_count !== undefined && voter_count !== null && voter_count !== '') {
+        const voterCountInt = parseInt(voter_count);
+        if (isNaN(voterCountInt) || voterCountInt < 1) {
+          errors.push('Seçmen sayısı en az 1 olmalıdır');
+        } else if (voterCountInt > 400) {
+          // Seçim Kanunu: Bir sandıkta en fazla 400 kayıtlı seçmen olabilir
+          errors.push('Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)');
+        }
       }
 
       if (errors.length > 0) {

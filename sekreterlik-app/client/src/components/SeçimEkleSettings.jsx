@@ -694,6 +694,27 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
     }
   };
 
+  const handleCreateSecondRound = async (electionId) => {
+    const confirmed = await confirm({
+      title: '2. Tur Oluştur',
+      message: 'Bu CB seçimi için 2. tur oluşturulacak. İlk turda en çok oy alan 2 aday 2. tura taşınacak. Devam etmek istiyor musunuz?'
+    });
+    if (!confirmed) return;
+
+    try {
+      const result = await ApiService.createSecondRound(electionId);
+      if (result.success) {
+        toast.success(result.message || '2. tur başarıyla oluşturuldu');
+        fetchElections();
+      } else {
+        toast.error(result.message || '2. tur oluşturulamadı');
+      }
+    } catch (error) {
+      console.error('Error creating second round:', error);
+      toast.error(error.message || '2. tur oluşturulurken hata oluştu');
+    }
+  };
+
   const getTypeLabel = (type) => {
     const labels = {
       'cb': 'Cumhurbaşkanı Seçimi',
@@ -726,6 +747,16 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
       'closed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
     };
     return colors[status] || colors.draft;
+  };
+
+  // Seçim durumu geçiş kontrolü: mevcut duruma göre izin verilen seçenekleri döndürür
+  const getAllowedStatusOptions = (currentStatus) => {
+    const allowedTransitions = {
+      'draft': ['draft', 'active'],
+      'active': ['active', 'closed'],
+      'closed': ['closed']
+    };
+    return allowedTransitions[currentStatus] || ['draft', 'active', 'closed'];
   };
 
   // İttifak yönetimi fonksiyonları
@@ -929,9 +960,12 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100"
               required
             >
-                <option value="draft">Taslak</option>
-                <option value="active">Aktif</option>
-                <option value="closed">Kapalı</option>
+              {(editingElection
+                ? getAllowedStatusOptions(editingElection.status || 'draft')
+                : ['draft', 'active', 'closed']
+              ).map(s => (
+                <option key={s} value={s}>{getStatusLabel(s)}</option>
+              ))}
             </select>
             </div>
           </div>
@@ -2907,13 +2941,18 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {getTypeLabel(election.type)}
                       </span>
+                      {election.type === 'cb' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          {(parseInt(election.round) || 1) === 2 ? '2. Tur' : '1. Tur'}
+                        </span>
+                      )}
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(election.status || 'draft')}`}>
                         {getStatusLabel(election.status || 'draft')}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Detaylar */}
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Detaylar:</div>
@@ -2934,7 +2973,7 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                     <div className="text-sm text-gray-900 dark:text-gray-100">Evet / Hayır</div>
                   )}
                 </div>
-                
+
                 {/* İşlemler */}
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-2">
                   <select
@@ -2942,10 +2981,18 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                     onChange={(e) => handleStatusChange(election.id, e.target.value)}
                     className={`text-xs px-2 py-1 rounded border ${getStatusColor(election.status || 'draft')} border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
                   >
-                    <option value="draft">Taslak</option>
-                    <option value="active">Aktif</option>
-                    <option value="closed">Kapalı</option>
+                    {getAllowedStatusOptions(election.status || 'draft').map(s => (
+                      <option key={s} value={s}>{getStatusLabel(s)}</option>
+                    ))}
                   </select>
+                  {election.type === 'cb' && election.status === 'closed' && (parseInt(election.round) || 1) === 1 && (
+                    <button
+                      onClick={() => handleCreateSecondRound(election.id)}
+                      className="w-full text-xs px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                    >
+                      2. Tur Oluştur
+                    </button>
+                  )}
                   <div className="flex gap-2">
                     <Link
                       to={`/election-results/${election.id}`}
@@ -3014,7 +3061,14 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                     })() : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {getTypeLabel(election.type)}
+                    <div className="flex items-center gap-2">
+                      {getTypeLabel(election.type)}
+                      {election.type === 'cb' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          {(parseInt(election.round) || 1) === 2 ? '2. Tur' : '1. Tur'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(election.status || 'draft')}`}>
@@ -3046,10 +3100,18 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                         onChange={(e) => handleStatusChange(election.id, e.target.value)}
                         className={`text-xs px-2 py-1 rounded border ${getStatusColor(election.status || 'draft')} border-gray-300 dark:border-gray-600`}
                       >
-                        <option value="draft">Taslak</option>
-                        <option value="active">Aktif</option>
-                        <option value="closed">Kapalı</option>
+                        {getAllowedStatusOptions(election.status || 'draft').map(s => (
+                          <option key={s} value={s}>{getStatusLabel(s)}</option>
+                        ))}
                       </select>
+                      {election.type === 'cb' && election.status === 'closed' && (parseInt(election.round) || 1) === 1 && (
+                        <button
+                          onClick={() => handleCreateSecondRound(election.id)}
+                          className="text-xs px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors font-medium"
+                        >
+                          2. Tur Oluştur
+                        </button>
+                      )}
                     <Link
                       to={`/election-results/${election.id}`}
                         className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"

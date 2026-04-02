@@ -42,12 +42,19 @@ class PublicApiService {
     const params = new URLSearchParams();
     if (electionId) params.append('election_id', electionId);
     if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
-    
+
     const response = await fetch(`${API_BASE_URL}/public/election-results/results?${params}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch election results: ${response.status} ${response.statusText}`);
     }
-    return response.json();
+    const data = await response.json();
+    // Client-side safety filter: exclude pending and rejected results from public view
+    if (Array.isArray(data)) {
+      return data.filter(result =>
+        result.approval_status === 'approved' || result.approval_status == null
+      );
+    }
+    return data;
   }
 
   /**

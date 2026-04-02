@@ -135,6 +135,11 @@ const BallotBoxesPage = () => {
       return;
     }
 
+    if (formData.voter_count && parseInt(formData.voter_count) > 400) {
+      toast.error('Bir sandıkta en fazla 400 seçmen olabilir (Seçim Kanunu)');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
@@ -283,6 +288,11 @@ const BallotBoxesPage = () => {
               }
               if (!institutionName) {
                 errors.push(`Satır ${rowNumber}: Kurum adı zorunludur`);
+                continue;
+              }
+
+              if (voterCount && parseInt(voterCount) > 400) {
+                errors.push(`Satır ${rowNumber}: Seçmen sayısı 400'ü aşıyor`);
                 continue;
               }
 
@@ -1006,9 +1016,11 @@ const BallotBoxesPage = () => {
                         value={formData.voter_count}
                         onChange={handleInputChange}
                         min="0"
+                        max="400"
                         placeholder="Örn: 200"
                         className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                       />
+                      <p className="mt-1 text-xs text-gray-500">Seçim Kanunu gereği en fazla 400 seçmen</p>
                     </div>
                   </div>
                   {/* Optional location fields */}

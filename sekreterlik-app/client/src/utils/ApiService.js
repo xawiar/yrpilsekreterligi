@@ -1906,6 +1906,18 @@ class ApiService {
     return response.json();
   }
 
+  static async createSecondRound(firstRoundElectionId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createSecondRound(firstRoundElectionId);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/elections/${firstRoundElectionId}/second-round`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
   static async updateElection(id, electionData) {
     if (USE_FIREBASE) {
       return FirebaseApiService.updateElection(id, electionData);

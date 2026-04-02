@@ -52,6 +52,7 @@ const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const ElectionsListPage = lazy(() => import('./pages/ElectionsListPage'));
 const ElectionResultsPage = lazy(() => import('./pages/ElectionResultsPage'));
 const ElectionResultEditPage = lazy(() => import('./pages/ElectionResultEditPage'));
+const ElectionComparisonPage = lazy(() => import('./pages/ElectionComparisonPage'));
 const PublicElectionResultsPage = lazy(() => import('./pages/PublicElectionResultsPage'));
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
@@ -361,6 +362,7 @@ function RouterContent() {
                             <Route path="/election-preparation/ballot-boxes/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BallotBoxDetailsPage /></Suspense></PageTransition>} />
                             <Route path="/elections" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionsListPage /></Suspense></PageTransition>} />
                             <Route path="/election-results/:electionId" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionResultsPage /></Suspense></PageTransition>} />
+                            <Route path="/election-comparison" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionComparisonPage /></Suspense></PageTransition>} />
                             <Route path="/bulk-sms" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BulkSmsPage /></Suspense></PageTransition>} />
                             <Route path="/meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MeetingsPage /></Suspense></PageTransition>} />
                             <Route path="/events" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><EventsPage /></Suspense></PageTransition>} />

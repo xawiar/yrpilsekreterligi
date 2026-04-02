@@ -1,5 +1,46 @@
 const db = require('../config/database');
 
+function validateVoteData(data, res) {
+  const errors = [];
+
+  const totalVoters = parseInt(data.total_voters) || 0;
+  const usedVotes = parseInt(data.used_votes) || 0;
+  const validVotes = parseInt(data.valid_votes) || 0;
+  const invalidVotes = parseInt(data.invalid_votes) || 0;
+
+  // 1. Negatif değer kontrolü
+  if (totalVoters < 0 || usedVotes < 0 || validVotes < 0 || invalidVotes < 0) {
+    errors.push('Oy değerleri negatif olamaz');
+  }
+
+  // 2. Kullanılan oy <= Toplam seçmen
+  if (usedVotes > totalVoters) {
+    errors.push(`Kullanılan oy (${usedVotes}) toplam seçmenden (${totalVoters}) fazla olamaz`);
+  }
+
+  // 3. Geçerli + Geçersiz = Kullanılan
+  if (validVotes + invalidVotes !== usedVotes) {
+    errors.push(`Geçerli (${validVotes}) + Geçersiz (${invalidVotes}) = ${validVotes + invalidVotes}, ama kullanılan oy ${usedVotes}`);
+  }
+
+  // 4. Parti oy toplamı = Geçerli oy (for each vote category)
+  const voteCategories = ['cb_votes', 'mv_votes', 'mayor_votes', 'municipal_council_votes', 'provincial_assembly_votes'];
+  voteCategories.forEach(category => {
+    if (data[category] && typeof data[category] === 'object' && Object.keys(data[category]).length > 0) {
+      const partyTotal = Object.values(data[category]).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+      if (partyTotal !== validVotes) {
+        errors.push(`${category} parti toplamı (${partyTotal}) geçerli oy sayısından (${validVotes}) farklı`);
+      }
+    }
+  });
+
+  if (errors.length > 0) {
+    res.status(400).json({ success: false, errors });
+    return false;
+  }
+  return true; // valid
+}
+
 class ElectionResultController {
   static async getAll(req, res) {
     try {
@@ -137,6 +178,9 @@ class ElectionResultController {
       const ipAddress = req.ip || req.connection.remoteAddress;
       const userAgent = req.get('user-agent');
 
+      // Vote data validation
+      if (!validateVoteData(resultData, res)) return;
+
       // Validation
       const errors = [];
       if (!resultData.election_id) errors.push('Seçim ID zorunludur');
@@ -256,6 +300,9 @@ class ElectionResultController {
       const userId = req.user?.id || null;
       const ipAddress = req.ip || req.connection.remoteAddress;
       const userAgent = req.get('user-agent');
+
+      // Vote data validation
+      if (!validateVoteData(resultData, res)) return;
 
       // Get old data for audit
       const oldResult = await db.get('SELECT * FROM election_results WHERE id = ?', [id]);
