@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
@@ -418,9 +419,6 @@ const MembersPage = () => {
       title: 'Hassas Veri Uyarısı'
     });
     if (!confirmed) return;
-
-    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
-    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
 
     setIsExporting(true);
     try {

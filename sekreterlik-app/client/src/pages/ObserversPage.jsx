@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import * as XLSX from 'xlsx';
@@ -486,9 +487,6 @@ const ObserversPage = () => {
 
                   setIsExporting(true);
                   try {
-                    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
-                    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
-
                     const excelData = [
                       ['TC', 'Ad Soyad', 'Telefon', 'Sandık', 'Konum', 'Başmüşahit']
                     ];

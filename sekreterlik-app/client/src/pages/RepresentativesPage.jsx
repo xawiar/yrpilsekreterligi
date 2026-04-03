@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import CryptoJS from 'crypto-js';
@@ -339,9 +340,6 @@ const RepresentativesPage = () => {
 
               setIsExporting(true);
               try {
-                const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
-                const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
-
                 const excelData = [
                   activeTab === 'neighborhood'
                     ? ['Mahalle Adı', 'İlçe', 'Belde', 'Temsilci Adı', 'Temsilci TC', 'Temsilci Telefon', 'Grup No']
