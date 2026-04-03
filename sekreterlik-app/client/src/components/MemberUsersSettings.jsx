@@ -36,6 +36,9 @@ const MemberUsersSettings = () => {
     password: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [passwordResetUser, setPasswordResetUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     fetchMemberUsers();
@@ -91,26 +94,55 @@ const MemberUsersSettings = () => {
   };
 
   const handleEditUser = (user) => {
-    // Şifreyi decrypt et
-    let decryptedPassword = user.password || '';
-    try {
-      if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
-        decryptedPassword = decryptData(decryptedPassword);
-      }
-    } catch (error) {
-      console.error('Error decrypting password:', error);
-    }
-    
     setEditingUser(user);
     setEditForm({
       username: user.username || '',
-      password: decryptedPassword
+      password: ''
     });
   };
 
   const handleCancelEdit = () => {
     setEditingUser(null);
     setEditForm({ username: '', password: '' });
+  };
+
+  const handlePasswordReset = async () => {
+    if (!passwordResetUser) return;
+
+    if (!newPassword || newPassword.length < 6) {
+      setMessage('Şifre en az 6 karakter olmalıdır');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      const response = await ApiService.updateMemberUser(
+        passwordResetUser.id,
+        passwordResetUser.username,
+        newPassword
+      );
+
+      if (response.success) {
+        let msg = 'Sifre basariyla sifirlandi';
+        if (response.firebaseAuthUpdated === false) {
+          msg += '\n⚠️ Not: Firebase Auth sifresi guncellenemedi (kullanici Firebase Auth\'da bulunamadi). Kullanici bir sonraki login\'de yeni sifre ile giris yapabilir.';
+        }
+        toast.success(msg);
+        setPasswordResetUser(null);
+        setNewPassword('');
+        await fetchMemberUsers();
+      } else {
+        setMessage(response.message || 'Sifre sifirlanirken hata olustu');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      setMessage('Sifre sifirlanirken hata olustu: ' + (error.message || 'Bilinmeyen hata'));
+      setMessageType('error');
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   const handleSaveEdit = async (e) => {
@@ -151,18 +183,6 @@ const MemberUsersSettings = () => {
       setMessage('Kullanıcı güncellenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
       setMessageType('error');
     }
-  };
-
-  const getDecryptedPassword = (user) => {
-    let password = user.password || '';
-    try {
-      if (password && typeof password === 'string' && password.startsWith('U2FsdGVkX1')) {
-        password = decryptData(password);
-      }
-    } catch (error) {
-      console.error('Error decrypting password:', error);
-    }
-    return password;
   };
 
   const handleToggleStatus = async (userId) => {
@@ -2267,6 +2287,9 @@ const MemberUsersSettings = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Durum
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    İşlemler
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -2277,10 +2300,8 @@ const MemberUsersSettings = () => {
                     const district = districts.find(d => String(d.id) === String(user.districtId));
                     const displayName = district?.name || user.chairmanName || 'Bilinmeyen';
                     const username = (user.username || '').toLowerCase();
-                    const password = (getDecryptedPassword(user) || '').toLowerCase();
                     return displayName.toLowerCase().includes(searchLower) ||
-                      username.includes(searchLower) ||
-                      password.includes(searchLower);
+                      username.includes(searchLower);
                   })
                   .map((user) => {
                     const district = districts.find(d => String(d.id) === String(user.districtId));
@@ -2309,11 +2330,24 @@ const MemberUsersSettings = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             user.is_active || user.isActive
-                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                               : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                           }`}>
                             {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => { setPasswordResetUser(user); setNewPassword(''); setIsResettingPassword(true); }}
+                              className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                              title="Şifre Sıfırla"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -2349,6 +2383,9 @@ const MemberUsersSettings = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Durum
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    İşlemler
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -2359,10 +2396,8 @@ const MemberUsersSettings = () => {
                     const town = towns.find(t => String(t.id) === String(user.townId));
                     const displayName = town?.name || user.chairmanName || 'Bilinmeyen';
                     const username = (user.username || '').toLowerCase();
-                    const password = (getDecryptedPassword(user) || '').toLowerCase();
                     return displayName.toLowerCase().includes(searchLower) ||
-                      username.includes(searchLower) ||
-                      password.includes(searchLower);
+                      username.includes(searchLower);
                   })
                   .map((user) => {
                     const town = towns.find(t => String(t.id) === String(user.townId));
@@ -2391,11 +2426,24 @@ const MemberUsersSettings = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             user.is_active || user.isActive
-                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                               : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                           }`}>
                             {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => { setPasswordResetUser(user); setNewPassword(''); setIsResettingPassword(true); }}
+                              className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                              title="Şifre Sıfırla"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -2430,6 +2478,9 @@ const MemberUsersSettings = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  İşlemler
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -2459,16 +2510,14 @@ const MemberUsersSettings = () => {
                     displayInfo = `${memberRegion} - ${memberPosition}`;
                   }
                   
-                  // Search in name, username, password, TC, phone
+                  // Search in name, username, TC, phone
                   const username = (user.username || '').toLowerCase();
-                  const password = (getDecryptedPassword(user) || '').toLowerCase();
                   const name = displayName.toLowerCase();
                   const info = displayInfo.toLowerCase();
-                  
+
                   return (
                     name.includes(searchLower) ||
                     username.includes(searchLower) ||
-                    password.includes(searchLower) ||
                     info.includes(searchLower)
                   );
                 });
@@ -2476,7 +2525,7 @@ const MemberUsersSettings = () => {
                 if (filteredUsers.length === 0) {
                   return (
                     <tr>
-                      <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz üye kullanıcısı bulunmuyor'}
                       </td>
                     </tr>
@@ -2540,11 +2589,24 @@ const MemberUsersSettings = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         user.is_active || user.isActive
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                           : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                       }`}>
                         {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => { setPasswordResetUser(user); setNewPassword(''); setIsResettingPassword(true); }}
+                          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                          title="Şifre Sıfırla"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   );
@@ -2554,7 +2616,7 @@ const MemberUsersSettings = () => {
           </table>
         </div>
       </div>
-      
+
       {/* Başmüşahit Kullanıcıları Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
         <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
@@ -2579,6 +2641,9 @@ const MemberUsersSettings = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  İşlemler
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -2586,23 +2651,21 @@ const MemberUsersSettings = () => {
                 // Filter OBSERVER users based on search term
                 const filteredObservers = observerTypeUsers.filter((user) => {
                   if (!searchTerm) return true;
-                  
+
                   const searchLower = searchTerm.toLowerCase();
                   const username = (user.username || '').toLowerCase();
-                  const password = (getDecryptedPassword(user) || '').toLowerCase();
                   const name = (user.name || '').toLowerCase();
-                  
+
                   return (
                     name.includes(searchLower) ||
-                    username.includes(searchLower) ||
-                    password.includes(searchLower)
+                    username.includes(searchLower)
                   );
                 });
                 
                 if (filteredObservers.length === 0) {
                   return (
                     <tr>
-                      <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz başmüşahit kullanıcısı bulunmuyor'}
                       </td>
                     </tr>
@@ -2632,11 +2695,24 @@ const MemberUsersSettings = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         user.is_active || user.isActive
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                           : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                       }`}>
                         {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => { setPasswordResetUser(user); setNewPassword(''); setIsResettingPassword(true); }}
+                          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                          title="Şifre Sıfırla"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ));
@@ -2670,6 +2746,9 @@ const MemberUsersSettings = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  İşlemler
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -2677,23 +2756,21 @@ const MemberUsersSettings = () => {
                 // Filter COORDINATOR users based on search term
                 const filteredCoordinators = coordinatorUsers.filter((user) => {
                   if (!searchTerm) return true;
-                  
+
                   const searchLower = searchTerm.toLowerCase();
                   const username = (user.username || '').toLowerCase();
-                  const password = (getDecryptedPassword(user) || '').toLowerCase();
                   const name = (user.name || '').toLowerCase();
-                  
+
                   return (
                     name.includes(searchLower) ||
-                    username.includes(searchLower) ||
-                    password.includes(searchLower)
+                    username.includes(searchLower)
                   );
                 });
                 
                 if (filteredCoordinators.length === 0) {
                   return (
                     <tr>
-                      <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz sorumlu kullanıcısı bulunmuyor'}
                       </td>
                     </tr>
@@ -2723,11 +2800,24 @@ const MemberUsersSettings = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         user.is_active || user.isActive
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                           : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                       }`}>
                         {user.is_active || user.isActive ? 'Aktif' : 'Pasif'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => { setPasswordResetUser(user); setNewPassword(''); setIsResettingPassword(true); }}
+                          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                          title="Şifre Sıfırla"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ));
@@ -2736,6 +2826,39 @@ const MemberUsersSettings = () => {
           </table>
         </div>
       </div>
+
+      {/* Şifre Sıfırlama Modal */}
+      {isResettingPassword && passwordResetUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-[90vw]">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Şifre Sıfırla — {passwordResetUser.displayName || passwordResetUser.name || passwordResetUser.username}
+            </h3>
+            <input
+              type="text"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Yeni şifre (min 6 karakter)"
+              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white mb-4"
+            />
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => { setIsResettingPassword(false); setPasswordResetUser(null); setNewPassword(''); }}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => handlePasswordReset()}
+                disabled={newPassword.length < 6}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+              >
+                Sıfırla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog {...confirmDialogProps} />
     </div>

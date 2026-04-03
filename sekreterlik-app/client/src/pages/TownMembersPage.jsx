@@ -30,66 +30,55 @@ const TownMembersPage = () => {
   });
 
   useEffect(() => {
-    if (id) {
-      fetchTown();
-    }
-  }, [id]);
+    if (!id) return;
 
-  // Fetch members when town changes
-  useEffect(() => {
-    if (town) {
-      fetchMembers();
-    }
-  }, [town]);
-
-  const fetchTown = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const towns = await ApiService.getTowns();
-      const townData = towns.find(t => t.id === parseInt(id) || String(t.id) === String(id));
-      
-      if (!townData) {
-        setError(`Belde bulunamadı (ID: ${id})`);
-        setLoading(false);
-        return;
-      }
-      
-      setTown(townData);
-      
-      // İlçe bilgisini de al
+    const loadData = async () => {
       try {
-        const districts = await ApiService.getDistricts();
-        const districtData = districts.find(d => d.id === townData.district_id || String(d.id) === String(townData.district_id));
-        setDistrict(districtData);
-      } catch (districtError) {
-        console.error('Error fetching district:', districtError);
-        // İlçe bilgisi yüklenemezse de devam et
+        setLoading(true);
+        setError(null);
+
+        // Town yükle
+        const towns = await ApiService.getTowns();
+        const townData = towns.find(t => t.id === parseInt(id) || String(t.id) === String(id));
+
+        if (!townData) {
+          setError(`Belde bulunamadı (ID: ${id})`);
+          return;
+        }
+
+        setTown(townData);
+
+        // District yükle (opsiyonel, hata verirse devam et)
+        try {
+          const districts = await ApiService.getDistricts();
+          const districtData = districts.find(d => d.id === townData.district_id || String(d.id) === String(townData.district_id));
+          setDistrict(districtData);
+        } catch (districtError) {
+          console.error('Error fetching district:', districtError);
+        }
+
+        // Members yükle
+        const membersData = await ApiService.getTownManagementMembers(townData.id);
+        setMembers(membersData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Veri yüklenirken hata oluştu: ' + error.message);
+      } finally {
+        setLoading(false);
       }
-      
-      // Loading state'i fetchMembers'da yönetilecek, burada false yapmıyoruz
-    } catch (error) {
-      console.error('Error fetching town:', error);
-      setError('Belde bilgileri yüklenirken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
-      setLoading(false);
-    }
-  };
+    };
+
+    loadData();
+  }, [id]);
 
   const fetchMembers = async () => {
     try {
-      setLoading(true);
-      if (!town?.id) {
-        setError('Belde bilgileri yüklenemedi');
-        return;
-      }
-
+      if (!town?.id) return;
       const data = await ApiService.getTownManagementMembers(town.id);
       setMembers(data);
     } catch (error) {
       console.error('Error fetching members:', error);
       setError('Üyeler yüklenirken hata oluştu: ' + error.message);
-    } finally {
-      setLoading(false);
     }
   };
 

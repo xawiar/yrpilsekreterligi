@@ -164,6 +164,7 @@ const SettingsPage = ({ tab }) => {
       { id: 'polls', name: 'Anketler', description: 'Anket yönetimi', permission: 'manage_polls' },
       { id: 'member-dashboard-analytics', name: 'Üye Dashboard Analitik', description: 'Dashboard analitikleri', permission: 'access_member_dashboard_analytics' },
       { id: 'app-branding', name: 'Uygulama Markası', description: 'Uygulama marka ayarları', permission: 'manage_app_branding' },
+      { id: 'voter-list', name: 'Seçmen Listesi', description: 'Seçmen listesi yönetimi', permission: 'voter-list' },
       { id: 'seçim-ekle', name: 'Seçim Ekle', description: 'Seçim yönetimi', permission: 'manage_elections' },
     ];
 
