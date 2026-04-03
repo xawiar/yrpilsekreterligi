@@ -120,6 +120,14 @@ const GenclikKollarıPage = () => {
       return;
     }
 
+    const confirmed = await confirm({
+      title: 'Başkanlığı Kaldır',
+      message: 'Bu kişinin başkanlığını kaldırmak istediğinize emin misiniz?',
+      confirmText: 'Kaldır',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
     try {
       await ApiService.removeYouthBranchPresident(selectedRegion);
       setPresidents(prev => {

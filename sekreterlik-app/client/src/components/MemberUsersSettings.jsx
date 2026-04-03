@@ -2303,7 +2303,7 @@ const MemberUsersSettings = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
-                            {getDecryptedPassword(user) || '-'}
+                            ••••••••
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -2385,7 +2385,7 @@ const MemberUsersSettings = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
-                            {getDecryptedPassword(user) || '-'}
+                            ••••••••
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -2534,7 +2534,7 @@ const MemberUsersSettings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
-                        {getDecryptedPassword(user) || '-'}
+                        ••••••••
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -2626,7 +2626,7 @@ const MemberUsersSettings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
-                        {getDecryptedPassword(user) || '-'}
+                        ••••••••
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -2717,7 +2717,7 @@ const MemberUsersSettings = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-gray-100 font-mono">
-                        {getDecryptedPassword(user) || '-'}
+                        ••••••••
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

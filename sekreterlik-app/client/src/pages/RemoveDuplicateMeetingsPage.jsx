@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const RemoveDuplicateMeetingsPage = () => {
   const { user, isLoggedIn } = useAuth();
   const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [loading, setLoading] = useState(false);
   const [duplicates, setDuplicates] = useState([]);
   const [results, setResults] = useState(null);
@@ -90,6 +93,14 @@ const RemoveDuplicateMeetingsPage = () => {
       setError('Silinecek çift toplantı bulunamadı. Önce "Çift Toplantıları Bul" butonuna tıklayın.');
       return;
     }
+
+    const confirmed = await confirm({
+      title: 'Toplantıları Sil',
+      message: `${duplicates.length} adet tekrarlı toplantı kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
+      confirmText: 'Sil',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
 
     setLoading(true);
     setError('');
@@ -237,6 +248,7 @@ const RemoveDuplicateMeetingsPage = () => {
           )}
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

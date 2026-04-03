@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 
 const CalendarPage = () => {
-  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [view, setView] = useState('month'); // month, week, day
-
   const months = [
     'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
@@ -25,9 +21,6 @@ const CalendarPage = () => {
   const loadCalendarData = async () => {
     setIsLoading(true);
     try {
-      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-
       const [eventsResponse, meetingsResponse] = await Promise.all([
         ApiService.getEvents(),
         ApiService.getMeetings()
@@ -250,30 +243,9 @@ const CalendarPage = () => {
               </button>
               
               <div className="flex bg-gray-100 rounded-lg">
-                <button
-                  onClick={() => setView('month')}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    view === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
+                <span className="px-3 py-1 rounded-lg text-sm bg-white text-blue-600 shadow-sm">
                   Ay
-                </button>
-                <button
-                  onClick={() => setView('week')}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    view === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Hafta
-                </button>
-                <button
-                  onClick={() => setView('day')}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    view === 'day' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Gün
-                </button>
+                </span>
               </div>
             </div>
           </div>

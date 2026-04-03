@@ -40,9 +40,7 @@ const RegionsSettings = () => {
         const regionToAdd = newRegionData && newRegionData.id && newRegionData.name
           ? { ...newRegionData, id: String(newRegionData.id) }
           : { id: String(newRegionData?.id || Date.now()), name: newRegion.trim() };
-        
-        console.log('Region created:', regionToAdd);
-        
+
         // Optimistic update: add to UI immediately
         setRegions([...regions, regionToAdd]);
         setNewRegion('');
@@ -61,99 +59,50 @@ const RegionsSettings = () => {
   };
 
   const handleDeleteRegion = async (id) => {
-    console.log('🗑️ handleDeleteRegion CALLED with id:', {
-      id: id,
-      idType: typeof id,
-      idValue: id,
-      idString: String(id || ''),
-      idIsNull: id === null,
-      idIsUndefined: id === undefined
-    });
-
     const confirmed = await confirm({ title: 'Bölgeyi Sil', message: 'Bu bölgeyi silmek istediğinize emin misiniz?' });
     if (confirmed) {
       // Store original state for rollback
       const originalRegions = [...regions];
-      
+
       try {
         // ID'yi güvenli şekilde string'e çevir
         let stringId;
-        
+
         if (id === null || id === undefined) {
-          console.error('❌ Region ID null veya undefined!', id);
           throw new Error('Region ID bulunamadı (null veya undefined)');
         }
-        
-        console.log('🔍 Converting ID to string, current type:', typeof id);
-        
+
         if (typeof id === 'object') {
-          console.log('⚠️ ID is object, extracting...', id);
-          // Eğer ID bir object ise
           if (id.id) {
             stringId = String(id.id);
           } else if (id.toString && typeof id.toString === 'function') {
             stringId = String(id.toString());
           } else {
-            console.error('❌ ID object ama id property yok!', id);
             throw new Error(`Region ID geçersiz format: ${JSON.stringify(id)}`);
           }
-        } else if (typeof id === 'number') {
-          stringId = String(id);
         } else {
           stringId = String(id);
         }
-        
-        console.log('🔍 ID converted to string:', {
-          originalId: id,
-          stringId: stringId,
-          stringIdType: typeof stringId,
-          stringIdLength: stringId?.length
-        });
-        
-        // Boş string kontrolü
-        if (!stringId || stringId.trim() === '' || stringId === 'undefined' || stringId === 'null' || stringId === '[object Object]') {
-          console.error('❌ String ID geçersiz!', {
-            stringId: stringId,
-            originalId: id,
-            originalType: typeof id
-          });
-          throw new Error(`Region ID geçersiz: ${id} (stringId: ${stringId})`);
-        }
-        
+
         stringId = stringId.trim();
-        
-        console.log('🗑️ FINAL - Deleting region:', {
-          originalId: id,
-          originalIdType: typeof id,
-          stringId: stringId,
-          stringIdType: typeof stringId,
-          stringIdLength: stringId.length,
-          callingApiService: true
-        });
-        
+
+        // Boş string kontrolü
+        if (!stringId || stringId === 'undefined' || stringId === 'null' || stringId === '[object Object]') {
+          throw new Error(`Region ID geçersiz: ${id}`);
+        }
+
         // Optimistic update: remove from UI immediately
         setRegions(regions.filter(r => {
           const rId = String(r.id || '').trim();
           return rId !== stringId;
         }));
-        
-        console.log('📞 Calling ApiService.deleteRegion with:', stringId);
+
         await ApiService.deleteRegion(stringId);
-        console.log('✅ ApiService.deleteRegion completed successfully');
-        
+
         // Fetch fresh data to ensure consistency
         await fetchRegions();
       } catch (error) {
-        console.error('❌ Error deleting region:', error);
-        console.error('❌ Delete region details:', {
-          id: id,
-          idType: typeof id,
-          idValue: id,
-          idString: String(id || ''),
-          errorMessage: error.message,
-          errorCode: error.code,
-          errorStack: error.stack?.substring(0, 500)
-        });
+        console.error('Error deleting region:', error);
         // Revert on error
         setRegions(originalRegions);
         // Fetch fresh data
@@ -279,56 +228,7 @@ const RegionsSettings = () => {
                       Düzenle
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        // Region objesinin tam yapısını logla
-                        const debugInfo = {
-                          region: region,
-                          regionId: region.id,
-                          regionIdType: typeof region.id,
-                          regionIdValue: region.id,
-                          regionIdString: String(region.id || ''),
-                          regionKeys: Object.keys(region || {}),
-                          regionStringified: JSON.stringify(region || {}, null, 2),
-                          regionIdIsNull: region.id === null,
-                          regionIdIsUndefined: region.id === undefined,
-                          regionIdIsString: typeof region.id === 'string',
-                          regionIdIsNumber: typeof region.id === 'number',
-                          regionIdIsObject: typeof region.id === 'object'
-                        };
-                        
-                        console.log('🔴 DELETE BUTTON CLICKED - FULL DEBUG:', debugInfo);
-                        
-                        // ID'yi manuel olarak string'e çevir
-                        let safeId;
-                        if (!region || !region.id) {
-                          console.error('❌ Region veya region.id yok!', region);
-                          toast.error('Region ID bulunamadı! Console loglarına bakın.');
-                          return;
-                        }
-                        
-                        if (typeof region.id === 'object') {
-                          if (region.id.id) {
-                            safeId = String(region.id.id);
-                          } else {
-                            console.error('❌ Region.id object ama id property yok!', region.id);
-                            safeId = String(region.id);
-                          }
-                        } else {
-                          safeId = String(region.id);
-                        }
-                        
-                        console.log('🔴 Calling handleDeleteRegion with safeId:', {
-                          originalId: region.id,
-                          safeId: safeId,
-                          safeIdType: typeof safeId,
-                          safeIdLength: safeId.length
-                        });
-                        
-                        handleDeleteRegion(safeId);
-                      }}
+                      onClick={() => handleDeleteRegion(region.id)}
                       className="text-red-600 hover:text-red-900 text-sm font-medium px-3 py-1 rounded-lg hover:bg-red-50 transition duration-200"
                     >
                       Sil

@@ -165,6 +165,12 @@ const ManagementChartPage = () => {
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
 
+      {/* Sayfa Başlığı */}
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl font-bold text-gray-900">YÖNETİM ŞEMASI</h1>
+        <p className="mt-2 text-gray-600">Kurum yönetimi ve üyelerin hiyerarşik düzeni</p>
+      </div>
+
       {/* İl Başkanı - En Üst Pozisyon */}
       {ilBaskani.length > 0 && (
         <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl shadow-lg p-8 mb-6 text-white">
@@ -354,12 +360,6 @@ const ManagementChartPage = () => {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Sayfa Başlığı - Alt Kısım */}
-      <div className="mt-12 text-center">
-        <h1 className="text-3xl font-bold text-gray-900">YÖNETİM ŞEMASI</h1>
-        <p className="mt-2 text-gray-600">Kurum yönetimi ve üyelerin hiyerarşik düzeni</p>
       </div>
 
       {/* Member Details Modal */}

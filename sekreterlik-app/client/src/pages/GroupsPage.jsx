@@ -15,7 +15,6 @@ const GroupsPage = () => {
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingGroupNo, setEditingGroupNo] = useState(null);
   const [groupLeaderIds, setGroupLeaderIds] = useState({});
 
   useEffect(() => {

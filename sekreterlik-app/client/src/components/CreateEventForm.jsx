@@ -51,8 +51,6 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
     const responsibleMembers = [];
     
     try {
-      console.log('Getting responsible members for:', selectedLocationTypes, selectedLocations);
-      
       // Get all officials and representatives data
       const [districtOfficials, townOfficials, neighborhoodRepresentatives, villageRepresentatives, neighborhoodSupervisors, villageSupervisors, districtDeputyInspectors, townDeputyInspectors] = await Promise.all([
         ApiService.getDistrictOfficials(),
@@ -64,17 +62,6 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         ApiService.getAllDistrictDeputyInspectors(),
         ApiService.getAllTownDeputyInspectors()
       ]);
-
-      console.log('Fetched data:', {
-        districtOfficials: districtOfficials.length,
-        townOfficials: townOfficials.length,
-        neighborhoodRepresentatives: neighborhoodRepresentatives.length,
-        villageRepresentatives: villageRepresentatives.length,
-        neighborhoodSupervisors: neighborhoodSupervisors.length,
-        villageSupervisors: villageSupervisors.length,
-        districtDeputyInspectors: districtDeputyInspectors.length,
-        townDeputyInspectors: townDeputyInspectors.length
-      });
 
       selectedLocationTypes.forEach(locationType => {
         const locationIds = selectedLocations[locationType] || [];
@@ -175,9 +162,6 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
             
           case 'neighborhood':
             // Find neighborhood representatives and supervisors
-            console.log('Looking for neighborhood representatives for locationId:', locationId);
-            console.log('Available neighborhood representatives:', neighborhoodRepresentatives);
-            
             const neighborhoodReps = neighborhoodRepresentatives
               .filter(rep => rep.neighborhood_id === locationId)
               .map(rep => ({
@@ -187,9 +171,7 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
                 region: rep.neighborhood_name,
                 phone: rep.phone
               }));
-              
-            console.log('Found neighborhood reps:', neighborhoodReps);
-            
+
             const neighborhoodSups = neighborhoodSupervisors
               .filter(sup => sup.neighborhood_id === locationId)
               .map(sup => ({
@@ -199,11 +181,8 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
                 region: sup.neighborhood_name,
                 phone: sup.phone
               }));
-              
-            console.log('Found neighborhood supervisors:', neighborhoodSups);
-              
+
             responsible = [...neighborhoodReps, ...neighborhoodSups];
-            console.log('Total responsible for neighborhood:', responsible);
             break;
             
           case 'village':
@@ -232,19 +211,15 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
             break;
         }
         
-        console.log(`Adding ${responsible.length} responsible members for ${locationType}:`, responsible);
         responsibleMembers.push(...responsible);
         });
       });
       
-      console.log('All responsible members before deduplication:', responsibleMembers);
-      
       // Remove duplicates
-      const finalResponsible = responsibleMembers.filter((member, index, self) => 
+      const finalResponsible = responsibleMembers.filter((member, index, self) =>
         index === self.findIndex(m => m.id === member.id)
       );
-      
-      console.log('Final responsible members:', finalResponsible);
+
       return finalResponsible;
     } catch (error) {
       console.error('Error fetching responsible members:', error);
@@ -409,19 +384,14 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
   // Load responsible members when selected locations change
   useEffect(() => {
     const loadResponsibleMembers = async () => {
-      console.log('useEffect triggered - selectedLocationTypes:', selectedLocationTypes, 'selectedLocations:', selectedLocations);
-      
       if (selectedLocationTypes.length === 0 || Object.values(selectedLocations).every(arr => arr.length === 0)) {
-        console.log('No locations selected, clearing responsible members');
         setResponsibleMembers([]);
         return;
       }
 
       setLoadingResponsibleMembers(true);
       try {
-        console.log('Loading responsible members...');
         const responsible = await getResponsibleMembers();
-        console.log('Loaded responsible members:', responsible);
         setResponsibleMembers(responsible);
         
         // Initialize attendance state for responsible members - default to attended
@@ -591,21 +561,18 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
         })
       };
       
-      console.log('Creating event with data:', eventData);
       const response = await ApiService.createEvent(eventData);
-      console.log('Event created successfully:', response);
       
       // Process visit counts for selected locations
       // Firebase'de createEvent içinde otomatik olarak yapılıyor, ama yine de burada da çağıralım
       // (createEvent içinde hata olursa burada tekrar deneyebiliriz)
       if (response && response.id) {
         try {
-          const visitResults = await ApiService.processEventLocations(
+          await ApiService.processEventLocations(
             response.id,
             selectedLocationTypes,
             selectedLocations
           );
-          console.log('Visit counts updated:', visitResults);
         } catch (visitError) {
           console.error('Error updating visit counts:', visitError);
           // Don't show error to user as event was created successfully
@@ -778,7 +745,6 @@ const CreateEventForm = ({ onClose, onEventCreated, members }) => {
       </div>
 
       {/* Responsible Members Selection */}
-      {console.log('Rendering responsible members section - responsibleMembers:', responsibleMembers, 'length:', responsibleMembers.length)}
       {responsibleMembers.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">

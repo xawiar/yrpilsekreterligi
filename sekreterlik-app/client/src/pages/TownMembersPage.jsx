@@ -79,14 +79,11 @@ const TownMembersPage = () => {
     try {
       setLoading(true);
       if (!town?.id) {
-        console.error('Town ID is missing:', town);
         setError('Belde bilgileri yüklenemedi');
         return;
       }
-      
-      console.log('Fetching members for town ID:', town.id);
+
       const data = await ApiService.getTownManagementMembers(town.id);
-      console.log('Town management members:', data);
       setMembers(data);
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -95,13 +92,6 @@ const TownMembersPage = () => {
       setLoading(false);
     }
   };
-
-  // Fetch members when town changes
-  useEffect(() => {
-    if (town) {
-      fetchMembers();
-    }
-  }, [town]);
 
   // Filter members based on search term
   useEffect(() => {

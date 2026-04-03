@@ -37,7 +37,6 @@ const MeetingsPage = () => {
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [regions, setRegions] = useState([]);
-  const [formMode, setFormMode] = useState('create'); // 'create' or 'edit'
   const [searchTerm, setSearchTerm] = useState(''); // For meeting search
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // Default sort by date, newest first
 

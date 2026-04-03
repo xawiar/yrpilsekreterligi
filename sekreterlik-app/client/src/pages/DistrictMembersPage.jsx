@@ -60,14 +60,11 @@ const DistrictMembersPage = () => {
     try {
       setLoading(true);
       if (!district?.id) {
-        console.error('District ID is missing:', district);
         setError('İlçe bilgileri yüklenemedi');
         return;
       }
-      
-      console.log('Fetching members for district ID:', district.id);
+
       const data = await ApiService.getDistrictManagementMembers(district.id);
-      console.log('District management members:', data);
       setMembers(data);
     } catch (error) {
       console.error('Error fetching members:', error);
