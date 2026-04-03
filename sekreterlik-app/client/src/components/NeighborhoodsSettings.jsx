@@ -37,6 +37,7 @@ const NeighborhoodsSettings = () => {
   });
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [isExporting, setIsExporting] = useState(false);
   const [showExcelForm, setShowExcelForm] = useState(false);
   const [excelData, setExcelData] = useState([]);
   const [excelErrors, setExcelErrors] = useState([]);
@@ -492,43 +493,55 @@ const NeighborhoodsSettings = () => {
   };
 
   const exportRepresentativesToExcel = async () => {
+    const confirmed = await confirm({
+      message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
+      title: 'Hassas Veri Uyarısı'
+    });
+    if (!confirmed) return;
+
+    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
+    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
+
+    setIsExporting(true);
     try {
       const representatives = await ApiService.getNeighborhoodRepresentatives();
       const neighborhoods = await ApiService.getNeighborhoods();
       const districts = await ApiService.getDistricts();
-      
+
       // Prepare data for Excel
       const excelData = [
         ['Mahalle Adı', 'İlçe Adı', 'Temsilci Adı', 'Temsilci TC', 'Temsilci Telefon', 'Grup No']
       ];
-      
+
       representatives.forEach(rep => {
         const neighborhood = neighborhoods.find(n => String(n.id) === String(rep.neighborhood_id));
         const district = neighborhood ? districts.find(d => String(d.id) === String(neighborhood.district_id)) : null;
-        
+
         excelData.push([
           neighborhood?.name || '',
           district?.name || '',
           rep.name || '',
-          rep.tc || '',
-          rep.phone || '',
+          maskTC(rep.tc),
+          maskPhone(rep.phone),
           neighborhood?.group_no || ''
         ]);
       });
-      
+
       const ws = XLSX.utils.aoa_to_sheet(excelData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Mahalle Temsilcileri');
-      
+
       const fileName = `mahalle_temsilcileri_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      
+
       setMessage('Mahalle temsilcileri Excel dosyası olarak indirildi');
       setMessageType('success');
     } catch (error) {
       console.error('Error exporting representatives:', error);
       setMessage('Excel dosyası oluşturulurken hata oluştu: ' + error.message);
       setMessageType('error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -561,12 +574,13 @@ const NeighborhoodsSettings = () => {
         <div className="flex space-x-3">
           <button
             onClick={exportRepresentativesToExcel}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors duration-200"
+            disabled={isExporting}
+            className={`inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-200 ${isExporting ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
           >
             <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Temsilcileri Excel'e Aktar
+            {isExporting ? 'Oluşturuluyor...' : 'Temsilcileri Excel\'e Aktar'}
           </button>
           <button
             onClick={downloadExcelTemplate}

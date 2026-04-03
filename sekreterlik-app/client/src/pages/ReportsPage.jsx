@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { TopRegistrarsTable, TopAttendeesTable } from '../components/Dashboard';
 import { calculateAllMemberScores } from '../utils/performanceScore';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,8 +17,10 @@ const ReportsPage = () => {
   const isAdmin = user && user.role === 'admin';
   const isDistrictPresident = user && user.role === 'district_president';
   const canSetStars = isAdmin || isDistrictPresident;
-  
+
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportContentRef = useRef(null);
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''
@@ -663,90 +666,96 @@ const ReportsPage = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('Raporlar - Genel İstatistikler', 14, 22);
-    
-    doc.setFontSize(12);
-    let yPos = 35;
-    
-    // Genel İstatistikler
-    doc.setFontSize(14);
-    doc.text('Genel İstatistikler', 14, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    doc.text(`Toplam Üye: ${stats.totalMembers}`, 14, yPos);
-    yPos += 7;
-    doc.text(`Toplam Toplantı: ${stats.totalMeetings}`, 14, yPos);
-    yPos += 7;
-    doc.text(`Ortalama Katılım Oranı: ${stats.avgMeetingAttendanceRate}%`, 14, yPos);
-    yPos += 7;
-    doc.text(`Toplam Etkinlik: ${stats.totalEvents}`, 14, yPos);
-    yPos += 10;
-    
-    // STK İstatistikleri
-    doc.setFontSize(14);
-    doc.text('STK İstatistikleri', 14, yPos);
-    yPos += 10;
-    doc.setFontSize(10);
-    doc.text(`Toplam STK: ${stats.totalSTKs}`, 14, yPos);
-    yPos += 7;
-    doc.text(`Toplam STK Ziyaret: ${stats.totalSTKVisits}`, 14, yPos);
-    yPos += 10;
-    
-    // Kamu Kurumu İstatistikleri
-    doc.setFontSize(14);
-    doc.text('Kamu Kurumu İstatistikleri', 14, yPos);
-    yPos += 10;
-    doc.setFontSize(10);
-    doc.text(`Toplam Kamu Kurumu: ${stats.totalPublicInstitutions}`, 14, yPos);
-    yPos += 7;
-    doc.text(`Toplam Kamu Kurumu Ziyaret: ${stats.totalPublicInstitutionVisits}`, 14, yPos);
-    
-    doc.save('raporlar.pdf');
+  const handleExportPDF = async () => {
+    const element = reportContentRef.current;
+    if (!element) {
+      toast.error('PDF oluşturulamadı: Sayfa içeriği bulunamadı');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 190; // 210 - 20mm margin
+      const pageHeight = 277; // 297 - 20mm margin
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 10; // top margin
+
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight + 10;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save('raporlar.pdf');
+      toast.success('PDF başarıyla oluşturuldu ve indirildi!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('PDF oluşturulurken bir hata oluştu: ' + error.message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-    
-    // Genel İstatistikler
-    const generalData = [
-      ['Metrik', 'Değer'],
-      ['Toplam Üye', stats.totalMembers],
-      ['Toplam Toplantı', stats.totalMeetings],
-      ['Ortalama Katılım Oranı (%)', stats.avgMeetingAttendanceRate],
-      ['Toplam Etkinlik', stats.totalEvents],
-    ];
-    const generalSheet = XLSX.utils.aoa_to_sheet(generalData);
-    XLSX.utils.book_append_sheet(workbook, generalSheet, 'Genel İstatistikler');
-    
-    // STK İstatistikleri
-    const stkData = [
-      ['STK Adı', 'Ziyaret Sayısı'],
-      ...stats.topSTKs.map(stk => [stk.name, stk.visitCount])
-    ];
-    const stkSheet = XLSX.utils.aoa_to_sheet(stkData);
-    XLSX.utils.book_append_sheet(workbook, stkSheet, 'STK İstatistikleri');
-    
-    // Kamu Kurumu İstatistikleri
-    const publicInstitutionData = [
-      ['Kamu Kurumu Adı', 'Ziyaret Sayısı'],
-      ...stats.topPublicInstitutions.map(inst => [inst.name, inst.visitCount])
-    ];
-    const publicInstitutionSheet = XLSX.utils.aoa_to_sheet(publicInstitutionData);
-    XLSX.utils.book_append_sheet(workbook, publicInstitutionSheet, 'Kamu Kurumu İstatistikleri');
-    
-    // Kategori Bazında Etkinlik
-    const categoryData = [
-      ['Kategori', 'Etkinlik Sayısı', 'Toplam Katılım'],
-      ...stats.eventCategoryStats.map(cat => [cat.categoryName, cat.eventCount, cat.totalAttendance])
-    ];
-    const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
-    XLSX.utils.book_append_sheet(workbook, categorySheet, 'Kategori İstatistikleri');
-    
-    XLSX.writeFile(workbook, 'raporlar.xlsx');
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const workbook = XLSX.utils.book_new();
+
+      // Genel İstatistikler
+      const generalData = [
+        ['Metrik', 'Değer'],
+        ['Toplam Üye', stats.totalMembers],
+        ['Toplam Toplantı', stats.totalMeetings],
+        ['Ortalama Katılım Oranı (%)', stats.avgMeetingAttendanceRate],
+        ['Toplam Etkinlik', stats.totalEvents],
+      ];
+      const generalSheet = XLSX.utils.aoa_to_sheet(generalData);
+      XLSX.utils.book_append_sheet(workbook, generalSheet, 'Genel İstatistikler');
+
+      // STK İstatistikleri
+      const stkData = [
+        ['STK Adı', 'Ziyaret Sayısı'],
+        ...stats.topSTKs.map(stk => [stk.name, stk.visitCount])
+      ];
+      const stkSheet = XLSX.utils.aoa_to_sheet(stkData);
+      XLSX.utils.book_append_sheet(workbook, stkSheet, 'STK İstatistikleri');
+
+      // Kamu Kurumu İstatistikleri
+      const publicInstitutionData = [
+        ['Kamu Kurumu Adı', 'Ziyaret Sayısı'],
+        ...stats.topPublicInstitutions.map(inst => [inst.name, inst.visitCount])
+      ];
+      const publicInstitutionSheet = XLSX.utils.aoa_to_sheet(publicInstitutionData);
+      XLSX.utils.book_append_sheet(workbook, publicInstitutionSheet, 'Kamu Kurumu İstatistikleri');
+
+      // Kategori Bazında Etkinlik
+      const categoryData = [
+        ['Kategori', 'Etkinlik Sayısı', 'Toplam Katılım'],
+        ...stats.eventCategoryStats.map(cat => [cat.categoryName, cat.eventCount, cat.totalAttendance])
+      ];
+      const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
+      XLSX.utils.book_append_sheet(workbook, categorySheet, 'Kategori İstatistikleri');
+
+      XLSX.writeFile(workbook, 'raporlar.xlsx');
+      toast.success('Excel dosyası başarıyla indirildi!');
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast.error('Excel dosyası oluşturulurken bir hata oluştu: ' + error.message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
@@ -830,6 +839,7 @@ const ReportsPage = () => {
           </details>
         </div>
 
+        <div ref={reportContentRef}>
         {/* Genel İstatistikler - Dashboard ile birleştirildi */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -1647,26 +1657,30 @@ const ReportsPage = () => {
           )}
         </div>
 
+        </div>{/* End reportContentRef */}
+
         {/* Export Butonları - En Alta */}
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
             <button
               onClick={handleExportPDF}
-              className="inline-flex items-center justify-center px-3 py-2 bg-red-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+              disabled={isExporting}
+              className={`inline-flex items-center justify-center px-3 py-2 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors ${isExporting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
             >
               <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
-              PDF İndir
+              {isExporting ? 'Oluşturuluyor...' : 'PDF İndir'}
             </button>
             <button
               onClick={handleExportExcel}
-              className="inline-flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+              disabled={isExporting}
+              className={`inline-flex items-center justify-center px-3 py-2 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors ${isExporting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
               <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Excel İndir
+              {isExporting ? 'Oluşturuluyor...' : 'Excel İndir'}
             </button>
           </div>
         </div>

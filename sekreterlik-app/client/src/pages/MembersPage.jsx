@@ -22,6 +22,7 @@ const MembersPage = () => {
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
   const [members, setMembers] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
   
   const [allMembers, setAllMembers] = useState([]); // Store all members for filtering
   const [loading, setLoading] = useState(true);
@@ -397,6 +398,16 @@ const MembersPage = () => {
   };
 
   const handleExportExcel = async () => {
+    const confirmed = await confirm({
+      message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
+      title: 'Hassas Veri Uyarısı'
+    });
+    if (!confirmed) return;
+
+    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
+    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
+
+    setIsExporting(true);
     try {
       // XLSX kütüphanesini dinamik olarak yükle
       const XLSX = await import('xlsx');
@@ -411,9 +422,9 @@ const MembersPage = () => {
       filteredMembers.forEach(member => {
         const stats = calculateMeetingStats(member, meetings);
         worksheetData.push([
-          member.tc || '',
+          maskTC(member.tc),
           member.name || '',
-          member.phone || '',
+          maskPhone(member.phone),
           member.position || '',
           member.region || '',
           stats.totalMeetings || 0,
@@ -464,6 +475,8 @@ const MembersPage = () => {
     } catch (error) {
       console.error('Error exporting members to Excel:', error);
       toast.error('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -666,6 +679,7 @@ const MembersPage = () => {
         viewMode={viewMode}
         onImportExcel={handleImportExcel}
         onExportExcel={handleExportExcel}
+        isExporting={isExporting}
         onAddMember={handleAddMember}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}

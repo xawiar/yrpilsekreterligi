@@ -8,10 +8,13 @@ import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 import { calculatePerformanceScore } from '../utils/performanceScore';
 import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
   const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
 
   // Early return if member is not provided
   if (!member || !member.id) {
@@ -25,6 +28,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
   const formattedName = formatMemberName(member.name || '');
   const [photo, setPhoto] = useState(member.photo || null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [notes, setNotes] = useState(member.notes || '');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -538,6 +542,17 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
   
   // Function to export member details as CSV with beautiful design
   const exportToCSV = async () => {
+    const confirmed = await confirm({
+      message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
+      title: 'Hassas Veri Uyarısı'
+    });
+    if (!confirmed) return;
+
+    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
+    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
+
+    setIsExporting(true);
+    try {
     // Create CSV content with beautiful formatting
     let csvContent = '';
     
@@ -553,9 +568,9 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     csvContent += '┌─────────────────────────────────────────────────────────────────────────────┐\n';
     csvContent += '│                            KİŞİSEL BİLGİLER                                │\n';
     csvContent += '├─────────────────────────────────────────────────────────────────────────────┤\n';
-    csvContent += `│ TC Kimlik No        │ ${(member.tc || 'Belirtilmemiş').padEnd(40)} │\n`;
+    csvContent += `│ TC Kimlik No        │ ${(maskTC(member.tc) || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ İsim Soyisim        │ ${formattedName.padEnd(40)} │\n`;
-    csvContent += `│ Telefon             │ ${(member.phone || 'Belirtilmemiş').padEnd(40)} │\n`;
+    csvContent += `│ Telefon             │ ${(maskPhone(member.phone) || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ E-posta             │ ${(member.email || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ Adres               │ ${(member.address || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ Görev               │ ${(member.position || 'Belirtilmemiş').padEnd(40)} │\n`;
@@ -683,21 +698,29 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success('CSV dosyası başarıyla indirildi!');
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast.error('CSV dosyası oluşturulurken bir hata oluştu: ' + error.message);
+    } finally {
+      setIsExporting(false);
+    }
   };
-  
+
   return (
     <div id="member-details-container" className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
       {/* Export button - changed to CSV */}
       <div className="flex justify-end">
         <button
           onClick={exportToCSV}
-          className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          disabled={isExporting}
+          className={`inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isExporting ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
         >
           <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <span className="hidden sm:inline">CSV Olarak İndir</span>
-          <span className="sm:hidden">İndir</span>
+          <span className="hidden sm:inline">{isExporting ? 'Oluşturuluyor...' : 'CSV Olarak İndir'}</span>
+          <span className="sm:hidden">{isExporting ? '...' : 'İndir'}</span>
         </button>
       </div>
       
@@ -1264,6 +1287,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
           )}
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

@@ -4,10 +4,14 @@ import { stringify } from 'csv-stringify/browser/esm/sync';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const EventDetails = ({ event, members }) => {
   const toast = useToast();
+  const { confirm, confirmDialogProps } = useConfirm();
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [neighborhoodRepresentatives, setNeighborhoodRepresentatives] = useState([]);
   const [neighborhoodSupervisors, setNeighborhoodSupervisors] = useState([]);
   const [villageRepresentatives, setVillageRepresentatives] = useState([]);
@@ -166,84 +170,102 @@ const EventDetails = ({ event, members }) => {
   
   // Function to export event details as CSV
   const exportToCSV = async () => {
-    // Create CSV content
-    let csvContent = '';
-    
-    // Event info
-    csvContent += 'Etkinlik Bilgileri\n';
-    csvContent += 'Alan,Değer\n';
-    csvContent += `Etkinlik Adı,${event.name}\n`;
-    csvContent += `Tarih,${event.date}\n`;
-    csvContent += `Yer,${event.location}\n`;
-    csvContent += `Toplam Katılımcı,${event.attendees ? event.attendees.length : 0} kişi\n`;
-    csvContent += `Katılan,${event.attendees ? event.attendees.filter(a => a.attended).length : 0} kişi\n`;
-    csvContent += `Katılmayan,${event.attendees ? event.attendees.filter(a => !a.attended).length : 0} kişi\n`;
-    csvContent += `Mazeretli,${getExcusedCount()} kişi\n`;
-    csvContent += `Katılım Oranı,${getAttendanceRate()}%\n`;
-    csvContent += `Açıklama,"${event.description || 'Açıklama eklenmemiş'}"\n`;
-    csvContent += `Oluşturulma Tarihi,${new Date(event.created_at).toLocaleDateString('tr-TR')}\n`;
-    csvContent += '\n';
-    
-    // Participants - detailed information
-    csvContent += 'Katılımcı Detayları\n';
-    csvContent += 'Üye Adı,TC Kimlik,Görev,Bölge,İlçe,Telefon,E-posta,Katılım Durumu,Mazeret Durumu,Mazeret Sebebi\n';
-    
-    if (event.attendees && event.attendees.length > 0) {
-      event.attendees.forEach(attendance => {
-        // Handle both string and number memberId values
-        const attendeeMemberId = attendance.memberId || attendance.member_id;
-        const memberInfo = getMemberInfo(attendeeMemberId);
-        const memberIdStr = String(attendeeMemberId);
-        const memberIdNum = Number(attendeeMemberId);
-        const member = members.find(m => {
-          const mIdStr = String(m.id);
-          const mIdNum = Number(m.id);
-          return mIdStr === memberIdStr || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberIdStr;
-        });
-        const memberName = memberInfo.name;
-        const memberTc = member ? member.tc : '-';
-        const memberPosition = memberInfo.position;
-        const memberRegion = memberInfo.region;
-        const memberDistrict = member ? member.district : '-';
-        const memberPhone = member ? member.phone : '-';
-        const memberEmail = member ? member.email : '-';
-        
-        let attendanceStatus = 'Katılmadı';
-        if (attendance.attended) {
-          attendanceStatus = 'Katıldı';
-        }
-        
-        let excuseStatus = 'Yok';
-        let excuseReason = '';
-        if (attendance.excuse && attendance.excuse.hasExcuse) {
-          excuseStatus = 'Var';
-          excuseReason = attendance.excuse.reason || 'Belirtilmemiş';
-        }
-        
-        // Escape commas and quotes in fields
-        const escapeField = (field) => {
-          if (typeof field === 'string' && (field.includes(',') || field.includes('"'))) {
-            return `"${field.replace(/"/g, '""')}"`;
+    const confirmed = await confirm({
+      message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
+      title: 'Hassas Veri Uyarısı'
+    });
+    if (!confirmed) return;
+
+    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
+    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
+
+    setIsExporting(true);
+    try {
+      // Create CSV content
+      let csvContent = '';
+
+      // Event info
+      csvContent += 'Etkinlik Bilgileri\n';
+      csvContent += 'Alan,Değer\n';
+      csvContent += `Etkinlik Adı,${event.name}\n`;
+      csvContent += `Tarih,${event.date}\n`;
+      csvContent += `Yer,${event.location}\n`;
+      csvContent += `Toplam Katılımcı,${event.attendees ? event.attendees.length : 0} kişi\n`;
+      csvContent += `Katılan,${event.attendees ? event.attendees.filter(a => a.attended).length : 0} kişi\n`;
+      csvContent += `Katılmayan,${event.attendees ? event.attendees.filter(a => !a.attended).length : 0} kişi\n`;
+      csvContent += `Mazeretli,${getExcusedCount()} kişi\n`;
+      csvContent += `Katılım Oranı,${getAttendanceRate()}%\n`;
+      csvContent += `Açıklama,"${event.description || 'Açıklama eklenmemiş'}"\n`;
+      csvContent += `Oluşturulma Tarihi,${new Date(event.created_at).toLocaleDateString('tr-TR')}\n`;
+      csvContent += '\n';
+
+      // Participants - detailed information
+      csvContent += 'Katılımcı Detayları\n';
+      csvContent += 'Üye Adı,TC Kimlik,Görev,Bölge,İlçe,Telefon,E-posta,Katılım Durumu,Mazeret Durumu,Mazeret Sebebi\n';
+
+      if (event.attendees && event.attendees.length > 0) {
+        event.attendees.forEach(attendance => {
+          // Handle both string and number memberId values
+          const attendeeMemberId = attendance.memberId || attendance.member_id;
+          const memberInfo = getMemberInfo(attendeeMemberId);
+          const memberIdStr = String(attendeeMemberId);
+          const memberIdNum = Number(attendeeMemberId);
+          const member = members.find(m => {
+            const mIdStr = String(m.id);
+            const mIdNum = Number(m.id);
+            return mIdStr === memberIdStr || mIdNum === memberIdNum || mIdStr === memberIdNum || mIdNum === memberIdStr;
+          });
+          const memberName = memberInfo.name;
+          const memberTc = member ? maskTC(member.tc) : '-';
+          const memberPosition = memberInfo.position;
+          const memberRegion = memberInfo.region;
+          const memberDistrict = member ? member.district : '-';
+          const memberPhone = member ? maskPhone(member.phone) : '-';
+          const memberEmail = member ? member.email : '-';
+
+          let attendanceStatus = 'Katılmadı';
+          if (attendance.attended) {
+            attendanceStatus = 'Katıldı';
           }
-          return field || '';
-        };
-        
-        csvContent += `${escapeField(memberName)},${escapeField(memberTc)},${escapeField(memberPosition)},${escapeField(memberRegion)},${escapeField(memberDistrict)},${escapeField(memberPhone)},${escapeField(memberEmail)},${escapeField(attendanceStatus)},${escapeField(excuseStatus)},${escapeField(excuseReason)}\n`;
-      });
-    } else {
-      csvContent += 'Bu etkinliğe katılımcı eklenmemiş\n';
+
+          let excuseStatus = 'Yok';
+          let excuseReason = '';
+          if (attendance.excuse && attendance.excuse.hasExcuse) {
+            excuseStatus = 'Var';
+            excuseReason = attendance.excuse.reason || 'Belirtilmemiş';
+          }
+
+          // Escape commas and quotes in fields
+          const escapeField = (field) => {
+            if (typeof field === 'string' && (field.includes(',') || field.includes('"'))) {
+              return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field || '';
+          };
+
+          csvContent += `${escapeField(memberName)},${escapeField(memberTc)},${escapeField(memberPosition)},${escapeField(memberRegion)},${escapeField(memberDistrict)},${escapeField(memberPhone)},${escapeField(memberEmail)},${escapeField(attendanceStatus)},${escapeField(excuseStatus)},${escapeField(excuseReason)}\n`;
+        });
+      } else {
+        csvContent += 'Bu etkinliğe katılımcı eklenmemiş\n';
+      }
+
+      // Create blob and download
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${event.name.replace(/\s+/g, '_')}_detaylar.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('CSV dosyası başarıyla indirildi!');
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast.error('CSV dosyası oluşturulurken bir hata oluştu: ' + error.message);
+    } finally {
+      setIsExporting(false);
     }
-    
-    // Create blob and download
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${event.name.replace(/\s+/g, '_')}_detaylar.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // Function to export event details as PDF
@@ -307,12 +329,13 @@ const EventDetails = ({ event, members }) => {
       <div className="flex justify-end space-x-3">
         <button
           onClick={exportToCSV}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          disabled={isExporting}
+          className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isExporting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
         >
           <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          CSV İndir
+          {isExporting ? 'Oluşturuluyor...' : 'CSV İndir'}
         </button>
         <button
           onClick={exportToPDF}
@@ -509,6 +532,7 @@ const EventDetails = ({ event, members }) => {
           </table>
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

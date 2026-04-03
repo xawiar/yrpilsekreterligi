@@ -17,6 +17,7 @@ const ObserversPage = () => {
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success'); // 'success' or 'error'
@@ -475,31 +476,50 @@ const ObserversPage = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => {
-                  const excelData = [
-                    ['TC', 'Ad Soyad', 'Telefon', 'Sandık', 'Konum', 'Başmüşahit']
-                  ];
-                  
-                  const filteredObservers = getFilteredObservers();
-                  filteredObservers.forEach(observer => {
-                    excelData.push([
-                      observer.tc || '',
-                      observer.name || '',
-                      observer.phone || '',
-                      getBallotBoxName(observer.ballot_box_id),
-                      getLocationInfo(observer),
-                      observer.is_chief_observer ? 'Evet' : 'Hayır'
-                    ]);
+                disabled={isExporting}
+                onClick={async () => {
+                  const confirmed = await confirm({
+                    message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
+                    title: 'Hassas Veri Uyarısı'
                   });
-                  
-                  const ws = XLSX.utils.aoa_to_sheet(excelData);
-                  const wb = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(wb, ws, 'Müşahitler');
-                  
-                  const fileName = `musahitler_${new Date().toISOString().split('T')[0]}.xlsx`;
-                  XLSX.writeFile(wb, fileName);
+                  if (!confirmed) return;
+
+                  setIsExporting(true);
+                  try {
+                    const maskTC = (tc) => tc ? `${String(tc).slice(0,3)}****${String(tc).slice(-3)}` : '';
+                    const maskPhone = (phone) => phone ? `${String(phone).slice(0,3)}****${String(phone).slice(-3)}` : '';
+
+                    const excelData = [
+                      ['TC', 'Ad Soyad', 'Telefon', 'Sandık', 'Konum', 'Başmüşahit']
+                    ];
+
+                    const filteredObservers = getFilteredObservers();
+                    filteredObservers.forEach(observer => {
+                      excelData.push([
+                        maskTC(observer.tc),
+                        observer.name || '',
+                        maskPhone(observer.phone),
+                        getBallotBoxName(observer.ballot_box_id),
+                        getLocationInfo(observer),
+                        observer.is_chief_observer ? 'Evet' : 'Hayır'
+                      ]);
+                    });
+
+                    const ws = XLSX.utils.aoa_to_sheet(excelData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Müşahitler');
+
+                    const fileName = `musahitler_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                    toast.success('Excel dosyası başarıyla indirildi!');
+                  } catch (error) {
+                    console.error('Excel export error:', error);
+                    toast.error('Excel dosyası oluşturulurken bir hata oluştu: ' + error.message);
+                  } finally {
+                    setIsExporting(false);
+                  }
                 }}
-                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                className={`inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white ${isExporting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
