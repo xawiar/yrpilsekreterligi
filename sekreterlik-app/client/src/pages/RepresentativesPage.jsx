@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import CryptoJS from 'crypto-js';
@@ -353,8 +352,8 @@ const RepresentativesPage = () => {
                     rep.district_name || '',
                     rep.town_name || '',
                     rep.name || '',
-                    maskTC(rep.tc),
-                    maskPhone(rep.phone),
+                    rep.tc || '',
+                    rep.phone || '',
                     rep.group_no || ''
                   ]);
                 });

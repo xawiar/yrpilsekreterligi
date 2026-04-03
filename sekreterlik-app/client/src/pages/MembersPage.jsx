@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
@@ -435,9 +434,9 @@ const MembersPage = () => {
       filteredMembers.forEach(member => {
         const stats = calculateMeetingStats(member, meetings);
         worksheetData.push([
-          maskTC(member.tc),
+          member.tc || '',
           member.name || '',
-          maskPhone(member.phone),
+          member.phone || '',
           member.position || '',
           member.region || '',
           stats.totalMeetings || 0,

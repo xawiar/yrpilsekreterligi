@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { stringify } from 'csv-stringify/browser/esm/sync'; // Import csv-stringify
 import jsPDF from 'jspdf';
@@ -113,11 +112,11 @@ const MeetingDetails = ({ meeting }) => {
           const attendeeMemberId = attendance.memberId || attendance.member_id;
           const member = getMember(attendeeMemberId);
           const memberName = member ? member.name : 'Bilinmeyen Üye';
-          const memberTc = member ? maskTC(member.tc) : '-';
+          const memberTc = member ? (member.tc || '-') : '-';
           const memberPosition = member ? member.position : '-';
           const memberRegion = member ? member.region : '-';
           const memberDistrict = member ? member.district : '-';
-          const memberPhone = member ? maskPhone(member.phone) : '-';
+          const memberPhone = member ? (member.phone || '-') : '-';
           const memberEmail = member ? member.email : '-';
 
           let attendanceStatus = 'Katılmadı';

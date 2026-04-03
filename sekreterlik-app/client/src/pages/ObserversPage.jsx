@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { decryptData } from '../utils/crypto';
 import * as XLSX from 'xlsx';
@@ -494,9 +493,9 @@ const ObserversPage = () => {
                     const filteredObservers = getFilteredObservers();
                     filteredObservers.forEach(observer => {
                       excelData.push([
-                        maskTC(observer.tc),
+                        observer.tc || '',
                         observer.name || '',
-                        maskPhone(observer.phone),
+                        observer.phone || '',
                         getBallotBoxName(observer.ballot_box_id),
                         getLocationInfo(observer),
                         observer.is_chief_observer ? 'Evet' : 'Hayır'

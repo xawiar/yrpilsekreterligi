@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { maskTC, maskPhone } from '../utils/maskingUtils';
 import { formatMemberName } from '../utils/nameFormatter';
 import { stringify } from 'csv-stringify/browser/esm/sync';
 import ApiService from '../utils/ApiService';
@@ -566,9 +565,9 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     csvContent += '┌─────────────────────────────────────────────────────────────────────────────┐\n';
     csvContent += '│                            KİŞİSEL BİLGİLER                                │\n';
     csvContent += '├─────────────────────────────────────────────────────────────────────────────┤\n';
-    csvContent += `│ TC Kimlik No        │ ${(maskTC(member.tc) || 'Belirtilmemiş').padEnd(40)} │\n`;
+    csvContent += `│ TC Kimlik No        │ ${(member.tc || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ İsim Soyisim        │ ${formattedName.padEnd(40)} │\n`;
-    csvContent += `│ Telefon             │ ${(maskPhone(member.phone) || 'Belirtilmemiş').padEnd(40)} │\n`;
+    csvContent += `│ Telefon             │ ${(member.phone || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ E-posta             │ ${(member.email || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ Adres               │ ${(member.address || 'Belirtilmemiş').padEnd(40)} │\n`;
     csvContent += `│ Görev               │ ${(member.position || 'Belirtilmemiş').padEnd(40)} │\n`;

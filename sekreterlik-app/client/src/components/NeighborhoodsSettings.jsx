@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { maskTC, maskPhone } from '../utils/maskingUtils';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from './mobile/NativeCard';
@@ -519,8 +518,8 @@ const NeighborhoodsSettings = () => {
           neighborhood?.name || '',
           district?.name || '',
           rep.name || '',
-          maskTC(rep.tc),
-          maskPhone(rep.phone),
+          rep.tc || '',
+          rep.phone || '',
           neighborhood?.group_no || ''
         ]);
       });
