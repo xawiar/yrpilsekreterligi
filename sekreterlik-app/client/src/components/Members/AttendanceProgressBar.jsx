@@ -1,11 +1,12 @@
 import React from 'react';
+import { getAttendanceColor } from './membersUtils';
 
-const AttendanceProgressBar = ({ percentage, getAttendanceColor }) => {
+const AttendanceProgressBar = ({ percentage }) => {
   return (
     <div className="flex items-center">
       <div className="w-16 bg-gray-200 rounded-full h-1.5 mr-2">
-        <div 
-          className={`h-1.5 rounded-full ${getAttendanceColor ? getAttendanceColor(percentage) : (percentage > 70 ? 'bg-green-500' : percentage > 40 ? 'bg-yellow-500' : 'bg-red-500')}`} 
+        <div
+          className={`h-1.5 rounded-full ${getAttendanceColor(percentage)}`}
           style={{ width: `${percentage}%` }}
         ></div>
       </div>

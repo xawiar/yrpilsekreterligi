@@ -303,8 +303,8 @@ const MembersTable = ({
                     <td className="px-3 py-3">
                       <div className="flex items-center">
                         <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mr-2">
-                          <div 
-                            className={`h-1.5 rounded-full ${stats.attendancePercentage > 70 ? 'bg-green-500' : stats.attendancePercentage > 40 ? 'bg-yellow-500' : 'bg-red-500'}`} 
+                          <div
+                            className={`h-1.5 rounded-full ${getAttendanceColor(stats.attendancePercentage)}`}
                             style={{ width: `${stats.attendancePercentage}%` }}
                           ></div>
                         </div>

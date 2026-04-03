@@ -2,11 +2,13 @@
  * Native Mobile Members List Component
  * Üyeler sayfası için native mobil görünümü
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
 
-const NativeMembersList = ({ 
+const ITEMS_PER_PAGE = 20;
+
+const NativeMembersList = ({
   members = [],
   onMemberClick,
   onAddMember,
@@ -17,6 +19,16 @@ const NativeMembersList = ({
   regions = [],
   loading = false
 }) => {
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+  // Reset visible count when members list changes (search/filter)
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [members.length, searchTerm, selectedRegion]);
+
+  const visibleMembers = members.slice(0, visibleCount);
+  const hasMore = visibleCount < members.length;
+
   return (
     <div className="px-4 py-6 space-y-4 pb-24">
       {/* Header */}
@@ -102,7 +114,7 @@ const NativeMembersList = ({
         </NativeCard>
       ) : (
         <div className="space-y-3">
-          {members.map((member) => (
+          {visibleMembers.map((member) => (
             <NativeCard
               key={member.id}
               onClick={() => onMemberClick && onMemberClick(member)}
@@ -116,7 +128,7 @@ const NativeMembersList = ({
                 {/* Member Info */}
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1">
-                    {member.name || 'İsimsiz Üye'}
+                    {member.name || 'Isimsiz Uye'}
                   </div>
                   {member.position && (
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -125,12 +137,12 @@ const NativeMembersList = ({
                   )}
                   {member.region && (
                     <div className="text-sm text-gray-500 dark:text-gray-500">
-                      📍 {member.region}
+                      {member.region}
                     </div>
                   )}
                   {member.phone && (
                     <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                      📞 {member.phone}
+                      {member.phone}
                     </div>
                   )}
                 </div>
@@ -149,6 +161,21 @@ const NativeMembersList = ({
               </div>
             </NativeCard>
           ))}
+
+          {/* Load More Button */}
+          {hasMore && (
+            <button
+              onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+              className="w-full py-3 mt-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium rounded-xl text-base hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            >
+              Daha Fazla Yukle ({members.length - visibleCount} kaldi)
+            </button>
+          )}
+
+          {/* Showing count */}
+          <p className="text-center text-sm text-gray-400 dark:text-gray-500 pt-1">
+            {visibleMembers.length} / {members.length} uye gosteriliyor
+          </p>
         </div>
       )}
     </div>

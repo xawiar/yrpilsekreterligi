@@ -27,11 +27,21 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
+
+    // TC ve telefon alanlarinda sadece rakam girisine izin ver
+    if (name === 'tc' || name === 'phone') {
+      const numericValue = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+
     // Clear error when user starts typing
     if (error) {
       setError('');
@@ -42,9 +52,38 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
     e.preventDefault();
     
     // Basic validation
-    if (!formData.tc || !formData.name || !formData.phone || 
+    if (!formData.tc || !formData.name || !formData.phone ||
         !formData.position || !formData.region) {
       setError('Tüm alanlar zorunludur');
+      return;
+    }
+
+    // TC Kimlik No validasyonu
+    if (!/^\d{11}$/.test(formData.tc)) {
+      setError('TC Kimlik No tam olarak 11 haneli rakamlardan oluşmalıdır');
+      return;
+    }
+    if (formData.tc.charAt(0) === '0') {
+      setError('TC Kimlik No sıfır ile başlayamaz');
+      return;
+    }
+
+    // Telefon validasyonu
+    const phone = formData.phone;
+    if (!/^\d+$/.test(phone)) {
+      setError('Telefon numarası sadece rakamlardan oluşmalıdır');
+      return;
+    }
+    if (phone.length < 10 || phone.length > 11) {
+      setError('Telefon numarası 10 veya 11 haneli olmalıdır (05XX... veya 5XX...)');
+      return;
+    }
+    if (phone.length === 11 && !phone.startsWith('0')) {
+      setError('11 haneli telefon numarası 0 ile başlamalıdır (örn: 05XX...)');
+      return;
+    }
+    if (phone.length === 10 && phone.startsWith('0')) {
+      setError('10 haneli telefon numarası 0 ile başlamamalıdır (örn: 5XX...)');
       return;
     }
     
@@ -210,6 +249,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
               name="tc"
               value={formData.tc}
               onChange={handleChange}
+              inputMode="numeric"
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
               placeholder="TC kimlik numarası"
               maxLength="11"
@@ -239,8 +279,10 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              inputMode="numeric"
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
               placeholder="Telefon numarası"
+              maxLength="11"
             />
           </div>
           

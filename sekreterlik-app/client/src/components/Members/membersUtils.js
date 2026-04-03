@@ -64,9 +64,10 @@ export const calculateMemberRegistrations = (memberId, memberRegistrations) => {
 };
 
 // Function to get attendance color based on percentage
+// Single source of truth: >=70 green, >=40 yellow, <40 red
 export const getAttendanceColor = (percentage) => {
-  if (percentage >= 80) return 'bg-green-500';
-  if (percentage >= 60) return 'bg-yellow-500';
+  if (percentage >= 70) return 'bg-green-500';
+  if (percentage >= 40) return 'bg-yellow-500';
   return 'bg-red-500';
 };
 

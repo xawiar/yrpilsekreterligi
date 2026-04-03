@@ -79,11 +79,17 @@ const MembersPage = () => {
   }, []);
 
   useEffect(() => {
-    // Apply filtering first
-    let result = allMembers.filter(member => 
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (selectedRegion === '' || member.region === selectedRegion)
-    );
+    // Apply filtering first (search by name, TC, phone, and position)
+    const term = searchTerm.toLowerCase();
+    let result = allMembers.filter(member => {
+      const matchesSearch = !term ||
+        (member.name && member.name.toLowerCase().includes(term)) ||
+        (member.tc && String(member.tc).toLowerCase().includes(term)) ||
+        (member.phone && String(member.phone).toLowerCase().includes(term)) ||
+        (member.position && member.position.toLowerCase().includes(term));
+      const matchesRegion = selectedRegion === '' || member.region === selectedRegion;
+      return matchesSearch && matchesRegion;
+    });
     
     // Then apply sorting (always sort by name A-Z by default)
     const sortKey = sortConfig.key || 'name'; // Fallback to 'name' if no key is set
@@ -263,12 +269,21 @@ const MembersPage = () => {
     }
   };
 
-  const handleArchiveMember = async (id) => {
+  const handleArchiveMember = async (idOrMember) => {
+    // Handle both ID (string/number) and member object
+    const memberId = (typeof idOrMember === 'object' && idOrMember !== null) ? idOrMember.id : idOrMember;
+
+    if (!memberId) {
+      console.error('Member ID is required for archiving');
+      toast.error('Üye arşivlenemedi: Geçersiz üye bilgisi');
+      return;
+    }
+
     const confirmed = await confirm({ title: 'Üyeyi Arşivle', message: 'Bu üyeyi arşivlemek istediğinize emin misiniz?' });
     if (!confirmed) return;
 
     try {
-      await ApiService.archiveMember(id);
+      await ApiService.archiveMember(memberId);
       fetchMembers(); // Refresh the list
       toast.success('Üye başarıyla arşivlendi');
     } catch (error) {
