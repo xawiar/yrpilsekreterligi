@@ -278,6 +278,47 @@ const DashboardPage = () => {
           )}
         </div>
       </div>
+
+      {/* Üye Performans Özeti */}
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Performans Özeti
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Ortalama Katılım */}
+          <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className={`text-2xl font-bold ${
+              stats.avgAttendanceRate >= 70 ? 'text-green-600 dark:text-green-400' :
+              stats.avgAttendanceRate >= 40 ? 'text-yellow-600 dark:text-yellow-400' :
+              'text-red-600 dark:text-red-400'
+            }`}>
+              %{stats.avgAttendanceRate || 0}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ort. Katılım</div>
+          </div>
+          {/* Toplam Üye */}
+          <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {stats.totalMembers || 0}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Üye</div>
+          </div>
+          {/* Toplantı Sayısı */}
+          <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              {stats.totalMeetings || 0}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplantı Sayısı</div>
+          </div>
+          {/* Etkinlik Sayısı */}
+          <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {stats.totalEvents || 0}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Etkinlik Sayısı</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

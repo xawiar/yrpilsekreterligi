@@ -53,11 +53,11 @@ export const loadPerformanceScoreSettings = async () => {
             cachedSettings = {
               meetingAttendancePoints: configDoc.meetingAttendancePoints || 10,
               eventAttendancePoints: configDoc.eventAttendancePoints || 10,
-              absencePenalty: configDoc.absencePenalty || -5,
+              absencePenalty: configDoc.absencePenalty ?? -10,
               memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
               perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
               perfectEventBonus: configDoc.perfectEventBonus || 50,
-              maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations || null,
+              maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations ?? 5,
               useAttendanceWeightForRegistrations: configDoc.useAttendanceWeightForRegistrations || false,
               minAttendanceRateForFullRegistrationPoints: configDoc.minAttendanceRateForFullRegistrationPoints || 0
             };
@@ -72,11 +72,11 @@ export const loadPerformanceScoreSettings = async () => {
       cachedSettings = {
         meetingAttendancePoints: 10,
         eventAttendancePoints: 10,
-        absencePenalty: -5,
+        absencePenalty: -10,
         memberRegistrationPoints: 5,
         perfectMeetingBonus: 50,
         perfectEventBonus: 50,
-        maxMonthlyRegistrations: null,
+        maxMonthlyRegistrations: 5,
         useAttendanceWeightForRegistrations: false,
         minAttendanceRateForFullRegistrationPoints: 0
       };
@@ -87,11 +87,11 @@ export const loadPerformanceScoreSettings = async () => {
       cachedSettings = {
         meetingAttendancePoints: 10,
         eventAttendancePoints: 10,
-        absencePenalty: -5,
+        absencePenalty: -10,
         memberRegistrationPoints: 5,
         perfectMeetingBonus: 50,
         perfectEventBonus: 50,
-        maxMonthlyRegistrations: null,
+        maxMonthlyRegistrations: 5,
         useAttendanceWeightForRegistrations: false,
         minAttendanceRateForFullRegistrationPoints: 0
       };
@@ -125,7 +125,7 @@ export const calculatePerformanceScore = async (member, meetings, events, member
   const {
     includeBonus = true,
     timeRange = 'all', // 'all', '3months', '6months'
-    weightRecent = false // Son 3 ayın katılımları 1.5x
+    weightRecent = true // Son 3 ayın katılımları 1.5x
   } = options;
   
   // Performans puanı ayarlarını yükle
@@ -288,7 +288,7 @@ export const calculatePerformanceScore = async (member, meetings, events, member
   }, 0);
 
   // Aylık maksimum üye kayıt limiti uygula (eğer ayar varsa)
-  const maxMonthlyRegistrations = settings.maxMonthlyRegistrations || null;
+  const maxMonthlyRegistrations = settings.maxMonthlyRegistrations ?? 5;
   if (maxMonthlyRegistrations && maxMonthlyRegistrations > 0) {
     // Kayıtları aylara göre grupla ve her ay için limit uygula
     const monthlyRegistrations = {};
@@ -496,7 +496,7 @@ export const calculatePerformanceScore = async (member, meetings, events, member
   }
 
   return {
-    totalScore: Math.round(totalScore),
+    totalScore: Math.max(0, Math.round(totalScore)),
     details,
     timeRange
   };
@@ -664,7 +664,24 @@ const calculateMaxScore = (meetings, events, firstMeetingDate, settings = null) 
  * Seviye belirleme (max puana göre yüzdelik)
  * Manuel yıldız ile performans yıldızının ortalamasını alır
  */
-const determineLevel = (score, maxScore, manualStars = null) => {
+const determineLevel = (score, maxScore, manualStars = null, firstMeetingDate = null) => {
+  // Yeni üye koruma: İlk 3 ay "Yeni Üye" statüsü
+  if (firstMeetingDate) {
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    if (new Date(firstMeetingDate) > threeMonthsAgo) {
+      return {
+        level: 'Yeni Üye',
+        levelColor: '#4F46E5',
+        stars: manualStars || 0,
+        performanceStars: 0,
+        manualStars: manualStars,
+        percentage: 0,
+        isNewMember: true
+      };
+    }
+  }
+
   if (maxScore === 0) {
     // Manuel yıldız varsa onu kullan, yoksa 1 yıldız
     const finalStars = manualStars !== null ? manualStars : 1;
@@ -675,7 +692,8 @@ const determineLevel = (score, maxScore, manualStars = null) => {
       performanceStars: 1,
       manualStars: manualStars,
       averageStars: finalStars,
-      percentage: 0
+      percentage: 0,
+      isNewMember: false
     };
   }
   
@@ -723,7 +741,8 @@ const determineLevel = (score, maxScore, manualStars = null) => {
     performanceStars, // Performans yıldızı
     manualStars: manualStars !== null ? manualStars : null, // Manuel yıldız
     averageStars, // Ortalama yıldız
-    percentage: Math.round(percentage)
+    percentage: Math.round(percentage),
+    isNewMember: false
   };
 };
 
@@ -747,7 +766,24 @@ export const calculateAllMemberScores = async (members, meetings, events, member
     const manualStars = member.manual_stars !== null && member.manual_stars !== undefined 
       ? parseInt(member.manual_stars) 
       : null;
-    const levelInfo = determineLevel(score.totalScore, maxScore, manualStars);
+    // Üyenin ilk katıldığı toplantı tarihini bul (yeni üye koruma için)
+    const memberFirstMeetingDate = (() => {
+      let earliest = null;
+      meetings.forEach(meeting => {
+        const attendee = meeting.attendees?.find(att => {
+          const attId = String(att.memberId || att.member_id);
+          return attId === String(member.id);
+        });
+        if (attendee && attendee.attended) {
+          const meetingDate = parseDate(meeting.date);
+          if (meetingDate && (!earliest || meetingDate < earliest)) {
+            earliest = meetingDate;
+          }
+        }
+      });
+      return earliest;
+    })();
+    const levelInfo = determineLevel(score.totalScore, maxScore, manualStars, memberFirstMeetingDate);
     
     return {
       member,
