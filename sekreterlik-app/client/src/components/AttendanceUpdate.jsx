@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdated }) => {
   const toast = useToast();
   const [attendance, setAttendance] = useState({});
+  const [effectiveAttendees, setEffectiveAttendees] = useState([]);
 
   // Function to get member name by ID
   const getMemberName = (memberId) => {
@@ -15,18 +16,32 @@ const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdate
 
   useEffect(() => {
     const data = meeting || event;
-    if (data && data.attendees) {
-      const initialAttendance = {};
-      data.attendees.forEach(att => {
-        initialAttendance[att.memberId] = {
-          attended: att.attended,
-          hasExcuse: att.excuse ? att.excuse.hasExcuse : false,
-          excuseReason: att.excuse ? att.excuse.reason : ''
-        };
-      });
-      setAttendance(initialAttendance);
+    if (!data) return;
+
+    let attendeesList = data.attendees || [];
+
+    // If attendees is empty (planned meeting), auto-populate from region members
+    if (attendeesList.length === 0 && data.regions && data.regions.length > 0 && members && members.length > 0) {
+      const regionMembers = members.filter(m => m.region && data.regions.includes(m.region));
+      attendeesList = regionMembers.map(m => ({
+        memberId: m.id,
+        attended: false,
+        excuse: { hasExcuse: false, reason: '' }
+      }));
     }
-  }, [meeting, event]);
+
+    setEffectiveAttendees(attendeesList);
+
+    const initialAttendance = {};
+    attendeesList.forEach(att => {
+      initialAttendance[att.memberId] = {
+        attended: att.attended,
+        hasExcuse: att.excuse ? att.excuse.hasExcuse : false,
+        excuseReason: att.excuse ? att.excuse.reason : ''
+      };
+    });
+    setAttendance(initialAttendance);
+  }, [meeting, event, members]);
 
   const handleAttendanceChange = (memberId, status) => {
     // status can be 'attended', 'notAttended', or 'excused'
@@ -58,8 +73,8 @@ const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdate
       const data = meeting || event;
       const isEvent = !!event;
       
-      // Prepare updated attendees data
-      const updatedAttendees = data.attendees.map(att => {
+      // Prepare updated attendees data (use effectiveAttendees which includes auto-populated region members)
+      const updatedAttendees = effectiveAttendees.map(att => {
         const memberId = att.memberId;
         const attData = attendance[memberId];
         
@@ -108,12 +123,12 @@ const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdate
   };
 
   const mobileView = isMobile();
-  const sortedAttendees = (meeting || event)?.attendees
-    ?.sort((a, b) => {
+  const sortedAttendees = effectiveAttendees.length > 0
+    ? [...effectiveAttendees].sort((a, b) => {
       const nameA = getMemberName(a.memberId);
       const nameB = getMemberName(b.memberId);
       return nameA.localeCompare(nameB, 'tr', { sensitivity: 'base' });
-    }) || [];
+    }) : [];
 
   return (
     <div className={`space-y-4 ${mobileView ? 'h-full flex flex-col' : ''}`}>

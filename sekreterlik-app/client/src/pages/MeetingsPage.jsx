@@ -36,6 +36,7 @@ const MeetingsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [formMode, setFormMode] = useState('create');
   const [regions, setRegions] = useState([]);
   const [searchTerm, setSearchTerm] = useState(''); // For meeting search
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // Default sort by date, newest first
@@ -53,37 +54,35 @@ const MeetingsPage = () => {
     }
   }, []); // Removed showArchived from dependency array
 
+  // Reusable sort function
+  const applySorting = (data, config) => {
+    if (!config.key || data.length === 0) return data;
+    return [...data].sort((a, b) => {
+      let aValue, bValue;
+
+      if (config.key === 'attendancePercentage' || config.key === 'totalExpected' || config.key === 'attendedCount') {
+        const aStats = calculateAttendanceStats(a);
+        const bStats = calculateAttendanceStats(b);
+        aValue = aStats[config.key];
+        bValue = bStats[config.key];
+      } else if (config.key === 'date') {
+        aValue = new Date(a.date.split('.').reverse().join('-'));
+        bValue = new Date(b.date.split('.').reverse().join('-'));
+      } else {
+        aValue = a[config.key];
+        bValue = b[config.key];
+      }
+
+      if (aValue < bValue) return config.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return config.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
   useEffect(() => {
-    // Apply sorting
+    // Apply sorting when sortConfig changes
     if (sortConfig.key && meetings.length > 0) {
-      const sorted = [...meetings].sort((a, b) => {
-        let aValue, bValue;
-        
-        if (sortConfig.key === 'attendancePercentage') {
-          // Calculate attendance percentage for sorting
-          const aStats = calculateAttendanceStats(a);
-          const bStats = calculateAttendanceStats(b);
-          aValue = aStats.attendancePercentage;
-          bValue = bStats.attendancePercentage;
-        } else if (sortConfig.key === 'date') {
-          // Convert date format for proper sorting (DD.MM.YYYY to YYYY-MM-DD)
-          aValue = new Date(a.date.split('.').reverse().join('-'));
-          bValue = new Date(b.date.split('.').reverse().join('-'));
-        } else {
-          aValue = a[sortConfig.key];
-          bValue = b[sortConfig.key];
-        }
-        
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-      
-      setMeetings(sorted);
+      setMeetings(prev => applySorting(prev, sortConfig));
     }
   }, [sortConfig]);
 
@@ -92,7 +91,8 @@ const MeetingsPage = () => {
       setLoading(true);
       // Always fetch non-archived meetings
       const data = await ApiService.getMeetings(false);
-      setMeetings(data);
+      // Apply current sort config to fetched data
+      setMeetings(applySorting(data, sortConfig));
     } catch (error) {
       console.error('Error fetching meetings:', error);
     } finally {
@@ -475,7 +475,7 @@ const MeetingsPage = () => {
       {/* Summary Statistics Cards - Responsive Grid Layout */}
       <MeetingsSummaryStatistics 
         totalMeetings={summaryStats.totalMeetings}
-        plannedMeetings={meetings.filter(m => !m.archived).length}
+        plannedMeetings={meetings.filter(m => m.isPlanned === true).length}
         avgAttendanceRate={summaryStats.avgAttendanceRate}
       />
 

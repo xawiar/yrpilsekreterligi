@@ -166,6 +166,12 @@ const MeetingDetails = ({ meeting }) => {
 
   // Function to export meeting details as PDF
   const exportToPDF = async () => {
+    const confirmed = await confirm({
+      message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
+      title: 'Hassas Veri Uyarısı'
+    });
+    if (!confirmed) return;
+
     try {
       const element = document.getElementById('meeting-details-container');
       if (!element) {
@@ -320,7 +326,7 @@ const MeetingDetails = ({ meeting }) => {
         ) : (
           (() => {
             const mobileView = isMobile();
-            const sortedAttendees = meeting.attendees && meeting.attendees
+            const sortedAttendees = meeting.attendees && [...meeting.attendees]
               .sort((a, b) => {
                 const attendeeMemberIdA = a.memberId || a.member_id;
                 const attendeeMemberIdB = b.memberId || b.member_id;
