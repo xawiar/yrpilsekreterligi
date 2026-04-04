@@ -1915,4 +1915,82 @@ router.post('/sync-member-users-with-auth', async (req, res) => {
   }
 });
 
+// Chief Observer Login endpoint (ballot_number and tc)
+router.post('/login-chief-observer', async (req, res) => {
+  const { ballot_number, tc } = req.body;
+
+  try {
+    if (!ballot_number || !tc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sandık numarası ve TC kimlik numarası zorunludur'
+      });
+    }
+
+    // Find ballot box by ballot_number
+    const ballotBox = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM ballot_boxes WHERE ballot_number = ?', [ballot_number], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
+    if (!ballotBox) {
+      return res.status(401).json({
+        success: false,
+        message: 'Geçersiz sandık numarası veya TC kimlik numarası'
+      });
+    }
+
+    // Find chief observer by tc and ballot_box_id
+    const observer = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT * FROM ballot_box_observers WHERE ballot_box_id = ? AND tc = ? AND is_chief_observer = 1',
+        [ballotBox.id, tc],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+
+    if (!observer) {
+      return res.status(401).json({
+        success: false,
+        message: 'Geçersiz sandık numarası veya TC kimlik numarası'
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken({
+      id: observer.id,
+      ballot_box_id: ballotBox.id,
+      tc: observer.tc,
+      role: 'chief_observer',
+      type: 'chief_observer'
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: observer.id,
+        name: observer.name,
+        tc: observer.tc,
+        phone: observer.phone,
+        role: 'chief_observer',
+        ballotBoxId: ballotBox.id,
+        ballotNumber: ballotBox.ballot_number,
+        institutionName: ballotBox.institution_name
+      }
+    });
+  } catch (error) {
+    console.error('Chief observer login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Giriş sırasında bir hata oluştu'
+    });
+  }
+});
+
 module.exports = router;

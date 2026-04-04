@@ -356,8 +356,12 @@ const BallotBoxesPage = () => {
           }
 
           if (importedCount > 0) {
-            setMessage(`${importedCount} sandık başarıyla içe aktarıldı${errors.length > 0 ? `, ${errors.length} hata oluştu` : ''}`);
-            setMessageType(errors.length > 0 ? 'error' : 'success');
+            const msg = `${importedCount} sandık başarıyla içe aktarıldı${errors.length > 0 ? `, ${errors.length} hata oluştu` : ''}`;
+            if (errors.length > 0) {
+              toast.error(msg);
+            } else {
+              toast.success(msg);
+            }
             await fetchBallotBoxes();
             setShowExcelImport(false);
             setExcelFile(null);

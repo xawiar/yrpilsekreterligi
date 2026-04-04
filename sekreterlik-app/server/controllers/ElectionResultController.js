@@ -222,6 +222,18 @@ class ElectionResultController {
         }
       }
 
+      // K3: Müşahit atanmadan sonuç girilmesini engelle
+      const observers = await db.all(
+        'SELECT id FROM ballot_box_observers WHERE ballot_box_id = ?',
+        [resultData.ballot_box_id]
+      );
+      if (!observers || observers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Bu sandığa henüz müşahit atanmamıştır. Önce müşahit ataması yapılmalıdır.'
+        });
+      }
+
       // Check if result already exists
       const existingResult = await db.get(
         'SELECT * FROM election_results WHERE election_id = ? AND ballot_box_id = ?',
@@ -229,6 +241,29 @@ class ElectionResultController {
       );
       if (existingResult) {
         return res.status(400).json({ message: 'Bu sandık için zaten sonuç girilmiş' });
+      }
+
+      // K10: Köy sandıklarında mayor ve municipal_council oyu olmamalı
+      const ballotBox = await db.get('SELECT * FROM ballot_boxes WHERE id = ?', [resultData.ballot_box_id]);
+      if (ballotBox && ballotBox.village_id && !ballotBox.neighborhood_id) {
+        const villageErrors = [];
+        if (resultData.mayor_votes) {
+          const mayorData = typeof resultData.mayor_votes === 'object' ? resultData.mayor_votes : JSON.parse(resultData.mayor_votes || '{}');
+          const mayorTotal = Object.values(mayorData).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+          if (mayorTotal > 0) {
+            villageErrors.push('Köy sandıklarında belediye başkanı oyu girilemez');
+          }
+        }
+        if (resultData.municipal_council_votes) {
+          const mcData = typeof resultData.municipal_council_votes === 'object' ? resultData.municipal_council_votes : JSON.parse(resultData.municipal_council_votes || '{}');
+          const mcTotal = Object.values(mcData).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+          if (mcTotal > 0) {
+            villageErrors.push('Köy sandıklarında belediye meclisi oyu girilemez');
+          }
+        }
+        if (villageErrors.length > 0) {
+          return res.status(400).json({ success: false, errors: villageErrors });
+        }
       }
 
       // Determine approval status: if filled by AI, it needs approval, otherwise auto-approved
@@ -346,10 +381,33 @@ class ElectionResultController {
         }
       }
 
-      const sql = `UPDATE election_results 
-                   SET ballot_number = ?, region_name = ?, district_name = ?, town_name = ?, 
-                       neighborhood_name = ?, village_name = ?, total_voters = ?, used_votes = ?, 
-                       invalid_votes = ?, valid_votes = ?, cb_votes = ?, mv_votes = ?, 
+      // K10: Köy sandıklarında mayor ve municipal_council oyu olmamalı
+      const ballotBox = await db.get('SELECT * FROM ballot_boxes WHERE id = ?', [oldResult.ballot_box_id]);
+      if (ballotBox && ballotBox.village_id && !ballotBox.neighborhood_id) {
+        const villageErrors = [];
+        if (resultData.mayor_votes) {
+          const mayorData = typeof resultData.mayor_votes === 'object' ? resultData.mayor_votes : JSON.parse(resultData.mayor_votes || '{}');
+          const mayorTotal = Object.values(mayorData).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+          if (mayorTotal > 0) {
+            villageErrors.push('Köy sandıklarında belediye başkanı oyu girilemez');
+          }
+        }
+        if (resultData.municipal_council_votes) {
+          const mcData = typeof resultData.municipal_council_votes === 'object' ? resultData.municipal_council_votes : JSON.parse(resultData.municipal_council_votes || '{}');
+          const mcTotal = Object.values(mcData).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+          if (mcTotal > 0) {
+            villageErrors.push('Köy sandıklarında belediye meclisi oyu girilemez');
+          }
+        }
+        if (villageErrors.length > 0) {
+          return res.status(400).json({ success: false, errors: villageErrors });
+        }
+      }
+
+      const sql = `UPDATE election_results
+                   SET ballot_number = ?, region_name = ?, district_name = ?, town_name = ?,
+                       neighborhood_name = ?, village_name = ?, total_voters = ?, used_votes = ?,
+                       invalid_votes = ?, valid_votes = ?, cb_votes = ?, mv_votes = ?,
                        mayor_votes = ?, provincial_assembly_votes = ?, municipal_council_votes = ?,
                        referendum_votes = ?, party_votes = ?, candidate_votes = ?,
                        signed_protocol_photo = ?, objection_protocol_photo = ?, has_objection = ?,
@@ -492,6 +550,16 @@ class ElectionResultController {
         return res.status(404).json({ message: 'Seçim sonucu bulunamadı' });
       }
 
+      // K6: Başmüşahit sadece kendi sandığının sonucunu onaylayabilir
+      if (req.user?.type === 'chief_observer' && req.user?.ballot_box_id) {
+        if (String(result.ballot_box_id) !== String(req.user.ballot_box_id)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Sadece kendi sandığınızın sonuçlarını onaylayabilirsiniz.'
+          });
+        }
+      }
+
       // Check if already approved or rejected
       if (result.approval_status === 'approved') {
         return res.status(400).json({ message: 'Bu sonuç zaten onaylanmış' });
@@ -540,6 +608,16 @@ class ElectionResultController {
       const result = await db.get('SELECT * FROM election_results WHERE id = ?', [id]);
       if (!result) {
         return res.status(404).json({ message: 'Seçim sonucu bulunamadı' });
+      }
+
+      // K6: Başmüşahit sadece kendi sandığının sonucunu reddedebilir
+      if (req.user?.type === 'chief_observer' && req.user?.ballot_box_id) {
+        if (String(result.ballot_box_id) !== String(req.user.ballot_box_id)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Sadece kendi sandığınızın sonuçlarını reddedebilirsiniz.'
+          });
+        }
       }
 
       // Check if already approved or rejected
