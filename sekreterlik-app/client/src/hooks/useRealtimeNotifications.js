@@ -1,32 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { setBadgeCount } from '../utils/pwaBadge';
 import { playNotificationSound } from '../utils/notificationSound';
 import ApiService from '../utils/ApiService';
 import { isNotificationAllowed, getStoredPreferences } from './useNotificationPreferences';
 
-// Firebase kullanimi kontrolu
 const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
                      import.meta.env.VITE_USE_FIREBASE === true ||
                      String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
 
-const POLLING_INTERVAL = 30000; // 30 saniye
+const POLLING_INTERVAL = 30000;
 
-/**
- * Tarayici bildirimi goster (Notification API).
- * Service worker varsa registration.showNotification, yoksa new Notification kullanir.
- */
 const showBrowserNotification = async (title, body) => {
   try {
     if (typeof Notification === 'undefined') return;
     if (Notification.permission !== 'granted') {
-      // Izin henuz verilmemisse iste
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return;
     }
-
-    // Service worker uzerinden goster (daha guvenilir, arka planda da calisir)
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.ready;
       await registration.showNotification(title, {
@@ -38,11 +30,7 @@ const showBrowserNotification = async (title, body) => {
         vibrate: [200, 100, 200]
       });
     } else {
-      // Fallback: dogrudan Notification API
-      new Notification(title, {
-        body,
-        icon: '/icon-192x192.png'
-      });
+      new Notification(title, { body, icon: '/icon-192x192.png' });
     }
   } catch (e) {
     console.warn('Browser notification error:', e);
@@ -56,34 +44,29 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
   const previousUnreadRef = useRef(0);
   const previousNotifIdsRef = useRef(new Set());
 
-  // Backend polling fonksiyonu
   const fetchNotifications = useCallback(async () => {
     if (!memberId) return;
     try {
       const response = await ApiService.getNotifications(memberId);
       const allNotifs = response.notifications || response || [];
       const prefs = getStoredPreferences();
-
-      // Tercihlere gore filtrele
-      const notifs = allNotifs.filter(n => isNotificationAllowed(n.type, prefs));
-      const unread = notifs.filter(n => !n.read).length;
+      const notifs = allNotifs.filter(function(n) { return isNotificationAllowed(n.type, prefs); });
+      const unread = notifs.filter(function(n) { return !n.read; }).length;
 
       setNotifications(notifs);
       setUnreadCount(unread);
       setBadgeCount(unread);
 
-      // Ilk yuklemeden sonra yeni bildirim gelirse ses cal + tarayici bildirimi goster
       if (!isInitialLoad.current && unread > previousUnreadRef.current) {
         playNotificationSound();
-        // Yeni gelen bildirimleri bul ve tarayici bildirimi goster
-        const currentIds = new Set(notifs.filter(n => !n.read).map(n => n.id));
-        const newNotifs = notifs.filter(n => !n.read && !previousNotifIdsRef.current.has(n.id));
-        for (const n of newNotifs) {
-          showBrowserNotification(n.title || 'Yeni Bildirim', n.message || n.body || '');
+        var currentIds = new Set(notifs.filter(function(n) { return !n.read; }).map(function(n) { return n.id; }));
+        var brandNew = notifs.filter(function(n) { return !n.read && !previousNotifIdsRef.current.has(n.id); });
+        for (var i = 0; i < brandNew.length; i++) {
+          showBrowserNotification(brandNew[i].title || 'Yeni Bildirim', brandNew[i].message || brandNew[i].body || '');
         }
         previousNotifIdsRef.current = currentIds;
       } else {
-        previousNotifIdsRef.current = new Set(notifs.filter(n => !n.read).map(n => n.id));
+        previousNotifIdsRef.current = new Set(notifs.filter(function(n) { return !n.read; }).map(function(n) { return n.id; }));
       }
       isInitialLoad.current = false;
       previousUnreadRef.current = unread;
@@ -93,50 +76,38 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
   }, [memberId]);
 
   // Firebase modu: onSnapshot ile realtime
-  useEffect(() => {
+  useEffect(function() {
     if (!memberId || !enabled || !USE_FIREBASE || !db) return;
 
-    // Reset initial load flag whenever memberId changes
     isInitialLoad.current = true;
     previousUnreadRef.current = 0;
 
-    // Önce user_notifications subcollection'ı dene (yeni fan-out sistem)
-    // Yoksa eski notifications koleksiyonuna fallback
-    const userNotifsRef = collection(db, `user_notifications/${memberId}/items`);
-    const q = query(
-      userNotifsRef,
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
+    var userNotifsRef = collection(db, 'user_notifications/' + memberId + '/items');
+    var q = query(userNotifsRef, orderBy('createdAt', 'desc'), limit(50));
 
-    // Eski notifications koleksiyonunu da dinle (geriye uyumluluk)
-    const oldNotifsRef = collection(db, 'notifications');
-    const oldQ = query(
-      oldNotifsRef,
-      orderBy('createdAt', 'desc'),
-      limit(100)
-    );
+    var oldNotifsRef = collection(db, 'notifications');
+    var oldQ = query(oldNotifsRef, orderBy('createdAt', 'desc'), limit(100));
 
-    let newNotifs = [];
-    let oldNotifs = [];
+    var newNotifsList = [];
+    var oldNotifsList = [];
 
-    const mergeAndUpdate = () => {
-      const prefs = getStoredPreferences();
-      // Yeni + eski bildirimleri birleştir, ID bazl�� deduplicate
-      const allMap = new Map();
-      for (const n of [...newNotifs, ...oldNotifs]) {
-        if (!allMap.has(n.id)) allMap.set(n.id, n);
+    function mergeAndUpdate() {
+      var prefs = getStoredPreferences();
+      var allMap = new Map();
+      var combined = newNotifsList.concat(oldNotifsList);
+      for (var i = 0; i < combined.length; i++) {
+        if (!allMap.has(combined[i].id)) allMap.set(combined[i].id, combined[i]);
       }
-      const allNotifs = Array.from(allMap.values())
-        .sort((a, b) => {
-          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
-          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+      var allNotifs = Array.from(allMap.values())
+        .sort(function(a, b) {
+          var dateA = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+          var dateB = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
           return dateB - dateA;
         })
         .slice(0, 50);
 
-      const filtered = allNotifs.filter(n => isNotificationAllowed(n.type, prefs));
-      const unread = filtered.filter(n => !n.read).length;
+      var filtered = allNotifs.filter(function(n) { return isNotificationAllowed(n.type, prefs); });
+      var unread = filtered.filter(function(n) { return !n.read; }).length;
 
       setNotifications(filtered);
       setUnreadCount(unread);
@@ -144,85 +115,53 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
 
       if (!isInitialLoad.current && unread > previousUnreadRef.current) {
         playNotificationSound();
-        const currentIds = new Set(filtered.filter(n => !n.read).map(n => n.id));
-        const brandNew = filtered.filter(n => !n.read && !previousNotifIdsRef.current.has(n.id));
-        for (const n of brandNew) {
-          showBrowserNotification(n.title || 'Yeni Bildirim', n.message || n.body || '');
+        var currentIds = new Set(filtered.filter(function(n) { return !n.read; }).map(function(n) { return n.id; }));
+        var brandNew = filtered.filter(function(n) { return !n.read && !previousNotifIdsRef.current.has(n.id); });
+        for (var j = 0; j < brandNew.length; j++) {
+          showBrowserNotification(brandNew[j].title || 'Yeni Bildirim', brandNew[j].message || brandNew[j].body || '');
         }
         previousNotifIdsRef.current = currentIds;
       } else {
-        previousNotifIdsRef.current = new Set(filtered.filter(n => !n.read).map(n => n.id));
+        previousNotifIdsRef.current = new Set(filtered.filter(function(n) { return !n.read; }).map(function(n) { return n.id; }));
       }
       isInitialLoad.current = false;
       previousUnreadRef.current = unread;
-    };
+    }
 
-    // Yeni sistem dinleyici
-    const unsub1 = onSnapshot(q, (snapshot) => {
-      newNotifs = [];
-      snapshot.forEach((doc) => {
-        newNotifs.push({ id: doc.id, ...doc.data() });
+    var unsub1 = onSnapshot(q, function(snapshot) {
+      newNotifsList = [];
+      snapshot.forEach(function(docSnap) {
+        newNotifsList.push({ id: docSnap.id, ...docSnap.data() });
       });
       mergeAndUpdate();
-    }, (err) => console.warn('user_notifications listener error:', err));
+    }, function(err) { console.warn('user_notifications listener error:', err); });
 
-    // Eski sistem dinleyici (geriye uyumluluk)
-    const unsub2 = onSnapshot(oldQ, (snapshot) => {
-      oldNotifs = [];
-      snapshot.forEach((doc) => {
-        const data = { id: doc.id, ...doc.data() };
+    var unsub2 = onSnapshot(oldQ, function(snapshot) {
+      oldNotifsList = [];
+      snapshot.forEach(function(docSnap) {
+        var data = { id: docSnap.id, ...docSnap.data() };
         if (data.memberId === memberId || data.memberId === null || !data.memberId) {
-          oldNotifs.push(data);
+          oldNotifsList.push(data);
         }
       });
       mergeAndUpdate();
+    }, function(err) { console.warn('old notifications listener error:', err); });
 
-      // Tercihlere gore filtrele
-      const notifs = allNotifs.filter(n => isNotificationAllowed(n.type, prefs));
-      const unread = notifs.filter(n => !n.read).length;
-
-      setNotifications(notifs);
-      setUnreadCount(unread);
-      setBadgeCount(unread);
-
-      // Play sound + browser notification only when new unread notifications arrive after initial load
-      if (!isInitialLoad.current && unread > previousUnreadRef.current) {
-        playNotificationSound();
-        // Yeni gelen bildirimleri bul ve tarayici bildirimi goster
-        const currentIds = new Set(notifs.filter(n => !n.read).map(n => n.id));
-        const newNotifs = notifs.filter(n => !n.read && !previousNotifIdsRef.current.has(n.id));
-        for (const n of newNotifs) {
-          showBrowserNotification(n.title || 'Yeni Bildirim', n.message || n.body || '');
-        }
-        previousNotifIdsRef.current = currentIds;
-      } else {
-        previousNotifIdsRef.current = new Set(notifs.filter(n => !n.read).map(n => n.id));
-      }
-      isInitialLoad.current = false;
-      previousUnreadRef.current = unread;
-    }, (err) => console.warn('old notifications listener error:', err));
-
-    return () => { unsub1(); unsub2(); };
+    return function() { unsub1(); unsub2(); };
   }, [memberId, enabled]);
 
-  // Backend modu: polling ile bildirim kontrolu
-  useEffect(() => {
+  // Backend modu: polling
+  useEffect(function() {
     if (!memberId || !enabled || USE_FIREBASE) return;
 
-    // Reset initial load flag whenever memberId changes
     isInitialLoad.current = true;
     previousUnreadRef.current = 0;
-
-    // Ilk cagri hemen yapilsin
     fetchNotifications();
-
-    // Her 30 saniyede bir polling
-    const interval = setInterval(fetchNotifications, POLLING_INTERVAL);
-
-    return () => clearInterval(interval);
+    var interval = setInterval(fetchNotifications, POLLING_INTERVAL);
+    return function() { clearInterval(interval); };
   }, [memberId, enabled, fetchNotifications]);
 
-  return { notifications, unreadCount };
+  return { notifications: notifications, unreadCount: unreadCount };
 };
 
 export default useRealtimeNotifications;
