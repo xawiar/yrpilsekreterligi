@@ -130,6 +130,14 @@ class BallotBoxController {
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
       }
 
+      // Mahalle ve köy aynı anda seçilemez
+      if (neighborhood_id && village_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Sandık ya mahalleye ya da köye ait olabilir, ikisine birden atanamaz.'
+        });
+      }
+
       // Check if ballot number already exists
       const existingBallotBox = await db.get('SELECT * FROM ballot_boxes WHERE ballot_number = ?', [ballot_number]);
       if (existingBallotBox) {
@@ -231,7 +239,34 @@ class BallotBoxController {
   static async delete(req, res) {
     try {
       const { id } = req.params;
-      
+
+      // Sandık bilgisini al
+      const ballotBox = await db.get('SELECT * FROM ballot_boxes WHERE id = ?', [id]);
+      if (!ballotBox) {
+        return res.status(404).json({ message: 'Sandık bulunamadı' });
+      }
+
+      // Sandık silinmeden önce başmüşahit kullanıcılarını temizle
+      const chiefObservers = await db.all(
+        'SELECT * FROM ballot_box_observers WHERE ballot_box_id = ? AND is_chief_observer = 1',
+        [id]
+      );
+      for (const observer of chiefObservers) {
+        const username = String(ballotBox.ballot_number);
+        const memberUsers = await db.all('SELECT * FROM member_users WHERE username = ?', [username]);
+        for (const user of memberUsers) {
+          try {
+            if (user.auth_uid) {
+              const firebaseAdmin = require('../config/firebaseAdmin');
+              await firebaseAdmin.auth().deleteUser(user.auth_uid);
+            }
+            await db.run('DELETE FROM member_users WHERE id = ?', [user.id]);
+          } catch (e) {
+            console.error('Error deleting member_user:', e.message);
+          }
+        }
+      }
+
       const sql = 'DELETE FROM ballot_boxes WHERE id = ?';
       await db.run(sql, [id]);
       

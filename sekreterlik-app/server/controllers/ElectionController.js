@@ -159,21 +159,59 @@ class ElectionController {
         }
       }
 
-      const sql = `UPDATE elections 
-                   SET name = ?, date = ?, type = ?, status = ?, voter_count = ?, 
-                       cb_candidates = ?, parties = ?, independent_cb_candidates = ?, 
-                       independent_mv_candidates = ?, mayor_parties = ?, mayor_candidates = ?, 
+      // Seçim aktifleştirme hazırlık checklist'i
+      const newStatus = electionData.status || oldElection.status;
+      const oldStatus = oldElection.status || 'draft';
+      let activationWarnings = [];
+      if (newStatus === 'active' && oldStatus === 'draft') {
+        // 1. Sandık var mı?
+        const ballotBoxes = await db.all('SELECT id, ballot_number, neighborhood_id, village_id FROM ballot_boxes');
+        if (ballotBoxes.length === 0) {
+          activationWarnings.push('Hiç sandık tanımlanmamış');
+        } else {
+          // 2. Müşahitsiz sandıklar
+          const observerCounts = await db.all(
+            'SELECT ballot_box_id, COUNT(*) as count FROM ballot_box_observers GROUP BY ballot_box_id'
+          );
+          const observerMap = new Map(observerCounts.map(o => [o.ballot_box_id, o.count]));
+          const noObserverBoxes = ballotBoxes.filter(bb => !observerMap.has(bb.id));
+          if (noObserverBoxes.length > 0) {
+            activationWarnings.push(`${noObserverBoxes.length} sandıkta müşahit atanmamış`);
+          }
+
+          // 3. Başmüşahitsiz sandıklar
+          const chiefCounts = await db.all(
+            'SELECT ballot_box_id, COUNT(*) as count FROM ballot_box_observers WHERE is_chief_observer = 1 GROUP BY ballot_box_id'
+          );
+          const chiefMap = new Map(chiefCounts.map(c => [c.ballot_box_id, c.count]));
+          const noChiefBoxes = ballotBoxes.filter(bb => !chiefMap.has(bb.id));
+          if (noChiefBoxes.length > 0) {
+            activationWarnings.push(`${noChiefBoxes.length} sandıkta başmüşahit atanmamış`);
+          }
+        }
+
+        // 4. Bölge tanımlı mı?
+        const regions = await db.all('SELECT id FROM election_regions');
+        if (regions.length === 0) {
+          activationWarnings.push('Hiç seçim bölgesi tanımlanmamış');
+        }
+      }
+
+      const sql = `UPDATE elections
+                   SET name = ?, date = ?, type = ?, status = ?, voter_count = ?,
+                       cb_candidates = ?, parties = ?, independent_cb_candidates = ?,
+                       independent_mv_candidates = ?, mayor_parties = ?, mayor_candidates = ?,
                        provincial_assembly_parties = ?, municipal_council_parties = ?,
                        baraj_percent = ?,
                        updated_at = CURRENT_TIMESTAMP,
                        closed_at = CASE WHEN ? = 'closed' AND status != 'closed' THEN CURRENT_TIMESTAMP ELSE closed_at END
                    WHERE id = ?`;
-      
+
       const params = [
         electionData.name,
         electionData.date,
         electionData.type,
-        electionData.status || oldElection.status,
+        newStatus,
         electionData.voter_count || null,
         JSON.stringify(electionData.cb_candidates || []),
         JSON.stringify(electionData.parties || []),
@@ -184,20 +222,24 @@ class ElectionController {
         JSON.stringify(electionData.provincial_assembly_parties || []),
         JSON.stringify(electionData.municipal_council_parties || []),
         electionData.baraj_percent !== undefined ? electionData.baraj_percent : (oldElection.baraj_percent || 7.0),
-        electionData.status || oldElection.status,
+        newStatus,
         id
       ];
 
       await db.run(sql, params);
-      
+
       // Audit log
       await db.run(
-        `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, old_data, new_data) 
+        `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, old_data, new_data)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [userId, 'admin', 'update', 'election', id, JSON.stringify(oldElection), JSON.stringify(electionData)]
       );
-      
-      res.json({ message: 'Seçim başarıyla güncellendi' });
+
+      const response = { message: 'Seçim başarıyla güncellendi' };
+      if (activationWarnings.length > 0) {
+        response.warnings = activationWarnings;
+      }
+      res.json(response);
     } catch (error) {
       console.error('Error updating election:', error);
       res.status(500).json({ message: 'Sunucu hatası', error: error.message });
@@ -262,22 +304,62 @@ class ElectionController {
         }
       }
 
-      const sql = `UPDATE elections 
-                   SET status = ?, 
+      // Seçim aktifleştirme hazırlık checklist'i
+      let activationWarnings = [];
+      if (status === 'active' && (oldElection.status || 'draft') === 'draft') {
+        // 1. Sandık var mı?
+        const ballotBoxes = await db.all('SELECT id, ballot_number, neighborhood_id, village_id FROM ballot_boxes');
+        if (ballotBoxes.length === 0) {
+          activationWarnings.push('Hiç sandık tanımlanmamış');
+        } else {
+          // 2. Müşahitsiz sandıklar
+          const observerCounts = await db.all(
+            'SELECT ballot_box_id, COUNT(*) as count FROM ballot_box_observers GROUP BY ballot_box_id'
+          );
+          const observerMap = new Map(observerCounts.map(o => [o.ballot_box_id, o.count]));
+          const noObserverBoxes = ballotBoxes.filter(bb => !observerMap.has(bb.id));
+          if (noObserverBoxes.length > 0) {
+            activationWarnings.push(`${noObserverBoxes.length} sandıkta müşahit atanmamış`);
+          }
+
+          // 3. Başmüşahitsiz sandıklar
+          const chiefCounts = await db.all(
+            'SELECT ballot_box_id, COUNT(*) as count FROM ballot_box_observers WHERE is_chief_observer = 1 GROUP BY ballot_box_id'
+          );
+          const chiefMap = new Map(chiefCounts.map(c => [c.ballot_box_id, c.count]));
+          const noChiefBoxes = ballotBoxes.filter(bb => !chiefMap.has(bb.id));
+          if (noChiefBoxes.length > 0) {
+            activationWarnings.push(`${noChiefBoxes.length} sandıkta başmüşahit atanmamış`);
+          }
+        }
+
+        // 4. Bölge tanımlı mı?
+        const regions = await db.all('SELECT id FROM election_regions');
+        if (regions.length === 0) {
+          activationWarnings.push('Hiç seçim bölgesi tanımlanmamış');
+        }
+      }
+
+      const sql = `UPDATE elections
+                   SET status = ?,
                        updated_at = CURRENT_TIMESTAMP,
                        closed_at = CASE WHEN ? = 'closed' AND status != 'closed' THEN CURRENT_TIMESTAMP ELSE closed_at END
                    WHERE id = ?`;
-      
+
       await db.run(sql, [status, status, id]);
-      
+
       // Audit log
       await db.run(
-        `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, old_data, new_data) 
+        `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, old_data, new_data)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [userId, 'admin', 'update_status', 'election', id, JSON.stringify({ status: oldElection.status }), JSON.stringify({ status })]
       );
-      
-      res.json({ message: 'Seçim durumu güncellendi' });
+
+      const response = { message: 'Seçim durumu güncellendi' };
+      if (activationWarnings.length > 0) {
+        response.warnings = activationWarnings;
+      }
+      res.json(response);
     } catch (error) {
       console.error('Error updating election status:', error);
       res.status(500).json({ message: 'Sunucu hatası', error: error.message });

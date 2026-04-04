@@ -156,7 +156,7 @@ const GroupsPage = () => {
             </svg>
             Seçime Hazırlık
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Gruplar</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Gruplar</h1>
         </div>
         <button
           onClick={() => {
@@ -226,8 +226,8 @@ const GroupsPage = () => {
       </div>
 
       {sortedGroupNos.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">Henüz grup oluşturulmamış. Grup numarası atanmış mahalle ve köyler burada görünecektir.</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <p className="text-gray-500 dark:text-gray-400">Henüz grup oluşturulmamış. Grup numarası atanmış mahalle ve köyler burada görünecektir.</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -237,11 +237,11 @@ const GroupsPage = () => {
             const currentLeaderId = groupLeaderIds[groupNo] || (groupLeader ? groupLeader.id : '');
 
             return (
-              <div key={groupNo} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div key={groupNo} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 {/* Group Header */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-4">
-                    <h2 className="text-2xl font-bold text-gray-900">Grup {groupNo}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Grup {groupNo}</h2>
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
                       {groupData.neighborhoods.length + groupData.villages.length} Toplam
                     </span>
@@ -249,14 +249,14 @@ const GroupsPage = () => {
                   
                   {/* Group Leader Selection */}
                   <div className="flex items-center space-x-4">
-                    <label htmlFor={`group-leader-${groupNo}`} className="text-sm font-medium text-gray-700">
+                    <label htmlFor={`group-leader-${groupNo}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Grup Lideri:
                     </label>
                     <select
                       id={`group-leader-${groupNo}`}
                       value={currentLeaderId}
                       onChange={(e) => handleGroupLeaderChange(groupNo, e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Grup lideri seçin</option>
                       {members.map((member) => (
@@ -266,7 +266,7 @@ const GroupsPage = () => {
                       ))}
                     </select>
                     {groupLeader && (
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
                         Seçili: <span className="font-medium">{groupLeader.name}</span>
                       </span>
                     )}
@@ -276,7 +276,7 @@ const GroupsPage = () => {
                 {/* Neighborhoods Table */}
                 {groupData.neighborhoods.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Mahalleler ({groupData.neighborhoods.length})
                     </h3>
                     
@@ -289,33 +289,33 @@ const GroupsPage = () => {
                         const town = neighborhood.town_id ? towns.find(t => String(t.id) === String(neighborhood.town_id)) : null;
                         
                         return (
-                          <div key={neighborhood.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                          <div key={neighborhood.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                             <div className="space-y-3">
-                              <h4 className="text-base font-semibold text-gray-900">{neighborhood.name}</h4>
-                              <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{neighborhood.name}</h4>
+                              <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">İlçe:</span>
-                                  <span className="text-gray-900 font-medium">{district?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">İlçe:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{district?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Belde:</span>
-                                  <span className="text-gray-900 font-medium">{town?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Belde:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{town?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Temsilci:</span>
-                                  <span className="text-gray-900 font-medium">{representative?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Temsilci:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{representative?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Temsilci Telefon:</span>
-                                  <span className="text-gray-900 font-medium">{representative?.phone || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Temsilci Telefon:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{representative?.phone || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Müfettiş:</span>
-                                  <span className="text-gray-900 font-medium">{supervisor?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Müfettiş:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{supervisor?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Müfettiş Telefon:</span>
-                                  <span className="text-gray-900 font-medium">{supervisor?.phone || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Müfettiş Telefon:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{supervisor?.phone || '-'}</span>
                                 </div>
                               </div>
                             </div>
@@ -326,19 +326,19 @@ const GroupsPage = () => {
 
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mahalle Adı</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">İlçe</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Belde</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Temsilci</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Temsilci Telefon</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müfettiş</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müfettiş Telefon</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Mahalle Adı</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">İlçe</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Belde</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Temsilci</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Temsilci Telefon</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Müfettiş</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Müfettiş Telefon</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                           {groupData.neighborhoods.map(neighborhood => {
                             const representative = neighborhoodRepresentatives.find(rep => String(rep.neighborhood_id) === String(neighborhood.id));
                             const supervisor = neighborhoodSupervisors.find(sup => String(sup.neighborhood_id) === String(neighborhood.id));
@@ -346,14 +346,14 @@ const GroupsPage = () => {
                             const town = neighborhood.town_id ? towns.find(t => String(t.id) === String(neighborhood.town_id)) : null;
                             
                             return (
-                              <tr key={neighborhood.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{neighborhood.name}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{district?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{town?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{representative?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{representative?.phone || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{supervisor?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{supervisor?.phone || '-'}</td>
+                              <tr key={neighborhood.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{neighborhood.name}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{district?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{town?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{representative?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{representative?.phone || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{supervisor?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{supervisor?.phone || '-'}</td>
                               </tr>
                             );
                           })}
@@ -366,7 +366,7 @@ const GroupsPage = () => {
                 {/* Villages Table */}
                 {groupData.villages.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Köyler ({groupData.villages.length})
                     </h3>
                     
@@ -379,33 +379,33 @@ const GroupsPage = () => {
                         const town = village.town_id ? towns.find(t => String(t.id) === String(village.town_id)) : null;
                         
                         return (
-                          <div key={village.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                          <div key={village.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                             <div className="space-y-3">
-                              <h4 className="text-base font-semibold text-gray-900">{village.name}</h4>
-                              <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{village.name}</h4>
+                              <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">İlçe:</span>
-                                  <span className="text-gray-900 font-medium">{district?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">İlçe:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{district?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Belde:</span>
-                                  <span className="text-gray-900 font-medium">{town?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Belde:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{town?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Temsilci:</span>
-                                  <span className="text-gray-900 font-medium">{representative?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Temsilci:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{representative?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Temsilci Telefon:</span>
-                                  <span className="text-gray-900 font-medium">{representative?.phone || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Temsilci Telefon:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{representative?.phone || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Müfettiş:</span>
-                                  <span className="text-gray-900 font-medium">{supervisor?.name || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Müfettiş:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{supervisor?.name || '-'}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Müfettiş Telefon:</span>
-                                  <span className="text-gray-900 font-medium">{supervisor?.phone || '-'}</span>
+                                  <span className="text-gray-500 dark:text-gray-400">Müfettiş Telefon:</span>
+                                  <span className="text-gray-900 dark:text-gray-100 font-medium">{supervisor?.phone || '-'}</span>
                                 </div>
                               </div>
                             </div>
@@ -416,19 +416,19 @@ const GroupsPage = () => {
 
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Köy Adı</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">İlçe</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Belde</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Temsilci</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Temsilci Telefon</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müfettiş</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müfettiş Telefon</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Köy Adı</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">İlçe</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Belde</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Temsilci</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Temsilci Telefon</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Müfettiş</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Müfettiş Telefon</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                           {groupData.villages.map(village => {
                             const representative = villageRepresentatives.find(rep => String(rep.village_id) === String(village.id));
                             const supervisor = villageSupervisors.find(sup => String(sup.village_id) === String(village.id));
@@ -436,14 +436,14 @@ const GroupsPage = () => {
                             const town = village.town_id ? towns.find(t => String(t.id) === String(village.town_id)) : null;
                             
                             return (
-                              <tr key={village.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{village.name}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{district?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{town?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{representative?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{representative?.phone || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{supervisor?.name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{supervisor?.phone || '-'}</td>
+                              <tr key={village.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{village.name}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{district?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{town?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{representative?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{representative?.phone || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{supervisor?.name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{supervisor?.phone || '-'}</td>
                               </tr>
                             );
                           })}

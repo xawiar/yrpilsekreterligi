@@ -122,7 +122,7 @@ const ElectionPreparationPage = () => {
       navigate(tab.path);
     } catch (e) {
       // Route-based navigation çalışmıyorsa sadece state'i güncelle
-      console.log('Route navigation not available, using state-based navigation');
+      // Route navigation not available, using state-based navigation
     }
   };
 

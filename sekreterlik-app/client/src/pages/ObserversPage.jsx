@@ -91,15 +91,6 @@ const ObserversPage = () => {
       if (name === 'ballot_box_id') {
         const selected = ballotBoxes.find(bb => String(bb.id) === String(value));
         if (selected) {
-          console.log('🔍 Sandık seçildi, otomatik doldurulacak:', {
-            ballotBoxId: selected.id,
-            district_id: selected.district_id,
-            town_id: selected.town_id,
-            neighborhood_id: selected.neighborhood_id,
-            village_id: selected.village_id,
-            previous_district_id: prev.district_id
-          });
-          
           // Sandığın kaydedilirken seçilen mahalle/köy ve belde bilgilerini otomatik doldur
           // Önce district_id'yi set et, sonra diğer alanları set et
           if (selected.district_id) {
@@ -121,12 +112,6 @@ const ObserversPage = () => {
           
           // Sandık seçimi nedeniyle district_id değiştiyse, alt alanları resetleme
           // Bu yüzden return ediyoruz, aşağıdaki reset mantığına geçmesin
-          console.log('✅ Sandık bilgileri otomatik dolduruldu:', {
-            district_id: newData.district_id,
-            town_id: newData.town_id,
-            neighborhood_id: newData.neighborhood_id,
-            village_id: newData.village_id
-          });
           return newData;
         } else {
           // Sandık seçimi temizlendiyse, sadece ballot_box_id'yi temizle, diğer alanları koru
@@ -188,15 +173,6 @@ const ObserversPage = () => {
         is_chief_observer: formData.is_chief_observer || false
       };
       
-      // Debug log - ballot_box_id değerini kontrol et
-      console.log('🔍 Observer Data:', {
-        ballot_box_id: observerData.ballot_box_id,
-        ballot_box_id_type: typeof observerData.ballot_box_id,
-        formData_ballot_box_id: formData.ballot_box_id,
-        USE_FIREBASE,
-        editingObserver: editingObserver ? editingObserver.id : null
-      });
-
       try {
         if (editingObserver) {
           // Başmüşahit güncellenirken kullanıcı otomatik olarak FirebaseApiService.updateBallotBoxObserver içinde güncelleniyor
@@ -256,15 +232,6 @@ const ObserversPage = () => {
 
   const handleEdit = (observer) => {
     setEditingObserver(observer);
-    // Debug log
-    console.log('🔍 Editing observer:', {
-      id: observer.id,
-      ballot_box_id: observer.ballot_box_id,
-      ballot_box_id_type: typeof observer.ballot_box_id,
-      district_id: observer.district_id,
-      neighborhood_id: observer.neighborhood_id,
-      village_id: observer.village_id
-    });
     
     // Get region_name from observer or from localStorage
     const regionName = observer.region_name || localStorage.getItem('admin_region_name') || '';
@@ -466,13 +433,13 @@ const ObserversPage = () => {
   const statistics = getStatistics();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Müşahitler</h1>
-              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Başmüşahit ve müşahit yönetimi</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Müşahitler</h1>
+              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">Başmüşahit ve müşahit yönetimi</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -545,7 +512,7 @@ const ObserversPage = () => {
               </button>
               <Link
                 to="/election-preparation"
-                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <span className="hidden sm:inline">← Geri Dön</span>
                 <span className="sm:hidden">←</span>
@@ -556,7 +523,7 @@ const ObserversPage = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -566,13 +533,13 @@ const ObserversPage = () => {
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Toplam Müşahit</p>
-                <p className="text-2xl font-semibold text-gray-900">{statistics.totalObservers}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Toplam Müşahit</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{statistics.totalObservers}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -582,13 +549,13 @@ const ObserversPage = () => {
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Başmüşahit</p>
-                <p className="text-2xl font-semibold text-gray-900">{statistics.chiefObserversCount}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Başmüşahit</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{statistics.chiefObserversCount}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
@@ -598,13 +565,13 @@ const ObserversPage = () => {
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Müşahit</p>
-                <p className="text-2xl font-semibold text-gray-900">{statistics.regularObserversCount}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Müşahit</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{statistics.regularObserversCount}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
@@ -614,8 +581,8 @@ const ObserversPage = () => {
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Toplam Sandık</p>
-                <p className="text-2xl font-semibold text-gray-900">{statistics.totalBallotBoxes}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Toplam Sandık</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{statistics.totalBallotBoxes}</p>
               </div>
             </div>
           </div>
@@ -623,7 +590,7 @@ const ObserversPage = () => {
 
         {/* Additional Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -633,13 +600,13 @@ const ObserversPage = () => {
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Müşahit Atanmış Sandık</p>
-                <p className="text-2xl font-semibold text-gray-900">{statistics.ballotBoxesWithObservers}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Müşahit Atanmış Sandık</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{statistics.ballotBoxesWithObservers}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
@@ -649,8 +616,8 @@ const ObserversPage = () => {
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Müşahit Atanmamış Sandık</p>
-                <p className="text-2xl font-semibold text-gray-900">{statistics.ballotBoxesWithoutObservers}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Müşahit Atanmamış Sandık</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{statistics.ballotBoxesWithoutObservers}</p>
               </div>
             </div>
           </div>
@@ -700,10 +667,10 @@ const ObserversPage = () => {
           </div>
         )}
 
-        <div className="bg-white shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="mb-6">
-              <h2 className="text-lg font-medium text-gray-900">
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 Müşahit Listesi
               </h2>
             </div>
@@ -714,20 +681,20 @@ const ObserversPage = () => {
                 placeholder="Müşahit ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
 
             {/* Filters */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Filtreler</h3>
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Filtreler</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">İlçe</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İlçe</label>
                   <select
                     value={filters.district_id}
                     onChange={(e) => handleFilterChange('district_id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="">Tüm İlçeler</option>
                     {districts.map(district => (
@@ -737,12 +704,12 @@ const ObserversPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Belde</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Belde</label>
                   <select
                     value={filters.town_id}
                     onChange={(e) => handleFilterChange('town_id', e.target.value)}
                     disabled={!filters.district_id}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
                   >
                     <option value="">Tüm Beldeler</option>
                     {getFilteredTowns().map(town => (
@@ -752,12 +719,12 @@ const ObserversPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mahalle</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mahalle</label>
                   <select
                     value={filters.neighborhood_id}
                     onChange={(e) => handleFilterChange('neighborhood_id', e.target.value)}
                     disabled={!filters.district_id}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
                   >
                     <option value="">Tüm Mahalleler</option>
                     {getFilteredNeighborhoods().map(neighborhood => (
@@ -767,12 +734,12 @@ const ObserversPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Köy</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Köy</label>
                   <select
                     value={filters.village_id}
                     onChange={(e) => handleFilterChange('village_id', e.target.value)}
                     disabled={!filters.district_id}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
                   >
                     <option value="">Tüm Köyler</option>
                     {getFilteredVillages().map(village => (
@@ -782,11 +749,11 @@ const ObserversPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tür</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tür</label>
                   <select
                     value={filters.is_chief_observer}
                     onChange={(e) => handleFilterChange('is_chief_observer', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="">Tümü</option>
                     <option value="true">Başmüşahit</option>
@@ -804,7 +771,7 @@ const ObserversPage = () => {
                     village_id: '',
                     is_chief_observer: ''
                   })}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Filtreleri Temizle
                 </button>
@@ -822,10 +789,10 @@ const ObserversPage = () => {
                   ></div>
 
                   {/* Modal panel */}
-                  <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+                    <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium text-gray-900">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                   {editingObserver ? 'Müşahit Düzenle' : 'Yeni Müşahit Ekle'}
                 </h3>
                         <button
@@ -840,7 +807,7 @@ const ObserversPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         TC Kimlik No *
                       </label>
                       <input
@@ -848,12 +815,12 @@ const ObserversPage = () => {
                         name="tc"
                         value={formData.tc}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Ad Soyad *
                       </label>
                       <input
@@ -861,12 +828,12 @@ const ObserversPage = () => {
                         name="name"
                         value={formData.name}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Telefon *
                       </label>
                       <input
@@ -874,19 +841,19 @@ const ObserversPage = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Sandık
                       </label>
                       <select
                         name="ballot_box_id"
                         value={formData.ballot_box_id}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">Sandık seçin (opsiyonel)</option>
                         {ballotBoxes.map(ballotBox => (
@@ -897,7 +864,7 @@ const ObserversPage = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         İl
                       </label>
                       <input
@@ -906,18 +873,18 @@ const ObserversPage = () => {
                         value={formData.region_name}
                         onChange={handleInputChange}
                         placeholder="Örn: Elazığ"
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         İlçe
                       </label>
                       <select
                         name="district_id"
                         value={formData.district_id}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">İlçe seçin (opsiyonel)</option>
                         {districts.map(district => (
@@ -928,14 +895,14 @@ const ObserversPage = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Belde
                       </label>
                       <select
                         name="town_id"
                         value={formData.town_id}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                         disabled={!formData.district_id}
                       >
                         <option value="">Belde seçin (opsiyonel)</option>
@@ -947,14 +914,14 @@ const ObserversPage = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Mahalle
                       </label>
                       <select
                         name="neighborhood_id"
                         value={formData.neighborhood_id}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                         disabled={!formData.district_id}
                       >
                         <option value="">Mahalle seçin (opsiyonel)</option>
@@ -976,14 +943,14 @@ const ObserversPage = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Köy
                       </label>
                       <select
                         name="village_id"
                         value={formData.village_id}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                         disabled={!formData.district_id}
                       >
                         <option value="">Köy seçin (opsiyonel)</option>
@@ -1010,16 +977,16 @@ const ObserversPage = () => {
                         name="is_chief_observer"
                         checked={formData.is_chief_observer}
                         onChange={handleInputChange}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
                       />
-                      <label className="ml-2 block text-sm text-gray-900">
+                      <label className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
                         Başmüşahit
                       </label>
                     </div>
                   </div>
                       </form>
                     </div>
-                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button
                       type="button"
                         onClick={handleSubmit}
@@ -1031,7 +998,7 @@ const ObserversPage = () => {
                     <button
                         type="button"
                         onClick={handleCancel}
-                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                       >
                         İptal
                     </button>
@@ -1044,42 +1011,42 @@ const ObserversPage = () => {
             {loading && !showAddForm ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Müşahitler yükleniyor...</p>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">Müşahitler yükleniyor...</p>
               </div>
             ) : (
               <div className="space-y-6">
                 {chiefObservers.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Başmüşahitler</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Başmüşahitler</h3>
                     
                     {/* Mobile Card View */}
                     <div className="md:hidden space-y-4">
                       {chiefObservers.map((observer) => (
-                        <div key={observer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div key={observer.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="text-base font-semibold text-gray-900 mb-1">{observer.name}</h3>
-                                <p className="text-sm text-gray-500">{observer.tc || '-'}</p>
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{observer.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{observer.tc || '-'}</p>
                               </div>
                             </div>
                             
-                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                            <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Telefon:</span>
-                                <span className="text-gray-900 font-medium">{observer.phone || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{observer.phone || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Sandık:</span>
-                                <span className="text-gray-900 font-medium">{getBallotBoxName(observer.ballot_box_id)}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Sandık:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{getBallotBoxName(observer.ballot_box_id)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Konum:</span>
-                                <span className="text-gray-900 font-medium">{getLocationInfo(observer)}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Konum:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{getLocationInfo(observer)}</span>
                               </div>
                             </div>
                             
-                            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
+                            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                               <button
                                 onClick={() => handleEdit(observer)}
                                 className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
@@ -1100,45 +1067,45 @@ const ObserversPage = () => {
 
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               TC
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Ad Soyad
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Telefon
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Sandık
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Konum
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               İşlemler
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                           {chiefObservers.map((observer) => (
                             <tr key={observer.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.tc}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.name}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.phone}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {getBallotBoxName(observer.ballot_box_id)}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {getLocationInfo(observer)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1165,36 +1132,36 @@ const ObserversPage = () => {
 
                 {regularObservers.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Müşahitler</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Müşahitler</h3>
                     
                     {/* Mobile Card View */}
                     <div className="md:hidden space-y-4">
                       {regularObservers.map((observer) => (
-                        <div key={observer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div key={observer.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="text-base font-semibold text-gray-900 mb-1">{observer.name}</h3>
-                                <p className="text-sm text-gray-500">{observer.tc || '-'}</p>
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{observer.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{observer.tc || '-'}</p>
                               </div>
                             </div>
                             
-                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                            <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Telefon:</span>
-                                <span className="text-gray-900 font-medium">{observer.phone || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{observer.phone || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Sandık:</span>
-                                <span className="text-gray-900 font-medium">{getBallotBoxName(observer.ballot_box_id)}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Sandık:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{getBallotBoxName(observer.ballot_box_id)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Konum:</span>
-                                <span className="text-gray-900 font-medium">{getLocationInfo(observer)}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Konum:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{getLocationInfo(observer)}</span>
                               </div>
                             </div>
                             
-                            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
+                            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                               <button
                                 onClick={() => handleEdit(observer)}
                                 className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
@@ -1215,45 +1182,45 @@ const ObserversPage = () => {
 
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               TC
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Ad Soyad
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Telefon
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Sandık
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Konum
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               İşlemler
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                           {regularObservers.map((observer) => (
                             <tr key={observer.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.tc}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.name}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.phone}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {getBallotBoxName(observer.ballot_box_id)}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {getLocationInfo(observer)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1280,7 +1247,7 @@ const ObserversPage = () => {
 
                 {filteredObservers.length === 0 && (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 dark:text-gray-400">
                       {searchTerm ? 'Arama kriterlerine uygun müşahit bulunamadı' : 'Henüz müşahit eklenmemiş'}
                     </p>
                   </div>

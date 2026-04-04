@@ -192,14 +192,26 @@ class VillageController {
         return res.status(404).json({ message: 'Köy bulunamadı' });
       }
       
+      // Silinen köyün bölge referanslarını temizle (election_regions.village_ids)
+      const regions = await db.all('SELECT id, village_ids FROM election_regions');
+      for (const region of regions) {
+        const ids = typeof region.village_ids === 'string'
+          ? JSON.parse(region.village_ids || '[]')
+          : (region.village_ids || []);
+        const filtered = ids.filter(vId => String(vId) !== String(id));
+        if (filtered.length !== ids.length) {
+          await db.run('UPDATE election_regions SET village_ids = ? WHERE id = ?', [JSON.stringify(filtered), region.id]);
+        }
+      }
+
       await db.run('DELETE FROM villages WHERE id = ?', [id]);
-      
+
       // Update in-memory collection
       const index = collections.villages.findIndex(v => v.id === parseInt(id));
       if (index !== -1) {
         collections.villages.splice(index, 1);
       }
-      
+
       res.json({ message: 'Köy başarıyla silindi' });
     } catch (error) {
       console.error('Error deleting village:', error);

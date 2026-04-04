@@ -156,6 +156,43 @@ class ElectionRegionController {
   static async delete(req, res) {
     try {
       const { id } = req.params;
+
+      // Bölgedeki sandık sayısını kontrol et
+      const region = await ElectionRegion.getById(id);
+      if (!region) {
+        return res.status(404).json({ message: 'Bölge bulunamadı' });
+      }
+
+      const neighborhoodIds = typeof region.neighborhood_ids === 'string'
+        ? JSON.parse(region.neighborhood_ids || '[]')
+        : (region.neighborhood_ids || []);
+      const villageIds = typeof region.village_ids === 'string'
+        ? JSON.parse(region.village_ids || '[]')
+        : (region.village_ids || []);
+
+      let ballotBoxCount = 0;
+      if (neighborhoodIds.length > 0) {
+        const nbResult = await db.get(
+          `SELECT COUNT(*) as count FROM ballot_boxes WHERE neighborhood_id IN (${neighborhoodIds.map(() => '?').join(',')})`,
+          neighborhoodIds
+        );
+        ballotBoxCount += nbResult?.count || 0;
+      }
+      if (villageIds.length > 0) {
+        const vResult = await db.get(
+          `SELECT COUNT(*) as count FROM ballot_boxes WHERE village_id IN (${villageIds.map(() => '?').join(',')})`,
+          villageIds
+        );
+        ballotBoxCount += vResult?.count || 0;
+      }
+
+      if (ballotBoxCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Bu bölgede ${ballotBoxCount} sandık bulunmaktadır. Önce sandıkları başka bölgeye taşıyın veya silin.`
+        });
+      }
+
       const result = await ElectionRegion.delete(id);
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Bölge bulunamadı' });

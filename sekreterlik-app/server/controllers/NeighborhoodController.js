@@ -192,14 +192,26 @@ class NeighborhoodController {
         return res.status(404).json({ message: 'Mahalle bulunamadı' });
       }
       
+      // Silinen mahallenin bölge referanslarını temizle (election_regions.neighborhood_ids)
+      const regions = await db.all('SELECT id, neighborhood_ids FROM election_regions');
+      for (const region of regions) {
+        const ids = typeof region.neighborhood_ids === 'string'
+          ? JSON.parse(region.neighborhood_ids || '[]')
+          : (region.neighborhood_ids || []);
+        const filtered = ids.filter(nId => String(nId) !== String(id));
+        if (filtered.length !== ids.length) {
+          await db.run('UPDATE election_regions SET neighborhood_ids = ? WHERE id = ?', [JSON.stringify(filtered), region.id]);
+        }
+      }
+
       await db.run('DELETE FROM neighborhoods WHERE id = ?', [id]);
-      
+
       // Update in-memory collection
       const index = collections.neighborhoods.findIndex(n => n.id === parseInt(id));
       if (index !== -1) {
         collections.neighborhoods.splice(index, 1);
       }
-      
+
       res.json({ message: 'Mahalle başarıyla silindi' });
     } catch (error) {
       console.error('Error deleting neighborhood:', error);
