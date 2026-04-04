@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
+import NotificationService, { NOTIFICATION_TYPES, TARGET_TYPES } from '../services/NotificationService';
 
 /**
  * EventFormBase - Unified event form component
@@ -448,6 +449,21 @@ const EventFormBase = ({ mode = 'create', event, onClose, onSuccess, members }) 
           } catch (visitError) {
             console.error('Error updating visit counts:', visitError);
           }
+        }
+      }
+
+      // Bildirim gonder (create ve plan modlarinda)
+      if (mode !== 'edit') {
+        try {
+          await NotificationService.createNotification({
+            title: `Etkinlik: ${finalEventName}`,
+            body: `${eventDate} tarihinde etkinlik planlanmistir.`,
+            type: NOTIFICATION_TYPES.EVENT_INVITE,
+            target: { type: TARGET_TYPES.ALL },
+            url: '/member-dashboard/events',
+          });
+        } catch (notifErr) {
+          console.warn('Event notification error (non-blocking):', notifErr);
         }
       }
 

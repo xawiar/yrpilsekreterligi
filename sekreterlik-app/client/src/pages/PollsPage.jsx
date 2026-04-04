@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import NotificationService, { NOTIFICATION_TYPES, TARGET_TYPES } from '../services/NotificationService';
 
 const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
                      import.meta.env.VITE_USE_FIREBASE === true ||
@@ -146,6 +147,20 @@ const PollsPage = () => {
       };
       
       await ApiService.createPoll(pollData);
+
+      // Bildirim gonder
+      try {
+        await NotificationService.createNotification({
+          title: `Yeni Anket: ${pollData.title}`,
+          body: pollData.description || 'Yeni bir anket olusturuldu. Oyunuzu kullanin.',
+          type: NOTIFICATION_TYPES.POLL_INVITE,
+          target: { type: TARGET_TYPES.ALL },
+          url: '/member-dashboard',
+        });
+      } catch (notifErr) {
+        console.warn('Poll notification error (non-blocking):', notifErr);
+      }
+
       toast.success('Anket başarıyla oluşturuldu');
       setIsCreateModalOpen(false);
       fetchPolls();

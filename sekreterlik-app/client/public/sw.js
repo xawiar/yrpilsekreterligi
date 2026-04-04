@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sekreterlik-v6-clear-archived-396dfd0';
+const CACHE_NAME = 'sekreterlik-v7-notif-cleanup-20260403';
 // Vite geliştirme ortamında sabit bundle yolları yok; yalnızca güvenli, mevcut dosyaları önbelleğe al
 const urlsToCache = [
   '/',
@@ -35,23 +35,40 @@ self.addEventListener('install', (event) => {
 // Fetch event
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
-  
-  // Skip localhost:5000 requests - backend API is not available in production
-  if (url.includes('localhost:5000') || url.includes('/api/health') || url.includes('/api/archive/documents') || url.includes('/api/district-officials') || url.includes('/api/visits/counts') || url.includes('/api/districts') || url.includes('/deputy-inspectors')) {
-    // Don't intercept these requests - let them fail silently
-    // Return a dummy response to prevent errors
-    event.respondWith(new Response('', { status: 200, statusText: 'OK' }));
+
+  // Skip localhost URLs entirely — do NOT intercept, let the browser handle them
+  if (url.includes('localhost:5000') || url.includes('localhost:3000') || url.includes('127.0.0.1')) {
+    return; // Do not call event.respondWith — browser handles natively
+  }
+
+  // Skip API requests — do not cache
+  if (url.includes('/api/')) {
     return;
   }
-  
+
+  // Skip Firebase/Firestore requests — do not cache
+  if (url.includes('firestore.googleapis.com') || url.includes('firebase') || url.includes('googleapis.com')) {
+    return;
+  }
+
+  // Navigation requests (HTML pages) — network-first for SPA routing
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => response)
+        .catch(() => {
+          // Offline fallback: serve cached index.html for SPA
+          return caches.match('/index.html');
+        })
+    );
+    return;
+  }
+
+  // Static assets — cache-first
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request).catch((error) => {
-          // Silently handle fetch errors (especially for localhost:5000)
-          console.warn('Fetch error (silently ignored):', error);
-          // Return a dummy response to prevent error
+        return response || fetch(event.request).catch(() => {
           return new Response('', { status: 503, statusText: 'Service Unavailable' });
         });
       })

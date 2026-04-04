@@ -1,10 +1,29 @@
-import { collection, doc, setDoc, getDocs, query, where, orderBy, limit, serverTimestamp, deleteDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  writeBatch,
+} from 'firebase/firestore';
 import { db } from '../config/firebase';
-import FirebaseService from './FirebaseService';
 import FirebaseApiService from '../utils/FirebaseApiService';
 
 // =====================================================
-// Bildirim Tipleri (Madde 2)
+// Koleksiyon isimleri
+// =====================================================
+const MASTER_NOTIFICATIONS = 'master_notifications';
+const USER_NOTIFICATIONS = 'user_notifications';
+
+// =====================================================
+// Bildirim Tipleri
 // =====================================================
 export const NOTIFICATION_TYPES = {
   ANNOUNCEMENT: 'announcement',
@@ -12,7 +31,7 @@ export const NOTIFICATION_TYPES = {
   EVENT_INVITE: 'event_invite',
   POLL_INVITE: 'poll_invite',
   ELECTION_UPDATE: 'election_update',
-  // Mevcut tipler (geriye uyumluluk)
+  // Geriye uyumluluk
   MEETING: 'meeting',
   MEETING_REMINDER: 'meeting_reminder',
   EVENT: 'event',
@@ -39,25 +58,170 @@ export const TARGET_TYPES = {
 };
 
 // =====================================================
-// NotificationService — Fan-out pattern (Madde 1, 3, 4, 5)
+// Yardimci: Hedef kullanicilari coz
 // =====================================================
+async function resolveTargetUsers(target) {
+  if (!target || !target.type) {
+    return await getAllMemberIds();
+  }
+
+  switch (target.type) {
+    case TARGET_TYPES.ALL:
+      return await getAllMemberIds();
+
+    case TARGET_TYPES.REGION:
+      return await getMemberIdsByRegion(target.value);
+
+    case TARGET_TYPES.ROLE:
+      return await getMemberIdsByRole(target.value);
+
+    case TARGET_TYPES.SINGLE:
+      return target.value ? [target.value] : [];
+
+    default:
+      return [];
+  }
+}
+
+async function getAllMemberIds() {
+  try {
+    const members = await FirebaseApiService.getMembers(false);
+    return (members || [])
+      .map((m) => String(m.id || m.memberId || '').trim())
+      .filter(Boolean);
+  } catch (error) {
+    console.error('[NotificationService] getAllMemberIds error:', error);
+    return [];
+  }
+}
+
+async function getMemberIdsByRegion(regionName) {
+  try {
+    const members = await FirebaseApiService.getMembers(false);
+    return (members || [])
+      .filter((m) => m.region === regionName)
+      .map((m) => String(m.id || m.memberId || '').trim())
+      .filter(Boolean);
+  } catch (error) {
+    console.error('[NotificationService] getMemberIdsByRegion error:', error);
+    return [];
+  }
+}
+
+async function getMemberIdsByRole(positionName) {
+  try {
+    const members = await FirebaseApiService.getMembers(false);
+    return (members || [])
+      .filter((m) => m.position === positionName || m.gorev === positionName)
+      .map((m) => String(m.id || m.memberId || '').trim())
+      .filter(Boolean);
+  } catch (error) {
+    console.error('[NotificationService] getMemberIdsByRole error:', error);
+    return [];
+  }
+}
+
+// =====================================================
+// Push Notification Gonder
+// =====================================================
+async function sendPushNotifications(userIds, { title, body, type, url }) {
+  try {
+    const snapshot = await getDocs(collection(db, 'push_subscriptions'));
+    if (snapshot.empty) return;
+
+    const targetSubs = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (userIds.includes(data.userId)) {
+        targetSubs.push(data);
+      }
+    });
+
+    if (targetSubs.length === 0) return;
+
+    const API_BASE_URL =
+      import.meta.env.VITE_API_BASE_URL ||
+      (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+
+    let authToken = null;
+    try {
+      authToken = localStorage.getItem('token');
+    } catch (_) {
+      // sessizce devam
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const formattedSubscriptions = targetSubs.map((sub) => ({
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dh, auth: sub.auth },
+    }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/send-direct`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title,
+          body,
+          subscriptions: formattedSubscriptions,
+          data: { type: type || 'general', url: url || '/notifications' },
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`[Push] Sent: ${result.sentCount || 0} successful`);
+        return;
+      }
+    } catch (backendErr) {
+      console.warn('[Push] Backend push failed, trying SW fallback:', backendErr.message);
+    }
+
+    // Fallback: Service Worker ile dogrudan bildirim goster
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, {
+          body,
+          icon: '/icon-192x192.png',
+          badge: '/badge-72x72.png',
+          tag: type || 'general',
+          renotify: true,
+          vibrate: [200, 100, 200],
+          requireInteraction: true,
+          data: { type: type || 'general', url: url || '/notifications' },
+          actions: [
+            { action: 'view', title: 'Goruntule' },
+            { action: 'close', title: 'Kapat' },
+          ],
+        });
+      } catch (_) {
+        // SW fallback basarisiz
+      }
+    }
+  } catch (error) {
+    console.warn('[Push] Push notification error:', error);
+  }
+}
+
+// =====================================================
+// PUBLIC API
+// =====================================================
+
 class NotificationService {
-
-  // Koleksiyon isimleri
-  static COLLECTIONS = {
-    MASTER_NOTIFICATIONS: 'master_notifications',
-    USER_NOTIFICATIONS: 'user_notifications',
-    NOTIFICATIONS: 'notifications', // mevcut koleksiyon (geriye uyumluluk)
-  };
-
-  // =====================================================
-  // Madde 1: Fan-out pattern — Bildirim olustur ve dagit
-  // =====================================================
+  /**
+   * Bildirim olustur ve fan-out ile dagit.
+   * master_notifications + user_notifications/{userId}/items/
+   * ESKİ notifications koleksiyonuna YAZMAZ.
+   */
   static async createNotification({ title, body, type, target, url, scheduledAt, data }) {
     try {
-      const currentUser = await this._getCurrentUserId();
-
       // Master bildirim yaz
+      const masterRef = doc(collection(db, MASTER_NOTIFICATIONS));
+      const now = new Date().toISOString();
+
       const masterData = {
         title,
         body,
@@ -65,216 +229,231 @@ class NotificationService {
         target: target || { type: TARGET_TYPES.ALL },
         url: url || null,
         scheduledAt: scheduledAt || null,
-        createdBy: currentUser,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         status: scheduledAt ? 'scheduled' : 'sent',
         ...(data ? { data } : {}),
       };
 
-      const masterId = await FirebaseService.create(
-        this.COLLECTIONS.MASTER_NOTIFICATIONS,
-        null,
-        masterData,
-        false
-      );
+      await setDoc(masterRef, masterData);
 
-      // Zamanli gonderim ise sadece master kaydet, dagitim yapma
+      // Zamanli gonderim ise sadece master kaydet
       if (scheduledAt && new Date(scheduledAt) > new Date()) {
-        return { success: true, masterId, targetCount: 0, status: 'scheduled' };
+        return { success: true, masterId: masterRef.id, targetCount: 0, status: 'scheduled' };
       }
 
-      // Fan-out: hedef kullanicilara dagit (Madde 3)
-      const targetUsers = await this.resolveTargetUsers(target);
+      // Fan-out: hedef kullanicilara dagit — writeBatch ile toplu yazma
+      const targetUsers = await resolveTargetUsers(target);
+      console.log('[NotificationService] Fan-out to', targetUsers.length, 'users');
+
+      // Firestore writeBatch max 500 islem destekler, chunk'layalim
+      const BATCH_SIZE = 450;
       let successCount = 0;
 
-      for (const userId of targetUsers) {
-        try {
-          // user_notifications/{userId}/items/ subcollection'a kopya yaz
-          const userNotifRef = doc(db, `user_notifications/${userId}/items`, masterId);
-          await setDoc(userNotifRef, {
-            notificationId: masterId,
+      for (let i = 0; i < targetUsers.length; i += BATCH_SIZE) {
+        const chunk = targetUsers.slice(i, i + BATCH_SIZE);
+        const batch = writeBatch(db);
+
+        for (const userId of chunk) {
+          const userNotifRef = doc(db, USER_NOTIFICATIONS, userId, 'items', masterRef.id);
+          batch.set(userNotifRef, {
+            notificationId: masterRef.id,
             title,
             body,
             type: type || NOTIFICATION_TYPES.ANNOUNCEMENT,
             url: url || null,
-            read: false,  // Madde 4: per-user okundu durumu
-            createdAt: new Date().toISOString(),
+            isRead: false,
+            createdAt: now,
             ...(data ? data : {}),
           });
-
-          // Geriye uyumluluk: mevcut notifications koleksiyonuna da yaz
-          await FirebaseService.create(
-            'notifications',
-            null,
-            {
-              title,
-              body,
-              type: type || NOTIFICATION_TYPES.ANNOUNCEMENT,
-              url: url || null,
-              read: false,
-              memberId: userId,
-              masterNotificationId: masterId,
-              createdAt: new Date().toISOString(),
-              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 gun
-            },
-            false
-          );
-
-          successCount++;
-        } catch (err) {
-          console.error(`Fan-out error for user ${userId}:`, err);
         }
+
+        await batch.commit();
+        successCount += chunk.length;
       }
 
-      // Madde 5: Push notification entegrasyonu
+      // Push notification gonder (non-blocking)
       try {
-        await this._sendPushNotifications(targetUsers, { title, body, type, url });
+        await sendPushNotifications(targetUsers, { title, body, type, url });
       } catch (pushErr) {
-        console.warn('Push notification error (non-blocking):', pushErr);
+        console.warn('[NotificationService] Push error (non-blocking):', pushErr);
       }
 
-      return { success: true, masterId, targetCount: successCount, status: 'sent' };
+      return { success: true, masterId: masterRef.id, targetCount: successCount, status: 'sent' };
     } catch (error) {
-      console.error('createNotification error:', error);
+      console.error('[NotificationService] createNotification error:', error);
       return { success: false, error: error.message };
     }
   }
 
-  // =====================================================
-  // Madde 3: Hedefleme — resolveTargetUsers
-  // =====================================================
-  static async resolveTargetUsers(target) {
-    if (!target || !target.type) {
-      return await this._getAllMemberIds();
-    }
-
-    switch (target.type) {
-      case TARGET_TYPES.ALL:
-        return await this._getAllMemberIds();
-
-      case TARGET_TYPES.REGION:
-        return await this._getMemberIdsByRegion(target.value);
-
-      case TARGET_TYPES.ROLE:
-        return await this._getMemberIdsByRole(target.value);
-
-      case TARGET_TYPES.SINGLE:
-        return target.value ? [target.value] : [];
-
-      default:
-        return [];
-    }
-  }
-
-  // Hedef kullanici sayisini hesapla (onizleme icin)
+  /**
+   * Hedef kullanici sayisini hesapla (onizleme icin)
+   */
   static async getTargetCount(target) {
     try {
-      const users = await this.resolveTargetUsers(target);
+      const users = await resolveTargetUsers(target);
       return users.length;
     } catch (error) {
-      console.error('getTargetCount error:', error);
+      console.error('[NotificationService] getTargetCount error:', error);
       return 0;
     }
   }
 
-  // =====================================================
-  // Madde 4: Okundu/okunmadi per-user
-  // =====================================================
+  /**
+   * Tek bir bildirimi okundu yap — user_notifications subcollection
+   */
   static async markAsRead(userId, notificationId) {
     try {
-      // user_notifications subcollection'da okundu yap
-      const userNotifRef = doc(db, `user_notifications/${userId}/items`, notificationId);
-      await updateDoc(userNotifRef, { read: true });
-
-      // Geriye uyumluluk: mevcut notifications koleksiyonunda da guncelle
-      await FirebaseApiService.markNotificationAsRead(notificationId);
-
+      const ref = doc(db, USER_NOTIFICATIONS, userId, 'items', notificationId);
+      await updateDoc(ref, {
+        isRead: true,
+        readAt: new Date().toISOString(),
+      });
       return { success: true };
     } catch (error) {
-      console.error('markAsRead error:', error);
-      // Fallback: sadece eski sistemi guncelle
-      return await FirebaseApiService.markNotificationAsRead(notificationId);
+      console.error('[NotificationService] markAsRead error:', error);
+      return { success: false };
     }
   }
 
+  /**
+   * Tum okunmamis bildirimleri okundu yap — writeBatch ile toplu
+   */
   static async markAllAsRead(userId) {
     try {
-      // user_notifications subcollection'daki tum bildirimleri okundu yap
-      const itemsRef = collection(db, `user_notifications/${userId}/items`);
-      const q = query(itemsRef, where('read', '==', false));
+      const itemsRef = collection(db, USER_NOTIFICATIONS, userId, 'items');
+      const q = query(itemsRef, where('isRead', '==', false));
       const snapshot = await getDocs(q);
 
-      const promises = [];
-      snapshot.forEach((docSnap) => {
-        promises.push(updateDoc(docSnap.ref, { read: true }));
-      });
-      await Promise.all(promises);
+      if (snapshot.empty) return { success: true };
 
-      // Geriye uyumluluk
-      await FirebaseApiService.markAllNotificationsAsRead(userId);
+      const batch = writeBatch(db);
+      const now = new Date().toISOString();
+      snapshot.docs.forEach((docSnap) => {
+        batch.update(docSnap.ref, { isRead: true, readAt: now });
+      });
+      await batch.commit();
 
       return { success: true };
     } catch (error) {
-      console.error('markAllAsRead error:', error);
-      return await FirebaseApiService.markAllNotificationsAsRead(userId);
+      console.error('[NotificationService] markAllAsRead error:', error);
+      return { success: false };
     }
   }
 
+  /**
+   * Tek bir bildirimi sil — user_notifications subcollection
+   */
   static async deleteNotification(userId, notificationId) {
     try {
-      // user_notifications subcollection'dan sil
-      const userNotifRef = doc(db, `user_notifications/${userId}/items`, notificationId);
-      await deleteDoc(userNotifRef);
+      const ref = doc(db, USER_NOTIFICATIONS, userId, 'items', notificationId);
+      await deleteDoc(ref);
+      return { success: true };
+    } catch (error) {
+      console.error('[NotificationService] deleteNotification error:', error);
+      return { success: false };
+    }
+  }
 
-      // Geriye uyumluluk
-      await FirebaseApiService.deleteNotification(notificationId);
+  /**
+   * Tum bildirimleri sil — writeBatch ile toplu
+   */
+  static async deleteAllNotifications(userId) {
+    try {
+      const itemsRef = collection(db, USER_NOTIFICATIONS, userId, 'items');
+      const snapshot = await getDocs(itemsRef);
+      if (snapshot.empty) return { success: true };
+
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref));
+      await batch.commit();
 
       return { success: true };
     } catch (error) {
-      console.error('deleteNotification error:', error);
-      return await FirebaseApiService.deleteNotification(notificationId);
+      console.error('[NotificationService] deleteAllNotifications error:', error);
+      return { success: false };
     }
+  }
+
+  /**
+   * Okunmamis bildirim sayisi — user_notifications subcollection
+   */
+  static async getUnreadCount(userId) {
+    try {
+      const itemsRef = collection(db, USER_NOTIFICATIONS, userId, 'items');
+      const q = query(itemsRef, where('isRead', '==', false));
+      const snapshot = await getDocs(q);
+      return snapshot.size;
+    } catch (error) {
+      console.error('[NotificationService] getUnreadCount error:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Real-time bildirim dinle — user_notifications/{userId}/items/ onSnapshot
+   * Callback'e bildirim listesi doner.
+   * Unsubscribe fonksiyonu dondurur.
+   */
+  static subscribeToNotifications(userId, callback) {
+    const itemsRef = collection(db, USER_NOTIFICATIONS, userId, 'items');
+    const q = query(itemsRef, orderBy('createdAt', 'desc'), limit(50));
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const results = [];
+        snapshot.forEach((docSnap) => {
+          results.push({
+            id: docSnap.id,
+            notificationId: docSnap.id,
+            ...docSnap.data(),
+          });
+        });
+        callback(results);
+      },
+      (error) => {
+        console.error('[NotificationService] subscribeToNotifications error:', error);
+        callback([]);
+      }
+    );
   }
 
   // =====================================================
-  // Gonderim gecmisi (Madde 9)
+  // Admin: Gonderim gecmisi
   // =====================================================
   static async getNotificationHistory(limitCount = 50) {
     try {
-      const masterNotifs = await FirebaseService.getAll(
-        this.COLLECTIONS.MASTER_NOTIFICATIONS,
-        {},
-        false
+      const q = query(
+        collection(db, MASTER_NOTIFICATIONS),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
       );
-
-      if (!masterNotifs || masterNotifs.length === 0) {
-        return [];
-      }
-
-      // Tarihe gore sirala ve limitle
-      return masterNotifs
-        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-        .slice(0, limitCount);
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
     } catch (error) {
-      console.error('getNotificationHistory error:', error);
+      console.error('[NotificationService] getNotificationHistory error:', error);
       return [];
     }
   }
 
-  // Zamanli bildirimleri getir (Madde 10)
+  // Zamanli bildirimleri getir
   static async getScheduledNotifications() {
     try {
-      const masterNotifs = await FirebaseService.getAll(
-        this.COLLECTIONS.MASTER_NOTIFICATIONS,
-        {},
-        false
+      const q = query(
+        collection(db, MASTER_NOTIFICATIONS),
+        where('status', '==', 'scheduled'),
+        orderBy('scheduledAt', 'asc')
       );
-
-      return (masterNotifs || [])
-        .filter(n => n.status === 'scheduled' && n.scheduledAt)
-        .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
     } catch (error) {
-      console.error('getScheduledNotifications error:', error);
+      console.error('[NotificationService] getScheduledNotifications error:', error);
       return [];
     }
   }
@@ -282,165 +461,11 @@ class NotificationService {
   // Zamanli bildirimi iptal et
   static async cancelScheduledNotification(masterId) {
     try {
-      await FirebaseService.update(
-        this.COLLECTIONS.MASTER_NOTIFICATIONS,
-        masterId,
-        { status: 'cancelled' },
-        false
-      );
+      await updateDoc(doc(db, MASTER_NOTIFICATIONS, masterId), { status: 'cancelled' });
       return { success: true };
     } catch (error) {
-      console.error('cancelScheduledNotification error:', error);
+      console.error('[NotificationService] cancelScheduledNotification error:', error);
       return { success: false };
-    }
-  }
-
-  // =====================================================
-  // Yardimci metodlar
-  // =====================================================
-
-  static async _getCurrentUserId() {
-    try {
-      const { auth } = await import('../config/firebase');
-      return auth.currentUser?.uid || null;
-    } catch {
-      return null;
-    }
-  }
-
-  static async _getAllMemberIds() {
-    try {
-      const members = await FirebaseApiService.getMembers(false);
-      return (members || [])
-        .map(m => String(m.id || m.memberId || '').trim())
-        .filter(Boolean);
-    } catch (error) {
-      console.error('_getAllMemberIds error:', error);
-      return [];
-    }
-  }
-
-  static async _getMemberIdsByRegion(regionName) {
-    try {
-      const members = await FirebaseApiService.getMembers(false);
-      return (members || [])
-        .filter(m => m.region === regionName)
-        .map(m => String(m.id || m.memberId || '').trim())
-        .filter(Boolean);
-    } catch (error) {
-      console.error('_getMemberIdsByRegion error:', error);
-      return [];
-    }
-  }
-
-  static async _getMemberIdsByRole(positionName) {
-    try {
-      const members = await FirebaseApiService.getMembers(false);
-      return (members || [])
-        .filter(m => m.position === positionName || m.gorev === positionName)
-        .map(m => String(m.id || m.memberId || '').trim())
-        .filter(Boolean);
-    } catch (error) {
-      console.error('_getMemberIdsByRole error:', error);
-      return [];
-    }
-  }
-
-  // Madde 5: Push notification gonder
-  static async _sendPushNotifications(userIds, { title, body, type, url }) {
-    try {
-      // Push subscription'lari Firestore'dan getir
-      const subscriptions = await FirebaseService.getAll('push_subscriptions', {}, false);
-      if (!subscriptions || subscriptions.length === 0) {
-        console.log('[Push] No push subscriptions found');
-        return;
-      }
-
-      // Hedef kullanicilarin subscription'larini filtrele
-      const targetSubs = subscriptions.filter(s => userIds.includes(s.userId));
-      if (targetSubs.length === 0) {
-        console.log('[Push] No matching subscriptions for target users');
-        return;
-      }
-
-      console.log(`[Push] Sending push to ${targetSubs.length} subscriptions`);
-
-      // Backend uzerinden gercek web-push gonder
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
-
-      // Auth token al
-      let authToken = null;
-      try {
-        authToken = localStorage.getItem('token');
-      } catch (e) {
-        // sessizce devam
-      }
-
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-
-      // Subscription'lari web-push formatina cevir
-      const formattedSubscriptions = targetSubs.map(sub => ({
-        endpoint: sub.endpoint,
-        keys: {
-          p256dh: sub.p256dh,
-          auth: sub.auth,
-        }
-      }));
-
-      try {
-        // Backend push endpoint'ini kullan (send-direct: subscription'lari dogrudan gonder)
-        const response = await fetch(`${API_BASE_URL}/push-subscriptions/send-direct`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            title,
-            body,
-            subscriptions: formattedSubscriptions,
-            data: { type: type || 'general', url: url || '/notifications' }
-          }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`[Push] Backend push sent: ${result.sentCount || 0} successful`);
-          return;
-        }
-        console.warn('[Push] Backend push endpoint returned:', response.status);
-      } catch (backendErr) {
-        console.warn('[Push] Backend push failed, falling back to direct notification:', backendErr.message);
-      }
-
-      // Fallback: Backend erisilemediyse, Service Worker uzerinden dogrudan bildirim goster
-      // Bu sadece uygulama acikken calisir, ama hic bildirim gormemekten iyidir
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          await registration.showNotification(title, {
-            body,
-            icon: '/icon-192x192.png',
-            badge: '/badge-72x72.png',
-            tag: type || 'general',
-            renotify: true,
-            vibrate: [200, 100, 200],
-            requireInteraction: true,
-            data: { type: type || 'general', url: url || '/notifications' },
-            actions: [
-              { action: 'view', title: 'Goruntule' },
-              { action: 'close', title: 'Kapat' }
-            ]
-          });
-          console.log('[Push] Fallback: Direct SW notification shown');
-        } catch (swErr) {
-          console.warn('[Push] Service Worker fallback failed:', swErr);
-        }
-      }
-    } catch (error) {
-      console.warn('[Push] Push notification send error:', error);
     }
   }
 }
