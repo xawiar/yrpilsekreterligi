@@ -14,6 +14,8 @@ const GroupsPage = () => {
   const [villageSupervisors, setVillageSupervisors] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [towns, setTowns] = useState([]);
+  const [ballotBoxes, setBallotBoxes] = useState([]);
+  const [ballotBoxObservers, setBallotBoxObservers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [groupLeaderIds, setGroupLeaderIds] = useState({});
 
@@ -24,7 +26,7 @@ const GroupsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [neighborhoodsData, villagesData, groupsData, membersData, neighborhoodRepsData, villageRepsData, neighborhoodSupsData, villageSupsData, districtsData, townsData] = await Promise.all([
+      const [neighborhoodsData, villagesData, groupsData, membersData, neighborhoodRepsData, villageRepsData, neighborhoodSupsData, villageSupsData, districtsData, townsData, ballotBoxesData, ballotBoxObserversData] = await Promise.all([
         ApiService.getNeighborhoods(),
         ApiService.getVillages(),
         ApiService.getGroups(),
@@ -34,7 +36,9 @@ const GroupsPage = () => {
         ApiService.getNeighborhoodSupervisors(),
         ApiService.getVillageSupervisors(),
         ApiService.getDistricts(),
-        ApiService.getTowns()
+        ApiService.getTowns(),
+        ApiService.getBallotBoxes(),
+        ApiService.getBallotBoxObservers()
       ]);
 
       setNeighborhoods(neighborhoodsData);
@@ -46,6 +50,8 @@ const GroupsPage = () => {
       setVillageSupervisors(villageSupsData);
       setDistricts(districtsData);
       setTowns(townsData);
+      setBallotBoxes(ballotBoxesData || []);
+      setBallotBoxObservers(ballotBoxObserversData || []);
 
       // Groups data - eğer yoksa boş array
       if (groupsData && Array.isArray(groupsData)) {
@@ -132,6 +138,37 @@ const GroupsPage = () => {
       return members.find(m => String(m.id) === String(group.group_leader_id));
     }
     return null;
+  };
+
+  // Grup sandık ve müşahit helper fonksiyonları
+  const getGroupBallotBoxes = (groupNo) => {
+    const group = groupedData[groupNo];
+    if (!group) return [];
+    const neighborhoodIds = group.neighborhoods.map(n => String(n.id));
+    const villageIds = group.villages.map(v => String(v.id));
+    return ballotBoxes.filter(bb =>
+      (bb.neighborhood_id && neighborhoodIds.includes(String(bb.neighborhood_id))) ||
+      (bb.village_id && villageIds.includes(String(bb.village_id)))
+    );
+  };
+
+  const getGroupBallotBoxCount = (groupNo) => {
+    return getGroupBallotBoxes(groupNo).length;
+  };
+
+  const getGroupObserverCount = (groupNo) => {
+    const groupBBIds = getGroupBallotBoxes(groupNo).map(bb => String(bb.id));
+    return ballotBoxObservers.filter(obs =>
+      obs.ballot_box_id && groupBBIds.includes(String(obs.ballot_box_id))
+    ).length;
+  };
+
+  const getGroupChiefCount = (groupNo) => {
+    const groupBBIds = getGroupBallotBoxes(groupNo).map(bb => String(bb.id));
+    return ballotBoxObservers.filter(obs =>
+      obs.ballot_box_id && groupBBIds.includes(String(obs.ballot_box_id)) &&
+      (obs.is_chief_observer === true || obs.is_chief_observer === 1)
+    ).length;
   };
 
   if (loading) {
@@ -271,6 +308,22 @@ const GroupsPage = () => {
                       </span>
                     )}
                   </div>
+                </div>
+
+                {/* Grup Sandık Özeti */}
+                <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                    {getGroupBallotBoxCount(groupNo)} sandık
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    {getGroupObserverCount(groupNo)} müşahit
+                  </span>
+                  <span className={`inline-flex items-center gap-1 ${getGroupChiefCount(groupNo) < getGroupBallotBoxCount(groupNo) ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    {getGroupChiefCount(groupNo)}/{getGroupBallotBoxCount(groupNo)} başmüşahit
+                  </span>
                 </div>
 
                 {/* Neighborhoods Table */}
