@@ -126,20 +126,23 @@ async function getMemberIdsByRole(positionName) {
 // Push Notification Gonder
 // =====================================================
 async function sendPushNotifications(userIds, { title, body, type, url }) {
-  // Maliisler pattern: push_tokens koleksiyonundan subscription al,
-  // Cloud Function sendPush endpoint'ine POST at
   try {
-    // Push token'lari topla (maliisler: getPushTokensForUsers)
+    console.error('[PUSH-SEND] Starting push for', userIds.length, 'users:', userIds);
     var subscriptions = [];
     for (var i = 0; i < userIds.length; i++) {
       try {
+        console.error('[PUSH-SEND] Reading push_tokens for:', userIds[i]);
         var tokenDoc = await getDoc(doc(db, 'push_tokens', userIds[i]));
+        console.error('[PUSH-SEND] Token exists:', tokenDoc.exists(), 'data:', tokenDoc.exists() ? Object.keys(tokenDoc.data()) : 'N/A');
         if (tokenDoc.exists() && tokenDoc.data().subscription && tokenDoc.data().isActive) {
           subscriptions.push(tokenDoc.data().subscription);
         }
-      } catch (e) { /* skip */ }
+      } catch (e) {
+        console.error('[PUSH-SEND] Token read error:', e.message);
+      }
     }
 
+    console.error('[PUSH-SEND] Total subscriptions found:', subscriptions.length);
     if (subscriptions.length === 0) return;
 
     // Cloud Function HTTP endpoint'ine POST (maliisler: /api/send-push)
