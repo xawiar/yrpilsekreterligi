@@ -150,10 +150,8 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
         })
       };
       
-      console.log('Creating meeting with data:', meetingData);
       const response = await ApiService.createMeeting(meetingData);
-      console.log('Meeting created successfully:', response);
-      
+
       // Show success message
       toast.success('Toplantı başarıyla oluşturuldu');
       

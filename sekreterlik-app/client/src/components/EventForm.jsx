@@ -50,8 +50,6 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
     const responsibleMembers = [];
     
     try {
-      console.log('Getting responsible members for:', selectedLocationTypes, selectedLocations);
-      
       // Get all officials and representatives data
       const [districtOfficials, townOfficials, neighborhoodRepresentatives, villageRepresentatives, neighborhoodSupervisors, villageSupervisors, districtDeputyInspectors, townDeputyInspectors] = await Promise.all([
         ApiService.getDistrictOfficials(),
@@ -621,10 +619,8 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
         })
       };
       
-      console.log('Updating event with data:', eventData);
       const response = await ApiService.updateEvent(event.id, eventData);
-      console.log('Event updated successfully:', response);
-      
+
       // Show success message
       toast.success('Etkinlik başarıyla güncellendi');
 

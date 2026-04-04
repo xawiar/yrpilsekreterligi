@@ -173,11 +173,16 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await ApiService.login(username, password);
-      
+
       if (response.success) {
+        // 2FA gerekiyorsa ozel response dondur
+        if (response.requires2FA) {
+          return { requires2FA: true, tempToken: response.tempToken };
+        }
+
         if (response.token) { localStorage.setItem('token', response.token); }
         setUser(response.user);
         setIsLoggedIn(true);
@@ -190,6 +195,36 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       setError('Giriş sırasında bir hata oluştu');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2FA dogrulama
+  const verify2FA = async (code, tempToken) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/auth/2fa/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, tempToken })
+      });
+      const data = await response.json();
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
+        setIsLoggedIn(true);
+        saveToLocalStorage(data.user, true);
+        return true;
+      } else {
+        setError(data.message || 'Dogrulama basarisiz');
+        return false;
+      }
+    } catch (err) {
+      setError('Dogrulama sirasinda bir hata olustu');
       return false;
     } finally {
       setLoading(false);
@@ -220,6 +255,7 @@ export const AuthProvider = ({ children }) => {
     error,
     userRole: getUserRole(), // Computed property for userRole
     login,
+    verify2FA,
     logout,
     setUserFromLogin // For direct user setting (e.g., chief observer login)
   };

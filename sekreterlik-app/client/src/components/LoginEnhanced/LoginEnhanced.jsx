@@ -20,9 +20,14 @@ const LoginEnhanced = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { login, user, setUserFromLogin } = useAuth();
+  const { login, verify2FA, user, setUserFromLogin } = useAuth();
   const navigate = useNavigate();
-  
+
+  // 2FA state
+  const [show2FA, setShow2FA] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [tempToken, setTempToken] = useState('');
+
   // Başmüşahit form state
   const [ballotNumber, setBallotNumber] = useState('');
   const [tc, setTc] = useState('');
@@ -119,7 +124,15 @@ const LoginEnhanced = () => {
     try {
       // Attempt to login
       const success = await login(username, password);
-      
+
+      // 2FA gerekiyorsa
+      if (success && typeof success === 'object' && success.requires2FA) {
+        setTempToken(success.tempToken);
+        setShow2FA(true);
+        setIsLoading(false);
+        return;
+      }
+
       if (success) {
         // Handle remember me functionality (sadece kullanıcı adı saklanır, şifre asla saklanmaz)
         if (rememberMe) {
@@ -378,9 +391,64 @@ const LoginEnhanced = () => {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Giriş Başarılı!</h3>
                 <p className="text-gray-600 dark:text-gray-400">Yönlendiriliyorsunuz...</p>
               </motion.div>
+            ) : show2FA ? (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Iki Faktorlu Dogrulama</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Authenticator uygulamanizdan 6 haneli kodu girin</p>
+                </div>
+                {error && (
+                  <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </div>
+                )}
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsLoading(true);
+                  setError('');
+                  const result = await verify2FA(twoFACode, tempToken);
+                  if (result) {
+                    setShowSuccess(true);
+                    setTimeout(() => navigate('/', { replace: true }), 500);
+                  } else {
+                    setError('Gecersiz dogrulama kodu');
+                  }
+                  setIsLoading(false);
+                }} className="space-y-4">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={twoFACode}
+                    onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="000000"
+                    className="w-full text-center text-2xl tracking-[0.5em] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || twoFACode.length !== 6}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                  >
+                    {isLoading ? 'Dogrulanıyor...' : 'Dogrula'}
+                  </button>
+                </form>
+                <button
+                  onClick={() => { setShow2FA(false); setTwoFACode(''); setTempToken(''); setError(''); }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Geri Don
+                </button>
+              </div>
             ) : activeTab === 'admin-member' ? (
               <>
-                <LoginForm 
+                <LoginForm
                   username={username}
                   setUsername={setUsername}
                   password={password}
@@ -391,7 +459,7 @@ const LoginEnhanced = () => {
                   rememberMe={rememberMe}
                   setRememberMe={setRememberMe}
                 />
-                
+
                 <LoginFooter />
               </>
             ) : activeTab === 'chief-observer' ? (

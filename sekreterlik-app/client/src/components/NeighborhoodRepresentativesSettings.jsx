@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { maskTC } from '../utils/maskingUtils';
 
 const NeighborhoodRepresentativesSettings = () => {
   const { confirm, confirmDialogProps } = useConfirm();
@@ -295,7 +296,7 @@ const NeighborhoodRepresentativesSettings = () => {
                     {representative.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {representative.tc}
+                    {maskTC(representative.tc)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {representative.phone || '-'}

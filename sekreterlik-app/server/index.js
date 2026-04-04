@@ -112,6 +112,8 @@ const apiKeysRouter = require('./routes/apiKeys');
 console.log('API keys router imported');
 const smsRouter = require('./routes/sms');
 console.log('SMS router imported');
+const branchMembersRouter = require('./routes/branchMembers');
+console.log('Branch members router imported');
 const publicApiRouter = require('./routes/publicApi');
 console.log('Public API router imported');
 const dataDeletionRequestsRouter = require('./routes/dataDeletionRequests');
@@ -124,6 +126,7 @@ const { validateInput } = require('./middleware/security');
 const { recordRequest, renderMetrics } = require('./utils/metrics');
 const { rateLimit, createRateLimiter } = require('./middleware/rateLimit');
 const { cache } = require('./middleware/cache');
+const { auditLog } = require('./middleware/auditLog');
 
 // Import MongoDB connection
 const { connectToMongoDB } = require('./config/mongodb');
@@ -254,26 +257,40 @@ if (process.env.SENTRY_DSN) {
   app.use(Sentry.Handlers.requestHandler());
 }
 
+// CSP nonce middleware - her istek icin benzersiz nonce olustur
+const crypto = require('crypto');
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 // Helmet.js - HTTP security headers (XSS, clickjacking, MIME type sniffing koruması)
 // CORS'tan SONRA kullanılmalı - CORS header'larını override etmemesi için
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind CSS için gerekli
-      scriptSrc: ["'self'", "'unsafe-inline'"], // React için gerekli ('unsafe-eval' kaldırıldı - güvenlik iyileştirmesi)
-      imgSrc: ["'self'", "data:", "blob:", "https:"], // Firebase Storage ve data URI için
+      styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind CSS inline stiller icin gerekli
+      scriptSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`, // Nonce-based script kontrolu
+        "'unsafe-inline'", // React runtime icin fallback (nonce desteklemeyen eski tarayicilar)
+      ],
+      imgSrc: ["'self'", "data:", "blob:", "https:"], // Firebase Storage ve data URI icin
       connectSrc: process.env.NODE_ENV === 'production'
-        ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com", "https://*.onrender.com"]
-        : ["'self'", "http://localhost:5000", "http://127.0.0.1:5000", "https://*.firebaseio.com", "https://*.googleapis.com"],
+        ? ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com", "https://*.onrender.com", "wss:"]
+        : ["'self'", "http://localhost:5000", "http://127.0.0.1:5000", "https://*.firebaseio.com", "https://*.googleapis.com", "ws:", "wss:"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     },
   },
-  crossOriginEmbedderPolicy: false, // Firebase için gerekli
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // Firebase Storage için
-  crossOriginOpenerPolicy: false, // CORS için gerekli
+  crossOriginEmbedderPolicy: false, // Firebase icin gerekli
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Firebase Storage icin
+  crossOriginOpenerPolicy: false, // CORS icin gerekli
 }));
 // Gzip compression for JSON/text responses (threshold 1KB)
 app.use(compression({
@@ -287,10 +304,27 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 // Basic rate limiting (apply to all APIs)
 app.use('/api', rateLimit);
+// Granular rate limiting for write operations (POST/PUT/DELETE)
+app.use('/api', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    return writeLimiter(req, res, next);
+  }
+  next();
+});
+// Export endpoint rate limiting
+app.use('/api/members/export', exportLimiter);
+app.use('/api/election-results', (req, res, next) => {
+  if (req.path.includes('export')) return exportLimiter(req, res, next);
+  next();
+});
 // Global input validation (XSS, SQL injection, path traversal)
 app.use(validateInput);
-// Stricter login limiter: 10 req / 5 minutes per IP
-const loginLimiter = createRateLimiter({ windowMs: 5 * 60 * 1000, max: 10 });
+// Stricter login limiter: 5 req / 1 minute per IP (brute force koruması)
+const loginLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 5 });
+// Export endpoint limiter: 10 req / 1 minute per IP (agir islemler icin)
+const exportLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 10 });
+// Write (POST/PUT/DELETE) limiter: 30 req / 1 minute per IP
+const writeLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 30 });
 
 // Correlation ID and request timing
 app.use((req, res, next) => {
@@ -332,6 +366,12 @@ console.log('Registering API routes');
 
 app.use('/api/auth', (req, res, next) => {
   if (req.path === '/login') return loginLimiter(req, res, next);
+  return next();
+}, (req, res, next) => {
+  // Audit log for login attempts
+  if (req.path === '/login' || req.path === '/login-coordinator' || req.path === '/login-chief-observer') {
+    return auditLog('auth_login')(req, res, next);
+  }
   return next();
 }, authRouter);
 app.use('/api/members', authenticateToken, cache(60), membersRouter);
@@ -383,7 +423,11 @@ app.use('/api/dashboard', authenticateToken, dashboardRouter);
 app.use('/api/notifications', authenticateToken, notificationsRouter);
 app.use('/api/api-keys', authenticateToken, apiKeysRouter);
 app.use('/api/sms', authenticateToken, smsRouter);
+app.use('/api/branch-members', authenticateToken, branchMembersRouter);
 app.use('/api/data-deletion-requests', authenticateToken, dataDeletionRequestsRouter);
+// Audit logs route (admin only)
+const auditLogsRouter = require('./routes/auditLogs');
+app.use('/api/audit-logs', authenticateToken, requireAdmin, auditLogsRouter);
 // Public election results routes - NO AUTHENTICATION REQUIRED
 app.use('/api/public/election-results', require('./routes/publicElectionResults'));
 
@@ -477,6 +521,13 @@ app.use((err, req, res, next) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    // SMS Scheduler baslat
+    try {
+      const { startSmsScheduler } = require('./services/smsScheduler');
+      startSmsScheduler();
+    } catch (schedulerError) {
+      console.error('SMS Scheduler baslatma hatasi:', schedulerError.message);
+    }
     // Optional DB maintenance
     if ((process.env.ENABLE_DB_MAINTENANCE || 'true') === 'true') {
       try {

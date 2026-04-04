@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
+import { hasPermission as checkPermission } from '../utils/permissions';
 import AdminSettings from '../components/AdminSettings';
 import RegionsSettings from '../components/RegionsSettings';
 import PositionsSettings from '../components/PositionsSettings';
@@ -36,6 +37,7 @@ import DataProcessingInventory from '../components/DataProcessingInventory';
 import KvkkComplianceReport from '../components/KvkkComplianceReport';
 import DataBreachProcedure from '../components/DataBreachProcedure';
 import VerbisGuide from '../components/VerbisGuide';
+import AuditLogSettings from '../components/AuditLogSettings';
 import {
   SettingsHeader,
   SettingsSummaryCards,
@@ -63,46 +65,9 @@ const SettingsPage = ({ tab }) => {
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
 
-  // Check if user has permission for a tab
+  // Check if user has permission for a tab (centralized utility)
   const hasPermission = React.useCallback((tabName) => {
-    if (isAdmin) return true;
-    if (loadingPermissions) return false;
-
-    const permissionMap = {
-      'admin': true, // Everyone can see their own info
-      'regions': grantedPermissions.includes('add_region'),
-      'positions': grantedPermissions.includes('add_position'),
-      'member-users': grantedPermissions.includes('manage_member_users'),
-      'districts': grantedPermissions.includes('add_district'),
-      'towns': grantedPermissions.includes('add_town'),
-      'neighborhoods': grantedPermissions.includes('add_neighborhood'),
-      'villages': grantedPermissions.includes('add_village'),
-      'stks': grantedPermissions.includes('manage_stk') || grantedPermissions.includes('add_stk'),
-      'public-institutions': grantedPermissions.includes('add_public_institution'),
-      'mosques': grantedPermissions.includes('add_mosque'),
-      'event-categories': grantedPermissions.includes('manage_event_categories'),
-      'authorization': false, // Admin only
-      'bylaws': grantedPermissions.includes('manage_bylaws'),
-      'gemini-api': false, // Admin only
-      'firebase-config': false, // Admin only
-      'deployment-config': false, // Admin only
-      'sms-config': false, // Admin only
-      'firebase-sync': false, // Admin only
-      'polls': grantedPermissions.includes('manage_polls'),
-      'member-dashboard-analytics': grantedPermissions.includes('access_member_dashboard_analytics'),
-      'app-branding': grantedPermissions.includes('manage_app_branding'),
-      'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
-      'voter-list': isAdmin || grantedPermissions.includes('manage_voters'),
-      'push-notifications': true, // All authenticated users can manage their own push notifications
-      'data-retention': false, // Admin only - KVKK
-      'data-deletion-requests': false, // Admin only - KVKK
-      'data-processing-inventory': false, // Admin only - KVKK
-      'kvkk-compliance': false, // Admin only - KVKK
-      'data-breach-procedure': false, // Admin only - KVKK
-      'verbis-guide': false, // Admin only - KVKK
-    };
-
-    return permissionMap[tabName] || false;
+    return checkPermission(tabName, isAdmin, grantedPermissions, loadingPermissions);
   }, [isAdmin, loadingPermissions, grantedPermissions]);
 
   // Load user permissions
@@ -198,7 +163,8 @@ const SettingsPage = ({ tab }) => {
         { id: 'data-processing-inventory', name: 'Veri Isleme Envanteri', description: 'KVKK veri isleme envanteri', permission: false },
         { id: 'kvkk-compliance', name: 'KVKK Uyum Durumu', description: 'KVKK uyum raporu', permission: false },
         { id: 'data-breach-procedure', name: 'Veri Ihlali Proseduru', description: 'Veri ihlali bildirim proseduru', permission: false },
-        { id: 'verbis-guide', name: 'VERBIS Kayit Rehberi', description: 'VERBIS kayit bilgilendirme', permission: false }
+        { id: 'verbis-guide', name: 'VERBIS Kayit Rehberi', description: 'VERBIS kayit bilgilendirme', permission: false },
+        { id: 'audit-log', name: 'Denetim Kayitlari', description: 'Sistem denetim log kayitlari', permission: false }
       );
     }
 
@@ -272,6 +238,7 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'kvkk-compliance' && hasPermission('kvkk-compliance') && <KvkkComplianceReport />}
                   {activeTab === 'data-breach-procedure' && hasPermission('data-breach-procedure') && <DataBreachProcedure />}
                   {activeTab === 'verbis-guide' && hasPermission('verbis-guide') && <VerbisGuide />}
+                  {activeTab === 'audit-log' && hasPermission('audit-log') && <AuditLogSettings />}
                 </>
               )}
             </div>

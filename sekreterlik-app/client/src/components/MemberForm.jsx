@@ -119,13 +119,10 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
         submitData.kvkk_consent_date = new Date().toISOString();
       }
 
-      console.log('Sending member data:', submitData); // Debug log
       let response;
       if (member) {
         // Update existing member
-        console.log('Updating existing member with ID:', member.id); // Debug log
         response = await ApiService.updateMember(member.id, submitData);
-        console.log('Update response:', response); // Debug log
         // Upload photo if selected
         if (photoFile) {
           try {
@@ -139,9 +136,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
         }
       } else {
         // Create new member
-        console.log('Creating new member'); // Debug log
         response = await ApiService.createMember(submitData);
-        console.log('Create response:', response); // Debug log
 
         // Upload photo for new member if selected
         if (photoFile && response?.id) {
@@ -167,19 +162,16 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
         }
       }
       
-      console.log('Member saved successfully'); // Debug log
       // Clear any previous errors
       setError('');
-      
+
       // Always close modal and refresh - use setTimeout to ensure state updates complete
       setTimeout(() => {
         // Make sure onMemberSaved is called (this also closes modal)
         if (onMemberSaved) {
-          console.log('Calling onMemberSaved callback'); // Debug log
           onMemberSaved();
         } else if (onClose) {
           // Fallback to onClose if onMemberSaved not provided
-          console.log('Calling onClose callback (fallback)'); // Debug log
           onClose();
         }
       }, 100);
@@ -446,9 +438,9 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
               required
             />
             <label htmlFor="kvkkConsent" className="text-sm text-gray-700 dark:text-gray-300">
-              <span className="font-medium">KVKK kapsamında</span> kişisel verilerimin işlenmesini ve özel nitelikli kişisel verilerimin (siyasi parti üyeliği) kayıt altına alınmasını kabul ediyorum.
+              6698 sayili KVKK kapsaminda, kimlik bilgilerim (ad, soyad, TC kimlik no), iletisim bilgilerim (telefon, adres) ve ozel nitelikli kisisel verilerim (siyasi parti uyeligi) dahil kisisel verilerimin; uyelik yonetimi, teskilat faaliyetleri, secim organizasyonu ve iletisim amaclarıyla islenmesine, Firebase (ABD - SCCs kapsaminda) ve SMS hizmet saglayicisina aktarilmasina <span className="font-medium">acik rizamla onay veriyorum</span>. Bu onayi diledigim zaman geri cekebilecegimi biliyorum.
               <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline ml-1">
-                Aydınlatma Metni
+                Aydinlatma Metni
               </a>
             </label>
           </div>

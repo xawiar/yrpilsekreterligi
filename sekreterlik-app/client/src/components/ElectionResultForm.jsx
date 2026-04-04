@@ -429,6 +429,68 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   };
 
   // AI ile tutanak doldur
+  /**
+   * OCR sonuc dogrulama: AI okumasini form tanimlariyla karsilastir
+   * @param {Object} data - OCR ile okunan veri
+   * @returns {Array<string>} Uyari mesajlari
+   */
+  const validateOCRResult = (data) => {
+    const warnings = [];
+    const totalVoters = parseInt(data.total_voters || formData.total_voters) || 0;
+    const usedVotes = parseInt(data.used_votes) || 0;
+    const invalidVotes = parseInt(data.invalid_votes) || 0;
+    const validVotes = parseInt(data.valid_votes) || 0;
+
+    // Toplam oy > secmen sayisi
+    if (totalVoters > 0 && usedVotes > totalVoters) {
+      warnings.push(`Kullanilan oy (${usedVotes}) secmen sayisindan (${totalVoters}) fazla!`);
+    }
+
+    // Negatif deger kontrolu
+    if (usedVotes < 0) warnings.push('Kullanilan oy negatif olamaz!');
+    if (invalidVotes < 0) warnings.push('Gecersiz oy negatif olamaz!');
+    if (validVotes < 0) warnings.push('Gecerli oy negatif olamaz!');
+
+    // Gecerli + gecersiz = kullanilan oy kontrolu
+    if (usedVotes > 0 && validVotes > 0 && invalidVotes >= 0) {
+      const sum = validVotes + invalidVotes;
+      if (sum !== usedVotes) {
+        warnings.push(`Gecerli oy (${validVotes}) + Gecersiz oy (${invalidVotes}) = ${sum}, Kullanilan oy (${usedVotes}) ile eslesmiyor!`);
+      }
+    }
+
+    // Parti/aday oy toplamlarini kontrol et
+    const voteCategories = [
+      { key: 'cb_votes', label: 'CB oylari' },
+      { key: 'mv_votes', label: 'MV oylari' },
+      { key: 'mayor_votes', label: 'Belediye baskani oylari' },
+      { key: 'provincial_assembly_votes', label: 'Il Genel Meclisi oylari' },
+      { key: 'municipal_council_votes', label: 'Belediye Meclisi oylari' },
+      { key: 'referendum_votes', label: 'Referandum oylari' },
+      { key: 'party_votes', label: 'Parti oylari' },
+      { key: 'candidate_votes', label: 'Aday oylari' },
+    ];
+
+    for (const { key, label } of voteCategories) {
+      const votes = data[key];
+      if (votes && typeof votes === 'object') {
+        const values = Object.values(votes);
+        // Negatif deger kontrolu
+        const negatives = values.filter(v => (parseInt(v) || 0) < 0);
+        if (negatives.length > 0) {
+          warnings.push(`${label} icinde negatif deger var!`);
+        }
+        // Toplam kontrol
+        const categoryTotal = values.reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+        if (validVotes > 0 && categoryTotal > 0 && categoryTotal !== validVotes) {
+          warnings.push(`${label} toplami (${categoryTotal}) gecerli oy sayisi (${validVotes}) ile eslesmiyor.`);
+        }
+      }
+    }
+
+    return warnings;
+  };
+
   const handleAIFill = async () => {
     if (!formData.signed_protocol_photo) {
       setMessage('Lütfen önce tutanak fotoğrafı yükleyin');
@@ -471,8 +533,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         filled_by_ai: true // AI ile doldurulduğunu işaretle
       }));
 
-      setMessage('AI tutanağı başarıyla okudu ve formu doldurdu. Lütfen kontrol edin ve kaydedin. Başmüşahit onayı gerekecek.');
-      setMessageType('success');
+      // OCR sonuc dogrulama
+      const ocrWarnings = validateOCRResult(extractedData);
+      if (ocrWarnings.length > 0) {
+        setMessage(`AI tutanagi okudu ancak su uyarilar var:\n${ocrWarnings.join('\n')}\nLutfen kontrol edin.`);
+        setMessageType('error');
+      } else {
+        setMessage('AI tutanagi basariyla okudu ve formu doldurdu. Lutfen kontrol edin ve kaydedin. Basmushahit onayi gerekecek.');
+        setMessageType('success');
+      }
     } catch (error) {
       console.error('AI fill error:', error);
       setMessage(`AI okuma hatası: ${error.message}`);

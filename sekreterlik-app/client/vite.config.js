@@ -177,5 +177,11 @@ export default defineConfig({
   preview: {
     port: 4173,
     strictPort: true
+  },
+
+  // Vitest config
+  test: {
+    globals: true,
+    environment: 'node',
   }
 })

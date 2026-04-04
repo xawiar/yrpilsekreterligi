@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import { maskTC } from '../utils/maskingUtils';
 
 const BallotBoxDetailsPage = () => {
   const { id } = useParams();
@@ -166,7 +167,7 @@ const BallotBoxDetailsPage = () => {
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Başmüşahit</h4>
                   <div className="bg-green-50 border border-green-200 rounded-md p-3">
                     <p className="text-sm font-medium text-gray-900">{chiefObserver.name}</p>
-                    <p className="text-sm text-gray-600">TC: {chiefObserver.tc}</p>
+                    <p className="text-sm text-gray-600">TC: {maskTC(chiefObserver.tc)}</p>
                     <p className="text-sm text-gray-600">Telefon: {chiefObserver.phone}</p>
                     <div className="mt-2 grid grid-cols-2 gap-4">
                       <div>
@@ -196,7 +197,7 @@ const BallotBoxDetailsPage = () => {
                     {regularObservers.map((observer) => (
                       <div key={observer.id} className="bg-blue-50 border border-blue-200 rounded-md p-3">
                         <p className="text-sm font-medium text-gray-900">{observer.name}</p>
-                        <p className="text-sm text-gray-600">TC: {observer.tc}</p>
+                        <p className="text-sm text-gray-600">TC: {maskTC(observer.tc)}</p>
                         <p className="text-sm text-gray-600">Telefon: {observer.phone}</p>
                         <div className="mt-2 grid grid-cols-2 gap-4">
                           <div>

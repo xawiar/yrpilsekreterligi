@@ -243,15 +243,17 @@ class EventController {
   static async archive(req, res) {
     try {
       const { id } = req.params;
-      const sql = 'UPDATE events SET archived = 1 WHERE id = ?';
-      const result = await db.run(sql, [parseInt(id)]);
-      
+      const archivedAt = new Date().toISOString();
+      const archivedReason = req.body?.reason || null;
+      const sql = 'UPDATE events SET archived = 1, archived_at = ?, archived_reason = ? WHERE id = ?';
+      const result = await db.run(sql, [archivedAt, archivedReason, parseInt(id)]);
+
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Etkinlik bulunamadı' });
       }
-      
+
       try { invalidate('/api/events'); } catch (_) {}
-      res.json({ message: 'Etkinlik başarıyla arşivlendi' });
+      res.json({ message: 'Etkinlik başarıyla arşivlendi', archived_at: archivedAt, archived_reason: archivedReason });
     } catch (error) {
       console.error('Error archiving event:', error);
       res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });

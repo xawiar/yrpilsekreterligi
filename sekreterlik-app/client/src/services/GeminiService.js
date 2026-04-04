@@ -3,7 +3,7 @@
  * Gemini 2.0 Flash ile chat, function calling, streaming desteği
  */
 
-import { buildSiteContext, buildMemberContext, maskSensitiveData } from '../utils/aiContextBuilder';
+import { buildSiteContext, buildSiteContextSummary, buildMemberContext, maskSensitiveData } from '../utils/aiContextBuilder';
 import { buildSystemPrompt } from '../utils/aiPrompts';
 import { TOOL_DECLARATIONS, executeToolCall } from '../utils/aiTools';
 
@@ -67,6 +67,10 @@ class GeminiService {
    */
   static buildSiteContext(siteData) {
     return buildSiteContext(siteData);
+  }
+
+  static buildSiteContextSummary(siteData) {
+    return buildSiteContextSummary(siteData);
   }
 
   static buildMemberContext(member, siteData) {
@@ -178,12 +182,50 @@ class GeminiService {
       const text = content?.parts?.[0]?.text;
 
       if (!text) throw new Error('Gemini yanıt üretemedi');
-      return text;
+      return this.validateAndCleanResponse(text);
 
     } catch (error) {
       console.error('Gemini chat hatası:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Yanit kalite kontrolu
+   * - Bos yanit kontrolu
+   * - Cok uzun yanit truncate + "Devamini oku"
+   * - Format bozuk kontrolu
+   */
+  static validateAndCleanResponse(text) {
+    // Bos yanit
+    if (!text || text.trim().length === 0) {
+      return 'Yanit alinamadi, lutfen tekrar deneyin.';
+    }
+
+    // Format bozuk kontrolu (tamamen anlamsiz karakterler)
+    const meaningfulChars = text.replace(/[^a-zA-ZçğıöşüÇĞİÖŞÜ0-9\s]/g, '').trim();
+    if (meaningfulChars.length < text.trim().length * 0.1) {
+      return 'Yanit formatinda bir sorun olustu. Lutfen sorunuzu tekrar sorun.';
+    }
+
+    // Cok uzun yanit (>2000 karakter) -> truncate + "Devamini oku"
+    const MAX_RESPONSE_LENGTH = 2000;
+    if (text.length > MAX_RESPONSE_LENGTH) {
+      // Son cumle sinirindan kes
+      let truncated = text.substring(0, MAX_RESPONSE_LENGTH);
+      const lastSentenceEnd = Math.max(
+        truncated.lastIndexOf('.'),
+        truncated.lastIndexOf('!'),
+        truncated.lastIndexOf('?'),
+        truncated.lastIndexOf('\n')
+      );
+      if (lastSentenceEnd > MAX_RESPONSE_LENGTH * 0.7) {
+        truncated = truncated.substring(0, lastSentenceEnd + 1);
+      }
+      return truncated + '\n\n... _(Yanit cok uzun oldugu icin kisaltildi. Daha fazla detay icin sorunuzu daraltin.)_';
+    }
+
+    return text;
   }
 
   /**

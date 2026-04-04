@@ -48,15 +48,16 @@ class ElectionRegion {
 
   static async create(data) {
     return new Promise((resolve, reject) => {
-      const sql = `INSERT INTO election_regions 
-                   (name, supervisor_id, neighborhood_ids, village_ids, district_id) 
-                   VALUES (?, ?, ?, ?, ?)`;
+      const sql = `INSERT INTO election_regions
+                   (name, supervisor_id, neighborhood_ids, village_ids, district_id, election_id)
+                   VALUES (?, ?, ?, ?, ?, ?)`;
       const params = [
         data.name,
         data.supervisor_id,
         JSON.stringify(data.neighborhood_ids || []),
         JSON.stringify(data.village_ids || []),
-        data.district_id || null
+        data.district_id || null,
+        data.election_id || null
       ];
       db.run(sql, params, function(err) {
         if (err) reject(err);
@@ -78,9 +79,9 @@ class ElectionRegion {
 
   static async update(id, data) {
     return new Promise((resolve, reject) => {
-      const sql = `UPDATE election_regions 
-                   SET name = ?, supervisor_id = ?, neighborhood_ids = ?, 
-                       village_ids = ?, district_id = ?, updated_at = CURRENT_TIMESTAMP
+      const sql = `UPDATE election_regions
+                   SET name = ?, supervisor_id = ?, neighborhood_ids = ?,
+                       village_ids = ?, district_id = ?, election_id = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id = ?`;
       const params = [
         data.name,
@@ -88,6 +89,7 @@ class ElectionRegion {
         JSON.stringify(data.neighborhood_ids || []),
         JSON.stringify(data.village_ids || []),
         data.district_id || null,
+        data.election_id || null,
         id
       ];
       db.run(sql, params, function(err) {

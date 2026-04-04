@@ -24,6 +24,26 @@ router.post('/login', async (req, res) => {
     
     if (isAdminValid) {
       const admin = await Admin.getAdmin();
+
+      // 2FA kontrolu
+      const is2FAEnabled = await Admin.is2FAEnabled();
+      if (is2FAEnabled) {
+        // 2FA aktifse gecici token dondur, tam token icin 2FA dogrulamasini bekle
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_ENCRYPTION_KEY;
+        const tempToken = jwt.sign(
+          { id: admin.id, username: admin.username, role: 'admin', type: 'admin' },
+          JWT_SECRET,
+          { expiresIn: '5m' } // 5 dakika gecerli
+        );
+        return res.json({
+          success: true,
+          requires2FA: true,
+          tempToken,
+          message: 'Iki faktorlu dogrulama gerekli'
+        });
+      }
+
       const token = generateToken({ id: admin.id, username: admin.username, role: 'admin', type: 'admin' });
 
       res.json({
@@ -1990,6 +2010,134 @@ router.post('/login-chief-observer', async (req, res) => {
       success: false,
       message: 'Giriş sırasında bir hata oluştu'
     });
+  }
+});
+
+// ============ 2FA Endpoints ============
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
+
+// 2FA durumunu kontrol et
+router.get('/2fa/status', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin yetkisi gerekli' });
+    }
+    const enabled = await Admin.is2FAEnabled();
+    res.json({ success: true, enabled });
+  } catch (error) {
+    console.error('2FA status error:', error);
+    res.status(500).json({ success: false, message: 'Sunucu hatasi' });
+  }
+});
+
+// 2FA etkinlestir - secret olustur
+router.post('/2fa/enable', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin yetkisi gerekli' });
+    }
+    const result = await Admin.enable2FA();
+    const admin = await Admin.getAdmin();
+    // otpauth URI olustur (Google Authenticator, Authy vb. icin)
+    const otpauthUrl = `otpauth://totp/YRPSekreterlik:${admin.username}?secret=${result.secret}&issuer=YRPSekreterlik&algorithm=SHA1&digits=6&period=30`;
+    res.json({
+      success: true,
+      secret: result.secret,
+      otpauthUrl
+    });
+  } catch (error) {
+    console.error('2FA enable error:', error);
+    res.status(500).json({ success: false, message: 'Sunucu hatasi' });
+  }
+});
+
+// 2FA devre disi birak
+router.post('/2fa/disable', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin yetkisi gerekli' });
+    }
+    const { code } = req.body;
+    const secret = await Admin.get2FASecret();
+    if (secret && !Admin.verifyTOTP(secret, code)) {
+      return res.status(400).json({ success: false, message: 'Gecersiz dogrulama kodu' });
+    }
+    await Admin.disable2FA();
+    res.json({ success: true, message: '2FA devre disi birakildi' });
+  } catch (error) {
+    console.error('2FA disable error:', error);
+    res.status(500).json({ success: false, message: 'Sunucu hatasi' });
+  }
+});
+
+// 2FA dogrulama (login akisinda kullanilir)
+router.post('/2fa/verify', async (req, res) => {
+  try {
+    const { code, tempToken } = req.body;
+    if (!code || !tempToken) {
+      return res.status(400).json({ success: false, message: 'Dogrulama kodu ve gecici token gerekli' });
+    }
+    const secret = await Admin.get2FASecret();
+    if (!secret) {
+      return res.status(400).json({ success: false, message: '2FA aktif degil' });
+    }
+    if (!Admin.verifyTOTP(secret, code)) {
+      return res.status(401).json({ success: false, message: 'Gecersiz dogrulama kodu' });
+    }
+    // tempToken ile JWT olustur (tempToken zaten dogrulanmis bilgiyi tasiyor)
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_ENCRYPTION_KEY;
+    try {
+      const decoded = jwt.verify(tempToken, JWT_SECRET);
+      const token = generateToken({ id: decoded.id, username: decoded.username, role: decoded.role, type: decoded.type });
+      res.json({
+        success: true,
+        token,
+        user: {
+          username: decoded.username,
+          name: 'Parti Sekreteri',
+          role: 'admin'
+        }
+      });
+    } catch (jwtErr) {
+      return res.status(401).json({ success: false, message: 'Gecici token gecersiz veya suresi dolmus' });
+    }
+  } catch (error) {
+    console.error('2FA verify error:', error);
+    res.status(500).json({ success: false, message: 'Sunucu hatasi' });
+  }
+});
+
+// ============ Oturum Suresi Ayarlari ============
+
+// Oturum suresini getir
+router.get('/session-duration', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin yetkisi gerekli' });
+    }
+    const duration = process.env.SESSION_DURATION || '7d';
+    res.json({ success: true, duration });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Sunucu hatasi' });
+  }
+});
+
+// Oturum suresini guncelle
+router.put('/session-duration', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin yetkisi gerekli' });
+    }
+    const { duration } = req.body;
+    const validDurations = ['1d', '3d', '7d', '30d'];
+    if (!validDurations.includes(duration)) {
+      return res.status(400).json({ success: false, message: 'Gecersiz oturum suresi. Gecerli degerler: 1d, 3d, 7d, 30d' });
+    }
+    process.env.SESSION_DURATION = duration;
+    res.json({ success: true, message: 'Oturum suresi guncellendi', duration });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Sunucu hatasi' });
   }
 });
 

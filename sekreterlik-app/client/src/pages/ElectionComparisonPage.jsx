@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
+import { getPartyColor } from '../utils/partyColors';
 
 const ElectionComparisonPage = () => {
   const toast = useToast();
@@ -205,6 +207,44 @@ const ElectionComparisonPage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* Bar Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Oy Yuzdeleri Karsilastirma Grafigi</h3>
+            </div>
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={Math.max(400, comparison.partyComparison.length * 50)}>
+                <BarChart
+                  data={comparison.partyComparison.map(p => ({
+                    party: p.party,
+                    [comparison.election1?.name || 'Secim 1']: parseFloat(p.pct1),
+                    [comparison.election2?.name || 'Secim 2']: parseFloat(p.pct2),
+                  }))}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis type="number" domain={[0, 'auto']} tickFormatter={v => `%${v}`} />
+                  <YAxis type="category" dataKey="party" width={90} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value) => `%${value}`} />
+                  <Legend />
+                  <Bar
+                    dataKey={comparison.election1?.name || 'Secim 1'}
+                    fill="#6366f1"
+                    radius={[0, 4, 4, 0]}
+                    barSize={18}
+                  />
+                  <Bar
+                    dataKey={comparison.election2?.name || 'Secim 2'}
+                    fill="#f59e0b"
+                    radius={[0, 4, 4, 0]}
+                    barSize={18}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>

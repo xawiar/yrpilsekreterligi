@@ -9,6 +9,7 @@ import { EmptyState } from '../components/UI';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { maskTC } from '../utils/maskingUtils';
 
 const RepresentativesPage = () => {
   const toast = useToast();
@@ -464,7 +465,7 @@ const RepresentativesPage = () => {
                             <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500 dark:text-gray-400">TC:</span>
-                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.tc || '-'}</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{maskTC(rep.tc) || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
@@ -528,7 +529,7 @@ const RepresentativesPage = () => {
                               {rep.name}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.tc}
+                              {maskTC(rep.tc)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.phone || '-'}
@@ -588,7 +589,7 @@ const RepresentativesPage = () => {
                             <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500 dark:text-gray-400">TC:</span>
-                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.tc || '-'}</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{maskTC(rep.tc) || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
@@ -652,7 +653,7 @@ const RepresentativesPage = () => {
                               {rep.name}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.tc}
+                              {maskTC(rep.tc)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.phone || '-'}

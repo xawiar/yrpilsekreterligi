@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { maskTC } from '../utils/maskingUtils';
 
 const TownPresidentDashboardPage = () => {
   const { user, logout } = useAuth();
@@ -1004,7 +1005,7 @@ const TownPresidentDashboardPage = () => {
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredMembers.map((member) => (
                       <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{member.tc}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{maskTC(member.tc)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{member.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{member.position}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{member.phone}</td>
@@ -1240,7 +1241,7 @@ const TownPresidentDashboardPage = () => {
                     {(representativeType === 'neighborhood' ? neighborhoodRepresentatives : villageRepresentatives).map((rep) => (
                       <tr key={rep.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{rep.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rep.tc}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{maskTC(rep.tc)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rep.phone || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {representativeType === 'neighborhood' ? rep.neighborhood_name : rep.village_name}
@@ -1384,7 +1385,7 @@ const TownPresidentDashboardPage = () => {
                       return (
                         <tr key={observer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{observer.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{observer.tc}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{maskTC(observer.tc)}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{observer.phone || '-'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {ballotBox ? `${ballotBox.ballot_number} - ${ballotBox.institution_name}` : '-'}

@@ -434,6 +434,144 @@ const AdminSettings = () => {
         </button>
       </div>
       <ConfirmDialog {...confirmDialogProps} />
+
+      {/* Guvenlik Ayarlari - Sadece admin */}
+      <SecuritySettingsSection />
+    </div>
+  );
+};
+
+// Guvenlik Ayarlari Alt Bileseni (2FA + Oturum Suresi)
+const SecuritySettingsSection = () => {
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [twoFASecret, setTwoFASecret] = useState('');
+  const [twoFAOtpUrl, setTwoFAOtpUrl] = useState('');
+  const [twoFALoading, setTwoFALoading] = useState(false);
+  const [disableCode, setDisableCode] = useState('');
+
+  const [sessionDuration, setSessionDuration] = useState('7d');
+  const [sessionLoading, setSessionLoading] = useState(false);
+
+  const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+  const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' });
+
+  useEffect(() => {
+    // 2FA durumunu kontrol et
+    fetch(`${API_URL}/api/auth/2fa/status`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(data => { if (data.success) setTwoFAEnabled(data.enabled); })
+      .catch(() => {});
+
+    // Oturum suresini al
+    fetch(`${API_URL}/api/auth/session-duration`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(data => { if (data.success) setSessionDuration(data.duration); })
+      .catch(() => {});
+  }, []);
+
+  const handle2FAEnable = async () => {
+    setTwoFALoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/2fa/enable`, { method: 'POST', headers: getHeaders() });
+      const data = await res.json();
+      if (data.success) {
+        setTwoFASecret(data.secret);
+        setTwoFAOtpUrl(data.otpauthUrl);
+        setTwoFAEnabled(true);
+      }
+    } catch (err) { console.error('2FA enable error:', err); }
+    finally { setTwoFALoading(false); }
+  };
+
+  const handle2FADisable = async () => {
+    if (!disableCode || disableCode.length !== 6) return;
+    setTwoFALoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/2fa/disable`, {
+        method: 'POST', headers: getHeaders(), body: JSON.stringify({ code: disableCode })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTwoFAEnabled(false);
+        setTwoFASecret('');
+        setTwoFAOtpUrl('');
+        setDisableCode('');
+      }
+    } catch (err) { console.error('2FA disable error:', err); }
+    finally { setTwoFALoading(false); }
+  };
+
+  const handleSessionDurationChange = async (val) => {
+    setSessionLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/session-duration`, {
+        method: 'PUT', headers: getHeaders(), body: JSON.stringify({ duration: val })
+      });
+      const data = await res.json();
+      if (data.success) setSessionDuration(val);
+    } catch (err) { console.error('Session duration error:', err); }
+    finally { setSessionLoading(false); }
+  };
+
+  const durationLabels = { '1d': '1 Gun', '3d': '3 Gun', '7d': '7 Gun', '30d': '30 Gun' };
+
+  return (
+    <div className="mt-8 space-y-6">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-2">Guvenlik Ayarlari</h3>
+
+      {/* 2FA */}
+      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Iki Faktorlu Dogrulama (2FA)</h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Admin hesabi icin ek guvenlik katmani</p>
+          </div>
+          <span className={`px-3 py-1 text-xs font-medium rounded-full ${twoFAEnabled ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'}`}>
+            {twoFAEnabled ? 'Aktif' : 'Pasif'}
+          </span>
+        </div>
+
+        {!twoFAEnabled ? (
+          <button onClick={handle2FAEnable} disabled={twoFALoading}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+            {twoFALoading ? 'Etkinlestiriliyor...' : '2FA Etkinlestir'}
+          </button>
+        ) : (
+          <div className="space-y-3">
+            {twoFASecret && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TOTP Secret (Authenticator uygulamasina girin):</p>
+                <code className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono break-all">{twoFASecret}</code>
+                <p className="text-xs text-gray-500 mt-2">Google Authenticator veya Authy uygulamasina bu kodu girin.</p>
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <input type="text" maxLength={6} value={disableCode} onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="6 haneli kod" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white w-32" />
+              <button onClick={handle2FADisable} disabled={twoFALoading || disableCode.length !== 6}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+                2FA Devre Disi Birak
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Oturum Suresi */}
+      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+        <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1">Oturum Suresi</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Kullanicilarin oturum acik kalma suresi</p>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(durationLabels).map(([val, label]) => (
+            <button key={val} onClick={() => handleSessionDurationChange(val)} disabled={sessionLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${sessionDuration === val
+                ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+              } disabled:opacity-50`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

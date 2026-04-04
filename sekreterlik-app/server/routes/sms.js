@@ -185,6 +185,18 @@ router.post('/send', requireAdmin, async (req, res) => {
     }
 
     const result = await sendViaNetgsm(config, cleanPhone, message);
+
+    // SMS tarihcesine kaydet
+    try {
+      const db = require('../config/database');
+      await db.run(
+        'INSERT INTO sms_history (sender_id, recipient_count, message, status) VALUES (?, ?, ?, ?)',
+        [req.user?.id || null, 1, message, result.success ? 'sent' : 'failed']
+      );
+    } catch (historyError) {
+      console.error('SMS tarihcesi kaydedilemedi:', historyError);
+    }
+
     res.json(result);
   } catch (error) {
     console.error('SMS gönderme hatası:', error);
@@ -258,10 +270,99 @@ router.post('/send-bulk', requireAdmin, async (req, res) => {
       ? `${results.sent} SMS gönderildi${results.failed > 0 ? `, ${results.failed} başarısız` : ''}`
       : 'Hiçbir SMS gönderilemedi';
 
+    // SMS tarihcesine kaydet
+    try {
+      const db = require('../config/database');
+      const totalRecipients = (recipients ? recipients.length : 0) || (phones ? phones.length : 0);
+      const status = results.failed === 0 ? 'sent' : (results.sent === 0 ? 'failed' : 'partial');
+      await db.run(
+        'INSERT INTO sms_history (sender_id, recipient_count, message, status) VALUES (?, ?, ?, ?)',
+        [req.user?.id || null, totalRecipients, message || (recipients?.[0]?.message || ''), status]
+      );
+    } catch (historyError) {
+      console.error('SMS tarihcesi kaydedilemedi:', historyError);
+    }
+
     res.json(results);
   } catch (error) {
     console.error('Toplu SMS gönderme hatası:', error);
     res.status(500).json({ success: false, message: error.message || 'Toplu SMS gönderilirken hata oluştu' });
+  }
+});
+
+/**
+ * GET /api/sms/history
+ * SMS gonderim tarihcesi
+ */
+router.get('/history', requireAdmin, async (req, res) => {
+  try {
+    const db = require('../config/database');
+    const history = await db.all('SELECT * FROM sms_history ORDER BY sent_at DESC LIMIT 100');
+    res.json(history);
+  } catch (error) {
+    console.error('SMS tarihcesi yuklenirken hata:', error);
+    res.status(500).json({ message: 'SMS tarihcesi yuklenirken hata olustu' });
+  }
+});
+
+/**
+ * POST /api/sms/schedule
+ * SMS planla
+ */
+router.post('/schedule', requireAdmin, async (req, res) => {
+  try {
+    const { message, recipients, scheduled_at } = req.body;
+
+    if (!message || !recipients || !scheduled_at) {
+      return res.status(400).json({ success: false, message: 'Mesaj, alicilar ve tarih zorunludur' });
+    }
+
+    const db = require('../config/database');
+    const result = await db.run(
+      'INSERT INTO scheduled_sms (message, recipients, scheduled_at, status) VALUES (?, ?, ?, ?)',
+      [message, JSON.stringify(recipients), scheduled_at, 'pending']
+    );
+
+    res.status(201).json({
+      success: true,
+      id: result.lastID,
+      message: 'SMS planlanmistir',
+      scheduled_at
+    });
+  } catch (error) {
+    console.error('SMS planlama hatasi:', error);
+    res.status(500).json({ success: false, message: 'SMS planlanirken hata olustu' });
+  }
+});
+
+/**
+ * GET /api/sms/scheduled
+ * Planlanmis SMS listesi
+ */
+router.get('/scheduled', requireAdmin, async (req, res) => {
+  try {
+    const db = require('../config/database');
+    const scheduled = await db.all('SELECT * FROM scheduled_sms ORDER BY scheduled_at DESC');
+    res.json(scheduled);
+  } catch (error) {
+    console.error('Planlanmis SMS listesi hatasi:', error);
+    res.status(500).json({ message: 'Planlanmis SMS listesi yuklenirken hata olustu' });
+  }
+});
+
+/**
+ * DELETE /api/sms/scheduled/:id
+ * Planlanmis SMS sil
+ */
+router.delete('/scheduled/:id', requireAdmin, async (req, res) => {
+  try {
+    const db = require('../config/database');
+    const { id } = req.params;
+    await db.run('DELETE FROM scheduled_sms WHERE id = ? AND status = ?', [parseInt(id), 'pending']);
+    res.json({ success: true, message: 'Planlanmis SMS silindi' });
+  } catch (error) {
+    console.error('Planlanmis SMS silme hatasi:', error);
+    res.status(500).json({ message: 'Planlanmis SMS silinirken hata olustu' });
   }
 });
 

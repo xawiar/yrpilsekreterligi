@@ -60,12 +60,10 @@ const MembersPage = () => {
   // Listen for region and position updates
   useEffect(() => {
     const handleRegionUpdate = () => {
-      console.log('Region updated, refreshing members...');
       fetchMembers();
     };
 
     const handlePositionUpdate = () => {
-      console.log('Position updated, refreshing members...');
       fetchMembers();
     };
 
@@ -384,8 +382,7 @@ const MembersPage = () => {
       // Import with preview data
       const result = await ApiService.importMembersFromExcel(excelImportFile, excelImportPreview);
       fetchMembers(); // Refresh the list
-      console.log('Members imported from Excel:', result);
-      
+
       // Close preview modal
       setExcelImportPreview(null);
       setExcelImportFile(null);
@@ -543,7 +540,6 @@ const MembersPage = () => {
       // URL'i temizle
       URL.revokeObjectURL(url);
       
-      console.log('Members exported to Excel');
     } catch (error) {
       console.error('Error exporting members to Excel:', error);
       toast.error('Excel dışa aktarımı sırasında bir hata oluştu: ' + error.message);

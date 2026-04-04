@@ -78,6 +78,11 @@ class ElectionRegionController {
         }
       }
 
+      // election_id varsa regionData'ya ekle
+      if (regionData.election_id) {
+        regionData.election_id = Number(regionData.election_id);
+      }
+
       const newRegion = await ElectionRegion.create(regionData);
       res.status(201).json({ success: true, message: 'Bölge başarıyla oluşturuldu', region: newRegion });
     } catch (error) {
@@ -143,6 +148,11 @@ class ElectionRegionController {
             });
           }
         }
+      }
+
+      // election_id varsa regionData'ya ekle
+      if (regionData.election_id !== undefined) {
+        regionData.election_id = regionData.election_id ? Number(regionData.election_id) : null;
       }
 
       const updatedRegion = await ElectionRegion.update(id, regionData);

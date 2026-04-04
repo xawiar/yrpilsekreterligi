@@ -43,8 +43,6 @@ const TaskForm = ({ task, onClose, onTaskSaved }) => {
     try {
       // In a real implementation, you would call the API service here
       // For now, we'll just simulate the save operation
-      console.log('Saving task:', formData);
-      
       onTaskSaved();
       onClose();
     } catch (error) {

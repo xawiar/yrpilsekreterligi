@@ -213,14 +213,19 @@ class MeetingController {
         return res.status(404).json({ message: 'Toplantı bulunamadı' });
       }
       
-      // Update in database
-      const result = await db.run('UPDATE meetings SET archived = 1 WHERE id = ?', [parseInt(id)]);
-      
+      // Update in database with archived_at and archived_reason
+      const archivedAt = new Date().toISOString();
+      const archivedReason = req.body?.reason || null;
+      const result = await db.run(
+        'UPDATE meetings SET archived = 1, archived_at = ?, archived_reason = ? WHERE id = ?',
+        [archivedAt, archivedReason, parseInt(id)]
+      );
+
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Toplantı bulunamadı' });
       }
-      
-      const archivedMeeting = { ...meeting, archived: 1 };
+
+      const archivedMeeting = { ...meeting, archived: 1, archived_at: archivedAt, archived_reason: archivedReason };
       res.json({ message: 'Toplantı arşivlendi', meeting: archivedMeeting });
     } catch (error) {
       console.error('Error archiving meeting:', error);

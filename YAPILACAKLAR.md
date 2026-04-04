@@ -14,6 +14,17 @@
 
 - [ ] Tarih aralığı filtresi (30dk)
 
+### 1A-EK — Güvenlik Eksik (doğrulama sırasında tespit)
+
+- [ ] Storage rules: /personal-documents ve /archive yollarına MIME type kontrolü ekle (sadece PDF ve image/* kabul et) (15dk)
+
+### ACİL — KVKK Sayfaları Çalışmıyor (Canlı testte tespit)
+
+- [ ] **BUG: Veri silme talepleri backend'e bağlanmıyor** — `ApiService.js:4099-4141` tüm DataDeletion istekleri `localhost:5000/api/data-deletion-requests`'e gidiyor. Firebase modunda `FirebaseApiService`'te bu metotlar YOK. Çözüm: FirebaseApiService'e DataDeletion CRUD metotları ekle (Firestore `data_deletion_requests` koleksiyonu) (1 saat)
+- [ ] **BUG: Firestore composite index eksik** — `notifications` koleksiyonunda `memberId + createdAt` composite index yok. Hata: "The query requires an index". Firebase Console'dan link tıklanarak oluşturulmalı VEYA kod içinde index oluşturma (15dk)
+- [ ] **BUG: EmptyDocumentsState DOM nesting hatası** — `<tr>` elementi `<div>` içinde. ArchivePage EmptyDocumentsState'te `<tr>` yerine `<tbody>` wrapper veya `<div>` kullanılmalı (10dk)
+- [ ] **PERFORMANS: Aşırı Firestore okuma** — Sayfa yüklenirken aynı koleksiyonlar 4-8 kez okunuyor (members 8x, districts 8x, towns 10x). Cache mekanizması yok, her component kendi fetch'ini yapıyor. En azından kısa süreli in-memory cache ekle (2 saat)
+
 ### 1B — Dosya Export (+1.5 puan, 2.5 saat)
 
 - [ ] PDF başlık + tarih + parti logosu + sayfa numarası — tüm PDF export'lara (2 saat)

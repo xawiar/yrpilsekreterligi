@@ -1,47 +1,10 @@
 import React, { useState } from 'react';
+import { hasPermission as checkPermission } from '../../utils/permissions';
 
 const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmin = false }) => {
-  // Check if user has permission for a tab
+  // Check if user has permission for a tab (centralized utility)
   const hasPermission = (tabName) => {
-    if (isAdmin) return true;
-
-    const permissionMap = {
-      'admin': true,
-      'regions': grantedPermissions.includes('add_region'),
-      'positions': grantedPermissions.includes('add_position'),
-      'member-users': grantedPermissions.includes('manage_member_users'),
-      'districts': grantedPermissions.includes('add_district'),
-      'towns': grantedPermissions.includes('add_town'),
-      'neighborhoods': grantedPermissions.includes('add_neighborhood'),
-      'villages': grantedPermissions.includes('add_village'),
-      'stks': grantedPermissions.includes('manage_stk') || grantedPermissions.includes('add_stk'),
-      'public-institutions': grantedPermissions.includes('add_public_institution'),
-      'mosques': grantedPermissions.includes('add_mosque'),
-      'event-categories': grantedPermissions.includes('manage_event_categories'),
-      'authorization': false,
-      'bylaws': grantedPermissions.includes('manage_bylaws'),
-      'gemini-api': false,
-      'firebase-config': false,
-      'deployment-config': false,
-      'sms-config': false,
-      'firebase-sync': false,
-      'polls': grantedPermissions.includes('manage_polls'),
-      'member-dashboard-analytics': grantedPermissions.includes('access_member_dashboard_analytics'),
-      'app-branding': grantedPermissions.includes('manage_app_branding'),
-      'performance-score': false,
-      'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
-      'api-keys': false,
-      'voter-list': isAdmin || grantedPermissions.includes('manage_voters'),
-      'push-notifications': true,
-      'data-retention': false,
-      'data-deletion-requests': false,
-      'data-processing-inventory': false,
-      'kvkk-compliance': false,
-      'data-breach-procedure': false,
-      'verbis-guide': false,
-    };
-
-    return permissionMap[tabName] || false;
+    return checkPermission(tabName, isAdmin, grantedPermissions, false);
   };
 
   // Tab group definitions
@@ -144,6 +107,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
         { id: 'kvkk-compliance', name: 'KVKK Uyum Durumu' },
         { id: 'data-breach-procedure', name: 'Veri Ihlali Proseduru' },
         { id: 'verbis-guide', name: 'VERBIS Kayit Rehberi' },
+        { id: 'audit-log', name: 'Denetim Kayitlari' },
       ]
     },
   ];

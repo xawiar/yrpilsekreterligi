@@ -6,7 +6,8 @@ import {
   DashboardHeader,
   DashboardStatsCards,
   TopRegistrarsTable,
-  TopAttendeesTable
+  TopAttendeesTable,
+  SystemHealthWidget
 } from '../components/Dashboard';
 import NativeDashboardExample from '../components/mobile/NativeDashboardExample';
 import Modal from '../components/Modal';
@@ -256,6 +257,9 @@ const DashboardPage = () => {
 
       {/* Stats Cards - Mobilde tek kolon, desktop'ta çoklu kolon */}
       <DashboardStatsCards stats={stats} />
+
+      {/* System Health - Admin Monitoring */}
+      <SystemHealthWidget />
 
       {/* Mobil: Dikey stack, Desktop: Yatay grid */}
       <div className={`grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6`}>

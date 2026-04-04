@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { maskTC } from '../utils/maskingUtils';
 
 const BallotBoxesPage = () => {
   const toast = useToast();
@@ -1577,7 +1578,7 @@ const BallotBoxesPage = () => {
                               <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Başmüşahit</h5>
                               <div className="bg-green-50 border border-green-200 rounded-md p-3">
                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{chiefObserver.name}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">TC: {chiefObserver.tc}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">TC: {maskTC(chiefObserver.tc)}</p>
                                 <p className="text-xs text-gray-600 dark:text-gray-400">Telefon: {chiefObserver.phone}</p>
                                 {chiefObserver.region_name && (
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">İl: {chiefObserver.region_name}</p>
@@ -1605,7 +1606,7 @@ const BallotBoxesPage = () => {
                                 {regularObservers.map((observer) => (
                                   <div key={observer.id} className="bg-blue-50 border border-blue-200 rounded-md p-2">
                                     <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{observer.name}</p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">TC: {observer.tc}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">TC: {maskTC(observer.tc)}</p>
                                     <p className="text-xs text-gray-600 dark:text-gray-400">Telefon: {observer.phone}</p>
                                   </div>
                                 ))}

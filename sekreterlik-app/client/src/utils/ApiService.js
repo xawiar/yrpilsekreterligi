@@ -389,14 +389,15 @@ class ApiService {
     return response.json();
   }
 
-  static async archiveMember(id) {
+  static async archiveMember(id, reason) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.archiveMember(id);
+      return FirebaseApiService.archiveMember(id, reason);
     }
 
     const response = await fetch(`${API_BASE_URL}/members/${id}/archive`, {
       method: 'DELETE',
-      headers: this.getAuthHeaders(false),
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ reason }),
     });
 
     if (!response.ok) {

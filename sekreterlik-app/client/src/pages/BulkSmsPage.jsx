@@ -35,6 +35,22 @@ const BulkSmsPage = () => {
   const [selectedRecipients, setSelectedRecipients] = useState([]);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
 
+  // SMS Sablonlari
+  const SMS_TEMPLATES = [
+    { id: 'empty', label: 'Bos Sablon', text: '' },
+    { id: 'meeting', label: 'Toplanti Daveti', text: 'Sayın {ad}, {tarih} tarihinde {konum}\'da toplantimiz vardir. Katiliminizi bekliyoruz.' },
+    { id: 'election', label: 'Secim Hatirlatma', text: 'Sayın {ad}, secim gunu sandik {no}\'da oy kullanacaksiniz. Iyi oylar dileriz.' },
+    { id: 'announcement', label: 'Genel Duyuru', text: '' },
+    { id: 'event', label: 'Etkinlik Daveti', text: 'Sayın {ad}, {tarih} tarihinde duzenlenen etkinligimize katiliminizi bekliyoruz.' },
+  ];
+
+  const handleTemplateSelect = (templateId) => {
+    const template = SMS_TEMPLATES.find(t => t.id === templateId);
+    if (template) {
+      setMessage(template.text);
+    }
+  };
+
   useEffect(() => {
     loadRegions();
     loadScheduledSms();
@@ -465,17 +481,32 @@ const BulkSmsPage = () => {
           </div>
         </div>
 
-        {/* Mesaj */}
+        {/* Mesaj Sablonu ve Mesaj */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Mesaj Metni <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Mesaj Metni <span className="text-red-500">*</span>
+            </label>
+            <div className="flex items-center space-x-2">
+              <label className="text-xs text-gray-500 dark:text-gray-400">Sablon:</label>
+              <select
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                defaultValue=""
+              >
+                <option value="" disabled>Sablon secin...</option>
+                {SMS_TEMPLATES.map(t => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={6}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Gönderilecek mesajı yazın. Mesaj başına üye adı otomatik olarak eklenecektir (Sn [üye adı], [mesaj])."
+            placeholder="Gonderilecek mesaji yazin. Mesaj basina uye adi otomatik olarak eklenecektir (Sn [uye adi], [mesaj])."
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Mesaj formatı: "Sn [üye adı], [mesaj metni]"

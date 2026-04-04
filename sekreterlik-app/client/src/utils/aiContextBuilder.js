@@ -1,6 +1,10 @@
 /**
  * AI Context Builder Utilities
  * Extracted from GroqService.js — standalone context-building helpers
+ *
+ * 2 Katmanlı Context Sistemi:
+ * - Katman 1 (buildSiteContextSummary): Ozet istatistikler, her zaman gonderilir (~500 token)
+ * - Katman 2 (buildSiteContext): Detayli veriler, function calling ile on-demand cekilir
  */
 
 /**
@@ -18,7 +22,114 @@ function maskSensitiveData(text) {
 }
 
 /**
- * Site verilerini context'e çevir (Token limiti için optimize edilmiş)
+ * Katman 1: Ozet istatistikler (max ~500 token, her zaman gonderilir)
+ * @param {Object} siteData - Firestore'dan cekilen site verileri
+ * @returns {Array<string>} Ozet context array'i
+ */
+function buildSiteContextSummary(siteData) {
+  const context = [];
+
+  context.push(`=== GENEL OZET ISTATISTIKLER ===`);
+
+  // Uye ozeti
+  const members = siteData.members || [];
+  const activeMembers = members.filter(m => !m.archived);
+  context.push(`Toplam uye: ${activeMembers.length} aktif${members.length !== activeMembers.length ? ` (${members.length - activeMembers.length} arsivlenmis)` : ''}`);
+
+  // Bolge dagilimi
+  if (activeMembers.length > 0) {
+    const regionCounts = {};
+    activeMembers.forEach(m => {
+      const region = m.region || 'Belirtilmemis';
+      regionCounts[region] = (regionCounts[region] || 0) + 1;
+    });
+    const regionSummary = Object.entries(regionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([r, c]) => `${r}: ${c}`)
+      .join(', ');
+    context.push(`Bolge dagilimi (ilk 5): ${regionSummary}`);
+  }
+
+  // Toplanti ozeti
+  const meetings = (siteData.meetings || []).filter(m => !m.archived);
+  context.push(`Aktif toplanti sayisi: ${meetings.length}`);
+  if (meetings.length > 0) {
+    const sortedMeetings = [...meetings].sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateB.localeCompare(dateA);
+    });
+    const lastMeeting = sortedMeetings[0];
+    if (lastMeeting?.date) {
+      context.push(`Son toplanti tarihi: ${lastMeeting.date}`);
+    }
+  }
+
+  // Etkinlik ozeti
+  const events = (siteData.events || []).filter(e => !e.archived);
+  context.push(`Aktif etkinlik sayisi: ${events.length}`);
+  if (events.length > 0) {
+    const sortedEvents = [...events].sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateB.localeCompare(dateA);
+    });
+    const lastEvent = sortedEvents[0];
+    if (lastEvent?.date) {
+      context.push(`Son etkinlik tarihi: ${lastEvent.date}`);
+    }
+  }
+
+  // Ilce/Belde ozeti
+  const districts = siteData.districts || [];
+  const towns = siteData.towns || [];
+  const neighborhoods = siteData.neighborhoods || [];
+  const villages = siteData.villages || [];
+  context.push(`Ilce: ${districts.length}, Belde: ${towns.length}, Mahalle: ${neighborhoods.length}, Koy: ${villages.length}`);
+
+  // Sandik ozeti
+  const ballotBoxes = siteData.ballotBoxes || [];
+  const observers = siteData.observers || [];
+  if (ballotBoxes.length > 0) {
+    context.push(`Sandik: ${ballotBoxes.length}, Musahit: ${observers.length}`);
+  }
+
+  // Secim ozeti
+  const elections = siteData.elections || [];
+  if (elections.length > 0) {
+    context.push(`Secim kaydi: ${elections.length}`);
+  }
+
+  // Secim sonuclari ozeti
+  const electionResults = siteData.electionResults || [];
+  if (electionResults.length > 0) {
+    context.push(`Secim sonucu girilen sandik: ${electionResults.length}`);
+  }
+
+  // STK, Kamu Kurumu, Cami ozeti
+  const stks = siteData.stks || [];
+  const publicInstitutions = siteData.publicInstitutions || [];
+  const mosques = siteData.mosques || [];
+  if (stks.length > 0 || publicInstitutions.length > 0 || mosques.length > 0) {
+    context.push(`STK: ${stks.length}, Kamu Kurumu: ${publicInstitutions.length}, Cami: ${mosques.length}`);
+  }
+
+  // Arsivlenmis veriler ozeti
+  const archivedMembers = siteData.archivedMembers || [];
+  const archivedMeetings = siteData.archivedMeetings || [];
+  const archivedEvents = siteData.archivedEvents || [];
+  if (archivedMembers.length > 0 || archivedMeetings.length > 0 || archivedEvents.length > 0) {
+    context.push(`Arsiv: ${archivedMembers.length} uye, ${archivedMeetings.length} toplanti, ${archivedEvents.length} etkinlik`);
+  }
+
+  context.push(`\nDetayli veri icin 'uye listesini goster', 'toplanti detaylarini goster' gibi sorular sorabilirsiniz.`);
+
+  return context;
+}
+
+/**
+ * Katman 2: Detayli site verileri (function calling ile on-demand cekilir)
  * @param {Object} siteData - Firestore'dan çekilen site verileri
  * @returns {Array<string>} Context array'i
  */
@@ -1786,4 +1897,4 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
   return context;
 }
 
-export { buildSiteContext, buildMemberContext, maskSensitiveData };
+export { buildSiteContext, buildSiteContextSummary, buildMemberContext, maskSensitiveData };

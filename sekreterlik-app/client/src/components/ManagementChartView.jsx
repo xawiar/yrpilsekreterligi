@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatMemberName } from '../utils/nameFormatter';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 
 const ManagementChartView = ({ members }) => {
+  const [viewMode, setViewMode] = useState('card'); // 'card' or 'tree'
   // Define priority order for divan members
   const getDivanMemberPriority = (position) => {
     const priorityOrder = {
@@ -60,12 +61,99 @@ const ManagementChartView = ({ members }) => {
 
   const { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
 
+  // Tree view bileşeni
+  const renderTreeView = () => (
+    <div className="p-4 sm:p-6 space-y-1">
+      {/* Il Baskani */}
+      {ilBaskani.map(member => (
+        <div key={member.id} className="mb-3">
+          <div className="flex items-center py-2 px-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-600">
+            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-bold mr-3 flex-shrink-0">
+              {member.name.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{formatMemberName(member.name)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{member.position}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Ilce Baskani */}
+      {ilceBaskani.map(member => (
+        <div key={member.id} className="ml-6 mb-3">
+          <div className="flex items-center py-2 px-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border-l-4 border-indigo-600">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold mr-3 flex-shrink-0">
+              {member.name.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{formatMemberName(member.name)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{member.position}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Divan Uyeleri */}
+      {divanUyeleri.length > 0 && (
+        <div className="ml-12">
+          <div className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1 mt-3">Divan Uyeleri ({divanUyeleri.length})</div>
+          {divanUyeleri.map(member => (
+            <div key={member.id} className="flex items-center py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded border-l-2 border-blue-400 ml-2 mb-1">
+              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-800 dark:text-blue-300 text-xs font-bold mr-2 flex-shrink-0">
+                {member.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-sm text-gray-900 dark:text-gray-100 truncate">{formatMemberName(member.name)}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">- {member.position}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Diger Uyeler */}
+      {digerUyeler.length > 0 && (
+        <div className="ml-12">
+          <div className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1 mt-3">Diger Uyeler ({digerUyeler.length})</div>
+          {digerUyeler.map(member => (
+            <div key={member.id} className="flex items-center py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded border-l-2 border-green-400 ml-2 mb-1">
+              <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-800 dark:text-green-300 text-xs font-bold mr-2 flex-shrink-0">
+                {member.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-sm text-gray-900 dark:text-gray-100 truncate">{formatMemberName(member.name)}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">- {member.position}</span>
+                {member.region && <span className="text-xs text-gray-400 ml-1">({member.region})</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-200 bg-gray-50 dark:bg-gray-900">
-        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Yönetim Şeması</h3>
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-200 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
+        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Yonetim Semasi</h3>
+        <div className="flex items-center space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('card')}
+            className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'card' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
+          >
+            Kart
+          </button>
+          <button
+            onClick={() => setViewMode('tree')}
+            className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'tree' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
+          >
+            Agac
+          </button>
+        </div>
       </div>
-      
+
+      {viewMode === 'tree' ? renderTreeView() : (
       <div className="p-4 sm:p-6">
         <div className="space-y-6 sm:space-y-8">
           {/* İl Başkanı - En Üst Pozisyon */}
@@ -250,6 +338,7 @@ const ManagementChartView = ({ members }) => {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };

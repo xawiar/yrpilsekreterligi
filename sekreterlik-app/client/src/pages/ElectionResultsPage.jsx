@@ -163,6 +163,47 @@ const ElectionResultsPage = ({ readOnly = false }) => {
     }
   }, [electionId]);
 
+  // Firestore real-time listener - yeni sonuc girildiginde otomatik yenile
+  useEffect(() => {
+    if (!electionId) return;
+    let unsubscribe = null;
+    const setupListener = async () => {
+      try {
+        const { db: firestoreDb } = await import('../config/firebase');
+        const { collection, query, where, onSnapshot } = await import('firebase/firestore');
+        if (!firestoreDb) return;
+        const resultsRef = collection(firestoreDb, 'election_results');
+        const q = query(resultsRef, where('election_id', '==', Number(electionId)));
+        let initialLoad = true;
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (initialLoad) {
+            initialLoad = false;
+            return;
+          }
+          // Yeni sonuc veya degisiklik var, veriyi yenile
+          const hasChanges = snapshot.docChanges().some(
+            change => change.type === 'added' || change.type === 'modified'
+          );
+          if (hasChanges) {
+            fetchData();
+            if (toast) {
+              toast.info('Yeni secim sonucu girisi tespit edildi, veriler guncellendi.');
+            }
+          }
+        }, (error) => {
+          console.warn('Firestore election_results listener error (non-critical):', error.message);
+        });
+      } catch (err) {
+        // Firebase mevcut degilse sessizce devam et
+        console.warn('Firestore real-time listener baslatilamadi (non-critical):', err.message);
+      }
+    };
+    setupListener();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [electionId]);
+
   const fetchData = async () => {
     try {
       if (import.meta.env.DEV) {

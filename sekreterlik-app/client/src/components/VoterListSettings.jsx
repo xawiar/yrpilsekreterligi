@@ -13,6 +13,12 @@ const VoterListSettings = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
 
+    // Secmen-Sandik Eslestirme
+    const [ballotSearchTC, setBallotSearchTC] = useState('');
+    const [ballotSearchResult, setBallotSearchResult] = useState(null);
+    const [ballotSearching, setBallotSearching] = useState(false);
+    const [ballotSearchError, setBallotSearchError] = useState('');
+
     // Preview State
     const [previewData, setPreviewData] = useState([]);
     const [previewColumns, setPreviewColumns] = useState([]);
@@ -311,6 +317,130 @@ const VoterListSettings = () => {
                             </div>
                         )}
                     </div>
+                </div>
+            </div>
+
+            {/* Secmen-Sandik Eslestirme */}
+            <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div className="px-4 py-5 sm:p-6">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        Secmen-Sandik Eslestirme
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        TC kimlik numarasi girerek secmenin hangi sandikta oy kullanacagini sorgulayabilirsiniz.
+                    </p>
+                    <div className="max-w-xl flex gap-3">
+                        <input
+                            type="text"
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                            placeholder="TC Kimlik No (11 haneli)"
+                            maxLength={11}
+                            value={ballotSearchTC}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setBallotSearchTC(val);
+                                setBallotSearchError('');
+                                setBallotSearchResult(null);
+                            }}
+                        />
+                        <button
+                            onClick={async () => {
+                                if (ballotSearchTC.length !== 11) {
+                                    setBallotSearchError('TC kimlik numarasi 11 haneli olmalidir');
+                                    return;
+                                }
+                                setBallotSearching(true);
+                                setBallotSearchError('');
+                                setBallotSearchResult(null);
+                                try {
+                                    // Secmen listesinde TC ara
+                                    const voters = await ApiService.searchVoters(ballotSearchTC);
+                                    if (!voters || voters.length === 0) {
+                                        setBallotSearchError('Bu TC ile kayitli secmen bulunamadi');
+                                        setBallotSearching(false);
+                                        return;
+                                    }
+                                    const voter = voters.find(v => String(v.tc) === ballotSearchTC) || voters[0];
+                                    // Sandik listesinden eslestir - mahalle/ilce/bolge bilgisine gore
+                                    let ballotBoxes = [];
+                                    try {
+                                        ballotBoxes = await ApiService.getBallotBoxes();
+                                    } catch (e) {
+                                        console.warn('Ballot boxes yuklenemedi:', e);
+                                    }
+                                    // Eslestirme: voter'in ilce/mahalle/koy bilgisiyle sandik bul
+                                    let matchedBox = null;
+                                    if (ballotBoxes.length > 0 && (voter.neighborhood || voter.district || voter.village)) {
+                                        matchedBox = ballotBoxes.find(bb => {
+                                            if (voter.neighborhood && bb.neighborhood_name) {
+                                                return bb.neighborhood_name.toLowerCase().includes(voter.neighborhood.toLowerCase());
+                                            }
+                                            if (voter.village && bb.village_name) {
+                                                return bb.village_name.toLowerCase().includes(voter.village.toLowerCase());
+                                            }
+                                            return false;
+                                        });
+                                    }
+                                    setBallotSearchResult({ voter, ballotBox: matchedBox });
+                                } catch (err) {
+                                    console.error('Ballot search error:', err);
+                                    setBallotSearchError('Sorgulama sirasinda hata olustu');
+                                } finally {
+                                    setBallotSearching(false);
+                                }
+                            }}
+                            disabled={ballotSearching || ballotSearchTC.length !== 11}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                        >
+                            {ballotSearching ? 'Araniyor...' : 'Sorgula'}
+                        </button>
+                    </div>
+                    {ballotSearchError && (
+                        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{ballotSearchError}</p>
+                    )}
+                    {ballotSearchResult && (
+                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Secmen Bilgisi</h4>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100"><span className="font-medium">Ad Soyad:</span> {ballotSearchResult.voter.fullName}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400"><span className="font-medium">TC:</span> {ballotSearchResult.voter.tc}</p>
+                                    {ballotSearchResult.voter.district && (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400"><span className="font-medium">Ilce:</span> {ballotSearchResult.voter.district}</p>
+                                    )}
+                                    {ballotSearchResult.voter.neighborhood && (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400"><span className="font-medium">Mahalle:</span> {ballotSearchResult.voter.neighborhood}</p>
+                                    )}
+                                    {ballotSearchResult.voter.village && (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400"><span className="font-medium">Koy:</span> {ballotSearchResult.voter.village}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Sandik Bilgisi</h4>
+                                    {ballotSearchResult.ballotBox ? (
+                                        <>
+                                            <p className="text-sm text-gray-900 dark:text-gray-100">
+                                                <span className="font-medium">Sandik No:</span>{' '}
+                                                <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                                                    {ballotSearchResult.ballotBox.ballot_number}
+                                                </span>
+                                            </p>
+                                            {ballotSearchResult.ballotBox.institution_name && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400"><span className="font-medium">Kurum:</span> {ballotSearchResult.ballotBox.institution_name}</p>
+                                            )}
+                                            {ballotSearchResult.ballotBox.neighborhood_name && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400"><span className="font-medium">Mahalle:</span> {ballotSearchResult.ballotBox.neighborhood_name}</p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                                            Eslesen sandik bulunamadi. Secmen bilgileri ile sandik verisi uyusmuyor olabilir.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

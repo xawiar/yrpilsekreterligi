@@ -7,6 +7,7 @@ import NativeButton from '../components/mobile/NativeButton';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { maskTC } from '../utils/maskingUtils';
 
 const CoordinatorsPage = () => {
   const location = useLocation();
@@ -513,7 +514,7 @@ const CoordinatorsListPage = () => {
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">TC</div>
-                            <div className="text-gray-900 dark:text-gray-100 font-medium">{coordinator.tc}</div>
+                            <div className="text-gray-900 dark:text-gray-100 font-medium">{maskTC(coordinator.tc)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Telefon</div>
@@ -638,7 +639,7 @@ const CoordinatorsListPage = () => {
                             {coordinator.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {coordinator.tc}
+                            {maskTC(coordinator.tc)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {coordinator.phone}
@@ -800,14 +801,12 @@ const CoordinatorsListPage = () => {
                       value={formData.parent_coordinator_id !== null && formData.parent_coordinator_id !== undefined ? String(formData.parent_coordinator_id) : ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        console.log('Selected value:', val, 'Type:', typeof val);
                         if (!val || val === '') {
                           setFormData({ ...formData, parent_coordinator_id: null });
                         } else {
                           // String veya number olabilir, her ikisini de destekle
                           const numVal = Number(val);
                           const finalVal = isNaN(numVal) ? val : numVal;
-                          console.log('Setting parent_coordinator_id to:', finalVal);
                           setFormData({ ...formData, parent_coordinator_id: finalVal });
                         }
                       }}
@@ -837,14 +836,12 @@ const CoordinatorsListPage = () => {
                       value={formData.parent_coordinator_id !== null && formData.parent_coordinator_id !== undefined ? String(formData.parent_coordinator_id) : ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        console.log('Selected value:', val, 'Type:', typeof val);
                         if (!val || val === '') {
                           setFormData({ ...formData, parent_coordinator_id: null });
                         } else {
                           // String veya number olabilir, her ikisini de destekle
                           const numVal = Number(val);
                           const finalVal = isNaN(numVal) ? val : numVal;
-                          console.log('Setting parent_coordinator_id to:', finalVal);
                           setFormData({ ...formData, parent_coordinator_id: finalVal });
                         }
                       }}
@@ -1080,6 +1077,8 @@ const RegionsListPage = () => {
   const [selectedVillages, setSelectedVillages] = useState([]);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState('');
   const [regionName, setRegionName] = useState('');
+  const [selectedElectionId, setSelectedElectionId] = useState('');
+  const [elections, setElections] = useState([]);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
 
@@ -1164,7 +1163,7 @@ const RegionsListPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [neighborhoodsData, villagesData, ballotBoxesData, coordinatorsData] = await Promise.all([
+      const [neighborhoodsData, villagesData, ballotBoxesData, coordinatorsData, electionsData] = await Promise.all([
         ApiService.getNeighborhoods().catch(err => { console.error('Error loading neighborhoods:', err); return []; }),
         ApiService.getVillages().catch(err => { console.error('Error loading villages:', err); return []; }),
         ApiService.getBallotBoxes().catch(err => { console.error('Error loading ballot boxes:', err); return []; }),
@@ -1176,11 +1175,13 @@ const RegionsListPage = () => {
             return [];
           }
           return [];
-        })
+        }),
+        ApiService.getElections().catch(err => { console.error('Error loading elections:', err); return []; })
       ]);
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
       setBallotBoxes(ballotBoxesData || []);
+      setElections(Array.isArray(electionsData) ? electionsData : electionsData?.data || []);
       // Bölge sorumlularını filtrele (region_supervisor role'üne sahip olanlar)
       const supervisors = (coordinatorsData || []).filter(c => c.role === 'region_supervisor');
       setRegionSupervisors(supervisors);
@@ -1221,8 +1222,9 @@ const RegionsListPage = () => {
         neighborhood_ids: selectedNeighborhoods,
         village_ids: selectedVillages,
         supervisor_id: selectedSupervisorId ? (isNaN(Number(selectedSupervisorId)) ? selectedSupervisorId : Number(selectedSupervisorId)) : null,
-        district_id: neighborhoods.find(n => selectedNeighborhoods.includes(n.id))?.district_id || 
-                     villages.find(v => selectedVillages.includes(v.id))?.district_id || null
+        district_id: neighborhoods.find(n => selectedNeighborhoods.includes(n.id))?.district_id ||
+                     villages.find(v => selectedVillages.includes(v.id))?.district_id || null,
+        election_id: selectedElectionId ? Number(selectedElectionId) : null
       };
 
       let response;
@@ -1241,6 +1243,7 @@ const RegionsListPage = () => {
         setSelectedNeighborhoods([]);
         setSelectedVillages([]);
         setSelectedSupervisorId('');
+        setSelectedElectionId('');
         await loadAllData(); // Tüm verileri yenile (regions + supervisors)
       } else {
         setMessage(response.message || 'Bölge işlemi sırasında hata oluştu');
@@ -1256,8 +1259,6 @@ const RegionsListPage = () => {
   };
 
   const handleEditRegion = async (region) => {
-    console.log('Editing region:', region);
-    
     // Önce tüm verileri yükle (neighborhoods, villages, supervisors)
     await loadData();
     
@@ -1294,21 +1295,17 @@ const RegionsListPage = () => {
       }
     }
     
-    console.log('Setting neighborhoods:', neighborhoodIds, 'villages:', villageIds);
     setSelectedNeighborhoods(neighborhoodIds);
     setSelectedVillages(villageIds);
-    
+
     // supervisor_id'yi string'e çevir - regionSupervisors state'i güncellenmiş olmalı
-    const supervisorId = region.supervisor_id !== null && region.supervisor_id !== undefined 
-      ? String(region.supervisor_id) 
+    const supervisorId = region.supervisor_id !== null && region.supervisor_id !== undefined
+      ? String(region.supervisor_id)
       : '';
-    
-    // regionSupervisors state'ini kontrol et
-    console.log('Setting supervisor_id to:', supervisorId, 'from region.supervisor_id:', region.supervisor_id);
-    console.log('Available supervisors:', regionSupervisors.map(s => ({ id: String(s.id), name: s.name })));
-    
+
     setSelectedSupervisorId(supervisorId);
-    
+    setSelectedElectionId(region.election_id ? String(region.election_id) : '');
+
     // Modal'ı aç
     setShowCreateModal(true);
   };
@@ -1621,6 +1618,7 @@ const RegionsListPage = () => {
                     setSelectedNeighborhoods([]);
                     setSelectedVillages([]);
                     setSelectedSupervisorId('');
+                    setSelectedElectionId('');
                     setMessage('');
                   }}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -1660,7 +1658,7 @@ const RegionsListPage = () => {
                   <option value="">Seçiniz...</option>
                   {regionSupervisors.map((supervisor) => (
                     <option key={supervisor.id} value={String(supervisor.id)}>
-                      {supervisor.name} {supervisor.tc ? `(${supervisor.tc})` : ''}
+                      {supervisor.name} {supervisor.tc ? `(${maskTC(supervisor.tc)})` : ''}
                     </option>
                   ))}
                 </select>
@@ -1669,6 +1667,27 @@ const RegionsListPage = () => {
                     Henüz bölge sorumlusu eklenmemiş. Önce "Sorumlular" sayfasından bölge sorumlusu ekleyin.
                   </p>
                 )}
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Secim (Opsiyonel)
+                </label>
+                <select
+                  value={selectedElectionId}
+                  onChange={(e) => setSelectedElectionId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Secim secin (opsiyonel)...</option>
+                  {elections.map((el) => (
+                    <option key={el.id} value={String(el.id)}>
+                      {el.name} {el.date ? `(${el.date})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Bolgeyi belirli bir secime baglamak icin secim secebilirsiniz.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1771,6 +1790,7 @@ const RegionsListPage = () => {
                     setSelectedNeighborhoods([]);
                     setSelectedVillages([]);
                     setSelectedSupervisorId('');
+                    setSelectedElectionId('');
                     setMessage('');
                   }}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"

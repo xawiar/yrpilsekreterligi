@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import GeminiService from '../services/GeminiService';
 import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
@@ -18,10 +19,18 @@ const Chatbot = ({ isOpen, onClose }) => {
   const [aiProvider] = useState('gemini');
   const [showLimitInfo, setShowLimitInfo] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const messagesEndRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
+
+  // Mobil ekran tespiti
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Scroll to bottom when new message is added
   useEffect(() => {
@@ -511,6 +520,11 @@ const Chatbot = ({ isOpen, onClose }) => {
       if (siteData) {
         const AIService = GeminiService;
 
+        // Katman 1: Ozet istatistikler (her zaman, ~500 token)
+        const summaryContext = AIService.buildSiteContextSummary(siteData);
+        context.push(...summaryContext);
+
+        // Katman 2: Detayli veriler (function calling ile on-demand cekilir)
         const siteContext = AIService.buildSiteContext(siteData);
         context.push(...siteContext);
 
@@ -1433,8 +1447,23 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-modal flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
+    <div className={
+      isMobile
+        ? "fixed inset-x-0 bottom-0 bg-black/40 z-modal"
+        : "fixed inset-0 bg-black/50 backdrop-blur-sm z-modal flex items-center justify-center p-4"
+    }
+      onClick={isMobile ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
+    >
+      {isMobile && (
+        <div className="flex justify-center pt-2 pb-1 bg-white dark:bg-gray-800 rounded-t-2xl">
+          <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        </div>
+      )}
+      <div className={
+        isMobile
+          ? "bg-white dark:bg-gray-800 shadow-2xl w-full flex flex-col h-[85vh] overflow-hidden"
+          : "bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col"
+      }>
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 rounded-t-2xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -1787,6 +1816,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
           </div>
         </form>
       </div>
+    </div>
     </div>
   );
 };

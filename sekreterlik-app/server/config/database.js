@@ -35,6 +35,38 @@ db.serialize(() => {
     }
   });
 
+  // Add archived_at and archived_reason columns
+  db.run(`ALTER TABLE members ADD COLUMN archived_at DATETIME`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // column already exists, ignore
+    }
+  });
+  db.run(`ALTER TABLE members ADD COLUMN archived_reason TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // column already exists, ignore
+    }
+  });
+  db.run(`ALTER TABLE meetings ADD COLUMN archived_at DATETIME`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // column already exists, ignore
+    }
+  });
+  db.run(`ALTER TABLE meetings ADD COLUMN archived_reason TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // column already exists, ignore
+    }
+  });
+  db.run(`ALTER TABLE events ADD COLUMN archived_at DATETIME`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // column already exists, ignore
+    }
+  });
+  db.run(`ALTER TABLE events ADD COLUMN archived_reason TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // column already exists, ignore
+    }
+  });
+
   // Create meetings table
   db.run(`CREATE TABLE IF NOT EXISTS meetings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -311,6 +343,38 @@ db.serialize(() => {
     FOREIGN KEY (town_id) REFERENCES towns (id) ON DELETE CASCADE,
     FOREIGN KEY (chairman_member_id) REFERENCES members (id) ON DELETE SET NULL,
     FOREIGN KEY (inspector_member_id) REFERENCES members (id) ON DELETE SET NULL
+  )`);
+
+  // Create branch_members table (kadin/genclik kollari uyeleri)
+  db.run(`CREATE TABLE IF NOT EXISTS branch_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    branch_type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    tc TEXT,
+    phone TEXT,
+    position TEXT,
+    district_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Create sms_history table (SMS gonderim tarihcesi)
+  db.run(`CREATE TABLE IF NOT EXISTS sms_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER,
+    recipient_count INTEGER,
+    message TEXT,
+    status TEXT DEFAULT 'sent',
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Create scheduled_sms table (planlanmis SMS)
+  db.run(`CREATE TABLE IF NOT EXISTS scheduled_sms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message TEXT NOT NULL,
+    recipients TEXT NOT NULL,
+    scheduled_at DATETIME NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
   // Create district management members table (ilçe yönetim kurulu üyeleri)
@@ -807,6 +871,30 @@ db.serialize(() => {
     FOREIGN KEY (supervisor_id) REFERENCES election_coordinators (id) ON DELETE SET NULL,
     FOREIGN KEY (district_id) REFERENCES districts (id) ON DELETE SET NULL
   )`);
+
+  // Add election_id column to election_regions if it doesn't exist
+  db.run(`ALTER TABLE election_regions ADD COLUMN election_id INTEGER REFERENCES elections(id) ON DELETE SET NULL`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding election_id column to election_regions:', err);
+    }
+  });
+
+  // Add method and path columns to audit_logs if they don't exist (for enhanced audit logging)
+  db.run(`ALTER TABLE audit_logs ADD COLUMN method TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // Ignore - column may already exist
+    }
+  });
+  db.run(`ALTER TABLE audit_logs ADD COLUMN path TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // Ignore - column may already exist
+    }
+  });
+  db.run(`ALTER TABLE audit_logs ADD COLUMN status_code INTEGER`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      // Ignore - column may already exist
+    }
+  });
 
   // Create audit_logs table for security
   db.run(`CREATE TABLE IF NOT EXISTS audit_logs (

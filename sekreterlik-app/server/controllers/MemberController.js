@@ -340,17 +340,22 @@ class MemberController {
         return res.status(404).json({ message: 'Üye bulunamadı' });
       }
       
-      // Update in database
-      const result = await db.run('UPDATE members SET archived = 1 WHERE id = ?', [parseInt(id)]);
-      
+      // Update in database with archived_at and archived_reason
+      const archivedAt = new Date().toISOString();
+      const archivedReason = req.body?.reason || null;
+      const result = await db.run(
+        'UPDATE members SET archived = 1, archived_at = ?, archived_reason = ? WHERE id = ?',
+        [archivedAt, archivedReason, parseInt(id)]
+      );
+
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Üye bulunamadı' });
       }
-      
+
       // Invalidate cache for members
       invalidate('/api/members');
-      
-      const archivedMember = { ...member, archived: 1 };
+
+      const archivedMember = { ...member, archived: 1, archived_at: archivedAt, archived_reason: archivedReason };
       res.json({ message: 'Üye arşivlendi', member: archivedMember });
     } catch (error) {
       console.error('Error archiving member:', error);

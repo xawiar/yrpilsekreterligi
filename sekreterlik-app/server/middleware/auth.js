@@ -49,12 +49,20 @@ const requireAdmin = (req, res, next) => {
 
 /**
  * JWT token oluştur
+ * Oturum suresi ortam degiskeninden veya varsayilan olarak '7d' olarak alinir
+ * Gecerli degerler: '1d', '3d', '7d', '30d'
  */
+const getSessionDuration = () => {
+  const duration = process.env.SESSION_DURATION || '7d';
+  const validDurations = ['1d', '3d', '7d', '30d'];
+  return validDurations.includes(duration) ? duration : '7d';
+};
+
 const generateToken = (payload) => {
   if (jwtSecretMissing) {
     throw new Error('JWT_SECRET tanımlı değil. Token oluşturulamıyor.');
   }
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: getSessionDuration() });
 };
 
 module.exports = {

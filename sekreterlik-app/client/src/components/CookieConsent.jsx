@@ -46,7 +46,7 @@ const CookieConsent = () => {
                     Bu site, hizmet kalitesini artirmak ve kullanici deneyimini iyilestirmek amaciyla cerezler ve yerel depolama (localStorage) kullanmaktadir.
                     Oturum bilgileri ve kullanici tercihleri yerel olarak cihazinizda saklanmaktadir.{' '}
                     <a href="/privacy-policy" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                      Aydinlatma Metni
+                      Aydinlatma Metni ve Cerez Politikasi
                     </a>
                   </p>
                 </div>

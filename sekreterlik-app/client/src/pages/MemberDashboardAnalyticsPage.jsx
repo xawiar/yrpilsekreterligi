@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { maskTC } from '../utils/maskingUtils';
 
 const MemberDashboardAnalyticsPage = () => {
   const [summary, setSummary] = useState([]);
@@ -221,7 +222,7 @@ const MemberDashboardAnalyticsPage = () => {
                         {item.name} {item.surname}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {item.tc || '-'}
+                        {maskTC(item.tc) || '-'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {item.total_sessions || 0}
@@ -295,7 +296,7 @@ const MemberDashboardAnalyticsPage = () => {
                           {item.name} {item.surname}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {item.tc || '-'}
+                          {maskTC(item.tc) || '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(item.sessionStart || item.session_start)}

@@ -193,10 +193,8 @@ const MeetingForm = ({ meeting, regions, onClose, onMeetingSaved, members }) => 
         })
       };
       
-      console.log('Updating meeting with data:', meetingData);
       await ApiService.updateMeeting(meeting.id, meetingData);
-      console.log('Meeting updated successfully');
-      
+
       toast.success('Toplantı başarıyla güncellendi');
       
       if (onMeetingSaved) {

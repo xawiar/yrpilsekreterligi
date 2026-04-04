@@ -36,9 +36,11 @@ const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
 const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
 const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
 const GenclikKollarıPage = lazy(() => import('./pages/GenclikKollarıPage'));
+const BranchPage = lazy(() => import('./pages/BranchPage'));
 const DistrictMembersPage = lazy(() => import('./pages/DistrictMembersPage'));
 const DistrictDetailsPage = lazy(() => import('./pages/DistrictDetailsPage'));
 const TownMembersPage = lazy(() => import('./pages/TownMembersPage'));
+const ManagementMembersPage = lazy(() => import('./pages/ManagementMembersPage'));
 const TownDetailsPage = lazy(() => import('./pages/TownDetailsPage'));
 const ElectionPreparationPage = lazy(() => import('./pages/ElectionPreparationPage'));
 const BallotBoxesPage = lazy(() => import('./pages/BallotBoxesPage'));
@@ -417,13 +419,13 @@ function RouterContent() {
                             <Route path="/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MembersPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TeşkilatPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat/ilçeler" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictsPage /></Suspense></PageTransition>} />
-                            <Route path="/teşkilat/kadın-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><KadınKollarıPage /></Suspense></PageTransition>} />
-                            <Route path="/teşkilat/gençlik-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><GenclikKollarıPage /></Suspense></PageTransition>} />
+                            <Route path="/teşkilat/kadın-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BranchPage type="women" /></Suspense></PageTransition>} />
+                            <Route path="/teşkilat/gençlik-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BranchPage type="youth" /></Suspense></PageTransition>} />
                             <Route path="/districts" element={<Navigate to="/teşkilat/ilçeler" replace />} />
                             <Route path="/calendar" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><CalendarPage /></Suspense></PageTransition>} />
-                            <Route path="/districts/:id/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictMembersPage /></Suspense></PageTransition>} />
+                            <Route path="/districts/:id/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ManagementMembersPage type="district" /></Suspense></PageTransition>} />
                             <Route path="/districts/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictDetailsPage /></Suspense></PageTransition>} />
-                            <Route path="/towns/:id/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TownMembersPage /></Suspense></PageTransition>} />
+                            <Route path="/towns/:id/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ManagementMembersPage type="town" /></Suspense></PageTransition>} />
                             <Route path="/towns/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TownDetailsPage /></Suspense></PageTransition>} />
                             <Route path="/election-preparation/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ElectionPreparationPage /></Suspense></PageTransition>} />
                             <Route path="/election-preparation/ballot-boxes/:id/details" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BallotBoxDetailsPage /></Suspense></PageTransition>} />
