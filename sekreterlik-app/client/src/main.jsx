@@ -21,11 +21,64 @@ loadThemeSettings().then(theme => {
 // FCM foreground mesaj dinleyicisini baslat
 import('./utils/fcmTokenManager').then(({ listenToFcmMessages }) => {
   listenToFcmMessages((payload) => {
-    console.log('📬 FCM message in foreground:', payload?.notification?.title);
+    console.log('FCM message in foreground:', payload?.notification?.title);
   });
-}).catch(() => {
-  // FCM desteklenmiyorsa sessizce devam et
-});
+}).catch(() => {});
+
+// Push token kaydet — sayfa her yuklendiginde (maliisler pattern)
+setTimeout(async () => {
+  try {
+    // Kullanici login olmus mu kontrol et
+    const savedUser = localStorage.getItem('user');
+    if (!savedUser) return;
+    const user = JSON.parse(savedUser);
+    const userId = user.id || user.uid || '';
+    if (!userId) return;
+
+    // Bildirim izni iste
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'denied') return;
+
+    let perm = Notification.permission;
+    if (perm !== 'granted') {
+      perm = await Notification.requestPermission();
+    }
+    if (perm !== 'granted') return;
+
+    // Service worker hazir mi
+    if (!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+
+    // VAPID key
+    const vapidKey = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
+    const padding = '='.repeat((4 - (vapidKey.length % 4)) % 4);
+    const b64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(b64);
+    const keyArr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) keyArr[i] = raw.charCodeAt(i);
+
+    // Subscribe
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: keyArr.buffer
+    });
+
+    // Firestore'a kaydet
+    const { doc, setDoc } = await import('firebase/firestore');
+    const { db } = await import('./config/firebase');
+    if (db) {
+      await setDoc(doc(db, 'push_tokens', userId), {
+        subscription: JSON.stringify(sub),
+        userId: userId,
+        updatedAt: new Date().toISOString(),
+        isActive: true
+      });
+      console.log('Push token saved for:', userId);
+    }
+  } catch (err) {
+    console.error('Push token save error:', err);
+  }
+}, 3000);
 
 // Firebase kullanımı kontrolü
 const USE_FIREBASE = 
