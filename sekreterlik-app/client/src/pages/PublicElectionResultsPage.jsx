@@ -5,14 +5,8 @@ const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
                      import.meta.env.VITE_USE_FIREBASE === true ||
                      String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
 
-// Lazy load ElectionResultsPage content component
-const ElectionResultsContent = lazy(() => import('./ElectionResultsPage').then(module => ({
-  default: () => {
-    // ElectionResultsPage'i readOnly modda render et
-    const ElectionResultsPage = module.default;
-    return <ElectionResultsPage readOnly={true} />;
-  }
-})));
+// ElectionResultsPage'i dogrudan lazy import et
+const ElectionResultsPage = lazy(() => import('./ElectionResultsPage'));
 
 // Helper: Build API base URL for backend mode
 const getApiBaseUrl = () => {
@@ -240,7 +234,7 @@ const PublicElectionResultsPage = ({ electionIdProp }) => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
         </div>
       }>
-        <ElectionResultsContent />
+        <ElectionResultsPage readOnly={true} electionIdProp={electionId} />
       </Suspense>
     </div>
   );

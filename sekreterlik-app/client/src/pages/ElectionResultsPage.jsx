@@ -119,9 +119,10 @@ const getWinningParty = (result, election) => {
   return null;
 };
 
-const ElectionResultsPage = ({ readOnly = false }) => {
+const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
   const toast = useToast();
-  const { electionId } = useParams();
+  const params = useParams();
+  const electionId = electionIdProp || params.electionId;
   const navigate = useNavigate();
   const [election, setElection] = useState(null);
   const [results, setResults] = useState([]);
