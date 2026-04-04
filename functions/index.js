@@ -19,7 +19,10 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ||
   "ilsekreterlik-app-encryption-key-2024-secret-very-long-key-" +
   "for-security-minimum-32-characters";
 
-/** @param {string} encryptedPassword */
+/**
+ * @param {string} encryptedPassword
+ * @return {string|null}
+ */
 function decryptPassword(encryptedPassword) {
   if (!encryptedPassword || typeof encryptedPassword !== "string") {
     return null;
@@ -39,7 +42,10 @@ function decryptPassword(encryptedPassword) {
   return encryptedPassword.replace(/\D/g, "");
 }
 
-/** @param {string} username */
+/**
+ * @param {string} username
+ * @return {string|null}
+ */
 function formatEmail(username) {
   if (!username) return null;
   if (username.includes("@")) return username;
