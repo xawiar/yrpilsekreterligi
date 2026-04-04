@@ -1,5 +1,6 @@
 const express = require('express');
 const ArchiveController = require('../controllers/ArchiveController');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -7,16 +8,17 @@ const router = express.Router();
 router.get('/documents', ArchiveController.getDocuments);
 router.post('/documents', ArchiveController.uploadDocument, ArchiveController.uploadDocumentHandler);
 router.get('/documents/:id/download', ArchiveController.downloadDocument);
-router.delete('/documents/:id', ArchiveController.deleteDocument);
+router.delete('/documents/:id', requireAdmin, ArchiveController.deleteDocument);
 
 // Clear archived data routes (place BEFORE dynamic :id routes to avoid matching issues)
-router.delete('/members/clear', ArchiveController.clearArchivedMembers);
-router.delete('/meetings/clear', ArchiveController.clearArchivedMeetings);
-router.delete('/documents/clear', ArchiveController.clearDocuments);
-router.delete('/events/clear', ArchiveController.clearArchivedEvents);
+// Admin only - toplu silme işlemleri
+router.delete('/members/clear', requireAdmin, ArchiveController.clearArchivedMembers);
+router.delete('/meetings/clear', requireAdmin, ArchiveController.clearArchivedMeetings);
+router.delete('/documents/clear', requireAdmin, ArchiveController.clearDocuments);
+router.delete('/events/clear', requireAdmin, ArchiveController.clearArchivedEvents);
 
-// Individual archived item deletion routes
-router.delete('/members/:id', ArchiveController.deleteArchivedMember);
-router.delete('/meetings/:id', ArchiveController.deleteArchivedMeeting);
+// Individual archived item deletion routes - Admin only
+router.delete('/members/:id', requireAdmin, ArchiveController.deleteArchivedMember);
+router.delete('/meetings/:id', requireAdmin, ArchiveController.deleteArchivedMeeting);
 
 module.exports = router;

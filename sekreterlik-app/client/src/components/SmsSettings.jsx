@@ -187,22 +187,16 @@ const SmsSettings = () => {
         return;
       }
 
-      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      // Test SMS'i backend proxy üzerinden gönder
+      const { default: smsService } = await import('../services/SmsService');
+      const result = await smsService.sendSms(testPhone.trim(), 'Bu bir test SMS mesajıdır. SMS yapılandırması başarılı!');
 
-      if (USE_FIREBASE) {
-        // SMS servisini kullanarak test SMS gönder
-        const { default: smsService } = await import('../services/SmsService');
-        await smsService.loadConfig();
-
-        const result = await smsService.sendSms(testPhone.trim(), 'Bu bir test SMS mesajıdır. SMS yapılandırması başarılı!');
-
-        if (result.success) {
-          setMessage('Test SMS başarıyla gönderildi!');
-          setMessageType('success');
-        } else {
-          setMessage('Test SMS gönderilemedi: ' + result.message);
-          setMessageType('error');
-        }
+      if (result.success) {
+        setMessage('Test SMS başarıyla gönderildi!');
+        setMessageType('success');
+      } else {
+        setMessage('Test SMS gönderilemedi: ' + result.message);
+        setMessageType('error');
       }
     } catch (error) {
       console.error('Error sending test SMS:', error);

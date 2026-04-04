@@ -19,6 +19,7 @@ const EventDetails = ({ event, members }) => {
 
   useEffect(() => {
     const fetchAdditionalData = async () => {
+      setLoading(true);
       try {
         const [neighborhoodReps, neighborhoodSups, villageReps, villageSups] = await Promise.all([
           ApiService.getNeighborhoodRepresentatives(),
@@ -32,11 +33,12 @@ const EventDetails = ({ event, members }) => {
         setVillageSupervisors(villageSups || []);
       } catch (error) {
         console.error('Error fetching additional data:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    
+
     fetchAdditionalData();
-    setLoading(false);
   }, [event]);
 
   const getMemberName = (memberId) => {

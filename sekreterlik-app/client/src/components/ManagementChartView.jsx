@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatMemberName } from '../utils/nameFormatter';
+import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 
 const ManagementChartView = ({ members }) => {
   // Define priority order for divan members
@@ -84,7 +85,7 @@ const ManagementChartView = ({ members }) => {
                     <div className="text-center">
                       {member.photo ? (
                         <img
-                          src={`http://localhost:5000${member.photo}`}
+                          src={normalizePhotoUrl(member.photo)}
                           alt={formatMemberName(member.name)}
                           className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-2 sm:mb-4"
                           onError={(e) => {
@@ -126,7 +127,7 @@ const ManagementChartView = ({ members }) => {
                     <div className="text-center">
                       {member.photo ? (
                         <img
-                          src={`http://localhost:5000${member.photo}`}
+                          src={normalizePhotoUrl(member.photo)}
                           alt={formatMemberName(member.name)}
                           className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-2 sm:mb-4"
                           onError={(e) => {
@@ -170,7 +171,7 @@ const ManagementChartView = ({ members }) => {
                         <div className="flex-shrink-0">
                           {member.photo ? (
                             <img
-                              src={`http://localhost:5000${member.photo}`}
+                              src={normalizePhotoUrl(member.photo)}
                               alt={formatMemberName(member.name)}
                               className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-blue-200"
                               loading="lazy"
@@ -219,7 +220,7 @@ const ManagementChartView = ({ members }) => {
                         <div className="flex-shrink-0">
                           {member.photo ? (
                             <img
-                              src={`http://localhost:5000${member.photo}`}
+                              src={normalizePhotoUrl(member.photo)}
                               alt={formatMemberName(member.name)}
                               className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-green-200"
                               onError={(e) => {

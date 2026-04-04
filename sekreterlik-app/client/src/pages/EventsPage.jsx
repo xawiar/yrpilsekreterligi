@@ -32,6 +32,7 @@ const EventsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [formMode, setFormMode] = useState('create');
   const [members, setMembers] = useState([]);
   const [searchTerm, setSearchTerm] = useState(''); // For event search
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // Default sort by date, newest first

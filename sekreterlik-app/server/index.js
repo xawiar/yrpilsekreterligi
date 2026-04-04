@@ -110,6 +110,8 @@ const notificationsRouter = require('./routes/notifications');
 console.log('Notifications router imported');
 const apiKeysRouter = require('./routes/apiKeys');
 console.log('API keys router imported');
+const smsRouter = require('./routes/sms');
+console.log('SMS router imported');
 const publicApiRouter = require('./routes/publicApi');
 console.log('Public API router imported');
 const PollController = require('./controllers/PollController');
@@ -376,6 +378,7 @@ app.use('/api/member-dashboard-analytics', authenticateToken, memberDashboardAna
 app.use('/api/dashboard', authenticateToken, dashboardRouter);
 app.use('/api/notifications', authenticateToken, notificationsRouter);
 app.use('/api/api-keys', authenticateToken, apiKeysRouter);
+app.use('/api/sms', authenticateToken, smsRouter);
 // Public election results routes - NO AUTHENTICATION REQUIRED
 app.use('/api/public/election-results', require('./routes/publicElectionResults'));
 

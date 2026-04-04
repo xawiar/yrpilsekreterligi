@@ -17,10 +17,10 @@ class EventController {
       const offset = (page - 1) * limit;
 
       if (showArchived) {
-        sql = 'SELECT * FROM events ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
+        sql = 'SELECT * FROM events WHERE archived = 1 ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
         params = [limit, offset];
       } else {
-        sql = 'SELECT * FROM events WHERE archived = 0 ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
+        sql = 'SELECT * FROM events WHERE (archived = 0 OR archived IS NULL) ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?';
         params = [limit, offset];
       }
       
@@ -72,8 +72,8 @@ class EventController {
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
       }
       
-      const sql = `INSERT INTO events (name, date, location, description, archived, attendees, selected_location_types, selected_locations) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+      const sql = `INSERT INTO events (name, date, location, description, archived, attendees, selected_location_types, selected_locations, category_id, is_planned)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const params = [
         eventData.name,
         eventData.date,
@@ -82,7 +82,9 @@ class EventController {
         0, // archived = false
         JSON.stringify(eventData.attendees || []), // Store attendees as JSON string
         JSON.stringify(eventData.selectedLocationTypes || []), // Store selected location types
-        JSON.stringify(eventData.selectedLocations || {}) // Store selected locations
+        JSON.stringify(eventData.selectedLocations || {}), // Store selected locations
+        eventData.category_id || null,
+        eventData.is_planned ? 1 : 0
       ];
       
       const result = await db.run(sql, params);
@@ -150,7 +152,7 @@ class EventController {
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
       }
       
-      const sql = `UPDATE events SET name = ?, date = ?, location = ?, description = ?, attendees = ? 
+      const sql = `UPDATE events SET name = ?, date = ?, location = ?, description = ?, attendees = ?, selected_location_types = ?, selected_locations = ?
                    WHERE id = ?`;
       const params = [
         eventData.name,
@@ -158,6 +160,8 @@ class EventController {
         eventData.location,
         eventData.description || null,
         JSON.stringify(eventData.attendees || []),
+        JSON.stringify(eventData.selectedLocationTypes || []),
+        JSON.stringify(eventData.selectedLocations || {}),
         parseInt(id)
       ];
       
