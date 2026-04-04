@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getBrandingSettings } from '../utils/brandingLoader';
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 import { isNotificationMuted, toggleNotificationMute } from '../utils/notificationSound';
+import NotificationDrawer from './NotificationDrawer';
 
 const Sidebar = ({ onMobileMenuClose }) => {
   const location = useLocation();
@@ -18,6 +19,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
     events: false,
     management: false
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     const loadBranding = () => {
@@ -225,8 +227,8 @@ const Sidebar = ({ onMobileMenuClose }) => {
               </svg>
             )}
           </button>
-          <Link
-            to="/notifications"
+          <button
+            onClick={() => setDrawerOpen(true)}
             className="relative p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
             title="Bildirimler"
           >
@@ -238,7 +240,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
-          </Link>
+          </button>
         </div>
         {branding?.logoUrl ? (
           <img src={branding.logoUrl} alt="Logo" className="h-10 w-auto mb-2 object-contain" loading="lazy" decoding="async" />
@@ -279,9 +281,8 @@ const Sidebar = ({ onMobileMenuClose }) => {
               </svg>
             )}
           </button>
-          <Link
-            to="/notifications"
-            onClick={() => onMobileMenuClose && onMobileMenuClose()}
+          <button
+            onClick={() => { onMobileMenuClose && onMobileMenuClose(); setDrawerOpen(true); }}
             className="relative p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700"
             title="Bildirimler"
           >
@@ -293,7 +294,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
-          </Link>
+          </button>
           {onMobileMenuClose && (
             <button
               onClick={onMobileMenuClose}
@@ -409,6 +410,9 @@ const Sidebar = ({ onMobileMenuClose }) => {
           Çıkış Yap
         </button>
       </div>
+
+      {/* Bildirim Drawer */}
+      <NotificationDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 };

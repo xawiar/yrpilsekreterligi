@@ -14,6 +14,7 @@ import Modal from '../components/Modal';
 import MeetingDetails from '../components/MeetingDetails';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import VisitMap from '../components/VisitMap';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -425,6 +426,22 @@ const DashboardPage = () => {
             Son 6 ayda toplanti verisi bulunmuyor
           </div>
         )}
+      </div>
+
+      {/* Ziyaret Haritasi Mini Widget */}
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Ziyaret Haritasi
+          </h3>
+          <button
+            onClick={() => navigate('/locations')}
+            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            Detayli Goruntule
+          </button>
+        </div>
+        <VisitMap height="300px" mini={true} />
       </div>
     </div>
   );

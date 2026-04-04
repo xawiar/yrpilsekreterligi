@@ -8,6 +8,7 @@ import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 import { calculatePerformanceScore } from '../utils/performanceScore';
 import { useToast } from '../contexts/ToastContext';
+import { compareIds } from '../utils/normalizeId';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
 
@@ -212,19 +213,19 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       // Check district positions
       const districtOfficials = await ApiService.getDistrictOfficials();
       const districtPositions = districtOfficials.filter(official => 
-        String(official.chairman_member_id) === String(member.id) || 
-        String(official.inspector_member_id) === String(member.id)
+        compareIds(official.chairman_member_id, member.id) || 
+        compareIds(official.inspector_member_id, member.id)
       );
       
       districtPositions.forEach(official => {
-        if (String(official.chairman_member_id) === String(member.id)) {
+        if (compareIds(official.chairman_member_id, member.id)) {
           positions.push({
             type: 'İlçe Başkanı',
             location: official.district_name,
             locationType: 'İlçe'
           });
         }
-        if (String(official.inspector_member_id) === String(member.id)) {
+        if (compareIds(official.inspector_member_id, member.id)) {
           positions.push({
             type: 'İlçe Müfettişi',
             location: official.district_name,
@@ -236,7 +237,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       // Check district deputy inspectors
       const districtDeputyInspectors = await ApiService.getAllDistrictDeputyInspectors();
       const districtDeputyPositions = districtDeputyInspectors.filter(deputy => 
-        String(deputy.member_id) === String(member.id)
+        compareIds(deputy.member_id, member.id)
       );
       
       districtDeputyPositions.forEach(deputy => {
@@ -250,19 +251,19 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       // Check town positions
       const townOfficials = await ApiService.getTownOfficials();
       const townPositions = townOfficials.filter(official => 
-        String(official.chairman_member_id) === String(member.id) || 
-        String(official.inspector_member_id) === String(member.id)
+        compareIds(official.chairman_member_id, member.id) || 
+        compareIds(official.inspector_member_id, member.id)
       );
       
       townPositions.forEach(official => {
-        if (String(official.chairman_member_id) === String(member.id)) {
+        if (compareIds(official.chairman_member_id, member.id)) {
           positions.push({
             type: 'Belde Başkanı',
             location: official.town_name,
             locationType: 'Belde'
           });
         }
-        if (String(official.inspector_member_id) === String(member.id)) {
+        if (compareIds(official.inspector_member_id, member.id)) {
           positions.push({
             type: 'Belde Müfettişi',
             location: official.town_name,
@@ -274,7 +275,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       // Check town deputy inspectors
       const townDeputyInspectors = await ApiService.getAllTownDeputyInspectors();
       const townDeputyPositions = townDeputyInspectors.filter(deputy => 
-        String(deputy.member_id) === String(member.id)
+        compareIds(deputy.member_id, member.id)
       );
       
       townDeputyPositions.forEach(deputy => {
@@ -288,7 +289,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       // Check neighborhood representatives
       const neighborhoodRepresentatives = await ApiService.getNeighborhoodRepresentatives();
       const neighborhoodRepPositions = neighborhoodRepresentatives.filter(rep => 
-        String(rep.member_id) === String(member.id)
+        compareIds(rep.member_id, member.id)
       );
       
       neighborhoodRepPositions.forEach(rep => {
@@ -303,13 +304,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       const neighborhoodSupervisors = await ApiService.getNeighborhoodSupervisors();
       const neighborhoods = await ApiService.getNeighborhoods();
       const neighborhoodSupPositions = neighborhoodSupervisors.filter(sup => 
-        String(sup.member_id) === String(member.id)
+        compareIds(sup.member_id, member.id)
       );
       
       neighborhoodSupPositions.forEach(sup => {
         // neighborhood_name yoksa neighborhoods listesinden bul
         const neighborhoodName = sup.neighborhood_name || 
-          neighborhoods.find(n => String(n.id) === String(sup.neighborhood_id))?.name || 
+          neighborhoods.find(n => compareIds(n.id, sup.neighborhood_id))?.name ||
           'Bilinmeyen Mahalle';
         
         positions.push({
@@ -322,7 +323,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       // Check village representatives
       const villageRepresentatives = await ApiService.getVillageRepresentatives();
       const villageRepPositions = villageRepresentatives.filter(rep => 
-        String(rep.member_id) === String(member.id)
+        compareIds(rep.member_id, member.id)
       );
       
       villageRepPositions.forEach(rep => {
@@ -337,13 +338,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       const villageSupervisors = await ApiService.getVillageSupervisors();
       const villages = await ApiService.getVillages();
       const villageSupPositions = villageSupervisors.filter(sup => 
-        String(sup.member_id) === String(member.id)
+        compareIds(sup.member_id, member.id)
       );
       
       villageSupPositions.forEach(sup => {
         // village_name yoksa villages listesinden bul
         const villageName = sup.village_name || 
-          villages.find(v => String(v.id) === String(sup.village_id))?.name || 
+          villages.find(v => compareIds(v.id, sup.village_id))?.name ||
           'Bilinmeyen Köy';
         
         positions.push({
@@ -361,13 +362,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
         
         groups.forEach(group => {
           // ID'leri string'e çevirerek karşılaştır
-          if (group.group_leader_id && String(group.group_leader_id) === String(member.id)) {
+          if (group.group_leader_id && compareIds(group.group_leader_id, member.id)) {
             // Bu gruptaki mahalleleri ve köyleri bul
             const groupNeighborhoods = neighborhoods.filter(n => 
-              n.group_no && String(n.group_no) === String(group.group_no)
+              n.group_no && compareIds(n.group_no, group.group_no)
             );
             const groupVillages = villages.filter(v => 
-              v.group_no && String(v.group_no) === String(group.group_no)
+              v.group_no && compareIds(v.group_no, group.group_no)
             );
             
             const locationNames = [

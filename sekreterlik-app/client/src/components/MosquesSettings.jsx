@@ -3,6 +3,7 @@ import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { compareIds } from '../utils/normalizeId';
 
 const MosquesSettings = () => {
   const toast = useToast();
@@ -216,16 +217,16 @@ const MosquesSettings = () => {
 
   // Filter data based on selections
   const filteredTowns = towns.filter(town => 
-    formData.district_id ? String(town.district_id) === String(formData.district_id) : true
+    formData.district_id ? compareIds(town.district_id, formData.district_id) : true
   );
 
   const filteredNeighborhoods = neighborhoods.filter(neighborhood => {
     // İlçe filtresi
-    if (formData.district_id && String(neighborhood.district_id) !== String(formData.district_id)) {
+    if (formData.district_id && !compareIds(neighborhood.district_id, formData.district_id)) {
       return false;
     }
     // Belde filtresi (isteğe bağlı)
-    if (formData.town_id && String(neighborhood.town_id) !== String(formData.town_id)) {
+    if (formData.town_id && !compareIds(neighborhood.town_id, formData.town_id)) {
       return false;
     }
     return true;
@@ -233,11 +234,11 @@ const MosquesSettings = () => {
 
   const filteredVillages = villages.filter(village => {
     // İlçe filtresi
-    if (formData.district_id && String(village.district_id) !== String(formData.district_id)) {
+    if (formData.district_id && !compareIds(village.district_id, formData.district_id)) {
       return false;
     }
     // Belde filtresi (isteğe bağlı)
-    if (formData.town_id && String(village.town_id) !== String(formData.town_id)) {
+    if (formData.town_id && !compareIds(village.town_id, formData.town_id)) {
       return false;
     }
     return true;

@@ -7,6 +7,8 @@
  * - Katman 2 (buildSiteContext): Detayli veriler, function calling ile on-demand cekilir
  */
 
+import { compareIds } from './normalizeId';
+
 /**
  * TC kimlik ve telefon numaralarını maskele
  * @param {string} text
@@ -180,7 +182,7 @@ function buildSiteContext(siteData) {
 
     // Her üye kaydının detayları
     const registrationsList = siteData.memberRegistrations.map(reg => {
-      const member = siteData.members?.find(m => String(m.id) === String(reg.memberId));
+      const member = siteData.members?.find(m => compareIds(m.id, reg.memberId));
       const info = [];
       if (member) info.push(`Kaydeden Üye: ${member.name || 'Bilinmeyen üye'}`);
       if (reg.count) info.push(`Kayıt Sayısı: ${reg.count}`);
@@ -216,7 +218,7 @@ function buildSiteContext(siteData) {
     // Üye bazında özet bilgiler
     context.push(`\n=== ÜYE BAZINDA KAYIT ÖZETLERİ ===`);
     Object.values(memberRegistrationTotals).forEach(total => {
-      const member = siteData.members?.find(m => String(m.id) === String(total.memberId));
+      const member = siteData.members?.find(m => compareIds(m.id, total.memberId));
       if (member) {
         context.push(`${member.name}: Toplam ${total.totalCount} üye kaydetti (${total.registrations.length} kayıt)`);
         total.registrations.forEach(reg => {
@@ -261,7 +263,7 @@ function buildSiteContext(siteData) {
             .filter(a => a.attended === true)
             .slice(0, 10)
             .map(a => {
-              const member = siteData.members?.find(m => String(m.id) === String(a.memberId));
+              const member = siteData.members?.find(m => compareIds(m.id, a.memberId));
               return member ? member.name : 'Bilinmeyen üye';
             })
             .join(', ');
@@ -274,7 +276,7 @@ function buildSiteContext(siteData) {
             .filter(a => a.attended !== true)
             .slice(0, 10)
             .map(a => {
-              const member = siteData.members?.find(m => String(m.id) === String(a.memberId));
+              const member = siteData.members?.find(m => compareIds(m.id, a.memberId));
               const excuseText = a.excuse?.hasExcuse ? ' (Mazeretli)' : '';
               return member ? member.name + excuseText : 'Bilinmeyen üye';
             })
@@ -299,7 +301,7 @@ function buildSiteContext(siteData) {
       if (event.date) eventInfo.push(`Tarih: ${event.date}`);
       if (event.location) eventInfo.push(`Yer: ${event.location}`);
       if (event.category) {
-        const category = siteData.eventCategories?.find(c => String(c.id) === String(event.category));
+        const category = siteData.eventCategories?.find(c => compareIds(c.id, event.category));
         if (category) eventInfo.push(`Kategori: ${category.name}`);
       }
       if (event.description) eventInfo.push(`Açıklama: ${event.description}`);
@@ -310,25 +312,25 @@ function buildSiteContext(siteData) {
         event.selectedLocationTypes.forEach((type, index) => {
           const locationId = event.selectedLocations[index];
           if (type === 'district') {
-            const district = siteData.districts?.find(d => String(d.id) === String(locationId));
+            const district = siteData.districts?.find(d => compareIds(d.id, locationId));
             if (district) locationInfo.push(`İlçe: ${district.name}`);
           } else if (type === 'town') {
-            const town = siteData.towns?.find(t => String(t.id) === String(locationId));
+            const town = siteData.towns?.find(t => compareIds(t.id, locationId));
             if (town) locationInfo.push(`Belde: ${town.name}`);
           } else if (type === 'neighborhood') {
-            const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(locationId));
+            const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, locationId));
             if (neighborhood) locationInfo.push(`Mahalle: ${neighborhood.name}`);
           } else if (type === 'village') {
-            const village = siteData.villages?.find(v => String(v.id) === String(locationId));
+            const village = siteData.villages?.find(v => compareIds(v.id, locationId));
             if (village) locationInfo.push(`Köy: ${village.name}`);
           } else if (type === 'stk') {
-            const stk = siteData.stks?.find(s => String(s.id) === String(locationId));
+            const stk = siteData.stks?.find(s => compareIds(s.id, locationId));
             if (stk) locationInfo.push(`STK: ${stk.name}`);
           } else if (type === 'public_institution') {
-            const publicInstitution = siteData.publicInstitutions?.find(p => String(p.id) === String(locationId));
+            const publicInstitution = siteData.publicInstitutions?.find(p => compareIds(p.id, locationId));
             if (publicInstitution) locationInfo.push(`Kamu Kurumu: ${publicInstitution.name}`);
           } else if (type === 'mosque') {
-            const mosque = siteData.mosques?.find(m => String(m.id) === String(locationId));
+            const mosque = siteData.mosques?.find(m => compareIds(m.id, locationId));
             if (mosque) locationInfo.push(`Cami: ${mosque.name}`);
           }
         });
@@ -347,7 +349,7 @@ function buildSiteContext(siteData) {
             .filter(a => a.attended === true)
             .slice(0, 10)
             .map(a => {
-              const member = siteData.members?.find(m => String(m.id) === String(a.memberId));
+              const member = siteData.members?.find(m => compareIds(m.id, a.memberId));
               return member ? member.name : 'Bilinmeyen üye';
             })
             .join(', ');
@@ -366,12 +368,12 @@ function buildSiteContext(siteData) {
     siteData.districts.forEach(district => {
       const info = [];
       info.push(`İlçe: ${district.name}`);
-      const districtOfficial = siteData.districtOfficials?.find(o => String(o.district_id) === String(district.id));
+      const districtOfficial = siteData.districtOfficials?.find(o => compareIds(o.district_id, district.id));
       if (districtOfficial) {
         if (districtOfficial.chairman_name) info.push(`Başkan: ${districtOfficial.chairman_name}`);
         if (districtOfficial.inspector_name) info.push(`Müfettiş: ${districtOfficial.inspector_name}`);
       }
-      const districtMembers = siteData.districtManagementMembers?.filter(m => String(m.district_id) === String(district.id)) || [];
+      const districtMembers = siteData.districtManagementMembers?.filter(m => compareIds(m.district_id, district.id)) || [];
       if (districtMembers.length > 0) info.push(`Yönetim Kurulu Üyesi: ${districtMembers.length}`);
       context.push(info.join(' | '));
     });
@@ -383,14 +385,14 @@ function buildSiteContext(siteData) {
     siteData.towns.forEach(town => {
       const info = [];
       info.push(`Belde: ${town.name}`);
-      const district = siteData.districts?.find(d => String(d.id) === String(town.district_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, town.district_id));
       if (district) info.push(`İlçe: ${district.name}`);
-      const townOfficial = siteData.townOfficials?.find(o => String(o.town_id) === String(town.id));
+      const townOfficial = siteData.townOfficials?.find(o => compareIds(o.town_id, town.id));
       if (townOfficial) {
         if (townOfficial.chairman_name) info.push(`Başkan: ${townOfficial.chairman_name}`);
         if (townOfficial.inspector_name) info.push(`Müfettiş: ${townOfficial.inspector_name}`);
       }
-      const townMembers = siteData.townManagementMembers?.filter(m => String(m.town_id) === String(town.id)) || [];
+      const townMembers = siteData.townManagementMembers?.filter(m => compareIds(m.town_id, town.id)) || [];
       if (townMembers.length > 0) info.push(`Yönetim Kurulu Üyesi: ${townMembers.length}`);
       context.push(info.join(' | '));
     });
@@ -403,14 +405,14 @@ function buildSiteContext(siteData) {
     siteData.neighborhoods.slice(0, 20).forEach(neighborhood => {
       const info = [];
       info.push(`Mahalle: ${neighborhood.name}`);
-      const district = siteData.districts?.find(d => String(d.id) === String(neighborhood.district_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, neighborhood.district_id));
       if (district) info.push(`İlçe: ${district.name}`);
       if (neighborhood.group_no) info.push(`Grup No: ${neighborhood.group_no}`);
-      const rep = siteData.neighborhoodRepresentatives?.find(r => String(r.neighborhood_id) === String(neighborhood.id));
+      const rep = siteData.neighborhoodRepresentatives?.find(r => compareIds(r.neighborhood_id, neighborhood.id));
       if (rep) info.push(`Temsilci: ${rep.member_name || 'Atanmamış'}`);
-      const supervisor = siteData.neighborhoodSupervisors?.find(s => String(s.neighborhood_id) === String(neighborhood.id));
+      const supervisor = siteData.neighborhoodSupervisors?.find(s => compareIds(s.neighborhood_id, neighborhood.id));
       if (supervisor) info.push(`Sorumlu: ${supervisor.member_name || 'Atanmamış'}`);
-      const visit = siteData.neighborhoodVisitCounts?.find(v => String(v.neighborhood_id) === String(neighborhood.id));
+      const visit = siteData.neighborhoodVisitCounts?.find(v => compareIds(v.neighborhood_id, neighborhood.id));
       if (visit) info.push(`Ziyaret Sayısı: ${visit.visit_count || 0}`);
       context.push(info.join(' | '));
     });
@@ -426,14 +428,14 @@ function buildSiteContext(siteData) {
     siteData.villages.slice(0, 20).forEach(village => {
       const info = [];
       info.push(`Köy: ${village.name}`);
-      const district = siteData.districts?.find(d => String(d.id) === String(village.district_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, village.district_id));
       if (district) info.push(`İlçe: ${district.name}`);
       if (village.group_no) info.push(`Grup No: ${village.group_no}`);
-      const rep = siteData.villageRepresentatives?.find(r => String(r.village_id) === String(village.id));
+      const rep = siteData.villageRepresentatives?.find(r => compareIds(r.village_id, village.id));
       if (rep) info.push(`Temsilci: ${rep.member_name || 'Atanmamış'}`);
-      const supervisor = siteData.villageSupervisors?.find(s => String(s.village_id) === String(village.id));
+      const supervisor = siteData.villageSupervisors?.find(s => compareIds(s.village_id, village.id));
       if (supervisor) info.push(`Sorumlu: ${supervisor.member_name || 'Atanmamış'}`);
-      const visit = siteData.villageVisitCounts?.find(v => String(v.village_id) === String(village.id));
+      const visit = siteData.villageVisitCounts?.find(v => compareIds(v.village_id, village.id));
       if (visit) info.push(`Ziyaret Sayısı: ${visit.visit_count || 0}`);
       context.push(info.join(' | '));
     });
@@ -627,7 +629,7 @@ function buildSiteContext(siteData) {
   if (siteData.neighborhoodVisitCounts && siteData.neighborhoodVisitCounts.length > 0) {
     context.push(`\n=== MAHALLE ZİYARET SAYILARI ===`);
     siteData.neighborhoodVisitCounts.forEach(visit => {
-      const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(visit.neighborhood_id));
+      const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, visit.neighborhood_id));
       const info = [];
       if (neighborhood) info.push(`Mahalle: ${neighborhood.name}`);
       if (visit.visit_count !== undefined) info.push(`Ziyaret Sayısı: ${visit.visit_count}`);
@@ -641,7 +643,7 @@ function buildSiteContext(siteData) {
   if (siteData.villageVisitCounts && siteData.villageVisitCounts.length > 0) {
     context.push(`\n=== KÖY ZİYARET SAYILARI ===`);
     siteData.villageVisitCounts.forEach(visit => {
-      const village = siteData.villages?.find(v => String(v.id) === String(visit.village_id));
+      const village = siteData.villages?.find(v => compareIds(v.id, visit.village_id));
       const info = [];
       if (village) info.push(`Köy: ${village.name}`);
       if (visit.visit_count !== undefined) info.push(`Ziyaret Sayısı: ${visit.visit_count}`);
@@ -665,7 +667,7 @@ function buildSiteContext(siteData) {
       context.push(`\n=== TEMSİLCİSİ OLMAYAN MAHALLELER ===`);
       context.push(`Toplam ${neighborhoodsWithoutReps.length} mahallenin temsilcisi yok:`);
       neighborhoodsWithoutReps.forEach(neighborhood => {
-        const district = siteData.districts?.find(d => String(d.id) === String(neighborhood.district_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, neighborhood.district_id));
         const info = [];
         info.push(`Mahalle: ${neighborhood.name}`);
         if (district) info.push(`İlçe: ${district.name}`);
@@ -688,7 +690,7 @@ function buildSiteContext(siteData) {
       context.push(`\n=== TEMSİLCİSİ OLMAYAN KÖYLER ===`);
       context.push(`Toplam ${villagesWithoutReps.length} köyün temsilcisi yok:`);
       villagesWithoutReps.forEach(village => {
-        const district = siteData.districts?.find(d => String(d.id) === String(village.district_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, village.district_id));
         const info = [];
         info.push(`Köy: ${village.name}`);
         if (district) info.push(`İlçe: ${district.name}`);
@@ -701,7 +703,7 @@ function buildSiteContext(siteData) {
   if (siteData.districtOfficials && siteData.districtOfficials.length > 0) {
     context.push(`\n=== İLÇE YÖNETİMİ ===`);
     siteData.districtOfficials.forEach(official => {
-      const district = siteData.districts?.find(d => String(d.id) === String(official.district_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, official.district_id));
       const info = [];
       if (district) info.push(`İlçe: ${district.name}`);
       if (official.chairman_name) info.push(`İlçe Başkanı: ${official.chairman_name}`);
@@ -716,7 +718,7 @@ function buildSiteContext(siteData) {
   if (siteData.districtDeputyInspectors && siteData.districtDeputyInspectors.length > 0) {
     context.push(`\n=== İLÇE MÜFETTİŞ YARDIMCILARI ===`);
     siteData.districtDeputyInspectors.forEach(deputy => {
-      const district = siteData.districts?.find(d => String(d.id) === String(deputy.district_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, deputy.district_id));
       const info = [];
       if (district) info.push(`İlçe: ${district.name}`);
       if (deputy.member_name) info.push(`Müfettiş Yardımcısı: ${deputy.member_name}`);
@@ -729,7 +731,7 @@ function buildSiteContext(siteData) {
   if (siteData.townOfficials && siteData.townOfficials.length > 0) {
     context.push(`\n=== BELDE YÖNETİMİ ===`);
     siteData.townOfficials.forEach(official => {
-      const town = siteData.towns?.find(t => String(t.id) === String(official.town_id));
+      const town = siteData.towns?.find(t => compareIds(t.id, official.town_id));
       const info = [];
       if (town) info.push(`Belde: ${town.name}`);
       if (official.chairman_name) info.push(`Belde Başkanı: ${official.chairman_name}`);
@@ -744,7 +746,7 @@ function buildSiteContext(siteData) {
   if (siteData.townDeputyInspectors && siteData.townDeputyInspectors.length > 0) {
     context.push(`\n=== BELDE MÜFETTİŞ YARDIMCILARI ===`);
     siteData.townDeputyInspectors.forEach(deputy => {
-      const town = siteData.towns?.find(t => String(t.id) === String(deputy.town_id));
+      const town = siteData.towns?.find(t => compareIds(t.id, deputy.town_id));
       const info = [];
       if (town) info.push(`Belde: ${town.name}`);
       if (deputy.member_name) info.push(`Müfettiş Yardımcısı: ${deputy.member_name}`);
@@ -757,8 +759,8 @@ function buildSiteContext(siteData) {
   if (siteData.neighborhoodRepresentatives && siteData.neighborhoodRepresentatives.length > 0) {
     context.push(`\n=== MAHALLE TEMSİLCİLERİ ===`);
     siteData.neighborhoodRepresentatives.forEach(rep => {
-      const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(rep.neighborhood_id));
-      const district = siteData.districts?.find(d => String(d.id) === String(rep.district_id));
+      const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, rep.neighborhood_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, rep.district_id));
       const info = [];
       if (neighborhood) info.push(`Mahalle: ${neighborhood.name}`);
       if (district) info.push(`İlçe: ${district.name}`);
@@ -772,8 +774,8 @@ function buildSiteContext(siteData) {
   if (siteData.villageRepresentatives && siteData.villageRepresentatives.length > 0) {
     context.push(`\n=== KÖY TEMSİLCİLERİ ===`);
     siteData.villageRepresentatives.forEach(rep => {
-      const village = siteData.villages?.find(v => String(v.id) === String(rep.village_id));
-      const district = siteData.districts?.find(d => String(d.id) === String(rep.district_id));
+      const village = siteData.villages?.find(v => compareIds(v.id, rep.village_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, rep.district_id));
       const info = [];
       if (village) info.push(`Köy: ${village.name}`);
       if (district) info.push(`İlçe: ${district.name}`);
@@ -787,8 +789,8 @@ function buildSiteContext(siteData) {
   if (siteData.neighborhoodSupervisors && siteData.neighborhoodSupervisors.length > 0) {
     context.push(`\n=== MAHALLE SORUMLULARI ===`);
     siteData.neighborhoodSupervisors.forEach(supervisor => {
-      const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(supervisor.neighborhood_id));
-      const district = siteData.districts?.find(d => String(d.id) === String(supervisor.district_id));
+      const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, supervisor.neighborhood_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, supervisor.district_id));
       const info = [];
       if (neighborhood) info.push(`Mahalle: ${neighborhood.name}`);
       if (district) info.push(`İlçe: ${district.name}`);
@@ -802,8 +804,8 @@ function buildSiteContext(siteData) {
   if (siteData.villageSupervisors && siteData.villageSupervisors.length > 0) {
     context.push(`\n=== KÖY SORUMLULARI ===`);
     siteData.villageSupervisors.forEach(supervisor => {
-      const village = siteData.villages?.find(v => String(v.id) === String(supervisor.village_id));
-      const district = siteData.districts?.find(d => String(d.id) === String(supervisor.district_id));
+      const village = siteData.villages?.find(v => compareIds(v.id, supervisor.village_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, supervisor.district_id));
       const info = [];
       if (village) info.push(`Köy: ${village.name}`);
       if (district) info.push(`İlçe: ${district.name}`);
@@ -819,10 +821,10 @@ function buildSiteContext(siteData) {
     context.push(`Toplam ${siteData.ballotBoxes.length} sandık kayıtlı.`);
 
     siteData.ballotBoxes.forEach(box => {
-      const district = siteData.districts?.find(d => String(d.id) === String(box.district_id));
-      const town = siteData.towns?.find(t => String(t.id) === String(box.town_id));
-      const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(box.neighborhood_id));
-      const village = siteData.villages?.find(v => String(v.id) === String(box.village_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, box.district_id));
+      const town = siteData.towns?.find(t => compareIds(t.id, box.town_id));
+      const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, box.neighborhood_id));
+      const village = siteData.villages?.find(v => compareIds(v.id, box.village_id));
 
       const info = [];
       if (box.ballot_box_number) info.push(`Sandık No: ${box.ballot_box_number}`);
@@ -845,8 +847,8 @@ function buildSiteContext(siteData) {
     if (chiefObservers.length > 0) {
       context.push(`Baş Müşahitler: ${chiefObservers.length} adet`);
       chiefObservers.forEach(observer => {
-        const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(observer.ballot_box_id));
-        const district = siteData.districts?.find(d => String(d.id) === String(observer.observer_district_id));
+        const ballotBox = siteData.ballotBoxes?.find(b => compareIds(b.id, observer.ballot_box_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, observer.observer_district_id));
         const info = [];
         if (observer.observer_name) info.push(`Baş Müşahit: ${observer.observer_name}`);
         if (observer.observer_phone) info.push(`Telefon: ${observer.observer_phone}`);
@@ -861,8 +863,8 @@ function buildSiteContext(siteData) {
     if (regularObservers.length > 0) {
       context.push(`Müşahitler: ${regularObservers.length} adet`);
       regularObservers.slice(0, 10).forEach(observer => {
-        const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(observer.ballot_box_id));
-        const district = siteData.districts?.find(d => String(d.id) === String(observer.observer_district_id));
+        const ballotBox = siteData.ballotBoxes?.find(b => compareIds(b.id, observer.ballot_box_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, observer.observer_district_id));
         const info = [];
         if (observer.observer_name) info.push(`Müşahit: ${observer.observer_name}`);
         if (observer.observer_phone) info.push(`Telefon: ${observer.observer_phone}`);
@@ -885,7 +887,7 @@ function buildSiteContext(siteData) {
       const groupInfo = [];
       if (group.group_no) groupInfo.push(`Grup No: ${group.group_no}`);
       if (group.group_leader_id) {
-        const leader = siteData.members?.find(m => String(m.id) === String(group.group_leader_id));
+        const leader = siteData.members?.find(m => compareIds(m.id, group.group_leader_id));
         if (leader) groupInfo.push(`Grup Lideri: ${leader.name}`);
       }
       context.push(groupInfo.join(' | '));
@@ -898,7 +900,7 @@ function buildSiteContext(siteData) {
     context.push(`Toplam ${siteData.districtManagementMembers.length} ilçe yönetim kurulu üyesi var.`);
 
     siteData.districtManagementMembers.forEach(member => {
-      const district = siteData.districts?.find(d => String(d.id) === String(member.district_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, member.district_id));
       const info = [];
       if (district) info.push(`İlçe: ${district.name}`);
       if (member.name) info.push(`Ad: ${member.name}`);
@@ -918,7 +920,7 @@ function buildSiteContext(siteData) {
     context.push(`Toplam ${siteData.townManagementMembers.length} belde yönetim kurulu üyesi var.`);
 
     siteData.townManagementMembers.forEach(member => {
-      const town = siteData.towns?.find(t => String(t.id) === String(member.town_id));
+      const town = siteData.towns?.find(t => compareIds(t.id, member.town_id));
       const info = [];
       if (town) info.push(`Belde: ${town.name}`);
       if (member.name) info.push(`Ad: ${member.name}`);
@@ -993,10 +995,10 @@ function buildSiteContext(siteData) {
     });
 
     siteData.mosques.forEach(mosque => {
-      const district = siteData.districts?.find(d => String(d.id) === String(mosque.district_id));
-      const town = siteData.towns?.find(t => String(t.id) === String(mosque.town_id));
-      const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(mosque.neighborhood_id));
-      const village = siteData.villages?.find(v => String(v.id) === String(mosque.village_id));
+      const district = siteData.districts?.find(d => compareIds(d.id, mosque.district_id));
+      const town = siteData.towns?.find(t => compareIds(t.id, mosque.town_id));
+      const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, mosque.neighborhood_id));
+      const village = siteData.villages?.find(v => compareIds(v.id, mosque.village_id));
 
       const info = [];
       if (mosque.name) info.push(`Cami Adı: ${mosque.name}`);
@@ -1232,13 +1234,13 @@ function buildSiteContext(siteData) {
     });
 
     Object.entries(resultsByElection).forEach(([electionId, results]) => {
-      const election = siteData.elections?.find(e => String(e.id) === String(electionId));
+      const election = siteData.elections?.find(e => compareIds(e.id, electionId));
       if (election) {
         context.push(`\n--- ${election.name} Sonuçları ---`);
         context.push(`Toplam ${results.length} sandık sonucu girilmiş.`);
 
         results.forEach(result => {
-          const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(result.ballot_box_id || result.ballotBoxId));
+          const ballotBox = siteData.ballotBoxes?.find(b => compareIds(b.id, result.ballot_box_id || result.ballotBoxId));
           const info = [];
           if (result.ballot_number || result.ballotNumber) {
             info.push(`Sandık No: ${result.ballot_number || result.ballotNumber}`);
@@ -1246,19 +1248,19 @@ function buildSiteContext(siteData) {
           if (ballotBox) {
             const locationParts = [];
             if (ballotBox.district_id) {
-              const district = siteData.districts?.find(d => String(d.id) === String(ballotBox.district_id));
+              const district = siteData.districts?.find(d => compareIds(d.id, ballotBox.district_id));
               if (district) locationParts.push(`İlçe: ${district.name}`);
             }
             if (ballotBox.town_id) {
-              const town = siteData.towns?.find(t => String(t.id) === String(ballotBox.town_id));
+              const town = siteData.towns?.find(t => compareIds(t.id, ballotBox.town_id));
               if (town) locationParts.push(`Belde: ${town.name}`);
             }
             if (ballotBox.neighborhood_id) {
-              const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+              const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, ballotBox.neighborhood_id));
               if (neighborhood) locationParts.push(`Mahalle: ${neighborhood.name}`);
             }
             if (ballotBox.village_id) {
-              const village = siteData.villages?.find(v => String(v.id) === String(ballotBox.village_id));
+              const village = siteData.villages?.find(v => compareIds(v.id, ballotBox.village_id));
               if (village) locationParts.push(`Köy: ${village.name}`);
             }
             if (locationParts.length > 0) {
@@ -1268,7 +1270,7 @@ function buildSiteContext(siteData) {
 
           // Başmüşahit bilgisi
           const observer = siteData.observers?.find(o =>
-            String(o.ballot_box_id) === String(result.ballot_box_id || result.ballotBoxId) &&
+            compareIds(o.ballot_box_id, result.ballot_box_id || result.ballotBoxId) &&
             (o.is_chief_observer === true || o.is_chief_observer === 1)
           );
           if (observer) {
@@ -1357,7 +1359,7 @@ function buildSiteContext(siteData) {
         const villageTotals = {};
 
         results.forEach(result => {
-          const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(result.ballot_box_id || result.ballotBoxId));
+          const ballotBox = siteData.ballotBoxes?.find(b => compareIds(b.id, result.ballot_box_id || result.ballotBoxId));
           if (!ballotBox) return;
 
           // Konum bilgisi
@@ -1366,14 +1368,14 @@ function buildSiteContext(siteData) {
           let locationType = '';
 
           if (ballotBox.neighborhood_id) {
-            const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(ballotBox.neighborhood_id));
+            const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, ballotBox.neighborhood_id));
             if (neighborhood) {
               locationKey = `neighborhood_${neighborhood.id}`;
               locationName = neighborhood.name;
               locationType = 'Mahalle';
             }
           } else if (ballotBox.village_id) {
-            const village = siteData.villages?.find(v => String(v.id) === String(ballotBox.village_id));
+            const village = siteData.villages?.find(v => compareIds(v.id, ballotBox.village_id));
             if (village) {
               locationKey = `village_${village.id}`;
               locationName = village.name;
@@ -1686,7 +1688,7 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
               eventInfo.push(`Etkinlik: ${e.name || 'İsimsiz'}`);
               if (e.date) eventInfo.push(`Tarih: ${e.date}`);
               if (e.location) eventInfo.push(`Yer: ${e.location}`);
-              const category = siteData.eventCategories?.find(c => String(c.id) === String(e.category));
+              const category = siteData.eventCategories?.find(c => compareIds(c.id, e.category));
               if (category) eventInfo.push(`Kategori: ${category.name}`);
               context.push(eventInfo.join(' | '));
             });
@@ -1722,8 +1724,8 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       });
 
       if (memberNeighborhoodRep) {
-        const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(memberNeighborhoodRep.neighborhood_id));
-        const district = siteData.districts?.find(d => String(d.id) === String(memberNeighborhoodRep.district_id));
+        const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, memberNeighborhoodRep.neighborhood_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, memberNeighborhoodRep.district_id));
         const repInfo = [];
         repInfo.push(`Mahalle Temsilcisi`);
         if (neighborhood) repInfo.push(`Mahalle: ${neighborhood.name}`);
@@ -1733,8 +1735,8 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       }
 
       if (memberVillageRep) {
-        const village = siteData.villages?.find(v => String(v.id) === String(memberVillageRep.village_id));
-        const district = siteData.districts?.find(d => String(d.id) === String(memberVillageRep.district_id));
+        const village = siteData.villages?.find(v => compareIds(v.id, memberVillageRep.village_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, memberVillageRep.district_id));
         const repInfo = [];
         repInfo.push(`Köy Temsilcisi`);
         if (village) repInfo.push(`Köy: ${village.name}`);
@@ -1756,8 +1758,8 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       });
 
       if (memberNeighborhoodSup) {
-        const neighborhood = siteData.neighborhoods?.find(n => String(n.id) === String(memberNeighborhoodSup.neighborhood_id));
-        const district = siteData.districts?.find(d => String(d.id) === String(memberNeighborhoodSup.district_id));
+        const neighborhood = siteData.neighborhoods?.find(n => compareIds(n.id, memberNeighborhoodSup.neighborhood_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, memberNeighborhoodSup.district_id));
         const supInfo = [];
         supInfo.push(`Mahalle Sorumlusu (Müfettiş)`);
         if (neighborhood) supInfo.push(`Mahalle: ${neighborhood.name}`);
@@ -1767,8 +1769,8 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       }
 
       if (memberVillageSup) {
-        const village = siteData.villages?.find(v => String(v.id) === String(memberVillageSup.village_id));
-        const district = siteData.districts?.find(d => String(d.id) === String(memberVillageSup.district_id));
+        const village = siteData.villages?.find(v => compareIds(v.id, memberVillageSup.village_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, memberVillageSup.district_id));
         const supInfo = [];
         supInfo.push(`Köy Sorumlusu (Müfettiş)`);
         if (village) supInfo.push(`Köy: ${village.name}`);
@@ -1786,8 +1788,8 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
 
       if (memberObservers.length > 0) {
         memberObservers.forEach(observer => {
-          const ballotBox = siteData.ballotBoxes?.find(b => String(b.id) === String(observer.ballot_box_id));
-          const district = siteData.districts?.find(d => String(d.id) === String(observer.observer_district_id));
+          const ballotBox = siteData.ballotBoxes?.find(b => compareIds(b.id, observer.ballot_box_id));
+          const district = siteData.districts?.find(d => compareIds(d.id, observer.observer_district_id));
           const obsInfo = [];
           if (observer.is_chief_observer === true) {
             obsInfo.push(`Baş Müşahit`);
@@ -1851,7 +1853,7 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       });
 
       if (memberDistrictOfficial) {
-        const district = siteData.districts?.find(d => String(d.id) === String(memberDistrictOfficial.district_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, memberDistrictOfficial.district_id));
         const officialInfo = [];
         if (memberDistrictOfficial.chairman_id && String(memberDistrictOfficial.chairman_id) === memberId) {
           officialInfo.push(`İlçe Başkanı`);
@@ -1864,7 +1866,7 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       }
 
       if (memberTownOfficial) {
-        const town = siteData.towns?.find(t => String(t.id) === String(memberTownOfficial.town_id));
+        const town = siteData.towns?.find(t => compareIds(t.id, memberTownOfficial.town_id));
         const officialInfo = [];
         if (memberTownOfficial.chairman_id && String(memberTownOfficial.chairman_id) === memberId) {
           officialInfo.push(`Belde Başkanı`);
@@ -1877,7 +1879,7 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       }
 
       if (memberDistrictDeputy) {
-        const district = siteData.districts?.find(d => String(d.id) === String(memberDistrictDeputy.district_id));
+        const district = siteData.districts?.find(d => compareIds(d.id, memberDistrictDeputy.district_id));
         const deputyInfo = [];
         deputyInfo.push(`İlçe Müfettiş Yardımcısı`);
         if (district) deputyInfo.push(`İlçe: ${district.name}`);
@@ -1885,7 +1887,7 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       }
 
       if (memberTownDeputy) {
-        const town = siteData.towns?.find(t => String(t.id) === String(memberTownDeputy.town_id));
+        const town = siteData.towns?.find(t => compareIds(t.id, memberTownDeputy.town_id));
         const deputyInfo = [];
         deputyInfo.push(`Belde Müfettiş Yardımcısı`);
         if (town) deputyInfo.push(`Belde: ${town.name}`);

@@ -6,6 +6,7 @@ import NativeCard from './mobile/NativeCard';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { compareIds } from '../utils/normalizeId';
 
 const VillagesSettings = () => {
   const toast = useToast();
@@ -119,7 +120,7 @@ const VillagesSettings = () => {
 
   const handleMemberSelect = (field, memberId) => {
     // ID'leri string'e çevirerek karşılaştır
-    const member = members.find(m => String(m.id) === String(memberId));
+    const member = members.find(m => compareIds(m.id, memberId));
     if (member) {
       setFormData(prev => ({
         ...prev,
@@ -216,7 +217,7 @@ const VillagesSettings = () => {
         let supervisorPhone = formData.supervisor_phone;
         
         if (formData.supervisor_member_id && (!supervisorName || !supervisorTc)) {
-          const selectedMember = members.find(m => String(m.id) === String(formData.supervisor_member_id));
+          const selectedMember = members.find(m => compareIds(m.id, formData.supervisor_member_id));
           if (selectedMember) {
             supervisorName = supervisorName || selectedMember.name;
             supervisorTc = supervisorTc || selectedMember.tc;
@@ -511,8 +512,8 @@ const VillagesSettings = () => {
       ];
 
       representatives.forEach(rep => {
-        const village = villages.find(v => String(v.id) === String(rep.village_id));
-        const district = village ? districts.find(d => String(d.id) === String(village.district_id)) : null;
+        const village = villages.find(v => compareIds(v.id, rep.village_id));
+        const district = village ? districts.find(d => compareIds(d.id, village.district_id)) : null;
 
         excelData.push([
           village?.name || '',
@@ -549,7 +550,7 @@ const VillagesSettings = () => {
 
   // Filter villages by group_no
   const filteredVillages = filterGroupNo 
-    ? villages.filter(v => String(v.group_no || '') === String(filterGroupNo))
+    ? villages.filter(v => compareIds(v.group_no || '', filterGroupNo))
     : villages;
 
   if (loading) {

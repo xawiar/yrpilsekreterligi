@@ -38,6 +38,7 @@ import KvkkComplianceReport from '../components/KvkkComplianceReport';
 import DataBreachProcedure from '../components/DataBreachProcedure';
 import VerbisGuide from '../components/VerbisGuide';
 import AuditLogSettings from '../components/AuditLogSettings';
+import AdminNotificationPanel from '../components/AdminNotificationPanel';
 import {
   SettingsHeader,
   SettingsSummaryCards,
@@ -128,6 +129,7 @@ const SettingsPage = ({ tab }) => {
     const tabs = [
       { id: 'admin', name: 'Kullanıcı Bilgileri', description: 'Mevcut admin bilgileri', permission: '*' },
       { id: 'push-notifications', name: 'Bildirim Ayarları', description: 'Push notification yönetimi', permission: '*' },
+      { id: 'notification-panel', name: 'Bildirim Gonder', description: 'Uyelere bildirim gonderme paneli', permission: '*' },
       { id: 'regions', name: 'Bölge Ekle', description: 'Bölge tanımlama', permission: 'add_region' },
       { id: 'positions', name: 'Görev Ekle', description: 'Görev tanımlama', permission: 'add_position' },
       { id: 'member-users', name: 'Üye Kullanıcıları', description: 'Üye kullanıcı yönetimi', permission: 'manage_member_users' },
@@ -207,6 +209,7 @@ const SettingsPage = ({ tab }) => {
                 <>
                   {activeTab === 'admin' && <AdminSettings />}
                   {activeTab === 'push-notifications' && hasPermission('push-notifications') && <PushNotificationSettings />}
+                  {activeTab === 'notification-panel' && hasPermission('notification-panel') && <AdminNotificationPanel />}
                   {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
                   {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
                   {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}
@@ -357,6 +360,7 @@ const SettingsPage = ({ tab }) => {
                   <>
                     {activeTab === 'admin' && <AdminSettings />}
                     {activeTab === 'push-notifications' && hasPermission('push-notifications') && <PushNotificationSettings />}
+                  {activeTab === 'notification-panel' && hasPermission('notification-panel') && <AdminNotificationPanel />}
                     {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
                     {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
                     {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}

@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useParams } from 'react-router-dom';
 
+const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
+                     import.meta.env.VITE_USE_FIREBASE === true ||
+                     String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
+
 // Lazy load ElectionResultsPage content component
 const ElectionResultsContent = lazy(() => import('./ElectionResultsPage').then(module => ({
   default: () => {
@@ -9,6 +13,15 @@ const ElectionResultsContent = lazy(() => import('./ElectionResultsPage').then(m
     return <ElectionResultsPage readOnly={true} />;
   }
 })));
+
+// Helper: Build API base URL for backend mode
+const getApiBaseUrl = () => {
+  let url = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
+  if (!url.endsWith('/api')) {
+    url = url.endsWith('/') ? `${url}api` : `${url}/api`;
+  }
+  return url;
+};
 
 /**
  * Public Election Results Page
@@ -23,6 +36,7 @@ const PublicElectionResultsPage = () => {
   const heartbeatIntervalRef = useRef(null);
   const countIntervalRef = useRef(null);
   const isUnmountingRef = useRef(false);
+  const firestoreUnsubRef = useRef(null);
 
   useEffect(() => {
     // Visitor ID oluştur (localStorage'da sakla)
@@ -33,9 +47,13 @@ const PublicElectionResultsPage = () => {
     }
     visitorIdRef.current = visitorId;
 
-    // Visitor'ı kaydet ve heartbeat başlat
-    registerVisitor();
-    startHeartbeat();
+    if (USE_FIREBASE) {
+      initFirebaseVisitorTracking();
+    } else {
+      // Backend modu: mevcut REST API kullan
+      registerVisitorBackend();
+      startHeartbeatBackend();
+    }
 
     // Cleanup
     return () => {
@@ -46,23 +64,75 @@ const PublicElectionResultsPage = () => {
       if (countIntervalRef.current) {
         clearInterval(countIntervalRef.current);
       }
-      unregisterVisitor();
+      if (firestoreUnsubRef.current) {
+        firestoreUnsubRef.current();
+      }
+      if (USE_FIREBASE) {
+        unregisterVisitorFirebase();
+      } else {
+        unregisterVisitorBackend();
+      }
     };
   }, [electionId]);
 
-  // Visitor'ı kaydet
-  const registerVisitor = async () => {
+  // ==================== Firebase Mode ====================
+  const initFirebaseVisitorTracking = async () => {
     try {
-      // Ensure API_BASE_URL always ends with /api
-      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
-      if (!API_BASE_URL.endsWith('/api')) {
-        API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
-      }
+      const { doc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, query, where } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      if (!db) return;
+
+      const visitorDocRef = doc(db, 'election_visitors', `${electionId}_${visitorIdRef.current}`);
+
+      // Register visitor
+      await setDoc(visitorDocRef, {
+        electionId,
+        visitorId: visitorIdRef.current,
+        lastSeen: serverTimestamp(),
+      });
+
+      // Heartbeat: update lastSeen periodically
+      heartbeatIntervalRef.current = setInterval(async () => {
+        if (isUnmountingRef.current) return;
+        try {
+          await setDoc(visitorDocRef, {
+            electionId,
+            visitorId: visitorIdRef.current,
+            lastSeen: serverTimestamp(),
+          });
+        } catch (e) { /* sessiz */ }
+      }, 30000);
+
+      // Listen to active visitor count in real-time
+      const visitorsQuery = query(
+        collection(db, 'election_visitors'),
+        where('electionId', '==', electionId)
+      );
+      firestoreUnsubRef.current = onSnapshot(visitorsQuery, (snapshot) => {
+        setVisitorCount(snapshot.size);
+      }, () => { /* sessiz */ });
+
+    } catch (e) {
+      console.error('Firebase visitor tracking error:', e);
+    }
+  };
+
+  const unregisterVisitorFirebase = async () => {
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      if (!db) return;
+      await deleteDoc(doc(db, 'election_visitors', `${electionId}_${visitorIdRef.current}`));
+    } catch (e) { /* sessiz */ }
+  };
+
+  // ==================== Backend Mode ====================
+  const registerVisitorBackend = async () => {
+    try {
+      const API_BASE_URL = getApiBaseUrl();
       const response = await fetch(`${API_BASE_URL}/public/visitors/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           electionId: electionId,
           visitorId: visitorIdRef.current,
@@ -81,19 +151,12 @@ const PublicElectionResultsPage = () => {
     }
   };
 
-  // Visitor'ı kaldır
-  const unregisterVisitor = async () => {
+  const unregisterVisitorBackend = async () => {
     try {
-      // Ensure API_BASE_URL always ends with /api
-      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
-      if (!API_BASE_URL.endsWith('/api')) {
-        API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
-      }
+      const API_BASE_URL = getApiBaseUrl();
       await fetch(`${API_BASE_URL}/public/visitors/unregister`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           electionId: electionId,
           visitorId: visitorIdRef.current,
@@ -104,22 +167,15 @@ const PublicElectionResultsPage = () => {
     }
   };
 
-  // Heartbeat - visitor'ın hala aktif olduğunu bildir
-  const startHeartbeat = () => {
+  const startHeartbeatBackend = () => {
     heartbeatIntervalRef.current = setInterval(async () => {
       if (isUnmountingRef.current) return;
 
       try {
-        // Ensure API_BASE_URL always ends with /api
-        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
-        if (!API_BASE_URL.endsWith('/api')) {
-          API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
-        }
+        const API_BASE_URL = getApiBaseUrl();
         const response = await fetch(`${API_BASE_URL}/public/visitors/heartbeat`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             electionId: electionId,
             visitorId: visitorIdRef.current,
@@ -136,18 +192,13 @@ const PublicElectionResultsPage = () => {
       } catch (error) {
         console.error('Error sending heartbeat:', error);
       }
-    }, 30000); // Her 30 saniyede bir heartbeat gönder
+    }, 30000);
 
-    // Visitor count'u periyodik olarak güncelle
     countIntervalRef.current = setInterval(async () => {
       if (isUnmountingRef.current) return;
 
       try {
-        // Ensure API_BASE_URL always ends with /api
-        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
-        if (!API_BASE_URL.endsWith('/api')) {
-          API_BASE_URL = API_BASE_URL.endsWith('/') ? `${API_BASE_URL}api` : `${API_BASE_URL}/api`;
-        }
+        const API_BASE_URL = getApiBaseUrl();
         const response = await fetch(`${API_BASE_URL}/public/visitors/count?electionId=${electionId}`);
         if (response.ok) {
           const data = await response.json();
@@ -158,7 +209,7 @@ const PublicElectionResultsPage = () => {
       } catch (error) {
         console.error('Error fetching visitor count:', error);
       }
-    }, 10000); // Her 10 saniyede bir count güncelle
+    }, 10000);
   };
 
   return (

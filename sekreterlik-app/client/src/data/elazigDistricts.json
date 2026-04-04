@@ -1,0 +1,93 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Merkez", "id": "merkez", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[39.05, 38.60], [39.35, 38.60], [39.35, 38.75], [39.05, 38.75], [39.05, 38.60]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Karakocan", "id": "karakocan", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[39.85, 38.90], [40.15, 38.90], [40.15, 39.05], [39.85, 39.05], [39.85, 38.90]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Palu", "id": "palu", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[39.80, 38.60], [40.10, 38.60], [40.10, 38.75], [39.80, 38.75], [39.80, 38.60]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Kovancılar", "id": "kovancilar", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[39.80, 38.75], [40.10, 38.75], [40.10, 38.90], [39.80, 38.90], [39.80, 38.75]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Maden", "id": "maden", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[39.35, 38.35], [39.65, 38.35], [39.65, 38.50], [39.35, 38.50], [39.35, 38.35]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Sivrice", "id": "sivrice", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[38.75, 38.35], [39.05, 38.35], [39.05, 38.55], [38.75, 38.55], [38.75, 38.35]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Keban", "id": "keban", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[38.65, 38.70], [38.95, 38.70], [38.95, 38.85], [38.65, 38.85], [38.65, 38.70]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Baskil", "id": "baskil", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[38.60, 38.50], [38.90, 38.50], [38.90, 38.70], [38.60, 38.70], [38.60, 38.50]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Ağın", "id": "agin", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[38.70, 38.85], [38.90, 38.85], [38.90, 38.95], [38.70, 38.95], [38.70, 38.85]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Arıcak", "id": "aricak", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[40.10, 38.80], [40.40, 38.80], [40.40, 38.95], [40.10, 38.95], [40.10, 38.80]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Alacakaya", "id": "alacakaya", "type": "district" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[39.55, 38.35], [39.85, 38.35], [39.85, 38.50], [39.55, 38.50], [39.55, 38.35]]]
+      }
+    }
+  ]
+}

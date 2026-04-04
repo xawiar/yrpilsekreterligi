@@ -141,19 +141,40 @@ function PublicElectionResultsWrapper() {
   );
 }
 
-// Router içinde kullanılacak component - useNavigate burada güvenli
+// Public route'lar icin auth gerektirmeyen wrapper
+function PublicRoutesWrapper() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
+        <Route path="/public/election-results/:electionId" element={<PublicElectionResultsWrapper />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
+// Router içinde kullanılacak component - public/auth route ayırımı
 function RouterContent() {
+  const location = useLocation();
+
+  // Public route'ları auth gerektirmeden render et (useAuth cagrilmaz)
+  const isPublicRoute = location.pathname.startsWith('/public/') || location.pathname === '/privacy-policy';
+  if (isPublicRoute) {
+    return <PublicRoutesWrapper />;
+  }
+
+  return <AuthenticatedContent />;
+}
+
+// Auth gerektiren route'lar icin ayri component (hooks kurali ihlal edilmez)
+function AuthenticatedContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = React.useState(false);
   const [quickActionModal, setQuickActionModal] = React.useState({ open: false, type: null });
-
-  // Public route ise layout gösterme
-  if (location.pathname.startsWith('/public/election-results/')) {
-    return <PublicElectionResultsWrapper />;
-  }
 
   const handleQuickActionClose = () => {
     setQuickActionModal({ open: false, type: null });

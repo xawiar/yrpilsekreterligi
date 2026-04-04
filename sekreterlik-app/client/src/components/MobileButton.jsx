@@ -31,9 +31,9 @@ const MobileButton = ({
 
   const variantClasses = {
     primary: `
-      bg-indigo-600 text-white
-      hover:bg-indigo-700
-      focus:ring-indigo-500
+      bg-primary-600 text-white
+      hover:bg-primary-700
+      focus:ring-primary-500
       shadow-md hover:shadow-lg
     `,
     secondary: `

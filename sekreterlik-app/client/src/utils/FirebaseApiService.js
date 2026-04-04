@@ -7173,7 +7173,8 @@ class FirebaseApiService {
         const notificationData = {
           title: 'Yeni Anket/Oylama Oluşturuldu',
           body: `${pollData.title} - Katılımınızı bekliyoruz!`,
-          type: 'poll',
+          type: 'poll_invite',
+          url: '/polls',
           data: JSON.stringify({
             pollId: docId,
             pollTitle: pollData.title
@@ -7331,10 +7332,53 @@ class FirebaseApiService {
    */
   static async endPoll(pollId) {
     try {
+      // Anket bilgisini al (bildirim için)
+      const poll = await this.getPollById(pollId);
+
       await FirebaseService.update(this.COLLECTIONS.POLLS, String(pollId), {
         status: 'ended',
         updatedAt: new Date().toISOString()
       }, false);
+
+      // Anket sonuclaninca tum uyelere bildirim gonder
+      if (poll) {
+        try {
+          const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+            where: [{ field: 'archived', operator: '==', value: false }]
+          }, false);
+
+          const notificationData = {
+            title: `Anket Sonuclandi: ${poll.title}`,
+            body: 'Anket sonuclarini goruntuleyebilirsiniz.',
+            type: 'poll_result',
+            url: '/polls',
+            data: JSON.stringify({
+              pollId: String(pollId),
+              pollTitle: poll.title
+            }),
+            read: false,
+            createdAt: new Date().toISOString()
+          };
+
+          for (const member of (allMembers || [])) {
+            try {
+              const memberId = member.id || member.memberId || member.member_id;
+              if (!memberId) continue;
+              await FirebaseService.create(
+                this.COLLECTIONS.NOTIFICATIONS,
+                null,
+                { ...notificationData, memberId: String(memberId).trim() },
+                false
+              );
+            } catch (memberError) {
+              console.error(`Error creating poll_result notification for member ${member.id}:`, memberError);
+            }
+          }
+        } catch (notificationError) {
+          console.error('Error creating poll_result notifications (non-blocking):', notificationError);
+        }
+      }
+
       return { message: 'Anket sonlandırıldı' };
     } catch (error) {
       console.error('Error ending poll:', error);

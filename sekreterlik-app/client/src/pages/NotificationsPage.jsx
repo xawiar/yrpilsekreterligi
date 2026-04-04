@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 const NotificationsPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
   const [notifications, setNotifications] = useState([]);
@@ -60,6 +62,37 @@ const NotificationsPage = () => {
     }
   };
 
+  const handleNotificationClick = async (notification) => {
+    // Okunmamissa okundu yap
+    if (!notification.read) {
+      await handleMarkAsRead(notification.id);
+    }
+    // url alani varsa yonlendir
+    if (notification.url) {
+      navigate(notification.url);
+      return;
+    }
+    // type bazli yonlendirme
+    switch (notification.type) {
+      case 'poll_invite':
+      case 'poll_result':
+      case 'poll':
+      case 'poll_vote':
+        navigate('/polls');
+        break;
+      case 'meeting':
+      case 'meeting_reminder':
+        navigate('/meetings');
+        break;
+      case 'event':
+      case 'event_reminder':
+        navigate('/events');
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleDelete = async (notificationId) => {
     try {
       await ApiService.deleteNotification(notificationId);
@@ -111,6 +144,8 @@ const NotificationsPage = () => {
         );
       case 'poll':
       case 'poll_vote':
+      case 'poll_invite':
+      case 'poll_result':
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -141,6 +176,8 @@ const NotificationsPage = () => {
         return 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400';
       case 'poll':
       case 'poll_vote':
+      case 'poll_invite':
+      case 'poll_result':
         return 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400';
       case 'message':
         return 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400';
@@ -226,7 +263,7 @@ const NotificationsPage = () => {
                 {/* Content */}
                 <div
                   className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <h3 className={`text-sm font-semibold truncate ${

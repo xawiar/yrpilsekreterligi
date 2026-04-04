@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import ApiService from '../utils/ApiService';
 import Modal from '../components/Modal';
 import { LoadingSpinner, EmptyState } from '../components/UI';
@@ -6,6 +8,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+
+const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
+                     import.meta.env.VITE_USE_FIREBASE === true ||
+                     String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
 
 const PollsPage = () => {
   const { user } = useAuth();
@@ -30,6 +36,26 @@ const PollsPage = () => {
   useEffect(() => {
     fetchPolls();
   }, [activeTab]);
+
+  // Gercek zamanli anket sonuclari dinleme (Firebase modu)
+  // poll_votes koleksiyonundaki degisiklikleri dinleyerek sonuclari gunceller
+  useEffect(() => {
+    if (!USE_FIREBASE || !db || !isResultsModalOpen || !selectedPoll?.id) return;
+
+    const votesRef = collection(db, 'poll_votes');
+    const q = query(votesRef, where('pollId', '==', String(selectedPoll.id)));
+
+    const unsubscribe = onSnapshot(q, async () => {
+      try {
+        const results = await ApiService.getPollResults(selectedPoll.id);
+        setPollResults(results);
+      } catch (error) {
+        console.error('Realtime poll results error:', error);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [isResultsModalOpen, selectedPoll?.id]);
 
   const fetchPolls = async () => {
     try {
