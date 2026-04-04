@@ -101,11 +101,12 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
     previousUnreadRef.current = 0;
 
     const notificationsRef = collection(db, 'notifications');
+    // Basit sorgu — composite index gerektirmez
+    // Client-side filtreleme ve sıralama yapılacak
     const q = query(
       notificationsRef,
-      where('memberId', 'in', [memberId, null]),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -113,7 +114,10 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
       const allNotifs = [];
       snapshot.forEach((doc) => {
         const data = { id: doc.id, ...doc.data() };
-        allNotifs.push(data);
+        // Client-side memberId filtresi (composite index yerine)
+        if (data.memberId === memberId || data.memberId === null || !data.memberId) {
+          allNotifs.push(data);
+        }
       });
 
       // Tercihlere gore filtrele
