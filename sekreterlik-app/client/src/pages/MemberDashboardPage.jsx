@@ -24,6 +24,8 @@ import NeighborhoodsPage from './NeighborhoodsPage';
 import VillagesPage from './VillagesPage';
 import GroupsPage from './GroupsPage';
 import Footer from '../components/Footer';
+import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
+import NotificationDrawer from '../components/NotificationDrawer';
 import PollVotingComponent from '../components/PollVotingComponent';
 import PollResultsComponent from '../components/PollResultsComponent';
 import Modal from '../components/Modal';
@@ -45,6 +47,8 @@ const MemberDashboardPage = () => {
   const [error, setError] = useState('');
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'public-institution-management', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
   const [grantedPermissions, setGrantedPermissions] = useState([]);
+  const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
+  const { unreadCount } = useRealtimeNotifications(user?.id || user?.uid);
 
   // View-permission mapping: Her view için hangi permission gerektiğini tanımla
   const viewPermissionMap = {
@@ -904,6 +908,21 @@ const MemberDashboardPage = () => {
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Kullanıcı Adı</p>
                   <p className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-gray-100">{user.username}</p>
                 </div>
+                {/* Bildirim Zili */}
+                <button
+                  onClick={() => setNotifDrawerOpen(true)}
+                  className="relative inline-flex items-center justify-center p-2 sm:p-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Bildirimler"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
                 <button
                   onClick={handleLogout}
                   className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
@@ -1749,6 +1768,8 @@ const MemberDashboardPage = () => {
           memberPosition={member?.position}
         />
       )}
+      {/* Bildirim Drawer */}
+      <NotificationDrawer isOpen={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} />
     </div>
   );
 };
