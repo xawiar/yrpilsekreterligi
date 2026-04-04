@@ -145,33 +145,47 @@ class DataDeletionRequest {
   }
 
   static async deleteMemberData(member_id) {
-    return new Promise((resolve, reject) => {
-      // Üyeyi ve ilgili tüm verileri kalıcı olarak sil
-      const queries = [
-        'DELETE FROM member_registrations WHERE member_id = ?',
-        'DELETE FROM personal_documents WHERE member_id = ?',
-        'DELETE FROM members WHERE id = ?'
-      ];
-
-      let completed = 0;
-      let errors = [];
-
-      queries.forEach((query) => {
-        db.run(query, [member_id], (err) => {
-          completed++;
-          if (err) {
-            errors.push(err.message);
-          }
-          if (completed === queries.length) {
-            if (errors.length > 0) {
-              reject(new Error('Bazı veriler silinemedi: ' + errors.join(', ')));
-            } else {
-              resolve({ success: true, member_id });
-            }
-          }
+    const runQuery = (sql, params) => {
+      return new Promise((resolve, reject) => {
+        db.run(sql, params, (err) => {
+          if (err) reject(err);
+          else resolve();
         });
       });
-    });
+    };
+
+    // Transaction ile uye ve iliskili tum verileri kalici olarak sil
+    await runQuery('BEGIN TRANSACTION', []);
+    try {
+      // Iliskili tablolardan sil (hata olsa da devam et - tablo olmayabilir)
+      const relatedQueries = [
+        'DELETE FROM member_registrations WHERE member_id = ?',
+        'DELETE FROM member_users WHERE member_id = ?',
+        'DELETE FROM data_deletion_requests WHERE member_id = ? AND status != \'approved\'',
+      ];
+
+      for (const sql of relatedQueries) {
+        try {
+          await runQuery(sql, [member_id]);
+        } catch (err) {
+          // Tablo yoksa veya baska hata olursa devam et
+          console.warn(`KVKK silme uyarisi (${sql}):`, err.message);
+        }
+      }
+
+      // Ana uye kaydini sil
+      await runQuery('DELETE FROM members WHERE id = ?', [member_id]);
+
+      await runQuery('COMMIT', []);
+      return { success: true, member_id };
+    } catch (error) {
+      try {
+        await runQuery('ROLLBACK', []);
+      } catch (rollbackErr) {
+        console.error('Rollback hatasi:', rollbackErr);
+      }
+      throw new Error('Uye verileri silinirken hata: ' + error.message);
+    }
   }
 }
 

@@ -425,6 +425,9 @@ app.use('/api/api-keys', authenticateToken, apiKeysRouter);
 app.use('/api/sms', authenticateToken, smsRouter);
 app.use('/api/branch-members', authenticateToken, branchMembersRouter);
 app.use('/api/data-deletion-requests', authenticateToken, dataDeletionRequestsRouter);
+// Settings route (admin only)
+const settingsRouter = require('./routes/settings');
+app.use('/api/settings', authenticateToken, settingsRouter);
 // Audit logs route (admin only)
 const auditLogsRouter = require('./routes/auditLogs');
 app.use('/api/audit-logs', authenticateToken, requireAdmin, auditLogsRouter);

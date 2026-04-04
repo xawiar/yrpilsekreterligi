@@ -13,7 +13,8 @@ const DataDeletionRequestsAdmin = () => {
     try {
       setLoading(true);
       const response = await ApiService.getDataDeletionRequests();
-      setRequests(response.data || []);
+      const data = Array.isArray(response) ? response : (response.data || []);
+      setRequests(data);
     } catch (err) {
       console.error('Error fetching deletion requests:', err);
       setError('Talepler yuklenirken hata olustu');

@@ -27,6 +27,7 @@ const authenticateToken = (req, res, next) => {
       username: decoded.username,
       role: decoded.role || decoded.type || 'member',
       type: decoded.type || decoded.role || 'member',
+      memberId: decoded.memberId || null,
     };
     next();
   } catch (err) {

@@ -8707,6 +8707,26 @@ class FirebaseApiService {
     try {
       const requests = await FirebaseService.getAll('data_deletion_requests', {}, false);
       if (!requests || requests.length === 0) return [];
+
+      // Her talep icin uye bilgisini ekle
+      for (const request of requests) {
+        if (request.member_id) {
+          try {
+            const memberDoc = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, String(request.member_id), false);
+            if (memberDoc) {
+              request.member_name = memberDoc.name || 'Bilinmeyen';
+              request.member_tc = memberDoc.tc || '';
+              request.member_phone = memberDoc.phone || '';
+            } else {
+              request.member_name = 'Silinmis Uye';
+            }
+          } catch (memberErr) {
+            console.warn(`Uye bilgisi alinamadi (member_id: ${request.member_id}):`, memberErr);
+            request.member_name = request.member_name || `Uye #${request.member_id}`;
+          }
+        }
+      }
+
       // Sort by created_at descending
       return requests.sort((a, b) => {
         const dateA = new Date(a.created_at || 0);
@@ -8732,10 +8752,42 @@ class FirebaseApiService {
 
   static async approveDataDeletionRequest(id) {
     try {
+      // Talebi getir ve member_id'yi al
+      const requestDoc = await FirebaseService.getById('data_deletion_requests', String(id), false);
+      const memberId = requestDoc?.member_id;
+
+      // Status guncelle
       await FirebaseService.update('data_deletion_requests', String(id), {
         status: 'approved',
         processed_at: new Date().toISOString()
       }, false);
+
+      // Uye verilerini sil
+      if (memberId) {
+        const collectionsToClean = [
+          { name: this.COLLECTIONS.MEMBERS, field: 'id' },
+          { name: this.COLLECTIONS.MEMBER_REGISTRATIONS, field: 'member_id' },
+          { name: this.COLLECTIONS.PERSONAL_DOCUMENTS, field: 'member_id' },
+          { name: this.COLLECTIONS.MEMBER_USERS, field: 'member_id' },
+        ];
+
+        for (const col of collectionsToClean) {
+          try {
+            const allDocs = await FirebaseService.getAll(col.name, {}, false);
+            if (allDocs && allDocs.length > 0) {
+              const matchingDocs = allDocs.filter(d => String(d[col.field]) === String(memberId));
+              for (const matchDoc of matchingDocs) {
+                if (matchDoc.id) {
+                  await FirebaseService.delete(col.name, String(matchDoc.id));
+                }
+              }
+            }
+          } catch (colError) {
+            console.warn(`KVKK veri silme - ${col.name} koleksiyonunda hata:`, colError);
+          }
+        }
+      }
+
       return { success: true };
     } catch (error) {
       console.error('Approve data deletion request error:', error);

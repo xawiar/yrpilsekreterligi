@@ -102,8 +102,8 @@ class MemberController {
         return res.status(400).json({ message: 'Bu TC kimlik numarası zaten kayıtlı' });
       }
       
-      const sql = `INSERT INTO members (tc, name, region, position, phone, email, address, district, notes, archived) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const sql = `INSERT INTO members (tc, name, region, position, phone, email, address, district, notes, archived, kvkk_consent_date)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const params = [
         encTc,
         memberData.name,
@@ -114,7 +114,8 @@ class MemberController {
         memberData.address || null,
         memberData.district || null,
         memberData.notes || null,
-        0 // archived = false
+        0, // archived = false
+        memberData.kvkk_consent_date || new Date().toISOString()
       ];
       
       const result = await db.run(sql, params);
@@ -200,8 +201,8 @@ class MemberController {
         return res.status(404).json({ message: 'Üye bulunamadı' });
       }
       
-      const sql = `UPDATE members SET tc = ?, name = ?, region = ?, position = ?, phone = ?, 
-                   email = ?, address = ?, district = ?, notes = ? WHERE id = ?`;
+      const sql = `UPDATE members SET tc = ?, name = ?, region = ?, position = ?, phone = ?,
+                   email = ?, address = ?, district = ?, notes = ?, kvkk_consent_date = ? WHERE id = ?`;
       const params = [
         encryptField(memberData.tc),
         memberData.name,
@@ -212,6 +213,7 @@ class MemberController {
         memberData.address || null,
         memberData.district || null,
         memberData.notes || null,
+        memberData.kvkk_consent_date || null,
         parseInt(id)
       ];
       

@@ -12,6 +12,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, message: 'member_id zorunludur' });
     }
 
+    // Admin degilse, sadece kendi member_id'si icin talep olusturabilir
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.type === 'admin');
+    if (!isAdmin && req.user.memberId && String(req.user.memberId) !== String(member_id)) {
+      return res.status(403).json({ success: false, message: 'Sadece kendi verileriniz icin silme talebi olusturabilirsiniz' });
+    }
+
     // Aynı üye için bekleyen talep var mı kontrol et
     const existingRequests = await DataDeletionRequest.getByMemberId(member_id);
     const hasPending = existingRequests.some(r => r.status === 'pending');

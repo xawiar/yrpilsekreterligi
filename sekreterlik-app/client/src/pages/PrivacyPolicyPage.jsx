@@ -5,10 +5,10 @@ import { db } from '../config/firebase';
 
 const defaultPrivacyText = `
 <h2>1. Veri Sorumlusu</h2>
-<p>Kisisel verileriniz, 6698 sayili Kisisel Verilerin Korunmasi Kanunu ("KVKK") kapsaminda veri sorumlusu sifatiyla <strong>[Parti Il Baskanligi]</strong> tarafindan islenmektedir.</p>
-<p><strong>Adres:</strong> [Il Baskanligi Adresi]<br/>
-<strong>Telefon:</strong> [Iletisim Numarasi]<br/>
-<strong>E-posta:</strong> [E-posta Adresi]</p>
+<p>Kisisel verileriniz, 6698 sayili Kisisel Verilerin Korunmasi Kanunu ("KVKK") kapsaminda veri sorumlusu sifatiyla <strong>YRP Elazig Il Baskanligi</strong> tarafindan islenmektedir.</p>
+<p><strong>Adres:</strong> Elazig Il Baskanligi<br/>
+<strong>Telefon:</strong> Il baskanliginiz ile iletisime geciniz<br/>
+<strong>E-posta:</strong> Il baskanliginiz ile iletisime geciniz</p>
 
 <h2>2. Islenen Kisisel Veriler</h2>
 <p>Asagidaki kisisel verileriniz islenmektedir:</p>
@@ -87,7 +87,7 @@ const defaultPrivacyText = `
 <ul>
   <li><strong>Yazili Basvuru:</strong> Il Baskanligi adresine kimlik teyidi yapilarak elden veya noter araciligiyla</li>
   <li><strong>Elektronik Basvuru:</strong> Sistemdeki "Verilerimin Silinmesini Talep Et" butonu araciligiyla</li>
-  <li><strong>E-posta:</strong> [kvkk@example.com] adresine guvenli elektronik imza ile</li>
+  <li><strong>E-posta:</strong> Il baskanliginizin resmi e-posta adresine guvenli elektronik imza ile</li>
 </ul>
 <p>Basvurulariniz en gec 30 (otuz) gun icinde ucretsiz olarak sonuclandirilacaktir. Islemin ayrica bir maliyet gerektirmesi halinde KVKK Kurulu tarafindan belirlenen tarife uzerinden ucret alinabilir.</p>
 

@@ -35,6 +35,13 @@ db.serialize(() => {
     }
   });
 
+  // Add kvkk_consent_date column to members table if it doesn't exist
+  db.run(`ALTER TABLE members ADD COLUMN kvkk_consent_date DATETIME`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding kvkk_consent_date column:', err);
+    }
+  });
+
   // Add archived_at and archived_reason columns
   db.run(`ALTER TABLE members ADD COLUMN archived_at DATETIME`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {

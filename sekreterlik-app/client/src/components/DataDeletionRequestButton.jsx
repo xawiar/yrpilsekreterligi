@@ -18,7 +18,8 @@ const DataDeletionRequestButton = ({ memberId }) => {
     try {
       setLoadingRequests(true);
       const response = await ApiService.getMyDataDeletionRequests(memberId);
-      setExistingRequests(response.data || []);
+      const data = Array.isArray(response) ? response : (response.data || []);
+      setExistingRequests(data);
     } catch (error) {
       console.error('Error fetching deletion requests:', error);
     } finally {
