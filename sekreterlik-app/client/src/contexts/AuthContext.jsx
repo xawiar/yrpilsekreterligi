@@ -186,8 +186,42 @@ export const AuthProvider = ({ children }) => {
         if (response.token) { localStorage.setItem('token', response.token); }
         setUser(response.user);
         setIsLoggedIn(true);
-        // localStorage'a kullanıcı bilgilerini kaydet (centralized)
         saveToLocalStorage(response.user, true);
+
+        // Login sonrasi otomatik push subscription (maliisler pattern)
+        setTimeout(async () => {
+          try {
+            if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
+              const perm = await Notification.requestPermission();
+              if (perm === 'granted' && 'serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                const vapidKey = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
+                const padding = '='.repeat((4 - (vapidKey.length % 4)) % 4);
+                const b64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const raw = window.atob(b64);
+                const arr = new Uint8Array(raw.length);
+                for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+                const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr.buffer });
+                const userId = response.user.id || response.user.uid || '';
+                if (userId) {
+                  const { doc, setDoc } = await import('firebase/firestore');
+                  const { db } = await import('../config/firebase');
+                  if (db) {
+                    await setDoc(doc(db, 'push_tokens', userId), {
+                      subscription: JSON.stringify(sub),
+                      userId: userId,
+                      updatedAt: new Date().toISOString(),
+                      isActive: true
+                    });
+                  }
+                }
+              }
+            }
+          } catch (pushErr) {
+            // Push basarisiz — sessiz devam
+          }
+        }, 2000);
+
         return true;
       } else {
         setError(response.message || 'Giriş başarısız');

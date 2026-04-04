@@ -143,7 +143,7 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
     if (subscriptions.length === 0) return;
 
     // Cloud Function HTTP endpoint'ine POST (maliisler: /api/send-push)
-    var PUSH_URL = 'https://europe-west1-spilsekreterligi.cloudfunctions.net/sendPush';
+    var PUSH_URL = 'https://sendpush-bsrvxijkia-ew.a.run.app';
 
     try {
       var response = await fetch(PUSH_URL, {
