@@ -31,7 +31,14 @@ const getApiBaseUrl = () => {
  */
 const PublicElectionResultsPage = ({ electionIdProp }) => {
   const params = useParams();
-  const electionId = electionIdProp || params.electionId;
+  // electionId: prop > useParams > URL'den parse
+  const electionId = electionIdProp || params.electionId || (() => {
+    try {
+      const path = window.location.pathname;
+      const match = path.match(/\/public\/election-results\/([^/]+)/);
+      return match ? match[1] : null;
+    } catch (e) { return null; }
+  })();
   const [visitorCount, setVisitorCount] = useState(0);
   const visitorIdRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
@@ -40,6 +47,9 @@ const PublicElectionResultsPage = ({ electionIdProp }) => {
   const firestoreUnsubRef = useRef(null);
 
   useEffect(() => {
+    // electionId yoksa visitor tracking yapma
+    if (!electionId) return;
+
     // Visitor ID oluştur (localStorage'da sakla)
     let visitorId = localStorage.getItem('public_election_visitor_id');
     if (!visitorId) {
