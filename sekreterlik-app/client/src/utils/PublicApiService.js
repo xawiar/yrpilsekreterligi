@@ -1,135 +1,133 @@
 /**
  * Public API Service
- * Authentication gerektirmeyen, sadece okuma (read-only) endpoint'leri için
- * Güvenlik: Rate limiting, input validation, sadece GET metodları
+ * Authentication gerektirmeyen, sadece okuma (read-only) endpoint'leri icin
+ * Firebase modunda: Firestore'dan dogrudan okur
+ * Backend modunda: REST API kullanir
  */
+
+import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
+                     import.meta.env.VITE_USE_FIREBASE === true ||
+                     String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
 
+async function firestoreGetAll(collectionName) {
+  if (!db) return [];
+  try {
+    var snapshot = await getDocs(collection(db, collectionName));
+    return snapshot.docs.map(function(d) { return { id: d.id, ...d.data() }; });
+  } catch (e) {
+    console.warn('Firestore read error (' + collectionName + '):', e.message);
+    return [];
+  }
+}
+
 class PublicApiService {
-  /**
-   * Get all elections (public)
-   * @returns {Promise<Array>}
-   */
   static async getElections() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/elections`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch elections: ${response.status} ${response.statusText}`);
+    if (USE_FIREBASE) {
+      return firestoreGetAll('elections');
     }
+    var response = await fetch(API_BASE_URL + '/public/election-results/elections');
+    if (!response.ok) throw new Error('Failed to fetch elections');
     return response.json();
   }
 
-  /**
-   * Get election by ID (public)
-   * @param {string|number} id
-   * @returns {Promise<Object>}
-   */
   static async getElectionById(id) {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/elections/${id}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch election: ${response.status} ${response.statusText}`);
+    if (USE_FIREBASE && db) {
+      // Firestore'da ID ile veya id alanı ile ara
+      var docRef = doc(db, 'elections', String(id));
+      var docSnap = await getDoc(docRef);
+      if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
+      // ID alani ile ara
+      var allElections = await firestoreGetAll('elections');
+      return allElections.find(function(e) { return String(e.id) === String(id); }) || null;
     }
+    var response = await fetch(API_BASE_URL + '/public/election-results/elections/' + id);
+    if (!response.ok) throw new Error('Failed to fetch election');
     return response.json();
   }
 
-  /**
-   * Get election results (public)
-   * @param {string|number} electionId
-   * @param {string|number|null} ballotBoxId
-   * @returns {Promise<Array>}
-   */
-  static async getElectionResults(electionId, ballotBoxId = null) {
-    const params = new URLSearchParams();
+  static async getElectionResults(electionId, ballotBoxId) {
+    if (USE_FIREBASE) {
+      var results = await firestoreGetAll('election_results');
+      var filtered = results;
+      if (electionId) {
+        filtered = filtered.filter(function(r) {
+          return String(r.election_id) === String(electionId);
+        });
+      }
+      if (ballotBoxId) {
+        filtered = filtered.filter(function(r) {
+          return String(r.ballot_box_id) === String(ballotBoxId);
+        });
+      }
+      // Public: sadece onaylanmis sonuclar
+      return filtered.filter(function(r) {
+        return r.approval_status === 'approved' || r.approval_status == null;
+      });
+    }
+    var params = new URLSearchParams();
     if (electionId) params.append('election_id', electionId);
     if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
-
-    const response = await fetch(`${API_BASE_URL}/public/election-results/results?${params}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch election results: ${response.status} ${response.statusText}`);
-    }
-    const data = await response.json();
-    // Client-side safety filter: exclude pending and rejected results from public view
+    var response = await fetch(API_BASE_URL + '/public/election-results/results?' + params);
+    if (!response.ok) throw new Error('Failed to fetch results');
+    var data = await response.json();
     if (Array.isArray(data)) {
-      return data.filter(result =>
-        result.approval_status === 'approved' || result.approval_status == null
-      );
+      return data.filter(function(r) { return r.approval_status === 'approved' || r.approval_status == null; });
     }
     return data;
   }
 
-  /**
-   * Get all ballot boxes (public)
-   * @returns {Promise<Array>}
-   */
   static async getBallotBoxes() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/ballot-boxes`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ballot boxes: ${response.status} ${response.statusText}`);
-    }
+    if (USE_FIREBASE) return firestoreGetAll('ballot_boxes');
+    var response = await fetch(API_BASE_URL + '/public/election-results/ballot-boxes');
+    if (!response.ok) throw new Error('Failed to fetch ballot boxes');
     return response.json();
   }
 
-  /**
-   * Get all districts (public)
-   * @returns {Promise<Array>}
-   */
   static async getDistricts() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/districts`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch districts: ${response.status} ${response.statusText}`);
-    }
+    if (USE_FIREBASE) return firestoreGetAll('districts');
+    var response = await fetch(API_BASE_URL + '/public/election-results/districts');
+    if (!response.ok) throw new Error('Failed to fetch districts');
     return response.json();
   }
 
-  /**
-   * Get all towns (public)
-   * @returns {Promise<Array>}
-   */
   static async getTowns() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/towns`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch towns: ${response.status} ${response.statusText}`);
-    }
+    if (USE_FIREBASE) return firestoreGetAll('towns');
+    var response = await fetch(API_BASE_URL + '/public/election-results/towns');
+    if (!response.ok) throw new Error('Failed to fetch towns');
     return response.json();
   }
 
-  /**
-   * Get all neighborhoods (public)
-   * @returns {Promise<Array>}
-   */
   static async getNeighborhoods() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/neighborhoods`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch neighborhoods: ${response.status} ${response.statusText}`);
-    }
+    if (USE_FIREBASE) return firestoreGetAll('neighborhoods');
+    var response = await fetch(API_BASE_URL + '/public/election-results/neighborhoods');
+    if (!response.ok) throw new Error('Failed to fetch neighborhoods');
     return response.json();
   }
 
-  /**
-   * Get all villages (public)
-   * @returns {Promise<Array>}
-   */
   static async getVillages() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/villages`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch villages: ${response.status} ${response.statusText}`);
-    }
+    if (USE_FIREBASE) return firestoreGetAll('villages');
+    var response = await fetch(API_BASE_URL + '/public/election-results/villages');
+    if (!response.ok) throw new Error('Failed to fetch villages');
     return response.json();
   }
 
-  /**
-   * Get all observers (public)
-   * Note: Sensitive information (password, tc, phone) is filtered on the backend
-   * @returns {Promise<Array>}
-   */
   static async getBallotBoxObservers() {
-    const response = await fetch(`${API_BASE_URL}/public/election-results/observers`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch observers: ${response.status} ${response.statusText}`);
+    if (USE_FIREBASE) {
+      var observers = await firestoreGetAll('ballot_box_observers');
+      // Hassas verileri filtrele (public)
+      return observers.map(function(o) {
+        return { id: o.id, name: o.name, ballot_box_id: o.ballot_box_id, is_chief_observer: o.is_chief_observer };
+      });
     }
+    var response = await fetch(API_BASE_URL + '/public/election-results/observers');
+    if (!response.ok) throw new Error('Failed to fetch observers');
     return response.json();
   }
 }
 
 export default PublicApiService;
-
