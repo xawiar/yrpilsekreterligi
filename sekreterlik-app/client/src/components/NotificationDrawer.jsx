@@ -118,29 +118,57 @@ const getTypeBgColor = (type) => {
 // =====================================================
 // Madde 15: Bildirime tikla — navigasyon
 // =====================================================
-const getNavigationUrl = (notification) => {
+const getNavigationUrl = (notification, user) => {
   // Eger bildirimde url tanimli ise onu kullan
   if (notification.url) return notification.url;
 
-  // Type'a gore varsayilan sayfa
+  const isAdmin = user?.role === 'admin';
   const type = notification.type;
+
+  // Admin icin dogrudan admin route'larina yonlendir
+  if (isAdmin) {
+    switch (type) {
+      case 'announcement':
+        return '/notifications';
+      case 'meeting_invite':
+      case 'meeting':
+      case 'meeting_reminder':
+        return '/meetings';
+      case 'event_invite':
+      case 'event':
+      case 'event_reminder':
+        return '/events';
+      case 'poll_invite':
+      case 'poll':
+      case 'poll_vote':
+        return '/settings?tab=polls';
+      case 'election_update':
+        return '/elections';
+      case 'message':
+        return '/notifications';
+      default:
+        return '/notifications';
+    }
+  }
+
+  // Uye icin member-dashboard view'larina yonlendir
   switch (type) {
     case 'announcement':
       return '/notifications';
     case 'meeting_invite':
     case 'meeting':
     case 'meeting_reminder':
-      return '/meetings';
+      return '/member-dashboard?view=meetings-page';
     case 'event_invite':
     case 'event':
     case 'event_reminder':
-      return '/events';
+      return '/member-dashboard?view=events-page';
     case 'poll_invite':
     case 'poll':
     case 'poll_vote':
-      return '/settings?tab=polls';
+      return '/member-dashboard?view=dashboard';
     case 'election_update':
-      return '/elections';
+      return '/member-dashboard?view=election-preparation-page';
     case 'message':
       return '/notifications';
     default:
@@ -214,7 +242,7 @@ const NotificationDrawer = ({ isOpen, onClose }) => {
     if (!notification.read) {
       handleMarkAsRead(notification.id);
     }
-    const url = getNavigationUrl(notification);
+    const url = getNavigationUrl(notification, user);
     navigate(url);
     onClose();
   };

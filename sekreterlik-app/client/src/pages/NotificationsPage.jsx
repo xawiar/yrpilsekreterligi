@@ -72,24 +72,49 @@ const NotificationsPage = () => {
       navigate(notification.url);
       return;
     }
-    // type bazli yonlendirme
-    switch (notification.type) {
-      case 'poll_invite':
-      case 'poll_result':
-      case 'poll':
-      case 'poll_vote':
-        navigate('/polls');
-        break;
-      case 'meeting':
-      case 'meeting_reminder':
-        navigate('/meetings');
-        break;
-      case 'event':
-      case 'event_reminder':
-        navigate('/events');
-        break;
-      default:
-        break;
+
+    const isAdmin = user?.role === 'admin';
+
+    // type bazli yonlendirme - role'a gore farkli route
+    if (isAdmin) {
+      switch (notification.type) {
+        case 'poll_invite':
+        case 'poll_result':
+        case 'poll':
+        case 'poll_vote':
+          navigate('/polls');
+          break;
+        case 'meeting':
+        case 'meeting_reminder':
+          navigate('/meetings');
+          break;
+        case 'event':
+        case 'event_reminder':
+          navigate('/events');
+          break;
+        default:
+          break;
+      }
+    } else {
+      // Uye icin member-dashboard view'larina yonlendir
+      switch (notification.type) {
+        case 'poll_invite':
+        case 'poll_result':
+        case 'poll':
+        case 'poll_vote':
+          navigate('/member-dashboard?view=dashboard');
+          break;
+        case 'meeting':
+        case 'meeting_reminder':
+          navigate('/member-dashboard?view=meetings-page');
+          break;
+        case 'event':
+        case 'event_reminder':
+          navigate('/member-dashboard?view=events-page');
+          break;
+        default:
+          break;
+      }
     }
   };
 

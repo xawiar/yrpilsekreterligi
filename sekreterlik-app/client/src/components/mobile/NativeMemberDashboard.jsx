@@ -133,21 +133,60 @@ const NativeMemberDashboard = ({
     return viewMap[permission] || null;
   };
 
-  // Hızlı işlemler için izinleri filtrele
-  const quickActionPermissions = [
-    'add_member', 'create_meeting', 'add_stk', 'manage_stk', 
-    'add_public_institution', 'create_event', 'access_ballot_boxes', 
-    'add_ballot_box', 'access_observers', 'add_observer'
-  ].filter(perm => grantedPermissions.includes(perm));
+  // Kategorize menu yapisi
+  const categories = [
+    {
+      title: 'Uye Islemleri',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+      permissions: ['add_member', 'access_members_page', 'add_stk', 'manage_stk', 'add_public_institution', 'access_districts_page', 'access_representatives_page', 'access_neighborhoods_page', 'access_villages_page', 'access_groups_page'],
+      color: 'from-teal-500 to-emerald-500',
+    },
+    {
+      title: 'Toplanti & Etkinlik',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+      permissions: ['create_meeting', 'access_meetings_page', 'create_event', 'access_events_page', 'access_calendar_page'],
+      color: 'from-indigo-500 to-purple-500',
+    },
+    {
+      title: 'Secim & Hazirlik',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      permissions: ['access_ballot_boxes', 'add_ballot_box', 'access_observers', 'add_observer', 'access_election_preparation_page'],
+      color: 'from-orange-500 to-red-500',
+    },
+    {
+      title: 'Diger',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+      ),
+      permissions: ['access_archive_page', 'access_management_chart_page'],
+      color: 'from-gray-500 to-slate-500',
+    },
+  ];
 
-  // Sayfa erişimleri için izinleri filtrele
-  const pageAccessPermissions = [
-    'access_members_page', 'access_meetings_page', 'access_events_page',
-    'access_calendar_page', 'access_districts_page', 'access_archive_page',
-    'access_management_chart_page', 'access_election_preparation_page',
-    'access_representatives_page', 'access_neighborhoods_page',
-    'access_villages_page', 'access_groups_page'
-  ].filter(perm => grantedPermissions.includes(perm));
+  // Sadece kullanicinin yetkisi olan kategorileri filtrele
+  const activeCategories = categories
+    .map(cat => ({
+      ...cat,
+      activePermissions: cat.permissions.filter(p => grantedPermissions.includes(p)),
+    }))
+    .filter(cat => cat.activePermissions.length > 0);
+
+  // Accordion state - ilk kategori acik
+  const [openCategory, setOpenCategory] = React.useState(0);
 
   return (
     <div className="px-4 py-6 space-y-4 pb-24">
@@ -163,68 +202,56 @@ const NativeMemberDashboard = ({
         )}
       </div>
 
-      {/* Hızlı İşlemler */}
-      {quickActionPermissions.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 px-1">
-            Hızlı İşlemler
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActionPermissions.map((permission) => {
-              const view = getPermissionView(permission);
-              if (!view) return null;
-              
-              return (
-                <NativeButton
-                  key={permission}
-                  variant="secondary"
-                  fullWidth
-                  icon={getPermissionIcon(permission)}
-                  onClick={() => onViewChange && onViewChange(view)}
-                >
-                  {getPermissionLabel(permission)}
-                </NativeButton>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Sayfa Erişimleri */}
-      {pageAccessPermissions.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 px-1">
-            Sayfa Erişimleri
-          </h2>
-          <div className="space-y-2">
-            {pageAccessPermissions.map((permission) => {
-              const view = getPermissionView(permission);
-              if (!view) return null;
-              
-              return (
-                <NativeCard
-                  key={permission}
-                  onClick={() => onViewChange && onViewChange(view)}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 text-white">
-                      {getPermissionIcon(permission)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">
-                        {getPermissionLabel(permission)}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+      {/* Kategorize Menu - Akordeon */}
+      {activeCategories.length > 0 && (
+        <div className="space-y-2">
+          {activeCategories.map((category, index) => (
+            <NativeCard key={category.title} className="overflow-hidden !p-0">
+              {/* Akordeon basligi */}
+              <button
+                onClick={() => setOpenCategory(openCategory === index ? -1 : index)}
+                className="flex items-center w-full px-4 py-3 text-left"
+              >
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${category.color} flex items-center justify-center flex-shrink-0 text-white mr-3`}>
+                  {category.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">
+                    {category.title}
                   </div>
-                </NativeCard>
-              );
-            })}
-          </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {category.activePermissions.length} islem
+                  </div>
+                </div>
+                <svg
+                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${openCategory === index ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {/* Akordeon icerik */}
+              {openCategory === index && (
+                <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+                  {category.activePermissions.map((permission) => {
+                    const view = getPermissionView(permission);
+                    if (!view) return null;
+                    return (
+                      <NativeButton
+                        key={permission}
+                        variant="secondary"
+                        fullWidth
+                        icon={getPermissionIcon(permission)}
+                        onClick={() => onViewChange && onViewChange(view)}
+                      >
+                        {getPermissionLabel(permission)}
+                      </NativeButton>
+                    );
+                  })}
+                </div>
+              )}
+            </NativeCard>
+          ))}
         </div>
       )}
 

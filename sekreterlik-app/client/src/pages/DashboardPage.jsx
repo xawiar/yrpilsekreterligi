@@ -224,6 +224,23 @@ const DashboardPage = () => {
           onMemberClick={handleMemberClick}
           onEventClick={handleEventClick}
         />
+        {/* Mobilde de Ziyaret Haritasi goster */}
+        <div className="px-4 pb-24">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Ziyaret Haritasi
+              </h3>
+              <button
+                onClick={() => navigate('/locations')}
+                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Detayli Goruntule
+              </button>
+            </div>
+            <VisitMap height="250px" mini={true} />
+          </div>
+        </div>
         <Modal
           isOpen={isMeetingModalOpen}
           onClose={() => {
