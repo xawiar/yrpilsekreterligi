@@ -146,27 +146,32 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
       console.error('[PUSH-SEND] Token load error:', e.message);
     }
 
+    // memberId → authUid mapping tablosu olustur
+    var memberToAuth = {};
+    try {
+      var muSnap = await getDocs(collection(db, 'member_users'));
+      muSnap.forEach(function(d) {
+        var data = d.data();
+        var mid = String(data.memberId || data.member_id || d.id || '');
+        var authUid = data.authUid || data.auth_uid || '';
+        if (mid && authUid) memberToAuth[mid] = authUid;
+      });
+    } catch (e2) { /* skip */ }
+
     // Her userId icin token bul
     for (var i = 0; i < userIds.length; i++) {
       var uid = String(userIds[i]);
+      // 1. Direkt ID ile ara
       if (allTokens[uid]) {
         subscriptions.push(allTokens[uid]);
-        console.error('[PUSH-SEND] Token found for:', uid);
+        console.error('[PUSH-SEND] Token found direct:', uid);
+      }
+      // 2. member_users mapping ile ara
+      else if (memberToAuth[uid] && allTokens[memberToAuth[uid]]) {
+        subscriptions.push(allTokens[memberToAuth[uid]]);
+        console.error('[PUSH-SEND] Token found via mapping:', uid, '->', memberToAuth[uid]);
       } else {
-        // Auth UID ile eslestirme dene (member_users'dan)
-        try {
-          var muSnap = await getDocs(collection(db, 'member_users'));
-          muSnap.forEach(function(d) {
-            var data = d.data();
-            if (String(data.memberId || data.member_id || d.id) === uid) {
-              var authUid = data.authUid || data.auth_uid;
-              if (authUid && allTokens[authUid]) {
-                subscriptions.push(allTokens[authUid]);
-                console.error('[PUSH-SEND] Token found via authUid:', authUid, 'for member:', uid);
-              }
-            }
-          });
-        } catch (e2) { /* skip */ }
+        console.error('[PUSH-SEND] No token for:', uid, 'mapping:', memberToAuth[uid] || 'none');
       }
     }
 
