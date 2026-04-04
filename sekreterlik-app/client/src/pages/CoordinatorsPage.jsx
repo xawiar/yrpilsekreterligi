@@ -292,6 +292,140 @@ const CoordinatorsListPage = () => {
     }
   };
 
+  // --- Ortak helper fonksiyonlar (mobile ve desktop arasında paylaşımlı) ---
+
+  const roleNames = {
+    provincial_coordinator: 'İl Genel Sorumlusu',
+    district_supervisor: 'İlçe Sorumlusu',
+    region_supervisor: 'Bölge Sorumlusu',
+    institution_supervisor: 'Kurum Sorumlusu'
+  };
+
+  // Bir bölgenin neighborhood_ids ve village_ids'lerini parse eder
+  const parseRegionIds = (region) => {
+    const neighborhoodIds = Array.isArray(region.neighborhood_ids)
+      ? region.neighborhood_ids
+      : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+    const villageIds = Array.isArray(region.village_ids)
+      ? region.village_ids
+      : (region.village_ids ? JSON.parse(region.village_ids) : []);
+    return { neighborhoodIds, villageIds };
+  };
+
+  // Bir bölgedeki toplam sandık sayısını hesaplar
+  const countBallotBoxesInRegion = (region) => {
+    const { neighborhoodIds, villageIds } = parseRegionIds(region);
+    const neighborhoodCount = ballotBoxes.filter(bb =>
+      neighborhoodIds.includes(bb.neighborhood_id) ||
+      neighborhoodIds.includes(String(bb.neighborhood_id))
+    ).length;
+    const villageCount = ballotBoxes.filter(bb =>
+      villageIds.includes(bb.village_id) ||
+      villageIds.includes(String(bb.village_id))
+    ).length;
+    return neighborhoodCount + villageCount;
+  };
+
+  // Üst sorumluyu bul (parent_coordinator_id ile + kurum sorumlusu fallback)
+  const getParentCoordinator = (coordinator) => {
+    let parent = null;
+    if (coordinator.parent_coordinator_id !== null && coordinator.parent_coordinator_id !== undefined) {
+      parent = coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id));
+    }
+    // Kurum sorumlusu için fallback: institution_name'den bölge sorumlusunu bul
+    if (coordinator.role === 'institution_supervisor' && !parent && coordinator.institution_name) {
+      const institutionBBs = ballotBoxes.filter(bb => bb.institution_name === coordinator.institution_name);
+      if (institutionBBs.length > 0) {
+        const firstBox = institutionBBs[0];
+        for (const region of regions) {
+          const { neighborhoodIds, villageIds } = parseRegionIds(region);
+          if ((firstBox.neighborhood_id && neighborhoodIds.includes(firstBox.neighborhood_id)) ||
+              (firstBox.village_id && villageIds.includes(firstBox.village_id))) {
+            if (region.supervisor_id) {
+              parent = coordinators.find(c => String(c.id) === String(region.supervisor_id));
+            }
+            break;
+          }
+        }
+      }
+    }
+    return parent;
+  };
+
+  // Bölge sorumlusu: bölge bilgisi ve sandık sayısı
+  const getRegionSupervisorInfo = (coordinator) => {
+    const coordinatorRegion = regions.find(r => String(r.supervisor_id || '') === String(coordinator.id));
+    const totalBallotBoxes = coordinatorRegion ? countBallotBoxesInRegion(coordinatorRegion) : 0;
+    return { coordinatorRegion, totalBallotBoxes };
+  };
+
+  // İlçe sorumlusu: bağlı bölgeler ve sandık sayıları
+  const getDistrictSupervisorInfo = (coordinator) => {
+    const regionSupervisors = coordinators.filter(c =>
+      c.role === 'region_supervisor' && String(c.parent_coordinator_id) === String(coordinator.id)
+    );
+    let totalBallotBoxes = 0;
+    const districtRegions = [];
+    regionSupervisors.forEach(rs => {
+      const region = regions.find(r => String(r.supervisor_id || '') === String(rs.id));
+      if (region) {
+        const regionBBCount = countBallotBoxesInRegion(region);
+        totalBallotBoxes += regionBBCount;
+        districtRegions.push({ name: region.name, ballotBoxes: regionBBCount });
+      }
+    });
+    return { districtRegions, totalBallotBoxes };
+  };
+
+  // Kurum sorumlusu: kurum bilgisi, bölge adı, sandık sayısı
+  const getInstitutionSupervisorInfo = (coordinator) => {
+    if (!coordinator.institution_name) return null;
+    const institutionBBs = ballotBoxes.filter(bb => bb.institution_name === coordinator.institution_name);
+    if (institutionBBs.length === 0) return null;
+
+    const firstBox = institutionBBs[0];
+    for (const region of regions) {
+      const { neighborhoodIds, villageIds } = parseRegionIds(region);
+      if ((firstBox.neighborhood_id && neighborhoodIds.includes(firstBox.neighborhood_id)) ||
+          (firstBox.village_id && villageIds.includes(firstBox.village_id))) {
+        return { institutionName: coordinator.institution_name, regionName: region.name, ballotBoxCount: institutionBBs.length };
+      }
+    }
+    // Bölge bulunamadıysa sadece kurum bilgisi
+    return { institutionName: coordinator.institution_name, regionName: null, ballotBoxCount: institutionBBs.length };
+  };
+
+  // Tüm hesaplanmış verileri tek seferde döndür
+  const getCoordinatorComputedData = (coordinator) => {
+    const parentCoordinator = getParentCoordinator(coordinator);
+    let coordinatorRegion = null;
+    let totalBallotBoxes = 0;
+    let districtSupervisorRegions = [];
+    let districtSupervisorTotalBallotBoxes = 0;
+    let institutionSupervisorInfo = null;
+
+    if (coordinator.role === 'region_supervisor') {
+      const info = getRegionSupervisorInfo(coordinator);
+      coordinatorRegion = info.coordinatorRegion;
+      totalBallotBoxes = info.totalBallotBoxes;
+    } else if (coordinator.role === 'district_supervisor') {
+      const info = getDistrictSupervisorInfo(coordinator);
+      districtSupervisorRegions = info.districtRegions;
+      districtSupervisorTotalBallotBoxes = info.totalBallotBoxes;
+    } else if (coordinator.role === 'institution_supervisor') {
+      institutionSupervisorInfo = getInstitutionSupervisorInfo(coordinator);
+    }
+
+    return {
+      parentCoordinator,
+      coordinatorRegion,
+      totalBallotBoxes,
+      districtSupervisorRegions,
+      districtSupervisorTotalBallotBoxes,
+      institutionSupervisorInfo
+    };
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -327,189 +461,15 @@ const CoordinatorsListPage = () => {
           // Mobilde kart görünümü
           <div className="space-y-3">
             {coordinators.map((coordinator) => {
-                  const roleNames = {
-                    provincial_coordinator: 'İl Genel Sorumlusu',
-                    district_supervisor: 'İlçe Sorumlusu',
-                    region_supervisor: 'Bölge Sorumlusu',
-                    institution_supervisor: 'Kurum Sorumlusu'
-                  };
-                  // Üst sorumluyu bul (parent_coordinator_id ile)
-                  let parentCoordinator = null;
-                  if (coordinator.parent_coordinator_id !== null && coordinator.parent_coordinator_id !== undefined) {
-                    parentCoordinator = coordinators.find(c => {
-                      const cId = String(c.id);
-                      const pId = String(coordinator.parent_coordinator_id);
-                      return cId === pId;
-                    });
-                  }
-                  
-                  // Kurum sorumlusu için, eğer parent_coordinator_id yoksa ama institution_name varsa,
-                  // kurumun bulunduğu bölgenin sorumlusunu bul
-                  if (coordinator.role === 'institution_supervisor' && !parentCoordinator && coordinator.institution_name) {
-                    // Kurumun sandıklarını bul
-                    const institutionBallotBoxes = ballotBoxes.filter(bb => 
-                      bb.institution_name === coordinator.institution_name
-                    );
-                    
-                    if (institutionBallotBoxes.length > 0) {
-                      const firstBox = institutionBallotBoxes[0];
-                      const neighborhoodId = firstBox.neighborhood_id;
-                      const villageId = firstBox.village_id;
-                      
-                      // Bölgeyi bul
-                      for (const region of regions) {
-                        const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                          ? region.neighborhood_ids
-                          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                        const regionVillageIds = Array.isArray(region.village_ids)
-                          ? region.village_ids
-                          : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                        
-                        if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
-                            (villageId && regionVillageIds.includes(villageId))) {
-                          // Bölgenin sorumlusunu bul
-                          if (region.supervisor_id) {
-                            parentCoordinator = coordinators.find(c => 
-                              String(c.id) === String(region.supervisor_id)
-                            );
-                          }
-                          break;
-                        }
-                      }
-                    }
-                  }
-                  
-                  // Bölge sorumlusu için bölge bilgisini bul
-                  let coordinatorRegion = null;
-                  let totalBallotBoxes = 0;
-                  
-                  // İlçe sorumlusu için bağlı bölge sorumlularının bölgelerini bul
-                  let districtSupervisorRegions = [];
-                  let districtSupervisorTotalBallotBoxes = 0;
-                  
-                  // Kurum sorumlusu için kurum bilgisi ve sandık sayısı
-                  let institutionSupervisorInfo = null;
-                  
-                  if (coordinator.role === 'region_supervisor') {
-                    // Bu sorumlunun sorumlu olduğu bölgeyi bul
-                    coordinatorRegion = regions.find(r => {
-                      const rSupervisorId = String(r.supervisor_id || '');
-                      const cId = String(coordinator.id);
-                      return rSupervisorId === cId;
-                    });
-                    
-                    // Bölge bulunduysa, o bölgedeki toplam sandık sayısını hesapla
-                    if (coordinatorRegion) {
-                      // neighborhood_ids ve village_ids parse et
-                      const regionNeighborhoodIds = Array.isArray(coordinatorRegion.neighborhood_ids)
-                        ? coordinatorRegion.neighborhood_ids
-                        : (coordinatorRegion.neighborhood_ids ? JSON.parse(coordinatorRegion.neighborhood_ids) : []);
-                      const regionVillageIds = Array.isArray(coordinatorRegion.village_ids)
-                        ? coordinatorRegion.village_ids
-                        : (coordinatorRegion.village_ids ? JSON.parse(coordinatorRegion.village_ids) : []);
-                      
-                      // Mahallelerdeki sandıkları say
-                      const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
-                        regionNeighborhoodIds.includes(bb.neighborhood_id) || 
-                        regionNeighborhoodIds.includes(String(bb.neighborhood_id))
-                      ).length;
-                      
-                      // Köylerdeki sandıkları say
-                      const villageBallotBoxes = ballotBoxes.filter(bb => 
-                        regionVillageIds.includes(bb.village_id) || 
-                        regionVillageIds.includes(String(bb.village_id))
-                      ).length;
-                      
-                      totalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
-                    }
-                  } else if (coordinator.role === 'district_supervisor') {
-                    // Bu ilçe sorumlusuna bağlı bölge sorumlularını bul
-                    const regionSupervisors = coordinators.filter(c => 
-                      c.role === 'region_supervisor' && 
-                      String(c.parent_coordinator_id) === String(coordinator.id)
-                    );
-                    
-                    // Her bölge sorumlusunun bölgesini bul ve sandık sayısını hesapla
-                    regionSupervisors.forEach(regionSupervisor => {
-                      const region = regions.find(r => {
-                        const rSupervisorId = String(r.supervisor_id || '');
-                        const rsId = String(regionSupervisor.id);
-                        return rSupervisorId === rsId;
-                      });
-                      
-                      if (region) {
-                        // neighborhood_ids ve village_ids parse et
-                        const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                          ? region.neighborhood_ids
-                          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                        const regionVillageIds = Array.isArray(region.village_ids)
-                          ? region.village_ids
-                          : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                        
-                        // Mahallelerdeki sandıkları say
-                        const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
-                          regionNeighborhoodIds.includes(bb.neighborhood_id) || 
-                          regionNeighborhoodIds.includes(String(bb.neighborhood_id))
-                        ).length;
-                        
-                        // Köylerdeki sandıkları say
-                        const villageBallotBoxes = ballotBoxes.filter(bb => 
-                          regionVillageIds.includes(bb.village_id) || 
-                          regionVillageIds.includes(String(bb.village_id))
-                        ).length;
-                        
-                        const regionTotalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
-                        districtSupervisorTotalBallotBoxes += regionTotalBallotBoxes;
-                        
-                        districtSupervisorRegions.push({
-                          name: region.name,
-                          ballotBoxes: regionTotalBallotBoxes
-                        });
-                      }
-                    });
-                  } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
-                    // Kurum sorumlusu için kurumdaki sandık sayısını hesapla
-                    const institutionBallotBoxes = ballotBoxes.filter(bb => 
-                      bb.institution_name === coordinator.institution_name
-                    );
-                    
-                    // Kurumun bulunduğu bölgeyi bul
-                    if (institutionBallotBoxes.length > 0) {
-                      const firstBox = institutionBallotBoxes[0];
-                      const neighborhoodId = firstBox.neighborhood_id;
-                      const villageId = firstBox.village_id;
-                      
-                      // Bölgeyi bul
-                      for (const region of regions) {
-                        const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                          ? region.neighborhood_ids
-                          : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                        const regionVillageIds = Array.isArray(region.village_ids)
-                          ? region.village_ids
-                          : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                        
-                        if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
-                            (villageId && regionVillageIds.includes(villageId))) {
-                          institutionSupervisorInfo = {
-                            institutionName: coordinator.institution_name,
-                            regionName: region.name,
-                            ballotBoxCount: institutionBallotBoxes.length
-                          };
-                          break;
-                        }
-                      }
-                      
-                      // Bölge bulunamadıysa sadece kurum bilgisini göster
-                      if (!institutionSupervisorInfo) {
-                        institutionSupervisorInfo = {
-                          institutionName: coordinator.institution_name,
-                          regionName: null,
-                          ballotBoxCount: institutionBallotBoxes.length
-                        };
-                      }
-                    }
-                  }
-                  
+                  const {
+                    parentCoordinator,
+                    coordinatorRegion,
+                    totalBallotBoxes,
+                    districtSupervisorRegions,
+                    districtSupervisorTotalBallotBoxes,
+                    institutionSupervisorInfo
+                  } = getCoordinatorComputedData(coordinator);
+
                   return (
                     <NativeCard key={coordinator.id} className="mb-3">
                       <div className="space-y-3">
@@ -663,189 +623,15 @@ const CoordinatorsListPage = () => {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {coordinators.map((coordinator) => {
-                      const roleNames = {
-                        provincial_coordinator: 'İl Genel Sorumlusu',
-                        district_supervisor: 'İlçe Sorumlusu',
-                        region_supervisor: 'Bölge Sorumlusu',
-                        institution_supervisor: 'Kurum Sorumlusu'
-                      };
-                      // Üst sorumluyu bul (parent_coordinator_id ile)
-                      let parentCoordinator = null;
-                      if (coordinator.parent_coordinator_id !== null && coordinator.parent_coordinator_id !== undefined) {
-                        parentCoordinator = coordinators.find(c => {
-                          const cId = String(c.id);
-                          const pId = String(coordinator.parent_coordinator_id);
-                          return cId === pId;
-                        });
-                      }
-                      
-                      // Kurum sorumlusu için, eğer parent_coordinator_id yoksa ama institution_name varsa,
-                      // kurumun bulunduğu bölgenin sorumlusunu bul
-                      if (coordinator.role === 'institution_supervisor' && !parentCoordinator && coordinator.institution_name) {
-                        // Kurumun sandıklarını bul
-                        const institutionBallotBoxes = ballotBoxes.filter(bb => 
-                          bb.institution_name === coordinator.institution_name
-                        );
-                        
-                        if (institutionBallotBoxes.length > 0) {
-                          const firstBox = institutionBallotBoxes[0];
-                          const neighborhoodId = firstBox.neighborhood_id;
-                          const villageId = firstBox.village_id;
-                          
-                          // Bölgeyi bul
-                          for (const region of regions) {
-                            const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                              ? region.neighborhood_ids
-                              : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                            const regionVillageIds = Array.isArray(region.village_ids)
-                              ? region.village_ids
-                              : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                            
-                            if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
-                                (villageId && regionVillageIds.includes(villageId))) {
-                              // Bölgenin sorumlusunu bul
-                              if (region.supervisor_id) {
-                                parentCoordinator = coordinators.find(c => 
-                                  String(c.id) === String(region.supervisor_id)
-                                );
-                              }
-                              break;
-                            }
-                          }
-                        }
-                      }
-                      
-                      // Bölge sorumlusu için bölge bilgisini bul
-                      let coordinatorRegion = null;
-                      let totalBallotBoxes = 0;
-                      
-                      // İlçe sorumlusu için bağlı bölge sorumlularının bölgelerini bul
-                      let districtSupervisorRegions = [];
-                      let districtSupervisorTotalBallotBoxes = 0;
-                      
-                      // Kurum sorumlusu için kurum bilgisi ve sandık sayısı
-                      let institutionSupervisorInfo = null;
-                      
-                      if (coordinator.role === 'region_supervisor') {
-                        // Bu sorumlunun sorumlu olduğu bölgeyi bul
-                        coordinatorRegion = regions.find(r => {
-                          const rSupervisorId = String(r.supervisor_id || '');
-                          const cId = String(coordinator.id);
-                          return rSupervisorId === cId;
-                        });
-                        
-                        // Bölge bulunduysa, o bölgedeki toplam sandık sayısını hesapla
-                        if (coordinatorRegion) {
-                          // neighborhood_ids ve village_ids parse et
-                          const regionNeighborhoodIds = Array.isArray(coordinatorRegion.neighborhood_ids)
-                            ? coordinatorRegion.neighborhood_ids
-                            : (coordinatorRegion.neighborhood_ids ? JSON.parse(coordinatorRegion.neighborhood_ids) : []);
-                          const regionVillageIds = Array.isArray(coordinatorRegion.village_ids)
-                            ? coordinatorRegion.village_ids
-                            : (coordinatorRegion.village_ids ? JSON.parse(coordinatorRegion.village_ids) : []);
-                          
-                          // Mahallelerdeki sandıkları say
-                          const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
-                            regionNeighborhoodIds.includes(bb.neighborhood_id) || 
-                            regionNeighborhoodIds.includes(String(bb.neighborhood_id))
-                          ).length;
-                          
-                          // Köylerdeki sandıkları say
-                          const villageBallotBoxes = ballotBoxes.filter(bb => 
-                            regionVillageIds.includes(bb.village_id) || 
-                            regionVillageIds.includes(String(bb.village_id))
-                          ).length;
-                          
-                          totalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
-                        }
-                      } else if (coordinator.role === 'district_supervisor') {
-                        // Bu ilçe sorumlusuna bağlı bölge sorumlularını bul
-                        const regionSupervisors = coordinators.filter(c => 
-                          c.role === 'region_supervisor' && 
-                          String(c.parent_coordinator_id) === String(coordinator.id)
-                        );
-                        
-                        // Her bölge sorumlusunun bölgesini bul ve sandık sayısını hesapla
-                        regionSupervisors.forEach(regionSupervisor => {
-                          const region = regions.find(r => {
-                            const rSupervisorId = String(r.supervisor_id || '');
-                            const rsId = String(regionSupervisor.id);
-                            return rSupervisorId === rsId;
-                          });
-                          
-                          if (region) {
-                            // neighborhood_ids ve village_ids parse et
-                            const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                              ? region.neighborhood_ids
-                              : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                            const regionVillageIds = Array.isArray(region.village_ids)
-                              ? region.village_ids
-                              : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                            
-                            // Mahallelerdeki sandıkları say
-                            const neighborhoodBallotBoxes = ballotBoxes.filter(bb => 
-                              regionNeighborhoodIds.includes(bb.neighborhood_id) || 
-                              regionNeighborhoodIds.includes(String(bb.neighborhood_id))
-                            ).length;
-                            
-                            // Köylerdeki sandıkları say
-                            const villageBallotBoxes = ballotBoxes.filter(bb => 
-                              regionVillageIds.includes(bb.village_id) || 
-                              regionVillageIds.includes(String(bb.village_id))
-                            ).length;
-                            
-                            const regionTotalBallotBoxes = neighborhoodBallotBoxes + villageBallotBoxes;
-                            districtSupervisorTotalBallotBoxes += regionTotalBallotBoxes;
-                            
-                            districtSupervisorRegions.push({
-                              name: region.name,
-                              ballotBoxes: regionTotalBallotBoxes
-                            });
-                          }
-                        });
-                      } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
-                        // Kurum sorumlusu için kurumdaki sandık sayısını hesapla
-                        const institutionBallotBoxes = ballotBoxes.filter(bb => 
-                          bb.institution_name === coordinator.institution_name
-                        );
-                        
-                        // Kurumun bulunduğu bölgeyi bul
-                        if (institutionBallotBoxes.length > 0) {
-                          const firstBox = institutionBallotBoxes[0];
-                          const neighborhoodId = firstBox.neighborhood_id;
-                          const villageId = firstBox.village_id;
-                          
-                          // Bölgeyi bul
-                          for (const region of regions) {
-                            const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                              ? region.neighborhood_ids
-                              : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                            const regionVillageIds = Array.isArray(region.village_ids)
-                              ? region.village_ids
-                              : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                            
-                            if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
-                                (villageId && regionVillageIds.includes(villageId))) {
-                              institutionSupervisorInfo = {
-                                institutionName: coordinator.institution_name,
-                                regionName: region.name,
-                                ballotBoxCount: institutionBallotBoxes.length
-                              };
-                              break;
-                            }
-                          }
-                          
-                          // Bölge bulunamadıysa sadece kurum bilgisini göster
-                          if (!institutionSupervisorInfo) {
-                            institutionSupervisorInfo = {
-                              institutionName: coordinator.institution_name,
-                              regionName: null,
-                              ballotBoxCount: institutionBallotBoxes.length
-                            };
-                          }
-                        }
-                      }
-                      
+                      const {
+                        parentCoordinator,
+                        coordinatorRegion,
+                        totalBallotBoxes,
+                        districtSupervisorRegions,
+                        districtSupervisorTotalBallotBoxes,
+                        institutionSupervisorInfo
+                      } = getCoordinatorComputedData(coordinator);
+
                       return (
                         <tr key={coordinator.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">

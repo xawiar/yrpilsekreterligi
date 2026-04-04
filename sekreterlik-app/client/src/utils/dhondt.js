@@ -20,8 +20,51 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
     return {};
   }
 
+  // Bağımsız aday tespiti
+  const isIndependent = (name) => {
+    const lower = name.toLowerCase();
+    return lower.includes('bağımsız') || lower.includes('independent');
+  };
+
+  // Bağımsız adayları D'Hondt'tan ayır
+  const independents = {};
+  const partyVotesFiltered = {};
+  for (const [name, votes] of Object.entries(partyVotes)) {
+    if (isIndependent(name)) {
+      independents[name] = parseInt(votes) || 0;
+    } else {
+      partyVotesFiltered[name] = votes;
+    }
+  }
+
+  // Bağımsız adaylar: en yüksek oyu alan 1 sandalye kazanır (direkt temsil)
+  let independentSeats = 0;
+  const independentResults = {};
+  const sortedIndependents = Object.entries(independents).sort((a, b) => b[1] - a[1]);
+  for (const [name, votes] of sortedIndependents) {
+    if (independentSeats < totalSeats && votes > 0) {
+      independentResults[name] = 1;
+      independentSeats++;
+    } else {
+      independentResults[name] = 0;
+    }
+  }
+
+  // Kalan sandalyeleri D'Hondt ile dağıt
+  const remainingSeats = totalSeats - independentSeats;
+
+  // Eğer bağımsız aday yoksa veya kalan sandalye varsa normal D'Hondt hesaplaması
+  if (remainingSeats <= 0) {
+    // Tüm sandalyeler bağımsızlara gitti, partilere 0 ver
+    const zeroResults = {};
+    for (const name of Object.keys(partyVotesFiltered)) {
+      zeroResults[name] = 0;
+    }
+    return { ...zeroResults, ...independentResults };
+  }
+
   // Parti oylarını sayıya çevir ve sıfır olmayanları filtrele
-  const votes = Object.entries(partyVotes)
+  const votes = Object.entries(partyVotesFiltered)
     .map(([party, votes]) => ({
       party,
       votes: parseInt(votes) || 0
@@ -29,13 +72,13 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
     .filter(p => p.votes > 0);
 
   if (votes.length === 0) {
-    return {};
+    return { ...independentResults };
   }
 
   // Her parti için bölümleri hesapla (1, 2, 3, ... ile böl)
   const quotients = [];
   votes.forEach(({ party, votes }) => {
-    for (let divisor = 1; divisor <= totalSeats; divisor++) {
+    for (let divisor = 1; divisor <= remainingSeats; divisor++) {
       quotients.push({
         party,
         quotient: votes / divisor,
@@ -45,20 +88,26 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
   });
 
   // Bölümleri büyükten küçüğe sırala
-  // Eşit quotient durumunda daha yüksek oyu olan parti önce gelir (deterministik sıralama)
+  // Eşit quotient durumunda:
+  // 1. Daha yüksek oyu olan parti önce (mevcut)
+  // 2. Oylar da eşitse, alphabetical sıralama (tie-breaker)
   quotients.sort((a, b) => {
     const diff = b.quotient - a.quotient;
     if (Math.abs(diff) < 1e-9) {
       // Eşit quotient: oyu daha yüksek olan parti önce
       const aVotes = votes.find(v => v.party === a.party)?.votes || 0;
       const bVotes = votes.find(v => v.party === b.party)?.votes || 0;
-      return bVotes - aVotes;
+      if (aVotes !== bVotes) {
+        return bVotes - aVotes;
+      }
+      // Oylar da eşitse: alphabetical sıralama (deterministik)
+      return a.party.localeCompare(b.party);
     }
     return diff;
   });
 
-  // İlk totalSeats kadar bölümü al (en yüksek bölümler)
-  const topQuotients = quotients.slice(0, totalSeats);
+  // İlk remainingSeats kadar bölümü al (en yüksek bölümler)
+  const topQuotients = quotients.slice(0, remainingSeats);
 
   // Her parti için kazanılan milletvekili sayısını hesapla
   const seatDistribution = {};
@@ -70,7 +119,8 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
     seatDistribution[party] = (seatDistribution[party] || 0) + 1;
   });
 
-  return seatDistribution;
+  // Bağımsız sonuçları birleştir
+  return { ...seatDistribution, ...independentResults };
 };
 
 /**
@@ -484,22 +534,56 @@ export const calculateDHondtWithAlliances = (
     };
   }
 
-  // 2. İttifak oylarını hesapla
-  const allianceVotes = computeAllianceVotes(partyVotes, alliances);
-  
-  // 3. Baraj kontrolü - İttifaklar
+  // 2. Bağımsız aday tespiti
+  const isIndependent = (name) => {
+    const lower = name.toLowerCase();
+    return lower.includes('bağımsız') || lower.includes('independent');
+  };
+
+  // Bağımsız adayları ayır (ittifakta olmayan bağımsızlar)
+  const independentCandidates = {};
+  const nonIndependentPartyVotes = {};
+  for (const [name, votes] of Object.entries(partyVotes)) {
+    const allianceId = getAllianceIdForParty(name, alliances);
+    if (allianceId === null && isIndependent(name)) {
+      independentCandidates[name] = parseInt(votes) || 0;
+    } else {
+      nonIndependentPartyVotes[name] = votes;
+    }
+  }
+
+  // Bağımsız adaylar: en yüksek oyu alan direkt 1 sandalye kazanır (baraj kontrolü ile)
+  let independentSeatsUsed = 0;
+  const independentResults = {};
+  const sortedIndependents = Object.entries(independentCandidates).sort((a, b) => b[1] - a[1]);
+  for (const [name, votes] of sortedIndependents) {
+    if (independentSeatsUsed < totalSeats && votes > 0 && applyThreshold(votes, totalVotes, thresholdPercent)) {
+      independentResults[name] = 1;
+      independentSeatsUsed++;
+    } else {
+      independentResults[name] = 0;
+    }
+  }
+
+  // Kalan sandalyeleri ittifaklı D'Hondt ile dağıt
+  const remainingSeats = totalSeats - independentSeatsUsed;
+
+  // 3. İttifak oylarını hesapla
+  const allianceVotes = computeAllianceVotes(nonIndependentPartyVotes, alliances);
+
+  // 4. Baraj kontrolü - İttifaklar
   const passedAlliances = alliances.filter(alliance => {
     const votes = allianceVotes[alliance.id] || 0;
     return applyThreshold(votes, totalVotes, thresholdPercent);
   });
-  
-  // 4. Baraj kontrolü - Solo partiler (ittifakta olmayan partiler)
-  const soloParties = Object.entries(partyVotes)
+
+  // 5. Baraj kontrolü - Solo partiler (ittifakta olmayan, bağımsız olmayan partiler)
+  const soloParties = Object.entries(nonIndependentPartyVotes)
     .filter(([partyName, votes]) => {
       // İttifakta olan partileri hariç tut
       const allianceId = getAllianceIdForParty(partyName, alliances);
       if (allianceId !== null) return false;
-      
+
       // Baraj kontrolü
       return applyThreshold(parseInt(votes) || 0, totalVotes, thresholdPercent);
     })
@@ -508,64 +592,78 @@ export const calculateDHondtWithAlliances = (
       votes: parseInt(votes) || 0
     }));
 
-  // 5. Aşama 1: İttifaklar arası D'Hondt
-  const firstStageEntities = {};
-  
-  // İttifakları ekle
-  passedAlliances.forEach(alliance => {
-    firstStageEntities[`alliance_${alliance.id}`] = allianceVotes[alliance.id] || 0;
-  });
-  
-  // Solo partileri ekle
-  soloParties.forEach(party => {
-    firstStageEntities[party.name] = party.votes;
-  });
-
-  // İlk aşama D'Hondt
-  const firstStageResult = calculateDHondt(firstStageEntities, totalSeats);
-  
-  // 6. Aşama 2: İttifak içi D'Hondt
+  // 6. Aşama 1: İttifaklar arası D'Hondt (kalan sandalyeler için)
   const finalPartySeats = {};
   const allianceSeats = {};
-  
-  // İttifaklar için iç dağıtım
-  passedAlliances.forEach(alliance => {
-    const allianceSeatCount = firstStageResult[`alliance_${alliance.id}`] || 0;
-    allianceSeats[alliance.id] = allianceSeatCount;
-    
-    if (allianceSeatCount > 0) {
-      // İttifak içi parti oyları
-      const alliancePartyVotes = {};
-      const partyIds = alliance.party_ids || alliance.partyIds || [];
-      
-      partyIds.forEach(partyId => {
-        const partyName = typeof partyId === 'string' ? partyId : (partyId.name || String(partyId));
-        const votes = partyVotes[partyName] || 0;
-        if (votes > 0) {
-          alliancePartyVotes[partyName] = votes;
-        }
-      });
-      
-      // İttifak içi D'Hondt
-      if (Object.keys(alliancePartyVotes).length > 0) {
-        const internalDistribution = calculateDHondt(alliancePartyVotes, allianceSeatCount);
-        
-        Object.entries(internalDistribution).forEach(([party, seats]) => {
-          finalPartySeats[party] = (finalPartySeats[party] || 0) + seats;
+  let firstStageResult = {};
+
+  if (remainingSeats > 0) {
+    const firstStageEntities = {};
+
+    // İttifakları ekle
+    passedAlliances.forEach(alliance => {
+      firstStageEntities[`alliance_${alliance.id}`] = allianceVotes[alliance.id] || 0;
+    });
+
+    // Solo partileri ekle
+    soloParties.forEach(party => {
+      firstStageEntities[party.name] = party.votes;
+    });
+
+    // İlk aşama D'Hondt (kalan sandalyeler için)
+    firstStageResult = calculateDHondt(firstStageEntities, remainingSeats);
+
+    // 7. Aşama 2: İttifak içi D'Hondt
+
+    // İttifaklar için iç dağıtım
+    passedAlliances.forEach(alliance => {
+      const allianceSeatCount = firstStageResult[`alliance_${alliance.id}`] || 0;
+      allianceSeats[alliance.id] = allianceSeatCount;
+
+      if (allianceSeatCount > 0) {
+        // İttifak içi parti oyları
+        const alliancePartyVotes = {};
+        const partyIds = alliance.party_ids || alliance.partyIds || [];
+
+        partyIds.forEach(partyId => {
+          const partyName = typeof partyId === 'string' ? partyId : (partyId.name || String(partyId));
+          const votes = nonIndependentPartyVotes[partyName] || 0;
+          if (votes > 0) {
+            alliancePartyVotes[partyName] = votes;
+          }
         });
+
+        // İttifak içi D'Hondt
+        if (Object.keys(alliancePartyVotes).length > 0) {
+          const internalDistribution = calculateDHondt(alliancePartyVotes, allianceSeatCount);
+
+          Object.entries(internalDistribution).forEach(([party, seats]) => {
+            finalPartySeats[party] = (finalPartySeats[party] || 0) + seats;
+          });
+        }
       }
-    }
-  });
-  
-  // Solo partiler için sandalye sayısını ekle
-  soloParties.forEach(party => {
-    const seats = firstStageResult[party.name] || 0;
-    if (seats > 0) {
-      finalPartySeats[party.name] = (finalPartySeats[party.name] || 0) + seats;
-    }
+    });
+
+    // Solo partiler için sandalye sayısını ekle
+    soloParties.forEach(party => {
+      const seats = firstStageResult[party.name] || 0;
+      if (seats > 0) {
+        finalPartySeats[party.name] = (finalPartySeats[party.name] || 0) + seats;
+      }
+    });
+  } else {
+    // Tüm sandalyeler bağımsızlara gitti
+    passedAlliances.forEach(alliance => {
+      allianceSeats[alliance.id] = 0;
+    });
+  }
+
+  // Bağımsız sonuçları birleştir
+  Object.entries(independentResults).forEach(([name, seats]) => {
+    finalPartySeats[name] = (finalPartySeats[name] || 0) + seats;
   });
 
-  // 7. Chart data oluştur
+  // 8. Chart data oluştur
   const chartData = Object.entries(finalPartySeats)
     .map(([party, seats]) => ({
       party,
@@ -574,13 +672,14 @@ export const calculateDHondtWithAlliances = (
     }))
     .sort((a, b) => b.seats - a.seats);
 
-  // 8. Audit log
+  // 9. Audit log
   const auditLog = {
     totalVotes,
     threshold: (totalVotes * thresholdPercent) / 100,
     thresholdPercent,
     passedAlliances: passedAlliances.map(a => ({ id: a.id, name: a.name, votes: allianceVotes[a.id] })),
     soloParties: soloParties.map(p => ({ name: p.name, votes: p.votes })),
+    independentCandidates: sortedIndependents.map(([name, votes]) => ({ name, votes, seats: independentResults[name] || 0 })),
     firstStage: firstStageResult,
     allianceSeats,
     finalDistribution: finalPartySeats

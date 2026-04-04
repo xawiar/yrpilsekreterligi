@@ -16,11 +16,11 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
   if (!election) {
     return (
       <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6">
           <div className="text-center">
             <div className="text-red-500 text-4xl mb-4">⚠️</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Hata</h2>
-            <p className="text-gray-600 mb-4">Seçim bilgisi bulunamadı. Lütfen tekrar deneyin.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Hata</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Seçim bilgisi bulunamadı. Lütfen tekrar deneyin.</p>
             <button
               onClick={onClose}
               className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
@@ -852,17 +852,17 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
   return (
     <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ height: '100vh', overflow: 'hidden' }}>
-      <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full h-[95vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-5xl w-full h-[95vh] overflow-hidden flex flex-col">
         {/* Tutanak Başlığı - Minimal ve Kurumsal */}
-        <div className="bg-white border-b-2 border-gray-300 px-6 py-4">
+        <div className="bg-white dark:bg-gray-800 border-b-2 border-gray-300 dark:border-gray-600 px-6 py-4">
           <div className="flex items-center justify-between">
                 <div>
-              <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">Seçim Sonuç Tutanağı</h1>
-              <p className="text-sm text-gray-600 mt-1">{election.name} - {getTypeLabel()}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Seçim Sonuç Tutanağı</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{election.name} - {getTypeLabel()}</p>
                 </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -872,12 +872,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         </div>
 
         {/* Save Button at Top - Large and Prominent */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors"
+              className="px-6 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
             >
               İptal
             </button>
@@ -908,7 +908,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         </div>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 relative" style={{ maxHeight: 'calc(95vh - 200px)' }}>
+        <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 relative" style={{ maxHeight: 'calc(95vh - 200px)' }}>
           <form id="election-result-form" onSubmit={handleSubmit} className="p-6 space-y-6 pb-6">
             {/* Message Alert */}
             {message && (
@@ -944,56 +944,56 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
 
             {/* Sandık Bilgileri (Otomatik, Düzenlenemez) */}
-            <div className="bg-white border border-gray-300 rounded p-5">
-              <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+            <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                 Sandık Bilgileri
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">İl</label>
-                  <div className="text-gray-900 font-medium">{formData.region_name || '-'}</div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">İl</label>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{formData.region_name || '-'}</div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">İlçe</label>
-                  <div className="text-gray-900 font-medium">{formData.district_name || '-'}</div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">İlçe</label>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{formData.district_name || '-'}</div>
                 </div>
                 {formData.town_name && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Belde</label>
-                    <div className="text-gray-900 font-medium">{formData.town_name}</div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Belde</label>
+                    <div className="text-gray-900 dark:text-gray-100 font-medium">{formData.town_name}</div>
                   </div>
                 )}
                 {formData.neighborhood_name && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Mahalle</label>
-                    <div className="text-gray-900 font-medium">{formData.neighborhood_name}</div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Mahalle</label>
+                    <div className="text-gray-900 dark:text-gray-100 font-medium">{formData.neighborhood_name}</div>
                   </div>
                 )}
                 {formData.village_name && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Köy</label>
-                    <div className="text-gray-900 font-medium">{formData.village_name}</div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Köy</label>
+                    <div className="text-gray-900 dark:text-gray-100 font-medium">{formData.village_name}</div>
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Sandık No</label>
-                  <div className="text-gray-900 font-medium">{ballotNumber || '-'}</div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Sandık No</label>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{ballotNumber || '-'}</div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Toplam Seçmen</label>
-                  <div className="text-gray-900 font-medium">{formData.total_voters || '-'}</div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Toplam Seçmen</label>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{formData.total_voters || '-'}</div>
                 </div>
               </div>
             </div>
 
             {/* Oy Sayıları */}
-            <div className="bg-white border border-gray-300 rounded p-5">
-              <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+            <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                 Oy Sayıları
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Oy Kullanan Seçmen Sayısı *
                   </label>
                   <input
@@ -1003,13 +1003,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     onChange={handleInputChange}
                     min="0"
                     inputMode="numeric"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                     required
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Geçersiz Oy Sayısı *
                   </label>
                   <input
@@ -1019,13 +1019,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     onChange={handleInputChange}
                     min="0"
                     inputMode="numeric"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                     required
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Geçerli Oy Sayısı *
                   </label>
                   <input
@@ -1035,7 +1035,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     onChange={handleInputChange}
                     min="0"
                     inputMode="numeric"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                     required
                     placeholder="0"
                   />
@@ -1046,63 +1046,63 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     
                     if (election?.type === 'cb') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>CB oyları toplamı: <span className="font-semibold">{validVotesByCategory.cb || 0}</span></div>
                         </div>
                       );
                     } else if (election?.type === 'mv') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>MV oyları toplamı: <span className="font-semibold">{validVotesByCategory.mv || 0}</span></div>
                         </div>
                       );
                     } else if (election?.type === 'genel') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>CB oyları toplamı: <span className="font-semibold">{validVotesByCategory.cb || 0}</span></div>
                           <div>MV oyları toplamı: <span className="font-semibold">{validVotesByCategory.mv || 0}</span></div>
-                          <div className="text-gray-500 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
+                          <div className="text-gray-500 dark:text-gray-400 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
                         </div>
                       );
                     } else if (election?.type === 'yerel_metropolitan_mayor' || election?.type === 'yerel_city_mayor' || election?.type === 'yerel_district_mayor') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>Belediye Başkanı oyları toplamı: <span className="font-semibold">{validVotesByCategory.mayor || 0}</span></div>
                         </div>
                       );
                     } else if (election?.type === 'yerel_provincial_assembly') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>İl Genel Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.provincial_assembly || 0}</span></div>
                         </div>
                       );
                     } else if (election?.type === 'yerel_municipal_council') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>Belediye Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.municipal_council || 0}</span></div>
                         </div>
                       );
                     } else if (election?.type === 'yerel') {
                       if (isVil) {
                         return (
-                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                             <div className="text-amber-600 font-semibold">⚠️ Köy: Sadece İl Genel Meclisi için oy kullanılır</div>
                             <div>İl Genel Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.provincial_assembly || 0}</span></div>
                           </div>
                         );
                       } else {
                         return (
-                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                             <div>Belediye Başkanı oyları toplamı: <span className="font-semibold">{validVotesByCategory.mayor || 0}</span></div>
                             <div>Belediye Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.municipal_council || 0}</span></div>
                             <div>İl Genel Meclisi oyları toplamı: <span className="font-semibold">{validVotesByCategory.provincial_assembly || 0}</span></div>
-                            <div className="text-gray-500 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
+                            <div className="text-gray-500 dark:text-gray-400 italic">Her kategori için geçerli oy sayısı ayrı ayrı kontrol edilir</div>
                           </div>
                         );
                       }
                     } else if (election?.type === 'referandum') {
                       return (
-                        <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                           <div>Referandum oyları toplamı: <span className="font-semibold">{validVotesByCategory.referendum || 0}</span></div>
                         </div>
                       );
@@ -1118,14 +1118,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Cumhurbaşkanı Oyları */}
                 {election.cb_candidates && election.cb_candidates.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Cumhurbaşkanı Adayları ve Aldıkları Oy Sayıları
                     </h2>
                     <div className="space-y-2">
                       {election.cb_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {candidate}
                           </label>
                           <input
@@ -1134,7 +1134,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.cb_votes[candidate] || ''}
                             onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1143,9 +1143,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       {election.independent_cb_candidates && election.independent_cb_candidates.length > 0 && (
                         <>
                           {election.independent_cb_candidates.map((candidate) => (
-                            <div key={`ind_cb_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                              <label className="flex-1 text-sm font-medium text-gray-900">
-                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                            <div key={`ind_cb_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                               </label>
                               <input
                                 type="number"
@@ -1153,7 +1153,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                                 value={formData.cb_votes[candidate] || ''}
                                 onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
                                 inputMode="numeric"
-                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                                 placeholder="0"
                               />
                             </div>
@@ -1161,9 +1161,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         </>
                       )}
                       {/* Diğer CB Adayları */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan adaylar)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan adaylar)</span>
                         </label>
                         <input
                           type="number"
@@ -1171,7 +1171,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.cb_votes['Diğer'] || ''}
                           onChange={(e) => handleCbVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1186,14 +1186,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Milletvekili Oyları (Parti Bazlı) */}
                 {election.parties && election.parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Milletvekili Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.parties.map((party) => (
-                        <div key={party.name || party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={party.name || party} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {party.name || party}
                           </label>
                           <input
@@ -1202,7 +1202,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mv_votes[party.name || party] || ''}
                             onChange={(e) => handleMvVoteChange(party.name || party, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1211,9 +1211,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       {election.independent_mv_candidates && election.independent_mv_candidates.length > 0 && (
                         <>
                           {election.independent_mv_candidates.map((candidate) => (
-                            <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                              <label className="flex-1 text-sm font-medium text-gray-900">
-                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                            <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                               </label>
                               <input
                                 type="number"
@@ -1221,7 +1221,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                                 value={formData.mv_votes[candidate] || ''}
                                 onChange={(e) => handleMvVoteChange(candidate, e.target.value)}
                                 inputMode="numeric"
-                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                                 placeholder="0"
                               />
                             </div>
@@ -1229,9 +1229,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         </>
                       )}
                       {/* Diğer MV Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler)</span>
                         </label>
                         <input
                           type="number"
@@ -1239,7 +1239,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.mv_votes['Diğer'] || ''}
                           onChange={(e) => handleMvVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1254,14 +1254,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Cumhurbaşkanı Oyları */}
                 {election.cb_candidates && election.cb_candidates.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Cumhurbaşkanı Adayları ve Aldıkları Oy Sayıları
                     </h2>
                     <div className="space-y-2">
                       {election.cb_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {candidate}
                           </label>
                           <input
@@ -1270,7 +1270,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.cb_votes[candidate] || ''}
                             onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1279,9 +1279,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       {election.independent_cb_candidates && election.independent_cb_candidates.length > 0 && (
                         <>
                           {election.independent_cb_candidates.map((candidate) => (
-                            <div key={`ind_cb_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                              <label className="flex-1 text-sm font-medium text-gray-900">
-                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                            <div key={`ind_cb_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                               </label>
                               <input
                                 type="number"
@@ -1289,7 +1289,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                                 value={formData.cb_votes[candidate] || ''}
                                 onChange={(e) => handleCbVoteChange(candidate, e.target.value)}
                                 inputMode="numeric"
-                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                                 placeholder="0"
                               />
                             </div>
@@ -1297,9 +1297,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         </>
                       )}
                       {/* Diğer CB Adayları */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan adaylar)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan adaylar)</span>
                         </label>
                         <input
                           type="number"
@@ -1307,7 +1307,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.cb_votes['Diğer'] || ''}
                           onChange={(e) => handleCbVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1317,14 +1317,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Milletvekili Oyları (Parti Bazlı) */}
                 {election.parties && election.parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Milletvekili Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.parties.map((party) => (
-                        <div key={party.name || party} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={party.name || party} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {party.name || party}
                           </label>
                           <input
@@ -1333,7 +1333,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mv_votes[party.name || party] || ''}
                             onChange={(e) => handleMvVoteChange(party.name || party, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1342,9 +1342,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       {election.independent_mv_candidates && election.independent_mv_candidates.length > 0 && (
                         <>
                           {election.independent_mv_candidates.map((candidate) => (
-                            <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                              <label className="flex-1 text-sm font-medium text-gray-900">
-                                {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                            <div key={`ind_mv_${candidate}`} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                              <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                               </label>
                               <input
                                 type="number"
@@ -1352,7 +1352,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                                 value={formData.mv_votes[candidate] || ''}
                                 onChange={(e) => handleMvVoteChange(candidate, e.target.value)}
                                 inputMode="numeric"
-                                className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                                className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                                 placeholder="0"
                               />
                             </div>
@@ -1360,9 +1360,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         </>
                       )}
                       {/* Diğer MV Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler)</span>
                         </label>
                         <input
                           type="number"
@@ -1370,7 +1370,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.mv_votes['Diğer'] || ''}
                           onChange={(e) => handleMvVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1385,16 +1385,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Belediye Başkanı Parti Oyları */}
                 {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Büyükşehir Belediye Başkanı Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                            <label className="flex-1 text-sm font-medium text-gray-900">
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                               {partyName}
                             </label>
                             <input
@@ -1403,16 +1403,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                               value={formData.mayor_votes[partyName] || ''}
                               onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
                               inputMode="numeric"
-                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                               placeholder="0"
                             />
                           </div>
                         );
                       })}
                       {/* Diğer Belediye Başkanı Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler/adaylar)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler/adaylar)</span>
                         </label>
                         <input
                           type="number"
@@ -1420,7 +1420,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.mayor_votes['Diğer'] || ''}
                           onChange={(e) => handleMayorVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1430,15 +1430,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Bağımsız Belediye Başkanı Adayları */}
                 {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Bağımsız Büyükşehir Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                           </label>
                           <input
                             type="number"
@@ -1446,7 +1446,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mayor_votes[candidate] || ''}
                             onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1462,16 +1462,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Belediye Başkanı Parti Oyları */}
                 {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       İl Belediye Başkanı Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                            <label className="flex-1 text-sm font-medium text-gray-900">
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                               {partyName}
                             </label>
                             <input
@@ -1480,16 +1480,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                               value={formData.mayor_votes[partyName] || ''}
                               onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
                               inputMode="numeric"
-                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                               placeholder="0"
                             />
                           </div>
                         );
                       })}
                       {/* Diğer Belediye Başkanı Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler/adaylar)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler/adaylar)</span>
                         </label>
                         <input
                           type="number"
@@ -1497,7 +1497,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.mayor_votes['Diğer'] || ''}
                           onChange={(e) => handleMayorVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1507,15 +1507,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Bağımsız Belediye Başkanı Adayları */}
                 {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Bağımsız İl Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                           </label>
                           <input
                             type="number"
@@ -1523,7 +1523,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mayor_votes[candidate] || ''}
                             onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1539,16 +1539,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Belediye Başkanı Parti Oyları */}
                 {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       İlçe Belediye Başkanı Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                            <label className="flex-1 text-sm font-medium text-gray-900">
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                               {partyName}
                             </label>
                             <input
@@ -1557,16 +1557,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                               value={formData.mayor_votes[partyName] || ''}
                               onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
                               inputMode="numeric"
-                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                               placeholder="0"
                             />
                           </div>
                         );
                       })}
                       {/* Diğer Belediye Başkanı Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler/adaylar)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler/adaylar)</span>
                         </label>
                         <input
                           type="number"
@@ -1574,7 +1574,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.mayor_votes['Diğer'] || ''}
                           onChange={(e) => handleMayorVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1584,15 +1584,15 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Bağımsız Belediye Başkanı Adayları */}
                 {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Bağımsız İlçe Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                           </label>
                           <input
                             type="number"
@@ -1600,7 +1600,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.mayor_votes[candidate] || ''}
                             onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
@@ -1616,16 +1616,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* İl Genel Meclisi Üyesi Oyları (Parti Bazlı) */}
                 {election.provincial_assembly_parties && Array.isArray(election.provincial_assembly_parties) && election.provincial_assembly_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       İl Genel Meclisi Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.provincial_assembly_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                            <label className="flex-1 text-sm font-medium text-gray-900">
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                               {partyName}
                             </label>
                             <input
@@ -1634,16 +1634,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                               value={formData.provincial_assembly_votes[partyName] || ''}
                               onChange={(e) => handleProvincialAssemblyVoteChange(partyName, e.target.value)}
                               inputMode="numeric"
-                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                               placeholder="0"
                             />
                           </div>
                         );
                       })}
                       {/* Diğer İl Genel Meclisi Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler)</span>
                         </label>
                         <input
                           type="number"
@@ -1651,7 +1651,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.provincial_assembly_votes['Diğer'] || ''}
                           onChange={(e) => handleProvincialAssemblyVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1666,16 +1666,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="space-y-5">
                 {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) */}
                 {election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Belediye Meclis Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.municipal_council_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                            <label className="flex-1 text-sm font-medium text-gray-900">
+                          <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                            <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                               {partyName}
                             </label>
                             <input
@@ -1684,16 +1684,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                               value={formData.municipal_council_votes[partyName] || ''}
                               onChange={(e) => handleMunicipalCouncilVoteChange(partyName, e.target.value)}
                               inputMode="numeric"
-                              className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                              className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                               placeholder="0"
                             />
                           </div>
                         );
                       })}
                       {/* Diğer Belediye Meclisi Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler)</span>
                         </label>
                         <input
                           type="number"
@@ -1701,7 +1701,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.municipal_council_votes['Diğer'] || ''}
                           onChange={(e) => handleMunicipalCouncilVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1737,8 +1737,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Belediye Başkanı Parti Oyları - Köyde devre dışı */}
                 {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
-                  <div className={`bg-white border border-gray-300 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Belediye Başkanı Parti Oyları
                       {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
@@ -1746,8 +1746,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       {election.mayor_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {partyName}
                           </label>
                           <input
@@ -1757,16 +1757,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             onChange={(e) => handleMayorVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
                             disabled={isVillage()}
-                            className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            className={`w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
             </div>
                         );
                       })}
                       {/* Diğer Belediye Başkanı Partileri */}
-                      <div className={`flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50 ${isVillage() ? 'opacity-50' : ''}`}>
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler/adaylar)</span>
+                      <div className={`flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50 ${isVillage() ? 'opacity-50' : ''}`}>
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler/adaylar)</span>
                         </label>
                         <input
                           type="number"
@@ -1775,7 +1775,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           onChange={(e) => handleMayorVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
                           disabled={isVillage()}
-                          className={`w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          className={`w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800 ${isVillage() ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
                           placeholder="0"
                         />
                       </div>
@@ -1785,16 +1785,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Bağımsız Belediye Başkanı Adayları - Köyde devre dışı */}
                 {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
-                  <div className={`bg-white border border-gray-300 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Bağımsız Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
                       {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
-                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
-                            {candidate} <span className="text-xs text-gray-500 font-normal">(Bağımsız)</span>
+                        <div key={candidate} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {candidate} <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Bağımsız)</span>
                           </label>
                           <input
                             type="number"
@@ -1803,7 +1803,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             onChange={(e) => handleMayorVoteChange(candidate, e.target.value)}
                             inputMode="numeric"
                             disabled={isVillage()}
-                            className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            className={`w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
                         </div>
@@ -1814,16 +1814,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* İl Genel Meclisi Üyesi Oyları (Parti Bazlı) */}
                 {election.provincial_assembly_parties && Array.isArray(election.provincial_assembly_parties) && election.provincial_assembly_parties.length > 0 && (
-                  <div className="bg-white border border-gray-300 rounded p-5">
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       İl Genel Meclisi Parti Oyları
                     </h2>
                     <div className="space-y-2">
                       {election.provincial_assembly_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {partyName}
                           </label>
                           <input
@@ -1832,16 +1832,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             value={formData.provincial_assembly_votes[partyName] || ''}
                             onChange={(e) => handleProvincialAssemblyVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
-                            className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                            className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                             placeholder="0"
                           />
                         </div>
                         );
                       })}
                       {/* Diğer İl Genel Meclisi Partileri */}
-                      <div className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50">
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                      <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50">
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler)</span>
                         </label>
                         <input
                           type="number"
@@ -1849,7 +1849,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           value={formData.provincial_assembly_votes['Diğer'] || ''}
                           onChange={(e) => handleProvincialAssemblyVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
-                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white"
+                          className="w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800"
                           placeholder="0"
                         />
                       </div>
@@ -1859,8 +1859,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
                 {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) - Köyde devre dışı */}
                 {election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
-                  <div className={`bg-white border border-gray-300 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
-                    <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+                  <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Belediye Meclis Parti Oyları
                       {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
@@ -1868,8 +1868,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       {election.municipal_council_parties.map((party) => {
                         const partyName = typeof party === 'string' ? party : (party?.name || String(party) || 'Bilinmeyen');
                         return (
-                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                          <label className="flex-1 text-sm font-medium text-gray-900">
+                        <div key={partyName} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                          <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                             {partyName}
                           </label>
                           <input
@@ -1879,16 +1879,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                             onChange={(e) => handleMunicipalCouncilVoteChange(partyName, e.target.value)}
                             inputMode="numeric"
                             disabled={isVillage()}
-                            className={`w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            className={`w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right ${isVillage() ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
                             placeholder="0"
                           />
                         </div>
                         );
                       })}
                       {/* Diğer Belediye Meclisi Partileri */}
-                      <div className={`flex items-center justify-between py-2 border-b border-gray-200 last:border-0 bg-amber-50 ${isVillage() ? 'opacity-50' : ''}`}>
-                        <label className="flex-1 text-sm font-medium text-gray-900">
-                          Diğer <span className="text-xs text-gray-500 font-normal">(Formda olmayan partiler)</span>
+                      <div className={`flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0 bg-amber-50 ${isVillage() ? 'opacity-50' : ''}`}>
+                        <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Diğer <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Formda olmayan partiler)</span>
                         </label>
                         <input
                           type="number"
@@ -1897,7 +1897,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           onChange={(e) => handleMunicipalCouncilVoteChange('Diğer', e.target.value)}
                           inputMode="numeric"
                           disabled={isVillage()}
-                          className={`w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white ${isVillage() ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          className={`w-32 px-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-right bg-white dark:bg-gray-800 ${isVillage() ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
                           placeholder="0"
                         />
                       </div>
@@ -1909,13 +1909,13 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
             {/* Referandum: Evet/Hayır */}
             {election?.type === 'referandum' && (
-              <div className="bg-white border border-gray-300 rounded p-5">
-                <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+              <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                   Referandum Oyları
                 </h2>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                    <label className="flex-1 text-sm font-medium text-gray-900">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                    <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                       Evet
                     </label>
                     <input
@@ -1924,12 +1924,12 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       value={formData.referendum_votes['Evet'] || 0}
                       onChange={(e) => handleReferendumVoteChange('Evet', e.target.value)}
                       inputMode="numeric"
-                      className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                      className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                       placeholder="0"
                     />
                   </div>
                   <div className="flex items-center justify-between py-2">
-                    <label className="flex-1 text-sm font-medium text-gray-900">
+                    <label className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                       Hayır
                     </label>
                     <input
@@ -1938,7 +1938,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       value={formData.referendum_votes['Hayır'] || 0}
                       onChange={(e) => handleReferendumVoteChange('Hayır', e.target.value)}
                       inputMode="numeric"
-                      className="w-32 px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
+                      className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-right"
                       placeholder="0"
                     />
                   </div>
@@ -2008,20 +2008,20 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
 
             {/* Tutanak Fotoğrafları */}
-            <div className="bg-white border border-gray-300 rounded p-5">
-              <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+            <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                 Tutanak Fotoğrafları
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     İmzalı Tutanak Fotoğrafı
                 </label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:bg-gray-700 transition-colors">
                     {uploadingPhotos.signed ? (
                       <div className="flex flex-col items-center justify-center w-full">
-                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-indigo-600 mb-2"></div>
-                        <span className="text-xs text-gray-600 mb-1">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 dark:border-gray-600 border-t-indigo-600 mb-2"></div>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                           {uploadProgress.signed > 0 ? `Yükleniyor... %${uploadProgress.signed}` : 'Yükleniyor...'}
                         </span>
                         {uploadProgress.signed > 0 && (
@@ -2049,7 +2049,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
-                        <span className="text-xs text-gray-600">Fotoğraf Yükle</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">Fotoğraf Yükle</span>
                       </div>
                     )}
                     <input
@@ -2085,14 +2085,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   İtiraz Tutanağı (Varsa)
                 </label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:bg-gray-700 transition-colors">
                     {uploadingPhotos.objection ? (
                       <div className="flex flex-col items-center justify-center w-full">
-                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-indigo-600 mb-2"></div>
-                        <span className="text-xs text-gray-600 mb-1">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 dark:border-gray-600 border-t-indigo-600 mb-2"></div>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                           {uploadProgress.objection > 0 ? `Yükleniyor... %${uploadProgress.objection}` : 'Yükleniyor...'}
                         </span>
                         {uploadProgress.objection > 0 && (
@@ -2120,7 +2120,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                         <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
-                        <span className="text-xs text-gray-600">Fotoğraf Yükle</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">Fotoğraf Yükle</span>
                       </div>
                     )}
                     <input
@@ -2139,8 +2139,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             </div>
 
             {/* İtiraz Bilgileri */}
-            <div className="bg-white border border-gray-300 rounded p-5">
-              <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+            <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                 İtiraz Bilgileri
               </h2>
               <div className="space-y-3">
@@ -2156,16 +2156,16 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       objection_reason: e.target.checked ? prev.objection_reason : ''
                     }));
                   }}
-                    className="w-5 h-5 text-red-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-red-500 cursor-pointer"
+                    className="w-5 h-5 text-red-600 border-2 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-red-500 cursor-pointer"
                 />
-                  <label htmlFor="has_objection" className="text-sm font-semibold text-gray-900 cursor-pointer">
+                  <label htmlFor="has_objection" className="text-sm font-semibold text-gray-900 dark:text-gray-100 cursor-pointer">
                   İtiraz Edildi
                 </label>
               </div>
               
               {formData.has_objection && (
                   <div className="ml-8">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       İtiraz Sebebi *
                     </label>
                     <textarea
@@ -2173,7 +2173,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       value={formData.objection_reason}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm resize-none"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm resize-none"
                       placeholder="İtiraz sebebini detaylı olarak yazınız..."
                       required={formData.has_objection}
                     />
@@ -2183,8 +2183,8 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             </div>
 
             {/* Notlar */}
-            <div className="bg-white border border-gray-300 rounded p-5">
-              <h2 className="text-base font-bold text-gray-900 uppercase mb-4 border-b border-gray-300 pb-2">
+            <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                 Notlar
               </h2>
               <textarea
@@ -2192,7 +2192,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
                 placeholder="Varsa ek notlarınızı buraya yazabilirsiniz..."
               />
             </div>

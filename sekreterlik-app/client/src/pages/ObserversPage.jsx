@@ -59,7 +59,13 @@ const ObserversPage = () => {
         ApiService.getNeighborhoods(),
         ApiService.getVillages()
       ]);
-      setObservers(observersData || []);
+      // Decrypt TC and phone fields before setting state
+      const decryptedObservers = (observersData || []).map(obs => ({
+        ...obs,
+        tc: obs.tc && obs.tc.startsWith('U2FsdGVkX1') ? decryptData(obs.tc) : obs.tc,
+        phone: obs.phone && obs.phone.startsWith('U2FsdGVkX1') ? decryptData(obs.phone) : obs.phone
+      }));
+      setObservers(decryptedObservers);
       setBallotBoxes(ballotBoxesData || []);
       setDistricts(districtsData || []);
       setTowns(townsData || []);
@@ -345,6 +351,12 @@ const ObserversPage = () => {
     if (neighborhoodId) parts.push(getNeighborhoodName(neighborhoodId));
     if (villageId) parts.push(getVillageName(villageId));
     return parts.length > 0 ? parts.join(' - ') : 'Konum seçilmemiş';
+  };
+
+  // Mask TC for display (first 3 + **** + last 3)
+  const maskTC = (tc) => {
+    if (!tc || tc.length < 7) return tc || '-';
+    return tc.substring(0, 3) + '****' + tc.substring(tc.length - 3);
   };
 
   // Filter observers based on search term and filters
@@ -1027,10 +1039,10 @@ const ObserversPage = () => {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{observer.name}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{observer.tc || '-'}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{maskTC(observer.tc)}</p>
                               </div>
                             </div>
-                            
+
                             <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
@@ -1045,7 +1057,7 @@ const ObserversPage = () => {
                                 <span className="text-gray-900 dark:text-gray-100 font-medium">{getLocationInfo(observer)}</span>
                               </div>
                             </div>
-                            
+
                             <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                               <button
                                 onClick={() => handleEdit(observer)}
@@ -1094,7 +1106,7 @@ const ObserversPage = () => {
                           {chiefObservers.map((observer) => (
                             <tr key={observer.id}>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {observer.tc}
+                                {maskTC(observer.tc)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.name}
@@ -1142,10 +1154,10 @@ const ObserversPage = () => {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{observer.name}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{observer.tc || '-'}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{maskTC(observer.tc)}</p>
                               </div>
                             </div>
-                            
+
                             <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
@@ -1160,7 +1172,7 @@ const ObserversPage = () => {
                                 <span className="text-gray-900 dark:text-gray-100 font-medium">{getLocationInfo(observer)}</span>
                               </div>
                             </div>
-                            
+
                             <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                               <button
                                 onClick={() => handleEdit(observer)}
@@ -1209,7 +1221,7 @@ const ObserversPage = () => {
                           {regularObservers.map((observer) => (
                             <tr key={observer.id}>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {observer.tc}
+                                {maskTC(observer.tc)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {observer.name}

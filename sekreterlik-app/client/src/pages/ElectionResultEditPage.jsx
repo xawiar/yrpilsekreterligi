@@ -47,10 +47,10 @@ const ElectionResultEditPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Yükleniyor...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Yükleniyor...</p>
         </div>
       </div>
     );
@@ -58,9 +58,9 @@ const ElectionResultEditPage = () => {
 
   if (!election || !result) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Seçim sonucu bulunamadı</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Seçim sonucu bulunamadı</h2>
           <button
             onClick={() => navigate(`/election-results/${electionId}`)}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -76,20 +76,20 @@ const ElectionResultEditPage = () => {
   const objectionPhoto = result.objection_protocol_photo || result.objectionProtocolPhoto;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Seçim Sonucu Düzenle - Sandık {result.ballot_number}
               </h1>
-              <p className="text-sm text-gray-600 mt-1">{election.name}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{election.name}</p>
             </div>
             <button
               onClick={() => navigate(`/election-results/${electionId}`)}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
             >
               ← Geri Dön
             </button>
@@ -99,13 +99,13 @@ const ElectionResultEditPage = () => {
         {/* Main Content: Protocol on Left, Form on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Protocol Photos */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Seçim Tutanakları</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Seçim Tutanakları</h2>
             
             {protocolPhoto ? (
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">İmzalı Tutanak</h3>
-                <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İmzalı Tutanak</h3>
+                <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <img
                     src={protocolPhoto}
                     alt="İmzalı Tutanak"
@@ -115,14 +115,14 @@ const ElectionResultEditPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="mb-6 p-8 border-2 border-dashed border-gray-300 rounded-lg text-center">
-                <p className="text-gray-500">İmzalı tutanak fotoğrafı yüklenmemiş</p>
+              <div className="mb-6 p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
+                <p className="text-gray-500 dark:text-gray-400">İmzalı tutanak fotoğrafı yüklenmemiş</p>
               </div>
             )}
 
             {objectionPhoto && (
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">İtiraz Tutanağı</h3>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İtiraz Tutanağı</h3>
                 <div className="border-2 border-red-200 rounded-lg overflow-hidden">
                   <img
                     src={objectionPhoto}
@@ -135,17 +135,17 @@ const ElectionResultEditPage = () => {
             )}
 
             {!protocolPhoto && !objectionPhoto && (
-              <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg text-center">
-                <p className="text-gray-500">Henüz tutanak fotoğrafı yüklenmemiş</p>
+              <div className="p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
+                <p className="text-gray-500 dark:text-gray-400">Henüz tutanak fotoğrafı yüklenmemiş</p>
               </div>
             )}
           </div>
 
           {/* Right: Form or Edit Button */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             {!showForm ? (
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Seçim Sonuç Verileri</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Seçim Sonuç Verileri</h2>
 
                 {result?.approval_status && result.approval_status !== 'approved' && (
                   <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
@@ -163,16 +163,16 @@ const ElectionResultEditPage = () => {
                   <div className="space-y-4 mb-6">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Kullanılan Oy</label>
-                        <div className="text-lg font-semibold text-gray-900">{result.used_votes || 0}</div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Kullanılan Oy</label>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{result.used_votes || 0}</div>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Geçersiz Oy</label>
-                        <div className="text-lg font-semibold text-gray-900">{result.invalid_votes || 0}</div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Geçersiz Oy</label>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{result.invalid_votes || 0}</div>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Geçerli Oy</label>
-                        <div className="text-lg font-semibold text-gray-900">{result.valid_votes || 0}</div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Geçerli Oy</label>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{result.valid_votes || 0}</div>
                       </div>
                     </div>
 
@@ -186,9 +186,9 @@ const ElectionResultEditPage = () => {
                     )}
 
                     {result.notes && (
-                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-700 mb-1">Notlar</div>
-                        <div className="text-sm text-gray-600">{result.notes}</div>
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Notlar</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">{result.notes}</div>
                       </div>
                     )}
                   </div>
@@ -210,7 +210,7 @@ const ElectionResultEditPage = () => {
               <div>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="mb-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  className="mb-4 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
                 >
                   ← Formu Kapat
                 </button>

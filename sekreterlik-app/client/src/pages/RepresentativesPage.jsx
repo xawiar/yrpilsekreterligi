@@ -316,7 +316,7 @@ const RepresentativesPage = () => {
             </svg>
             Seçime Hazırlık
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Temsilciler</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Temsilciler</h1>
         </div>
         <div className="flex items-center space-x-3">
           <button
@@ -383,15 +383,15 @@ const RepresentativesPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab('neighborhood')}
               className={`py-4 px-6 text-sm font-medium border-b-2 ${
                 activeTab === 'neighborhood'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:border-gray-600'
               }`}
             >
               Mahalle Temsilcileri ({neighborhoodRepresentatives.length})
@@ -401,7 +401,7 @@ const RepresentativesPage = () => {
               className={`py-4 px-6 text-sm font-medium border-b-2 ${
                 activeTab === 'village'
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:border-gray-600'
               }`}
             >
               Köy Temsilcileri ({villageRepresentatives.length})
@@ -410,13 +410,13 @@ const RepresentativesPage = () => {
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <input
             type="text"
             placeholder="İsim, TC, telefon veya mahalle/köy adı ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
 
@@ -424,10 +424,10 @@ const RepresentativesPage = () => {
         <div className="p-6">
           {activeTab === 'neighborhood' ? (
             <>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Mahalle Temsilcileri</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Mahalle Temsilcileri</h2>
               {filteredNeighborhoodReps.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-500">
+                  <p className="text-gray-500 dark:text-gray-400">
                     {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz mahalle temsilcisi eklenmemiş'}
                   </p>
                 </div>
@@ -438,34 +438,34 @@ const RepresentativesPage = () => {
                     {filteredNeighborhoodReps.map((rep) => {
                       const attendanceStats = getAttendanceStats(rep, true);
                       return (
-                        <div key={rep.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div key={rep.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="text-base font-semibold text-gray-900 mb-1">{rep.name}</h3>
-                                <p className="text-sm text-gray-500">{rep.neighborhood_name || '-'}</p>
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{rep.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{rep.neighborhood_name || '-'}</p>
                               </div>
                             </div>
                             
-                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                            <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">TC:</span>
-                                <span className="text-gray-900 font-medium">{rep.tc || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">TC:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.tc || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Telefon:</span>
-                                <span className="text-gray-900 font-medium">{rep.phone || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.phone || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">İlçe:</span>
-                                <span className="text-gray-900 font-medium">{rep.district_name || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">İlçe:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.district_name || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Belde:</span>
-                                <span className="text-gray-900 font-medium">{rep.town_name || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Belde:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.town_name || '-'}</span>
                               </div>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500">Katılım:</span>
+                                <span className="text-gray-500 dark:text-gray-400">Katılım:</span>
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   {attendanceStats.attended}/{attendanceStats.required}
                                 </span>
@@ -479,56 +479,56 @@ const RepresentativesPage = () => {
 
                   {/* Desktop Table View */}
                   <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Ad Soyad
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           TC
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Telefon
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Mahalle
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           İlçe
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Belde
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Katılım
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredNeighborhoodReps.map((rep) => {
                         const attendanceStats = getAttendanceStats(rep, true);
                         return (
-                          <tr key={rep.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <tr key={rep.id} className="hover:bg-gray-50 dark:bg-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                               {rep.name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.tc}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.phone || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.neighborhood_name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.district_name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.town_name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 {attendanceStats.attended}/{attendanceStats.required}
                               </span>
@@ -544,10 +544,10 @@ const RepresentativesPage = () => {
             </>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Köy Temsilcileri</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Köy Temsilcileri</h2>
               {filteredVillageReps.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-500">
+                  <p className="text-gray-500 dark:text-gray-400">
                     {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz köy temsilcisi eklenmemiş'}
                   </p>
                 </div>
@@ -558,34 +558,34 @@ const RepresentativesPage = () => {
                     {filteredVillageReps.map((rep) => {
                       const attendanceStats = getAttendanceStats(rep, false);
                       return (
-                        <div key={rep.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div key={rep.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="text-base font-semibold text-gray-900 mb-1">{rep.name}</h3>
-                                <p className="text-sm text-gray-500">{rep.village_name || '-'}</p>
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">{rep.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{rep.village_name || '-'}</p>
                               </div>
                             </div>
                             
-                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                            <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">TC:</span>
-                                <span className="text-gray-900 font-medium">{rep.tc || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">TC:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.tc || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Telefon:</span>
-                                <span className="text-gray-900 font-medium">{rep.phone || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Telefon:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.phone || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">İlçe:</span>
-                                <span className="text-gray-900 font-medium">{rep.district_name || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">İlçe:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.district_name || '-'}</span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Belde:</span>
-                                <span className="text-gray-900 font-medium">{rep.town_name || '-'}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Belde:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{rep.town_name || '-'}</span>
                               </div>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500">Katılım:</span>
+                                <span className="text-gray-500 dark:text-gray-400">Katılım:</span>
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   {attendanceStats.attended}/{attendanceStats.required}
                                 </span>
@@ -599,56 +599,56 @@ const RepresentativesPage = () => {
 
                   {/* Desktop Table View */}
                   <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Ad Soyad
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           TC
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Telefon
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Köy
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           İlçe
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Belde
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Katılım
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredVillageReps.map((rep) => {
                         const attendanceStats = getAttendanceStats(rep, false);
                         return (
-                          <tr key={rep.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <tr key={rep.id} className="hover:bg-gray-50 dark:bg-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                               {rep.name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.tc}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.phone || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.village_name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.district_name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {rep.town_name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 {attendanceStats.attended}/{attendanceStats.required}
                               </span>
