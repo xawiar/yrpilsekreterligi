@@ -137,34 +137,20 @@ const PublicApplicationPage = () => {
         ip_address: '',
       });
 
-      // Write notification for admins
+      // Sadece admin'e bildirim gonder (tum uyelere DEGIL)
       try {
-        await addDoc(collection(db, 'notifications'), {
+        var NotificationService = (await import('../services/NotificationService')).default;
+        await NotificationService.createNotification({
           title: 'Yeni Uyelik Basvurusu',
-          body: `${formData.name.trim()} uyelik basvurusu yapti`,
+          body: formData.name.trim() + ' uyelik basvurusu yapti',
           type: 'member_application',
-          memberId: null,
-          createdAt: serverTimestamp(),
-          read: false,
+          target: { type: 'role', value: 'admin' },
+          url: '/settings?tab=membership-applications'
         });
       } catch (notifErr) {
         console.warn('Bildirim olusturulamadi:', notifErr.message);
       }
-
-      // Also write to master_notifications for fan-out pattern
-      try {
-        await addDoc(collection(db, 'master_notifications'), {
-          title: 'Yeni Uyelik Basvurusu',
-          body: `${formData.name.trim()} uyelik basvurusu yapti`,
-          type: 'member_application',
-          target: { type: 'all' },
-          url: null,
-          scheduledAt: null,
-          createdBy: 'system',
-          createdAt: new Date().toISOString(),
-          status: 'sent',
-        });
-      } catch (masterNotifErr) {
+      try { /* backward compat placeholder */ } catch (masterNotifErr) {
         console.warn('Master bildirim olusturulamadi:', masterNotifErr.message);
       }
 
