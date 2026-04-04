@@ -100,25 +100,82 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
     isInitialLoad.current = true;
     previousUnreadRef.current = 0;
 
-    const notificationsRef = collection(db, 'notifications');
-    // Basit sorgu — composite index gerektirmez
-    // Client-side filtreleme ve sıralama yapılacak
+    // Önce user_notifications subcollection'ı dene (yeni fan-out sistem)
+    // Yoksa eski notifications koleksiyonuna fallback
+    const userNotifsRef = collection(db, `user_notifications/${memberId}/items`);
     const q = query(
-      notificationsRef,
+      userNotifsRef,
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+
+    // Eski notifications koleksiyonunu da dinle (geriye uyumluluk)
+    const oldNotifsRef = collection(db, 'notifications');
+    const oldQ = query(
+      oldNotifsRef,
       orderBy('createdAt', 'desc'),
       limit(100)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    let newNotifs = [];
+    let oldNotifs = [];
+
+    const mergeAndUpdate = () => {
       const prefs = getStoredPreferences();
-      const allNotifs = [];
+      // Yeni + eski bildirimleri birleştir, ID bazl�� deduplicate
+      const allMap = new Map();
+      for (const n of [...newNotifs, ...oldNotifs]) {
+        if (!allMap.has(n.id)) allMap.set(n.id, n);
+      }
+      const allNotifs = Array.from(allMap.values())
+        .sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+          return dateB - dateA;
+        })
+        .slice(0, 50);
+
+      const filtered = allNotifs.filter(n => isNotificationAllowed(n.type, prefs));
+      const unread = filtered.filter(n => !n.read).length;
+
+      setNotifications(filtered);
+      setUnreadCount(unread);
+      setBadgeCount(unread);
+
+      if (!isInitialLoad.current && unread > previousUnreadRef.current) {
+        playNotificationSound();
+        const currentIds = new Set(filtered.filter(n => !n.read).map(n => n.id));
+        const brandNew = filtered.filter(n => !n.read && !previousNotifIdsRef.current.has(n.id));
+        for (const n of brandNew) {
+          showBrowserNotification(n.title || 'Yeni Bildirim', n.message || n.body || '');
+        }
+        previousNotifIdsRef.current = currentIds;
+      } else {
+        previousNotifIdsRef.current = new Set(filtered.filter(n => !n.read).map(n => n.id));
+      }
+      isInitialLoad.current = false;
+      previousUnreadRef.current = unread;
+    };
+
+    // Yeni sistem dinleyici
+    const unsub1 = onSnapshot(q, (snapshot) => {
+      newNotifs = [];
+      snapshot.forEach((doc) => {
+        newNotifs.push({ id: doc.id, ...doc.data() });
+      });
+      mergeAndUpdate();
+    }, (err) => console.warn('user_notifications listener error:', err));
+
+    // Eski sistem dinleyici (geriye uyumluluk)
+    const unsub2 = onSnapshot(oldQ, (snapshot) => {
+      oldNotifs = [];
       snapshot.forEach((doc) => {
         const data = { id: doc.id, ...doc.data() };
-        // Client-side memberId filtresi (composite index yerine)
         if (data.memberId === memberId || data.memberId === null || !data.memberId) {
-          allNotifs.push(data);
+          oldNotifs.push(data);
         }
       });
+      mergeAndUpdate();
 
       // Tercihlere gore filtrele
       const notifs = allNotifs.filter(n => isNotificationAllowed(n.type, prefs));
@@ -143,11 +200,9 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
       }
       isInitialLoad.current = false;
       previousUnreadRef.current = unread;
-    }, (error) => {
-      console.error('Notification listener error:', error);
-    });
+    }, (err) => console.warn('old notifications listener error:', err));
 
-    return () => unsubscribe();
+    return () => { unsub1(); unsub2(); };
   }, [memberId, enabled]);
 
   // Backend modu: polling ile bildirim kontrolu
