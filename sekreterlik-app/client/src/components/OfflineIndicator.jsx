@@ -18,8 +18,12 @@ const OfflineIndicator = () => {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      const count = await getQueueCount();
-      setQueueCount(count);
+      try {
+        const count = await getQueueCount();
+        setQueueCount(count);
+      } catch (e) {
+        // IndexedDB unavailable — ignore silently
+      }
     }, 5000);
     return () => clearInterval(interval);
   }, []);

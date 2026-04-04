@@ -240,8 +240,31 @@ class FirebaseService {
    * @returns {Promise<Array>} Doküman listesi
    * @throws {Error} Collection okunamazsa hata fırlatır
    */
+  // Basit in-memory cache (60 saniye TTL)
+  static _cache = new Map();
+  static _getCached(key) {
+    const entry = this._cache.get(key);
+    if (entry && Date.now() - entry.ts < 60000) return entry.data;
+    this._cache.delete(key);
+    return null;
+  }
+  static _setCache(key, data) {
+    this._cache.set(key, { data, ts: Date.now() });
+  }
+  static clearCache(prefix) {
+    if (!prefix) { this._cache.clear(); return; }
+    for (const k of this._cache.keys()) { if (k.startsWith(prefix)) this._cache.delete(k); }
+  }
+
   static async getAll(collectionName, options = {}, decrypt = true) {
     try {
+      // Cache kontrolu — sadece filtresiz sorgular icin
+      const cacheKey = 'fs_' + collectionName + '_' + JSON.stringify(options);
+      if (!options.where && !options.startAfter) {
+        const cached = this._getCached(cacheKey);
+        if (cached) return cached;
+      }
+
       const collectionRef = collection(db, collectionName);
       let q = query(collectionRef);
       
@@ -331,9 +354,9 @@ class FirebaseService {
         docs.push(decryptedData);
       });
       
-      // Only log if collection has documents (reduce console noise)
-      if (docs.length > 0) {
-        console.log(`📖 Retrieved ${docs.length} documents from collection "${collectionName}"`);
+      // Cache'e kaydet
+      if (!options.where && !options.startAfter) {
+        this._setCache(cacheKey, docs);
       }
       return docs;
     } catch (error) {

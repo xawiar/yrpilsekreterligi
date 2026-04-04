@@ -1,4 +1,5 @@
 import FirebaseService from '../services/FirebaseService';
+import { getCached, setCache, clearCache } from './apiCache';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
