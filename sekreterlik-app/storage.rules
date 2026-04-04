@@ -9,18 +9,20 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    // Personal documents - authenticated with size limit
+    // Personal documents - authenticated with size limit and MIME type
     match /personal-documents/{memberId}/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024;
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/.*');
     }
 
-    // Archive documents
+    // Archive documents - authenticated with size limit and MIME type
     match /archive/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024;
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/.*');
     }
 
     // Election protocol photos

@@ -8683,6 +8683,79 @@ class FirebaseApiService {
       throw error;
     }
   }
+
+  // ============================================
+  // KVKK - Veri Silme Talepleri (Data Deletion Requests)
+  // ============================================
+
+  static async createDataDeletionRequest(member_id, reason) {
+    try {
+      const docId = await FirebaseService.create('data_deletion_requests', null, {
+        member_id: String(member_id),
+        reason: reason || '',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+      return { success: true, id: docId };
+    } catch (error) {
+      console.error('Create data deletion request error:', error);
+      throw new Error('Veri silme talebi oluşturulurken hata oluştu');
+    }
+  }
+
+  static async getDataDeletionRequests() {
+    try {
+      const requests = await FirebaseService.getAll('data_deletion_requests', {}, false);
+      if (!requests || requests.length === 0) return [];
+      // Sort by created_at descending
+      return requests.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        return dateB - dateA;
+      });
+    } catch (error) {
+      console.error('Get data deletion requests error:', error);
+      return [];
+    }
+  }
+
+  static async getMyDataDeletionRequests(memberId) {
+    try {
+      const allRequests = await FirebaseService.getAll('data_deletion_requests', {}, false);
+      if (!allRequests || allRequests.length === 0) return [];
+      return allRequests.filter(r => String(r.member_id) === String(memberId));
+    } catch (error) {
+      console.error('Get my data deletion requests error:', error);
+      return [];
+    }
+  }
+
+  static async approveDataDeletionRequest(id) {
+    try {
+      await FirebaseService.update('data_deletion_requests', String(id), {
+        status: 'approved',
+        processed_at: new Date().toISOString()
+      }, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Approve data deletion request error:', error);
+      throw new Error('Veri silme talebi onaylanırken hata oluştu');
+    }
+  }
+
+  static async rejectDataDeletionRequest(id, rejection_reason) {
+    try {
+      await FirebaseService.update('data_deletion_requests', String(id), {
+        status: 'rejected',
+        rejection_reason: rejection_reason || '',
+        processed_at: new Date().toISOString()
+      }, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Reject data deletion request error:', error);
+      throw new Error('Veri silme talebi reddedilirken hata oluştu');
+    }
+  }
 }
 
 export default FirebaseApiService;

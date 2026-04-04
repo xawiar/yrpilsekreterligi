@@ -1,5 +1,6 @@
 import FirebaseApiService from './FirebaseApiService';
 import FirebaseService from '../services/FirebaseService';
+import { getCached, setCache, clearCache } from './apiCache';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
@@ -304,12 +305,19 @@ class ApiService {
 
   // Members API
   static async getMembers(archived = false) {
-    if (USE_FIREBASE) {
-      return FirebaseApiService.getMembers(archived);
-    }
+    const cacheKey = `members_${archived}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    const timestamp = Date.now();
-    return this.fetchJsonWithRetry(`${API_BASE_URL}/members?archived=${archived}&_t=${timestamp}`);
+    let result;
+    if (USE_FIREBASE) {
+      result = await FirebaseApiService.getMembers(archived);
+    } else {
+      const timestamp = Date.now();
+      result = await this.fetchJsonWithRetry(`${API_BASE_URL}/members?archived=${archived}&_t=${timestamp}`);
+    }
+    setCache(cacheKey, result);
+    return result;
   }
 
   static async getMemberById(id) {
@@ -322,6 +330,7 @@ class ApiService {
   }
 
   static async createMember(memberData) {
+    clearCache('members');
     if (USE_FIREBASE) {
       return FirebaseApiService.createMember(memberData);
     }
@@ -352,6 +361,7 @@ class ApiService {
   }
 
   static async updateMember(id, memberData) {
+    clearCache('members');
     if (USE_FIREBASE) {
       return FirebaseApiService.updateMember(id, memberData);
     }
@@ -390,6 +400,7 @@ class ApiService {
   }
 
   static async archiveMember(id, reason) {
+    clearCache('members');
     if (USE_FIREBASE) {
       return FirebaseApiService.archiveMember(id, reason);
     }
@@ -409,6 +420,7 @@ class ApiService {
   }
 
   static async restoreMember(id) {
+    clearCache('members');
     if (USE_FIREBASE) {
       return FirebaseApiService.restoreMember(id);
     }
@@ -1278,14 +1290,20 @@ class ApiService {
 
   // Districts API
   static async getDistricts() {
-    if (USE_FIREBASE) {
-      return FirebaseApiService.getDistricts();
-    }
+    const cacheKey = 'districts';
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    // Add cache-busting parameter to ensure fresh data
-    const timestamp = Date.now();
-    const response = await fetch(`${API_BASE_URL}/districts?_t=${timestamp}`, { headers: this.getAuthHeaders() });
-    return response.json();
+    let result;
+    if (USE_FIREBASE) {
+      result = await FirebaseApiService.getDistricts();
+    } else {
+      const timestamp = Date.now();
+      const response = await fetch(`${API_BASE_URL}/districts?_t=${timestamp}`, { headers: this.getAuthHeaders() });
+      result = await response.json();
+    }
+    setCache(cacheKey, result);
+    return result;
   }
 
   static async getDistrictById(districtId) {
@@ -1301,6 +1319,7 @@ class ApiService {
   }
 
   static async createDistrict(districtData) {
+    clearCache('districts');
     if (USE_FIREBASE) {
       return FirebaseApiService.createDistrict(districtData);
     }
@@ -1314,6 +1333,7 @@ class ApiService {
   }
 
   static async updateDistrict(id, districtData) {
+    clearCache('districts');
     if (USE_FIREBASE) {
       return FirebaseApiService.updateDistrict(id, districtData);
     }
@@ -1327,6 +1347,7 @@ class ApiService {
   }
 
   static async deleteDistrict(id) {
+    clearCache('districts');
     if (USE_FIREBASE) {
       return FirebaseApiService.deleteDistrict(id);
     }
@@ -1344,14 +1365,20 @@ class ApiService {
 
   // Towns API
   static async getTowns() {
-    if (USE_FIREBASE) {
-      return FirebaseApiService.getTowns();
-    }
+    const cacheKey = 'towns';
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    // Add cache-busting parameter to ensure fresh data
-    const timestamp = Date.now();
-    const response = await fetch(`${API_BASE_URL}/towns?_t=${timestamp}`, { headers: this.getAuthHeaders() });
-    return response.json();
+    let result;
+    if (USE_FIREBASE) {
+      result = await FirebaseApiService.getTowns();
+    } else {
+      const timestamp = Date.now();
+      const response = await fetch(`${API_BASE_URL}/towns?_t=${timestamp}`, { headers: this.getAuthHeaders() });
+      result = await response.json();
+    }
+    setCache(cacheKey, result);
+    return result;
   }
 
   static async getTownById(townId) {
@@ -1377,6 +1404,7 @@ class ApiService {
   }
 
   static async createTown(townData) {
+    clearCache('towns');
     if (USE_FIREBASE) {
       return FirebaseApiService.createTown(townData);
     }
@@ -1390,6 +1418,7 @@ class ApiService {
   }
 
   static async updateTown(id, townData) {
+    clearCache('towns');
     if (USE_FIREBASE) {
       return FirebaseApiService.updateTown(id, townData);
     }
@@ -1403,6 +1432,7 @@ class ApiService {
   }
 
   static async deleteTown(id) {
+    clearCache('towns');
     if (USE_FIREBASE) {
       return FirebaseApiService.deleteTown(id);
     }
@@ -1420,12 +1450,19 @@ class ApiService {
 
   // Neighborhoods API
   static async getNeighborhoods() {
-    if (USE_FIREBASE) {
-      return FirebaseApiService.getNeighborhoods();
-    }
+    const cacheKey = 'neighborhoods';
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    const response = await fetch(`${API_BASE_URL}/neighborhoods`, { headers: this.getAuthHeaders() });
-    return response.json();
+    let result;
+    if (USE_FIREBASE) {
+      result = await FirebaseApiService.getNeighborhoods();
+    } else {
+      const response = await fetch(`${API_BASE_URL}/neighborhoods`, { headers: this.getAuthHeaders() });
+      result = await response.json();
+    }
+    setCache(cacheKey, result);
+    return result;
   }
 
   static async getNeighborhoodsByDistrict(districtId) {
@@ -1439,6 +1476,7 @@ class ApiService {
   }
 
   static async createNeighborhood(neighborhoodData) {
+    clearCache('neighborhoods');
     if (USE_FIREBASE) {
       return FirebaseApiService.createNeighborhood(neighborhoodData);
     }
@@ -1452,6 +1490,7 @@ class ApiService {
   }
 
   static async updateNeighborhood(id, neighborhoodData) {
+    clearCache('neighborhoods');
     if (USE_FIREBASE) {
       return FirebaseApiService.updateNeighborhood(id, neighborhoodData);
     }
@@ -1465,6 +1504,7 @@ class ApiService {
   }
 
   static async deleteNeighborhood(id) {
+    clearCache('neighborhoods');
     if (USE_FIREBASE) {
       return FirebaseApiService.deleteNeighborhood(id);
     }
@@ -1478,12 +1518,19 @@ class ApiService {
 
   // Villages API
   static async getVillages() {
-    if (USE_FIREBASE) {
-      return FirebaseApiService.getVillages();
-    }
+    const cacheKey = 'villages';
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    const response = await fetch(`${API_BASE_URL}/villages`, { headers: this.getAuthHeaders() });
-    return response.json();
+    let result;
+    if (USE_FIREBASE) {
+      result = await FirebaseApiService.getVillages();
+    } else {
+      const response = await fetch(`${API_BASE_URL}/villages`, { headers: this.getAuthHeaders() });
+      result = await response.json();
+    }
+    setCache(cacheKey, result);
+    return result;
   }
 
   static async getVillagesByDistrict(districtId) {
@@ -1497,6 +1544,7 @@ class ApiService {
   }
 
   static async createVillage(villageData) {
+    clearCache('villages');
     if (USE_FIREBASE) {
       return FirebaseApiService.createVillage(villageData);
     }
@@ -1510,6 +1558,7 @@ class ApiService {
   }
 
   static async updateVillage(id, villageData) {
+    clearCache('villages');
     if (USE_FIREBASE) {
       return FirebaseApiService.updateVillage(id, villageData);
     }
@@ -1523,6 +1572,7 @@ class ApiService {
   }
 
   static async deleteVillage(id) {
+    clearCache('villages');
     if (USE_FIREBASE) {
       return FirebaseApiService.deleteVillage(id);
     }
@@ -4098,6 +4148,10 @@ class ApiService {
   // ============================================
 
   static async createDataDeletionRequest(member_id, reason) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.createDataDeletionRequest(member_id, reason);
+    }
+
     const response = await fetch(`${API_BASE_URL}/data-deletion-requests`, {
       method: 'POST',
       headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -4111,6 +4165,10 @@ class ApiService {
   }
 
   static async getDataDeletionRequests() {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getDataDeletionRequests();
+    }
+
     const response = await fetch(`${API_BASE_URL}/data-deletion-requests`, {
       headers: this.getAuthHeaders()
     });
@@ -4119,6 +4177,10 @@ class ApiService {
   }
 
   static async getMyDataDeletionRequests(memberId) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.getMyDataDeletionRequests(memberId);
+    }
+
     const response = await fetch(`${API_BASE_URL}/data-deletion-requests/member/${memberId}`, {
       headers: this.getAuthHeaders()
     });
@@ -4127,6 +4189,10 @@ class ApiService {
   }
 
   static async approveDataDeletionRequest(id) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.approveDataDeletionRequest(id);
+    }
+
     const response = await fetch(`${API_BASE_URL}/data-deletion-requests/${id}/approve`, {
       method: 'PUT',
       headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' }
@@ -4139,6 +4205,10 @@ class ApiService {
   }
 
   static async rejectDataDeletionRequest(id, rejection_reason) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.rejectDataDeletionRequest(id, rejection_reason);
+    }
+
     const response = await fetch(`${API_BASE_URL}/data-deletion-requests/${id}/reject`, {
       method: 'PUT',
       headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
