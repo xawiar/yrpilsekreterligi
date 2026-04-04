@@ -10,6 +10,44 @@ import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
 
+var RSVP_STYLES = {
+  attending: { border: 'border-green-200', bg: 'bg-green-50', title: 'text-green-700', badge: 'bg-green-100 text-green-800', label: 'Katilacak' },
+  not_attending: { border: 'border-red-200', bg: 'bg-red-50', title: 'text-red-700', badge: 'bg-red-100 text-red-800', label: 'Katilamayacak' },
+  maybe: { border: 'border-amber-200', bg: 'bg-amber-50', title: 'text-amber-700', badge: 'bg-amber-100 text-amber-800', label: 'Belirsiz' }
+};
+
+function RsvpPersonList({ rsvpData, members }) {
+  var groups = ['attending', 'not_attending', 'maybe'];
+  return (
+    <div className="mt-4 space-y-3">
+      {groups.map(function(status) {
+        var style = RSVP_STYLES[status];
+        var items = rsvpData.filter(function(r) { return r.status === status; });
+        if (items.length === 0) return null;
+        return (
+          <div key={status} className={'border rounded-lg p-3 ' + style.border + ' ' + style.bg}>
+            <div className={'text-sm font-semibold mb-2 ' + style.title}>{style.label} ({items.length})</div>
+            <div className="flex flex-wrap gap-2">
+              {items.map(function(rsvp) {
+                var name = rsvp.userName || rsvp.memberName;
+                if (!name && members) {
+                  var m = members.find(function(mem) { return String(mem.id) === String(rsvp.userId); });
+                  name = m ? m.name : 'Uye';
+                }
+                return (
+                  <span key={rsvp.id} className={'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ' + style.badge}>
+                    {name || 'Uye'}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const MeetingDetails = ({ meeting }) => {
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
@@ -438,6 +476,7 @@ const MeetingDetails = ({ meeting }) => {
               const totalExpected = meeting.attendees ? meeting.attendees.length : 0;
               const noResponse = totalExpected > 0 ? Math.max(0, totalExpected - attending - notAttending - maybe) : 0;
               return (
+                <>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
                     <span className="text-green-600 font-bold text-lg">{attending}</span>
@@ -458,6 +497,8 @@ const MeetingDetails = ({ meeting }) => {
                     </div>
                   )}
                 </div>
+                <RsvpPersonList rsvpData={rsvpData} members={members} />
+                </>
               );
             })()}
           </div>
