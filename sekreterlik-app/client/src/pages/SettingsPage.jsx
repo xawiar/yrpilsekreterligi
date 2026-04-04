@@ -384,6 +384,11 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
                     {activeTab === 'data-retention' && hasPermission('data-retention') && <DataRetentionSettings />}
                     {activeTab === 'data-deletion-requests' && hasPermission('data-deletion-requests') && <DataDeletionRequestsAdmin />}
+                    {activeTab === 'data-processing-inventory' && hasPermission('data-processing-inventory') && <DataProcessingInventory />}
+                    {activeTab === 'kvkk-compliance' && hasPermission('kvkk-compliance') && <KvkkComplianceReport />}
+                    {activeTab === 'data-breach-procedure' && hasPermission('data-breach-procedure') && <DataBreachProcedure />}
+                    {activeTab === 'verbis-guide' && hasPermission('verbis-guide') && <VerbisGuide />}
+                    {activeTab === 'audit-log' && hasPermission('audit-log') && <AuditLogSettings />}
                   </>
                 )}
               </>
