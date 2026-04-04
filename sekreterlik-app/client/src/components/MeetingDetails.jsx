@@ -71,7 +71,7 @@ const MeetingDetails = ({ meeting }) => {
             body: `${meeting.date} tarihli toplantiya henuz cevap vermediniz. Lutfen katilim durumunuzu bildiriniz.`,
             type: NOTIFICATION_TYPES.MEETING_REMINDER,
             target: { type: TARGET_TYPES.SINGLE, value: String(member.id) },
-            url: '/member-dashboard?view=meetings-page',
+            url: '/member-dashboard/meetings',
           });
           sentCount++;
         } catch (err) {

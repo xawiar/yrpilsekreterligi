@@ -289,7 +289,7 @@ function AuthenticatedContent() {
 
           {/* Member Dashboard Route */}
           <Route
-            path="/member-dashboard"
+            path="/member-dashboard/*"
             element={
               <MemberRoute>
                 <MemberDashboardPage />

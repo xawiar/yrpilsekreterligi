@@ -349,19 +349,98 @@ class NotificationService {
   // Madde 5: Push notification gonder
   static async _sendPushNotifications(userIds, { title, body, type, url }) {
     try {
-      // Push subscription'lari getir
+      // Push subscription'lari Firestore'dan getir
       const subscriptions = await FirebaseService.getAll('push_subscriptions', {}, false);
-      if (!subscriptions || subscriptions.length === 0) return;
+      if (!subscriptions || subscriptions.length === 0) {
+        console.log('[Push] No push subscriptions found');
+        return;
+      }
 
       // Hedef kullanicilarin subscription'larini filtrele
       const targetSubs = subscriptions.filter(s => userIds.includes(s.userId));
+      if (targetSubs.length === 0) {
+        console.log('[Push] No matching subscriptions for target users');
+        return;
+      }
 
-      // Her subscription icin browser notification tetikle
-      // Not: Gercek push icin server-side gerekli, burada sadece veritabanina kaydediyoruz
-      // Tarayici push bildirimleri useRealtimeNotifications hook'u ile zaten handle ediliyor
-      console.log(`Push notification triggered for ${targetSubs.length} subscriptions`);
+      console.log(`[Push] Sending push to ${targetSubs.length} subscriptions`);
+
+      // Backend uzerinden gercek web-push gonder
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+
+      // Auth token al
+      let authToken = null;
+      try {
+        authToken = localStorage.getItem('token');
+      } catch (e) {
+        // sessizce devam
+      }
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
+      // Subscription'lari web-push formatina cevir
+      const formattedSubscriptions = targetSubs.map(sub => ({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh,
+          auth: sub.auth,
+        }
+      }));
+
+      try {
+        // Backend push endpoint'ini kullan (send-direct: subscription'lari dogrudan gonder)
+        const response = await fetch(`${API_BASE_URL}/push-subscriptions/send-direct`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            title,
+            body,
+            subscriptions: formattedSubscriptions,
+            data: { type: type || 'general', url: url || '/notifications' }
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`[Push] Backend push sent: ${result.sentCount || 0} successful`);
+          return;
+        }
+        console.warn('[Push] Backend push endpoint returned:', response.status);
+      } catch (backendErr) {
+        console.warn('[Push] Backend push failed, falling back to direct notification:', backendErr.message);
+      }
+
+      // Fallback: Backend erisilemediyse, Service Worker uzerinden dogrudan bildirim goster
+      // Bu sadece uygulama acikken calisir, ama hic bildirim gormemekten iyidir
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          await registration.showNotification(title, {
+            body,
+            icon: '/icon-192x192.png',
+            badge: '/badge-72x72.png',
+            tag: type || 'general',
+            renotify: true,
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            data: { type: type || 'general', url: url || '/notifications' },
+            actions: [
+              { action: 'view', title: 'Goruntule' },
+              { action: 'close', title: 'Kapat' }
+            ]
+          });
+          console.log('[Push] Fallback: Direct SW notification shown');
+        } catch (swErr) {
+          console.warn('[Push] Service Worker fallback failed:', swErr);
+        }
+      }
     } catch (error) {
-      console.warn('Push notification send error:', error);
+      console.warn('[Push] Push notification send error:', error);
     }
   }
 }

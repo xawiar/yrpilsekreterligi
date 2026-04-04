@@ -18,6 +18,9 @@ router.post('/test', authenticateToken, PushSubscriptionController.sendTestNotif
 // Send notification to all users (admin only)
 router.post('/send-to-all', authenticateToken, PushSubscriptionController.sendToAll);
 
+// Send push notification with provided subscriptions (Firebase mode support)
+router.post('/send-direct', authenticateToken, PushSubscriptionController.sendDirect);
+
 // Send notification to users with a specific role (admin only)
 router.post('/send-to-role', authenticateToken, PushSubscriptionController.sendToRole);
 

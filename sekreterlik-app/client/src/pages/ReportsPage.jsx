@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
-const VisitMap = React.lazy(function() { return import('../components/VisitMap'); });
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -1826,15 +1825,6 @@ const ReportsPage = () => {
             </button>
           </div>
         </div>
-      </div>
-      {/* Ziyaret Haritasi */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mt-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Ziyaret Haritasi
-        </h3>
-        <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-400">Harita yukleniyor...</div>}>
-          <VisitMap height="400px" mini={false} />
-        </Suspense>
       </div>
     </div>
   );

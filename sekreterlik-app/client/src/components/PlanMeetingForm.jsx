@@ -59,7 +59,7 @@ const PlanMeetingForm = ({ onClose, onMeetingPlanned, regions }) => {
             body: `${meetingDate} tarihinde toplanti planlanmistir. Katilim durumunuzu bildiriniz.`,
             type: NOTIFICATION_TYPES.MEETING_INVITE,
             target: { type: TARGET_TYPES.REGION, value: region },
-            url: '/member-dashboard?view=meetings-page',
+            url: '/member-dashboard/meetings',
             data: meetingId ? { meetingId } : undefined,
           });
         } catch (notifErr) {

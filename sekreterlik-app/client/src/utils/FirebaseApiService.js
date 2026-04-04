@@ -7669,11 +7669,28 @@ class FirebaseApiService {
   // Push Notification API - Firebase'de push notification göndermek için server-side gerekir
   // Client-side'da sadece local browser notification gösterilebilir (test için)
   static async getVapidKey() {
-    // VAPID key Firebase'de de aynı (server'dan alınmalı, ama şimdilik hardcoded)
-    // Production'da bu key server'dan alınmalı
+    // Oncelikle backend'den VAPID key almaya calis
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/vapid-key`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.publicKey) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn('[Push] Backend VAPID key fetch failed, using fallback:', e.message);
+    }
+
+    // Fallback: server .env ile eslestirilmis hardcoded key
     return {
       success: true,
-      publicKey: 'BO9vjwvHvLDxeP-H2IY92hsQlWGYTCW7NpX3M0GAyooyTbT30Y_0q_ahIsomr38bsL2Nbh7DHEZKMD7YTsiEYf8'
+      publicKey: 'BJXubm0Qz9DZMVkhs2-9-qSsNI8kcT3SEZGgoE6OQDmCr3RNxgfa7yNui58liafe5Qiw32RNYRODNwC_m8Ijk1Y'
     };
   }
 
@@ -7775,134 +7792,94 @@ class FirebaseApiService {
   }
 
   static async sendTestNotification(userId = null) {
-    // Firebase'de push notification göndermek için server-side gerekir
-    // Client-side'da Service Worker üzerinden notification göster
     try {
-      // Service Worker üzerinden notification göster
-      if ('serviceWorker' in navigator) {
+      // Oncelikle backend uzerinden gercek push gondermeyi dene
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+      const token = localStorage.getItem('token');
+
+      // Kullanicinin push subscription'ini Firestore'dan al
+      const resolvedId = userId || (() => {
         try {
-          const registration = await navigator.serviceWorker.ready;
+          const userData = localStorage.getItem('user');
+          if (userData) {
+            const user = JSON.parse(userData);
+            return user?.id || user?.memberId || user?.uid || null;
+          }
+        } catch (e) { /* ignore */ }
+        return null;
+      })();
 
-          // Service Worker üzerinden notification göster
-          await registration.showNotification('Test Bildirimi', {
-            body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
-            icon: '/icon-192x192.png',
-            badge: '/icon-192x192.png',
-            tag: 'test-notification',
-            requireInteraction: true,
-            vibrate: [200, 100, 200],
-            data: {
-              url: window.location.href,
-              timestamp: Date.now()
-            },
-            actions: [
-              {
-                action: 'view',
-                title: 'Görüntüle'
-              },
-              {
-                action: 'close',
-                title: 'Kapat'
-              }
-            ]
-          });
+      if (resolvedId) {
+        try {
+          const subs = await FirebaseService.findByField('push_subscriptions', 'userId', String(resolvedId));
+          if (subs && subs.length > 0) {
+            const sub = subs[0];
+            const formattedSubs = [{
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth }
+            }];
 
-          return {
-            success: true,
-            message: 'Test bildirimi gösterildi (Service Worker üzerinden)'
-          };
-        } catch (swError) {
-          console.warn('Service Worker notification failed, trying native Notification:', swError);
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-          // Service Worker başarısız olursa, native Notification'ı dene (sadece main thread'de)
-          if (typeof window !== 'undefined' && 'Notification' in window) {
-            // İzin kontrolü
-            if (Notification.permission === 'granted') {
-              try {
-                const notification = new Notification('Test Bildirimi', {
-                  body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
-                  icon: '/icon-192x192.png',
-                  badge: '/icon-192x192.png',
-                  tag: 'test-notification',
-                  requireInteraction: true,
-                  vibrate: [200, 100, 200]
-                });
+            const response = await fetch(`${API_BASE_URL}/push-subscriptions/send-direct`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                title: 'Test Bildirimi',
+                body: 'Bu bir test bildirimidir. Push notification sistemi calisiyor!',
+                subscriptions: formattedSubs,
+                data: { type: 'test', action: 'view', url: '/notifications' }
+              }),
+            });
 
-                notification.onclick = () => {
-                  window.focus();
-                  notification.close();
-                };
-
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.sentCount > 0) {
                 return {
                   success: true,
-                  message: 'Test bildirimi gösterildi (native notification)'
-                };
-              } catch (nativeError) {
-                // Native Notification da başarısız olursa
-                return {
-                  success: false,
-                  message: 'Bildirim gösterilemedi. Lütfen tarayıcı ayarlarından bildirim izni verin.'
+                  message: 'Gercek push bildirimi gonderildi (backend uzerinden)'
                 };
               }
-            } else if (Notification.permission !== 'denied') {
-              // İzin iste
-              const permission = await Notification.requestPermission();
-              if (permission === 'granted') {
-                try {
-                  const notification = new Notification('Test Bildirimi', {
-                    body: 'Bu bir test bildirimidir. Push notification sistemi çalışıyor!',
-                    icon: '/icon-192x192.png',
-                    badge: '/icon-192x192.png',
-                    tag: 'test-notification',
-                    requireInteraction: true,
-                    vibrate: [200, 100, 200]
-                  });
-
-                  notification.onclick = () => {
-                    window.focus();
-                    notification.close();
-                  };
-
-                  return {
-                    success: true,
-                    message: 'Test bildirimi gösterildi (native notification)'
-                  };
-                } catch (nativeError) {
-                  return {
-                    success: false,
-                    message: 'Bildirim gösterilemedi. Lütfen tarayıcı ayarlarından bildirim izni verin.'
-                  };
-                }
-              } else {
-                return {
-                  success: false,
-                  message: 'Bildirim izni verilmedi'
-                };
-              }
-            } else {
-              return {
-                success: false,
-                message: 'Bildirim izni reddedilmiş. Lütfen tarayıcı ayarlarından izin verin.'
-              };
             }
-          } else {
-            return {
-              success: false,
-              message: 'Bildirimler bu tarayıcıda desteklenmiyor.'
-            };
           }
+        } catch (backendErr) {
+          console.warn('[Push] Backend test push failed, falling back to local:', backendErr.message);
         }
-      } else {
+      }
+
+      // Fallback: Service Worker uzerinden local notification goster
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('Test Bildirimi', {
+          body: 'Bu bir test bildirimidir. Push notification sistemi calisiyor!',
+          icon: '/icon-192x192.png',
+          badge: '/icon-192x192.png',
+          tag: 'test-notification',
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          data: { url: window.location.href, timestamp: Date.now() },
+          actions: [
+            { action: 'view', title: 'Goruntule' },
+            { action: 'close', title: 'Kapat' }
+          ]
+        });
+
         return {
-          success: false,
-          message: 'Service Worker desteklenmiyor. Bildirimler gösterilemez.'
+          success: true,
+          message: 'Test bildirimi gosterildi (Service Worker uzerinden)'
         };
       }
+
+      return {
+        success: false,
+        message: 'Service Worker desteklenmiyor. Bildirimler gosterilemez.'
+      };
     } catch (error) {
       console.error('Error sending test notification:', error);
       return {
         success: false,
-        message: error.message || 'Test bildirimi gösterilirken hata oluştu'
+        message: error.message || 'Test bildirimi gosterilirken hata olustu'
       };
     }
   }

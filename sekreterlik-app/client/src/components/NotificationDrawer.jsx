@@ -160,17 +160,17 @@ const getNavigationUrl = (notification, user) => {
     case 'meeting_invite':
     case 'meeting':
     case 'meeting_reminder':
-      return '/member-dashboard?view=meetings-page';
+      return '/member-dashboard/meetings';
     case 'event_invite':
     case 'event':
     case 'event_reminder':
-      return '/member-dashboard?view=events-page';
+      return '/member-dashboard/events';
     case 'poll_invite':
     case 'poll':
     case 'poll_vote':
-      return '/member-dashboard?view=polls-page';
+      return '/member-dashboard';
     case 'election_update':
-      return '/member-dashboard?view=election-preparation-page';
+      return '/member-dashboard/election-preparation';
     case 'message':
       return '/notifications';
     default:

@@ -104,17 +104,17 @@ const NotificationsPage = () => {
         case 'poll_result':
         case 'poll':
         case 'poll_vote':
-          navigate('/member-dashboard?view=polls-page');
+          navigate('/member-dashboard');
           break;
         case 'meeting_invite':
         case 'meeting':
         case 'meeting_reminder':
-          navigate('/member-dashboard?view=meetings-page');
+          navigate('/member-dashboard/meetings');
           break;
         case 'event_invite':
         case 'event':
         case 'event_reminder':
-          navigate('/member-dashboard?view=events-page');
+          navigate('/member-dashboard/events');
           break;
         default:
           break;

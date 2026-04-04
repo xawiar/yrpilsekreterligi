@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -14,8 +14,6 @@ import Modal from '../components/Modal';
 import MeetingDetails from '../components/MeetingDetails';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-const VisitMap = React.lazy(() => import('../components/VisitMap').catch(() => ({ default: () => <div className="text-center py-8 text-gray-500">Harita yuklenemedi</div> })));
-
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -224,23 +222,6 @@ const DashboardPage = () => {
           onMemberClick={handleMemberClick}
           onEventClick={handleEventClick}
         />
-        {/* Mobilde de Ziyaret Haritasi goster */}
-        <div className="px-4 pb-24">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Ziyaret Haritasi
-              </h3>
-              <button
-                onClick={() => navigate('/locations')}
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-              >
-                Detayli Goruntule
-              </button>
-            </div>
-            <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-400">Harita yukleniyor...</div>}><VisitMap height="250px" mini={true} /></Suspense>
-          </div>
-        </div>
         <Modal
           isOpen={isMeetingModalOpen}
           onClose={() => {
@@ -445,21 +426,6 @@ const DashboardPage = () => {
         )}
       </div>
 
-      {/* Ziyaret Haritasi Mini Widget */}
-      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Ziyaret Haritasi
-          </h3>
-          <button
-            onClick={() => navigate('/locations')}
-            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-          >
-            Detayli Goruntule
-          </button>
-        </div>
-        <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-400">Harita yukleniyor...</div>}><VisitMap height="300px" mini={true} /></Suspense>
-      </div>
     </div>
   );
 };

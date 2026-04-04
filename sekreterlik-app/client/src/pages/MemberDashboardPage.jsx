@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
@@ -33,9 +33,44 @@ import MobileBottomNav from '../components/MobileBottomNav';
 import BranchManagementSection from '../components/BranchManagementSection';
 import DataDeletionRequestButton from '../components/DataDeletionRequestButton';
 
+// URL path <-> view name mappings
+const viewToPathMap = {
+  'dashboard': '',
+  'stk-management': 'stk-management',
+  'stk-events': 'stk-events',
+  'public-institution-management': 'public-institution-management',
+  'add-member': 'add-member',
+  'create-meeting': 'create-meeting',
+  'members-page': 'members',
+  'meetings-page': 'meetings',
+  'calendar-page': 'calendar',
+  'districts-page': 'districts',
+  'events-page': 'events',
+  'archive-page': 'archive',
+  'management-chart-page': 'management-chart',
+  'election-preparation-page': 'election-preparation',
+  'representatives-page': 'representatives',
+  'neighborhoods-page': 'neighborhoods',
+  'villages-page': 'villages',
+  'groups-page': 'groups',
+  'ballot-boxes': 'ballot-boxes',
+  'observers': 'observers',
+};
+
+const pathToViewMap = Object.fromEntries(
+  Object.entries(viewToPathMap).map(([view, path]) => [path, view])
+);
+
+const getViewFromPathname = (pathname) => {
+  const subPath = pathname.replace(/^\/member-dashboard\/?/, '').replace(/\/$/, '');
+  if (!subPath) return 'dashboard';
+  return pathToViewMap[subPath] || 'dashboard';
+};
+
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [member, setMember] = useState(null);
   const [members, setMembers] = useState([]);
@@ -46,7 +81,7 @@ const MemberDashboardPage = () => {
   const [pollResults, setPollResults] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'stk-management', 'stk-events', 'public-institution-management', 'ballot-boxes', 'observers', 'members-page', 'meetings-page', 'calendar-page', 'districts-page', 'events-page', 'archive-page', 'management-chart-page', 'election-preparation-page', 'representatives-page', 'neighborhoods-page', 'villages-page', 'groups-page'
+  const [currentView, setCurrentView] = useState(() => getViewFromPathname(location.pathname));
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const { unreadCount } = useRealtimeNotifications(user?.id || user?.uid);
@@ -75,40 +110,53 @@ const MemberDashboardPage = () => {
     'groups-page': ['access_groups_page'],
   };
 
+  // Navigate to a view by updating the URL (which in turn updates currentView via useEffect)
+  const navigateToView = React.useCallback((view) => {
+    const urlPath = viewToPathMap[view];
+    if (urlPath === undefined) {
+      // Unknown view, go to dashboard
+      navigate('/member-dashboard', { replace: true });
+    } else if (urlPath === '') {
+      navigate('/member-dashboard', { replace: false });
+    } else {
+      navigate(`/member-dashboard/${urlPath}`, { replace: false });
+    }
+  }, [navigate]);
+
   // Yetki kontrolü yapan wrapper fonksiyon
   const setViewWithPermission = React.useCallback((view) => {
     // Dashboard her zaman erişilebilir
     if (view === 'dashboard') {
-      setCurrentView('dashboard');
+      navigateToView('dashboard');
       return;
     }
 
     // View için gerekli permission'ları kontrol et
     const requiredPermissions = viewPermissionMap[view] || [];
-    
+
     // Eğer permission tanımlı değilse, erişime izin ver (geriye dönük uyumluluk)
     if (requiredPermissions.length === 0) {
       console.warn(`View '${view}' için permission tanımı bulunamadı`);
-      setCurrentView(view);
+      navigateToView(view);
       return;
     }
 
     // Kullanıcının en az bir permission'ı var mı kontrol et
-    const hasPermission = requiredPermissions.some(perm => 
+    const hasPermission = requiredPermissions.some(perm =>
       grantedPermissions.includes(perm)
     );
 
     if (hasPermission) {
-      setCurrentView(view);
+      navigateToView(view);
     } else {
       // Yetki yoksa dashboard'a dön ve uyarı göster
       console.warn(`Kullanıcının '${view}' view'ine erişim yetkisi yok`);
-      setCurrentView('dashboard');
+      navigateToView('dashboard');
       setError(`Bu sayfaya erişim yetkiniz bulunmamaktadır.`);
       // 3 saniye sonra hatayı temizle
       setTimeout(() => setError(''), 3000);
     }
-  }, [grantedPermissions]);
+  }, [grantedPermissions, navigateToView]);
 
   // Helper fonksiyon: View için yetki kontrolü
   const hasViewPermission = React.useCallback((view) => {
@@ -168,11 +216,27 @@ const MemberDashboardPage = () => {
   const [womenBranchManagement, setWomenBranchManagement] = useState([]);
   const [youthBranchManagement, setYouthBranchManagement] = useState([]);
   
-  // URL query param'dan view oku (bildirim yonlendirmeleri icin)
+  // URL pathname degistiginde currentView'i guncelle
+  useEffect(() => {
+    const viewFromPath = getViewFromPathname(location.pathname);
+    if (viewFromPath !== currentView) {
+      setCurrentView(viewFromPath);
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Eski ?view= query param destegi (bildirim yonlendirmeleri icin)
+  // Eski formattan yeni URL formatina yonlendir
   useEffect(() => {
     const viewParam = searchParams.get('view');
-    if (viewParam && viewParam !== currentView) {
-      setViewWithPermission(viewParam);
+    if (viewParam) {
+      // Eski ?view= formatindan yeni URL formatina redirect et
+      const urlPath = viewToPathMap[viewParam];
+      if (urlPath !== undefined) {
+        navigate(urlPath === '' ? '/member-dashboard' : `/member-dashboard/${urlPath}`, { replace: true });
+      } else {
+        // Bilinmeyen view, dashboard'a git
+        navigate('/member-dashboard', { replace: true });
+      }
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -232,9 +296,9 @@ const MemberDashboardPage = () => {
   // Redirect to dashboard if current view no longer has permission (CRITICAL 4)
   useEffect(() => {
     if (currentView !== 'dashboard' && !hasViewPermission(currentView)) {
-      setCurrentView('dashboard');
+      navigate('/member-dashboard', { replace: true });
     }
-  }, [currentView, grantedPermissions]);
+  }, [currentView, grantedPermissions]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Start analytics session

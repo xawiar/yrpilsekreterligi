@@ -281,6 +281,69 @@ class PushSubscriptionController {
     }
   }
 
+  // Send push notification with provided subscriptions (Firebase mode support)
+  static async sendDirect(req, res) {
+    try {
+      const { title, body, subscriptions, data } = req.body;
+
+      if (!title || !body) {
+        return res.status(400).json({
+          success: false,
+          message: 'Baslik ve icerik gerekli'
+        });
+      }
+
+      if (!subscriptions || !Array.isArray(subscriptions) || subscriptions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'En az bir subscription gerekli'
+        });
+      }
+
+      // Validate and format subscriptions
+      const formattedSubscriptions = subscriptions
+        .filter(sub => sub && sub.endpoint && sub.keys && sub.keys.p256dh && sub.keys.auth)
+        .map(sub => ({
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.keys.p256dh,
+            auth: sub.keys.auth
+          }
+        }));
+
+      if (formattedSubscriptions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Gecerli subscription bulunamadi'
+        });
+      }
+
+      const payload = PushNotificationService.createPayload(
+        title,
+        body,
+        '/icon-192x192.png',
+        '/badge-72x72.png',
+        data || { type: 'general', action: 'view', url: '/notifications' }
+      );
+
+      const results = await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
+
+      res.json({
+        success: true,
+        message: `Bildirim ${formattedSubscriptions.length} aboneye gonderildi`,
+        sentCount: results.filter(r => r.success).length,
+        totalCount: formattedSubscriptions.length,
+        results
+      });
+    } catch (error) {
+      console.error('Error sending direct push notification:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Push bildirim gonderilirken hata olustu'
+      });
+    }
+  }
+
   // Get all subscriptions (admin only)
   static async getAll(req, res) {
     try {
