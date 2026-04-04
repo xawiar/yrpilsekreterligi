@@ -44,7 +44,14 @@ async function setupPush(savedUser) {
     const user = JSON.parse(savedUser);
     const userId = user.id || user.uid || '';
     if (!userId) { console.error('[PUSH] No userId'); return; }
-    console.error('[PUSH] userId:', userId);
+    // Tum olasi ID'leri topla
+    const allIds = new Set();
+    allIds.add(userId);
+    if (user.uid) allIds.add(user.uid);
+    if (user.id) allIds.add(String(user.id));
+    if (user.memberId) allIds.add(String(user.memberId));
+    if (user.member_id) allIds.add(String(user.member_id));
+    console.error('[PUSH] All IDs to save:', Array.from(allIds));
 
     // Bildirim izni iste
     if (typeof Notification === 'undefined') { console.error('[PUSH] No Notification API'); return; }
@@ -83,40 +90,39 @@ async function setupPush(savedUser) {
     const { db } = await import('./config/firebase');
     if (db) {
       const subJson = JSON.stringify(sub);
-      const tokenData = {
-        subscription: subJson,
-        userId: userId,
-        updatedAt: new Date().toISOString(),
-        isActive: true
-      };
-      // Auth UID ile kaydet
-      await setDoc(doc(db, 'push_tokens', userId), tokenData);
-      // Members ID ile de kaydet (bildirim sistemi bu ID'yi kullaniyor)
-      const memberId = user.memberId || user.member_id || '';
-      if (memberId && memberId !== userId) {
-        await setDoc(doc(db, 'push_tokens', String(memberId)), { ...tokenData, userId: String(memberId) });
-        console.error('[PUSH] TOKEN SAVED for both:', userId, 'and', memberId);
-      } else {
-        // memberId yoksa, tum members'i tara ve esle
+      // Tum olasi ID'ler ile token kaydet
+      for (const id of allIds) {
         try {
-          const { collection: col, getDocs: gd, query: q, where: w } = await import('firebase/firestore');
-          const membersSnap = await gd(col(db, 'members'));
-          const authUid = userId;
-          // member_users'dan bu auth uid ile eslesen member bul
-          const muSnap = await gd(col(db, 'member_users'));
-          let foundMemberId = null;
-          muSnap.forEach((d) => {
-            if (d.data().authUid === authUid || d.data().auth_uid === authUid) {
-              foundMemberId = d.data().memberId || d.data().member_id || d.id;
-            }
+          await setDoc(doc(db, 'push_tokens', id), {
+            subscription: subJson,
+            userId: id,
+            updatedAt: new Date().toISOString(),
+            isActive: true
           });
-          if (foundMemberId) {
-            await setDoc(doc(db, 'push_tokens', String(foundMemberId)), { ...tokenData, userId: String(foundMemberId) });
-            console.error('[PUSH] TOKEN SAVED for member:', foundMemberId);
-          }
-        } catch (_e) { /* sessiz */ }
-        console.error('[PUSH] TOKEN SAVED OK for:', userId);
+        } catch (_e) { /* skip */ }
       }
+      // member_users'dan da eslestirme yap
+      try {
+        const { collection: col, getDocs: gd } = await import('firebase/firestore');
+        const muSnap = await gd(col(db, 'member_users'));
+        muSnap.forEach((d) => {
+          const data = d.data();
+          const authUid = data.authUid || data.auth_uid;
+          if (authUid && allIds.has(authUid)) {
+            const mid = data.memberId || data.member_id || d.id;
+            if (mid && !allIds.has(String(mid))) {
+              setDoc(doc(db, 'push_tokens', String(mid)), {
+                subscription: subJson,
+                userId: String(mid),
+                updatedAt: new Date().toISOString(),
+                isActive: true
+              });
+              allIds.add(String(mid));
+            }
+          }
+        });
+      } catch (_e) { /* skip */ }
+      console.error('[PUSH] TOKEN SAVED for IDs:', Array.from(allIds));
     } else {
       console.error('[PUSH] No db!');
     }
