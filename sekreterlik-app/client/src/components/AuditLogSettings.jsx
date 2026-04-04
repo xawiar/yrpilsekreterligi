@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import ApiService from '../utils/ApiService';
+import { collection, query, orderBy, limit, getDocs, where, startAfter, getCountFromServer } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+const USE_FIREBASE =
+  import.meta.env.VITE_USE_FIREBASE === 'true' ||
+  import.meta.env.VITE_USE_FIREBASE === true ||
+  String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
+
+const PAGE_SIZE = 30;
 
 const AuditLogSettings = () => {
   const [logs, setLogs] = useState([]);
@@ -8,11 +16,96 @@ const AuditLogSettings = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [actionFilter, setActionFilter] = useState('');
   const [actions, setActions] = useState([]);
+  const [lastDocs, setLastDocs] = useState({}); // Pagination cursors for Firebase
 
-  const fetchLogs = async (p = 1) => {
+  // Firebase: Firestore'dan audit loglari oku
+  const fetchLogsFirebase = async (p = 1) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({ page: p, limit: 30 });
+      if (!db) {
+        setLogs([]);
+        return;
+      }
+
+      const logsRef = collection(db, 'audit_logs');
+      const constraints = [];
+
+      if (actionFilter) {
+        constraints.push(where('action', '==', actionFilter));
+      }
+
+      constraints.push(orderBy('created_at', 'desc'));
+
+      // Toplam sayfa sayisini hesapla
+      try {
+        const countSnap = await getCountFromServer(query(logsRef, ...(actionFilter ? [where('action', '==', actionFilter)] : [])));
+        const totalCount = countSnap.data().count;
+        setTotalPages(Math.max(1, Math.ceil(totalCount / PAGE_SIZE)));
+      } catch {
+        // Count basarisiz olursa varsayilan deger
+        setTotalPages(1);
+      }
+
+      // Cursor-based pagination
+      if (p > 1 && lastDocs[p - 1]) {
+        constraints.push(startAfter(lastDocs[p - 1]));
+      }
+      constraints.push(limit(PAGE_SIZE));
+
+      const q = query(logsRef, ...constraints);
+      const snapshot = await getDocs(q);
+
+      const fetchedLogs = [];
+      let lastDoc = null;
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        fetchedLogs.push({
+          id: docSnap.id,
+          ...data,
+          created_at: data.created_at?.toDate ? data.created_at.toDate().toISOString() : data.created_at,
+        });
+        lastDoc = docSnap;
+      });
+
+      // Son dokumani bir sonraki sayfa icin sakla
+      if (lastDoc) {
+        setLastDocs(prev => ({ ...prev, [p]: lastDoc }));
+      }
+
+      setLogs(fetchedLogs);
+      setPage(p);
+    } catch (err) {
+      console.error('Firebase audit log fetch error:', err);
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Firebase: Benzersiz action degerlerini al
+  const fetchActionsFirebase = async () => {
+    try {
+      if (!db) return;
+      const logsRef = collection(db, 'audit_logs');
+      // Son 500 kayittan benzersiz action degerlerini cikar
+      const q = query(logsRef, orderBy('created_at', 'desc'), limit(500));
+      const snapshot = await getDocs(q);
+      const actionSet = new Set();
+      snapshot.forEach((docSnap) => {
+        const action = docSnap.data().action;
+        if (action) actionSet.add(action);
+      });
+      setActions([...actionSet].sort());
+    } catch (err) {
+      console.error('Firebase audit actions fetch error:', err);
+    }
+  };
+
+  // Backend: API uzerinden audit loglari oku
+  const fetchLogsBackend = async (p = 1) => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({ page: p, limit: PAGE_SIZE });
       if (actionFilter) params.append('action', actionFilter);
 
       const token = localStorage.getItem('token');
@@ -33,7 +126,7 @@ const AuditLogSettings = () => {
     }
   };
 
-  const fetchActions = async () => {
+  const fetchActionsBackend = async () => {
     try {
       const token = localStorage.getItem('token');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -49,12 +142,19 @@ const AuditLogSettings = () => {
     }
   };
 
+  const fetchLogs = USE_FIREBASE ? fetchLogsFirebase : fetchLogsBackend;
+  const fetchActions = USE_FIREBASE ? fetchActionsFirebase : fetchActionsBackend;
+
   useEffect(() => {
     fetchActions();
     fetchLogs(1);
   }, []);
 
   useEffect(() => {
+    // Filtre degistiginde cursoru sifirla ve ilk sayfadan basla
+    if (USE_FIREBASE) {
+      setLastDocs({});
+    }
     fetchLogs(1);
   }, [actionFilter]);
 
@@ -108,10 +208,19 @@ const AuditLogSettings = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kullanici</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Islem</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Metod</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Yol</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">IP</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
+                  {USE_FIREBASE ? (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Varlik Tipi</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Varlik ID</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Metod</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Yol</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">IP</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -127,14 +236,23 @@ const AuditLogSettings = () => {
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{log.method || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 max-w-[200px] truncate">{log.path || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{log.ip_address || '-'}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className={log.status_code >= 400 ? 'text-red-600' : 'text-green-600'}>
-                        {log.status_code || '-'}
-                      </span>
-                    </td>
+                    {USE_FIREBASE ? (
+                      <>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{log.entity_type || '-'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 max-w-[200px] truncate">{log.entity_id || '-'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{log.method || '-'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 max-w-[200px] truncate">{log.path || '-'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{log.ip_address || '-'}</td>
+                        <td className="px-4 py-3 text-xs">
+                          <span className={log.status_code >= 400 ? 'text-red-600' : 'text-green-600'}>
+                            {log.status_code || '-'}
+                          </span>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

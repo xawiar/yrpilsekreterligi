@@ -443,11 +443,14 @@ const AdminSettings = () => {
 
 // Guvenlik Ayarlari Alt Bileseni (2FA + Oturum Suresi)
 const SecuritySettingsSection = () => {
+  const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' || import.meta.env.VITE_USE_FIREBASE === true || String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
+
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [twoFASecret, setTwoFASecret] = useState('');
   const [twoFAOtpUrl, setTwoFAOtpUrl] = useState('');
   const [twoFALoading, setTwoFALoading] = useState(false);
   const [disableCode, setDisableCode] = useState('');
+  const [backendAvailable, setBackendAvailable] = useState(!USE_FIREBASE);
 
   const [sessionDuration, setSessionDuration] = useState('7d');
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -456,17 +459,20 @@ const SecuritySettingsSection = () => {
   const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' });
 
   useEffect(() => {
+    // Firebase modunda backend olmadigi icin bu endpointler calismaz
+    if (USE_FIREBASE) return;
+
     // 2FA durumunu kontrol et
     fetch(`${API_URL}/api/auth/2fa/status`, { headers: getHeaders() })
       .then(r => r.json())
       .then(data => { if (data.success) setTwoFAEnabled(data.enabled); })
-      .catch(() => {});
+      .catch(() => { setBackendAvailable(false); });
 
     // Oturum suresini al
     fetch(`${API_URL}/api/auth/session-duration`, { headers: getHeaders() })
       .then(r => r.json())
       .then(data => { if (data.success) setSessionDuration(data.duration); })
-      .catch(() => {});
+      .catch(() => { setBackendAvailable(false); });
   }, []);
 
   const handle2FAEnable = async () => {
@@ -514,6 +520,44 @@ const SecuritySettingsSection = () => {
   };
 
   const durationLabels = { '1d': '1 Gun', '3d': '3 Gun', '7d': '7 Gun', '30d': '30 Gun' };
+
+  // Firebase modunda veya backend erisilemezse bilgi mesaji goster
+  if (USE_FIREBASE || !backendAvailable) {
+    return (
+      <div className="mt-8 space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-2">Guvenlik Ayarlari</h3>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {USE_FIREBASE ? 'Firebase Modunda Kullanilamaz' : 'Backend Sunucusuna Erisilemedi'}
+              </h4>
+              <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                {USE_FIREBASE
+                  ? 'Iki faktorlu dogrulama (2FA) ve oturum suresi ayarlari yalnizca backend sunucu modunda kullanilabilir. Firebase modunda Firebase Authentication tarafindan yonetilen oturum guvenligi aktiftir.'
+                  : 'Guvenlik ayarlari icin backend sunucusuna baglanti saglanamadi. Lutfen sunucunun calistigindan emin olun.'}
+              </p>
+              {USE_FIREBASE && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Aktif</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Firebase Authentication oturum yonetimi</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Aktif</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Firestore guvenlik kurallari</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8 space-y-6">
