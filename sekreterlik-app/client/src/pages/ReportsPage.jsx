@@ -682,19 +682,40 @@ const ReportsPage = () => {
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 190; // 210 - 20mm margin
-      const pageHeight = 277; // 297 - 20mm margin
+      const margin = 10;
+      const headerHeight = 12; // space reserved for header
+      const footerHeight = 10; // space reserved for footer
+      const imgWidth = 210 - margin * 2; // 190mm
+      const pageHeight = 297 - margin * 2 - headerHeight - footerHeight; // usable content height
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
-      let position = 10; // top margin
+      let pageNumber = 1;
+      const today = new Date().toLocaleDateString('tr-TR');
+      const totalPages = Math.ceil(imgHeight / pageHeight);
 
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      // Helper: draw header and footer on current page
+      const addHeaderFooter = (pageNum) => {
+        // Header: title + date
+        pdf.setFontSize(10);
+        pdf.setTextColor(100);
+        pdf.text('Raporlar', margin, margin + 5);
+        pdf.text(today, 210 - margin, margin + 5, { align: 'right' });
+        // Footer: page number
+        pdf.setFontSize(9);
+        pdf.text(`Sayfa ${pageNum} / ${totalPages}`, 105, 297 - margin + 2, { align: 'center' });
+      };
+
+      // First page
+      addHeaderFooter(pageNumber);
+      pdf.addImage(imgData, 'PNG', margin, margin + headerHeight, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10;
+      while (heightLeft > 0) {
+        pageNumber++;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        addHeaderFooter(pageNumber);
+        const position = margin + headerHeight - (imgHeight - heightLeft);
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
@@ -722,6 +743,10 @@ const ReportsPage = () => {
         ['Toplam Etkinlik', stats.totalEvents],
       ];
       const generalSheet = XLSX.utils.aoa_to_sheet(generalData);
+      generalSheet['!cols'] = [
+        { wch: 30 }, // Metrik
+        { wch: 15 }  // Değer
+      ];
       XLSX.utils.book_append_sheet(workbook, generalSheet, 'Genel İstatistikler');
 
       // STK İstatistikleri
@@ -730,6 +755,10 @@ const ReportsPage = () => {
         ...stats.topSTKs.map(stk => [stk.name, stk.visitCount])
       ];
       const stkSheet = XLSX.utils.aoa_to_sheet(stkData);
+      stkSheet['!cols'] = [
+        { wch: 30 }, // STK Adı
+        { wch: 15 }  // Ziyaret Sayısı
+      ];
       XLSX.utils.book_append_sheet(workbook, stkSheet, 'STK İstatistikleri');
 
       // Kamu Kurumu İstatistikleri
@@ -738,6 +767,10 @@ const ReportsPage = () => {
         ...stats.topPublicInstitutions.map(inst => [inst.name, inst.visitCount])
       ];
       const publicInstitutionSheet = XLSX.utils.aoa_to_sheet(publicInstitutionData);
+      publicInstitutionSheet['!cols'] = [
+        { wch: 30 }, // Kamu Kurumu Adı
+        { wch: 15 }  // Ziyaret Sayısı
+      ];
       XLSX.utils.book_append_sheet(workbook, publicInstitutionSheet, 'Kamu Kurumu İstatistikleri');
 
       // Kategori Bazında Etkinlik
@@ -746,6 +779,11 @@ const ReportsPage = () => {
         ...stats.eventCategoryStats.map(cat => [cat.categoryName, cat.eventCount, cat.totalAttendance])
       ];
       const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
+      categorySheet['!cols'] = [
+        { wch: 25 }, // Kategori
+        { wch: 15 }, // Etkinlik Sayısı
+        { wch: 15 }  // Toplam Katılım
+      ];
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Kategori İstatistikleri');
 
       XLSX.writeFile(workbook, 'raporlar.xlsx');

@@ -1,0 +1,38 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: sekreterlik-app/client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: sekreterlik-app/client
+        run: npm ci
+
+      - name: Build
+        working-directory: sekreterlik-app/client
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Check build output
+        working-directory: sekreterlik-app/client
+        run: |
+          echo "Build completed successfully"
+          ls -la dist/
+          echo "Total files: $(find dist -type f | wc -l)"

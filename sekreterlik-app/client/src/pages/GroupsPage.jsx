@@ -247,9 +247,20 @@ const GroupsPage = () => {
             });
             
             const ws = XLSX.utils.aoa_to_sheet(excelData);
+            ws['!cols'] = [
+              { wch: 10 }, // Grup No
+              { wch: 25 }, // Grup Lideri
+              { wch: 20 }, // Mahalle/Köy
+              { wch: 15 }, // İlçe
+              { wch: 15 }, // Belde
+              { wch: 25 }, // Temsilci
+              { wch: 15 }, // Temsilci Telefon
+              { wch: 25 }, // Müfettiş
+              { wch: 15 }  // Müfettiş Telefon
+            ];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Gruplar');
-            
+
             const fileName = `gruplar_${new Date().toISOString().split('T')[0]}.xlsx`;
             XLSX.writeFile(wb, fileName);
           }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
@@ -21,9 +21,8 @@ import { Pagination } from '../components/UI';
 const MembersPage = () => {
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
-  const [members, setMembers] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   const [allMembers, setAllMembers] = useState([]); // Store all members for filtering
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState(null);
@@ -78,6 +77,15 @@ const MembersPage = () => {
     };
   }, []);
 
+  // Cache meeting stats per member to avoid recalculating on every sort
+  const memberStats = useMemo(() => {
+    const statsMap = new Map();
+    allMembers.forEach(member => {
+      statsMap.set(member.id, calculateMeetingStats(member, meetings));
+    });
+    return statsMap;
+  }, [allMembers, meetings]);
+
   useEffect(() => {
     // Apply filtering first (search by name, TC, phone, and position)
     const term = searchTerm.toLowerCase();
@@ -90,38 +98,26 @@ const MembersPage = () => {
       const matchesRegion = selectedRegion === '' || member.region === selectedRegion;
       return matchesSearch && matchesRegion;
     });
-    
+
     // Then apply sorting (always sort by name A-Z by default)
     const sortKey = sortConfig.key || 'name'; // Fallback to 'name' if no key is set
     const sortDirection = sortConfig.direction || 'asc'; // Fallback to 'asc' if no direction is set
-    
+
     result = [...result].sort((a, b) => {
       let aValue, bValue;
-      
+
       if (sortKey === 'attendancePercentage') {
-        // Calculate attendance percentage for sorting
-        const aStats = calculateMeetingStats(a, meetings);
-        const bStats = calculateMeetingStats(b, meetings);
-        aValue = aStats.attendancePercentage;
-        bValue = bStats.attendancePercentage;
+        aValue = (memberStats.get(a.id) || {}).attendancePercentage;
+        bValue = (memberStats.get(b.id) || {}).attendancePercentage;
       } else if (sortKey === 'totalMeetings') {
-        // Calculate total meetings for sorting
-        const aStats = calculateMeetingStats(a, meetings);
-        const bStats = calculateMeetingStats(b, meetings);
-        aValue = aStats.totalMeetings;
-        bValue = bStats.totalMeetings;
+        aValue = (memberStats.get(a.id) || {}).totalMeetings;
+        bValue = (memberStats.get(b.id) || {}).totalMeetings;
       } else if (sortKey === 'attendedMeetings') {
-        // Calculate attended meetings for sorting
-        const aStats = calculateMeetingStats(a, meetings);
-        const bStats = calculateMeetingStats(b, meetings);
-        aValue = aStats.attendedMeetings;
-        bValue = bStats.attendedMeetings;
+        aValue = (memberStats.get(a.id) || {}).attendedMeetings;
+        bValue = (memberStats.get(b.id) || {}).attendedMeetings;
       } else if (sortKey === 'excusedMeetings') {
-        // Calculate excused meetings for sorting
-        const aStats = calculateMeetingStats(a, meetings);
-        const bStats = calculateMeetingStats(b, meetings);
-        aValue = aStats.excusedMeetings;
-        bValue = bStats.excusedMeetings;
+        aValue = (memberStats.get(a.id) || {}).excusedMeetings;
+        bValue = (memberStats.get(b.id) || {}).excusedMeetings;
       } else if (sortKey === 'registrations') {
         // Calculate registrations for sorting
         aValue = calculateMemberRegistrations(a.id, memberRegistrations);
@@ -130,22 +126,22 @@ const MembersPage = () => {
         aValue = a[sortKey];
         bValue = b[sortKey];
       }
-      
+
       // Handle null or undefined values
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return sortDirection === 'asc' ? 1 : -1;
       if (bValue == null) return sortDirection === 'asc' ? -1 : 1;
-      
+
       // For string values, use localeCompare for proper sorting (especially for Turkish characters)
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'tr-TR', { 
+        const comparison = aValue.localeCompare(bValue, 'tr-TR', {
           sensitivity: 'base',
           numeric: true,
           caseFirst: 'lower'
         });
         return sortDirection === 'asc' ? comparison : -comparison;
       }
-      
+
       // For numeric values
       if (aValue < bValue) {
         return sortDirection === 'asc' ? -1 : 1;
@@ -155,9 +151,9 @@ const MembersPage = () => {
       }
       return 0;
     });
-    
+
     setFilteredMembers(result);
-  }, [allMembers, searchTerm, selectedRegion, sortConfig, meetings, memberRegistrations]);
+  }, [allMembers, searchTerm, selectedRegion, sortConfig, meetings, memberRegistrations, memberStats]);
 
   // Reset to page 1 when search term or region filter changes
   useEffect(() => {
@@ -169,7 +165,6 @@ const MembersPage = () => {
       setLoading(true);
       const resp = await ApiService.getMembers(false);
       const data = Array.isArray(resp) ? resp : (resp.data || []);
-      setMembers(data);
       setAllMembers(data);
     } catch (error) {
       console.error('Error fetching members:', error);

@@ -994,8 +994,12 @@ const ElectionResultsPage = ({ readOnly = false }) => {
         ['Geçersiz Oy', calculateTotalInvalidVotes()],
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      summarySheet['!cols'] = [
+        { wch: 25 }, // Label
+        { wch: 20 }  // Value
+      ];
       XLSX.utils.book_append_sheet(workbook, summarySheet, 'Özet');
-      
+
       // Results sheet
       const resultsData = filtered.map(result => ({
         'Sandık No': result.ballot_number || '',
@@ -1010,6 +1014,18 @@ const ElectionResultsPage = ({ readOnly = false }) => {
         'İtiraz': result.has_objection ? 'Evet' : 'Hayır',
       }));
       const resultsSheet = XLSX.utils.json_to_sheet(resultsData);
+      resultsSheet['!cols'] = [
+        { wch: 12 }, // Sandık No
+        { wch: 12 }, // İl
+        { wch: 15 }, // İlçe
+        { wch: 15 }, // Belde
+        { wch: 20 }, // Mahalle/Köy
+        { wch: 14 }, // Toplam Seçmen
+        { wch: 14 }, // Oy Kullanan
+        { wch: 12 }, // Geçerli Oy
+        { wch: 12 }, // Geçersiz Oy
+        { wch: 10 }  // İtiraz
+      ];
       XLSX.utils.book_append_sheet(workbook, resultsSheet, 'Sonuçlar');
       
       XLSX.writeFile(workbook, `${election?.name || 'seçim-sonuclari'}_${new Date().toISOString().split('T')[0]}.xlsx`);

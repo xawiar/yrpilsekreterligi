@@ -271,6 +271,16 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
     });
 
     const ws = XLSX.utils.aoa_to_sheet(excelData);
+    ws['!cols'] = [
+      { wch: 20 }, // Mahalle/Köy Adı
+      { wch: 15 }, // İlçe
+      { wch: 15 }, // Belde
+      { wch: 10 }, // Grup No
+      { wch: 25 }, // Temsilci
+      { wch: 15 }, // Temsilci Telefon
+      { wch: 25 }, // Müfettiş
+      { wch: 15 }  // Müfettiş Telefon
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, cfg.excelSheet);
 

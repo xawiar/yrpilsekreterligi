@@ -379,9 +379,17 @@ const BallotBoxesPage = () => {
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
+    ws['!cols'] = [
+      { wch: 12 }, // İl
+      { wch: 15 }, // İlçe
+      { wch: 20 }, // Mahalle / Köy
+      { wch: 25 }, // Sandık Alanı / Okul Adı
+      { wch: 15 }, // Sandık Numarası
+      { wch: 25 }  // Sandık Seçmen Sayısı
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sandıklar');
-    
+
     XLSX.writeFile(wb, 'sandik_template.xlsx');
   };
 
@@ -701,9 +709,17 @@ const BallotBoxesPage = () => {
                   });
                   
                   const ws = XLSX.utils.aoa_to_sheet(excelData);
+                  ws['!cols'] = [
+                    { wch: 12 }, // İl
+                    { wch: 15 }, // İlçe
+                    { wch: 20 }, // Mahalle / Köy
+                    { wch: 25 }, // Sandık Alanı / Okul Adı
+                    { wch: 15 }, // Sandık Numarası
+                    { wch: 25 }  // Sandık Seçmen Sayısı
+                  ];
                   const wb = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(wb, ws, 'Sandıklar');
-                  
+
                   const fileName = `sandiklar_${new Date().toISOString().split('T')[0]}.xlsx`;
                   XLSX.writeFile(wb, fileName);
                 }}

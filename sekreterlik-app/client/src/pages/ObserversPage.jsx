@@ -482,6 +482,14 @@ const ObserversPage = () => {
                     });
 
                     const ws = XLSX.utils.aoa_to_sheet(excelData);
+                    ws['!cols'] = [
+                      { wch: 12 }, // TC
+                      { wch: 25 }, // Ad Soyad
+                      { wch: 15 }, // Telefon
+                      { wch: 15 }, // Sandık
+                      { wch: 25 }, // Konum
+                      { wch: 12 }  // Başmüşahit
+                    ];
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, 'Müşahitler');
 

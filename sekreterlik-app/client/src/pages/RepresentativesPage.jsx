@@ -359,6 +359,15 @@ const RepresentativesPage = () => {
                 });
 
                 const ws = XLSX.utils.aoa_to_sheet(excelData);
+                ws['!cols'] = [
+                  { wch: 20 }, // Mahalle/Köy Adı
+                  { wch: 15 }, // İlçe
+                  { wch: 15 }, // Belde
+                  { wch: 25 }, // Temsilci Adı
+                  { wch: 12 }, // Temsilci TC
+                  { wch: 15 }, // Temsilci Telefon
+                  { wch: 10 }  // Grup No
+                ];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, activeTab === 'neighborhood' ? 'Mahalle Temsilcileri' : 'Köy Temsilcileri');
 

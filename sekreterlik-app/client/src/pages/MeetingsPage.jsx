@@ -200,17 +200,6 @@ const MeetingsPage = () => {
     }
   };
 
-  // Function to handle excuse updates (opens the attendance modal)
-  const handleUpdateExcuse = async (id) => {
-    try {
-      const meeting = await ApiService.getMeetingById(id);
-      setSelectedMeeting(meeting);
-      setIsAttendanceModalOpen(true);
-    } catch (error) {
-      console.error('Error fetching meeting details:', error);
-    }
-  };
-
   const closeCreateMeetingModal = () => {
     setIsCreateModalOpen(false);
   };
@@ -559,7 +548,6 @@ const MeetingsPage = () => {
           handleEditMeeting={handleEditMeeting}
           handleArchiveMeeting={handleArchiveMeeting}
           handleUpdateAttendance={handleUpdateAttendance}
-          handleUpdateExcuse={handleUpdateExcuse}
           calculateAttendanceStats={calculateAttendanceStats}
           getAttendanceColor={getAttendanceColor}
         />

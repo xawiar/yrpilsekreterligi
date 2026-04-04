@@ -12,7 +12,20 @@ const ExcelExport = ({ data, filename, buttonText, className = "" }) => {
       
       // Convert data to worksheet
       const worksheet = XLSX.utils.json_to_sheet(data);
-      
+
+      // Auto-calculate column widths from headers and data
+      if (data && data.length > 0) {
+        const keys = Object.keys(data[0]);
+        worksheet['!cols'] = keys.map(key => {
+          const maxDataLen = data.reduce((max, row) => {
+            const val = row[key];
+            const len = val != null ? String(val).length : 0;
+            return Math.max(max, len);
+          }, key.length);
+          return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+        });
+      }
+
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
       
