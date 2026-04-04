@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from './LoadingSpinner';
 
-const LoginForm = ({ 
-  username, 
-  setUsername, 
-  password, 
-  setPassword, 
-  error, 
+const LoginForm = ({
+  username,
+  setUsername,
+  password,
+  setPassword,
+  error,
   isLoading,
   handleSubmit,
   rememberMe,
   setRememberMe
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
@@ -58,6 +59,7 @@ const LoginForm = ({
             autoComplete="off"
             data-form-type="other"
             required
+            autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:shadow-lg focus:shadow-emerald-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
@@ -88,6 +90,8 @@ const LoginForm = ({
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+            onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
             className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:shadow-lg focus:shadow-emerald-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
             style={{
               boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
@@ -114,6 +118,7 @@ const LoginForm = ({
             </button>
           </div>
         </div>
+        {capsLock && <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">Caps Lock açık</p>}
       </div>
 
       <div className="flex items-center justify-between">

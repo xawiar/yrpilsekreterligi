@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatMemberName } from '../utils/nameFormatter';
 import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +15,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
   const { user } = useAuth();
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
+  const navigate = useNavigate();
 
   // Early return if member is not provided
   if (!member || !member.id) {
@@ -925,16 +927,24 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
             <div className="text-xs sm:text-sm text-gray-500">Kaydettiği Üye</div>
             <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{registrations}</div>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-500">Etkinlik Sayısı</div>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{eventStats.totalEvents}</div>
+          <div
+            className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => navigate('/events')}
+            title="Etkinlikler sayfasina git"
+          >
+            <div className="text-xs sm:text-sm text-gray-500">Etkinlik Sayisi</div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-indigo-600">{eventStats.totalEvents}</div>
+          </div>
+          <div
+            className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => navigate('/events')}
+            title="Etkinlikler sayfasina git"
+          >
+            <div className="text-xs sm:text-sm text-gray-500">Katildigi Etkinlik</div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-indigo-600">{eventStats.attendedEvents}</div>
           </div>
           <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-500">Katıldığı Etkinlik</div>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{eventStats.attendedEvents}</div>
-          </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-500">Etkinlik Katılım %</div>
+            <div className="text-xs sm:text-sm text-gray-500">Etkinlik Katilim %</div>
             <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{eventStats.eventAttendancePercentage}%</div>
           </div>
         </div>
@@ -1145,7 +1155,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
                 return (
                   <tr key={meeting.id} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {meeting.name}
+                      <button
+                        onClick={() => navigate('/meetings')}
+                        className="text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                        title="Toplantilara git"
+                      >
+                        {meeting.name}
+                      </button>
                     </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {meeting.date}

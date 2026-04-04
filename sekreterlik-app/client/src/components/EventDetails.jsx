@@ -322,7 +322,8 @@ const EventDetails = ({ event, members }) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `${event.name.replace(/\s+/g, '_')}_detaylar.csv`);
+      const csvDateStr = new Date().toISOString().split('T')[0];
+      link.setAttribute('download', `${event.name.replace(/\s+/g, '_')}_detaylar_${csvDateStr}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -356,29 +357,45 @@ const EventDetails = ({ event, members }) => {
       // Create PDF
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      // Calculate dimensions
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      const margin = 10;
+      const headerHeight = 12;
+      const footerHeight = 10;
+      const imgWidth = 210 - margin * 2;
+      const pageHeight = 297 - margin * 2 - headerHeight - footerHeight;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
+      let pageNumber = 1;
+      const today = new Date().toLocaleDateString('tr-TR');
+      const dateStr = new Date().toISOString().split('T')[0];
+      const totalPages = Math.ceil(imgHeight / pageHeight);
 
-      let position = 0;
+      // Helper: draw header and footer on current page
+      const addHeaderFooter = (pageNum) => {
+        pdf.setFontSize(10);
+        pdf.setTextColor(100);
+        pdf.text('Etkinlik Detaylari', margin, margin + 5);
+        pdf.text(today, 210 - margin, margin + 5, { align: 'right' });
+        pdf.setFontSize(9);
+        pdf.text(`Sayfa ${pageNum} / ${totalPages}`, 105, 297 - margin + 2, { align: 'center' });
+      };
 
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      // First page
+      addHeaderFooter(pageNumber);
+      pdf.addImage(imgData, 'PNG', margin, margin + headerHeight, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
+      while (heightLeft > 0) {
+        pageNumber++;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        addHeaderFooter(pageNumber);
+        const position = margin + headerHeight - (imgHeight - heightLeft);
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
       // Save PDF
-      pdf.save(`${event.name.replace(/\s+/g, '_')}_detaylar.pdf`);
+      pdf.save(`${event.name.replace(/\s+/g, '_')}_detaylar_${dateStr}.pdf`);
       
       toast.success('PDF başarıyla oluşturuldu ve indirildi!');
     } catch (error) {

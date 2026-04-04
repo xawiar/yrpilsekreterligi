@@ -132,6 +132,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
   const [villages, setVillages] = useState([]);
   const [observers, setObservers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Filters
   const [selectedDistrict, setSelectedDistrict] = useState('');
@@ -917,8 +918,8 @@ const ElectionResultsPage = ({ readOnly = false }) => {
 
   // Export as PNG
   const handleExportPNG = async () => {
-    if (!chartContainerRef.current) return;
-    
+    if (!chartContainerRef.current || isExporting) return;
+    setIsExporting(true);
     try {
       const canvas = await html2canvas(chartContainerRef.current, {
         scale: 2,
@@ -927,54 +928,80 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       });
       
       const link = document.createElement('a');
-      link.download = `${election?.name || 'seçim-sonuclari'}_grafik.png`;
+      const pngDateStr = new Date().toISOString().split('T')[0];
+      link.download = `${(election?.name || 'secim-sonuclari').replace(/\s+/g, '_')}_grafik_${pngDateStr}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (error) {
       console.error('PNG export error:', error);
       toast.error('PNG oluşturulurken bir hata oluştu');
+    } finally {
+      setIsExporting(false);
     }
   };
 
   // Export as PDF
   const handleExportPDF = async () => {
-    if (!chartContainerRef.current) return;
-    
+    if (!chartContainerRef.current || isExporting) return;
+    setIsExporting(true);
     try {
       const canvas = await html2canvas(chartContainerRef.current, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff'
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210;
-      const pageHeight = 295;
+      const margin = 10;
+      const headerHeight = 12;
+      const footerHeight = 10;
+      const imgWidth = 210 - margin * 2;
+      const pageHeight = 297 - margin * 2 - headerHeight - footerHeight;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      let pageNumber = 1;
+      const today = new Date().toLocaleDateString('tr-TR');
+      const dateStr = new Date().toISOString().split('T')[0];
+      const totalPages = Math.ceil(imgHeight / pageHeight);
+
+      // Helper: draw header and footer on current page
+      const addHeaderFooter = (pageNum) => {
+        pdf.setFontSize(10);
+        pdf.setTextColor(100);
+        pdf.text('Secim Sonuclari', margin, margin + 5);
+        pdf.text(today, 210 - margin, margin + 5, { align: 'right' });
+        pdf.setFontSize(9);
+        pdf.text(`Sayfa ${pageNum} / ${totalPages}`, 105, 297 - margin + 2, { align: 'center' });
+      };
+
+      // First page
+      addHeaderFooter(pageNumber);
+      pdf.addImage(imgData, 'PNG', margin, margin + headerHeight, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
+
+      while (heightLeft > 0) {
+        pageNumber++;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        addHeaderFooter(pageNumber);
+        const position = margin + headerHeight - (imgHeight - heightLeft);
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      
-      pdf.save(`${election?.name || 'seçim-sonuclari'}_grafik.pdf`);
+
+      pdf.save(`${(election?.name || 'secim-sonuclari').replace(/\s+/g, '_')}_grafik_${dateStr}.pdf`);
     } catch (error) {
       console.error('PDF export error:', error);
       toast.error('PDF oluşturulurken bir hata oluştu');
+    } finally {
+      setIsExporting(false);
     }
   };
 
   // Export as Excel
   const handleExportExcel = useCallback(() => {
+    if (isExporting) return;
+    setIsExporting(true);
     try {
       const filtered = getFilteredResults();
       if (!filtered || filtered.length === 0) {
@@ -1032,8 +1059,10 @@ const ElectionResultsPage = ({ readOnly = false }) => {
     } catch (error) {
       console.error('Excel export error:', error);
       toast.error('Excel oluşturulurken bir hata oluştu');
+    } finally {
+      setIsExporting(false);
     }
-  }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes]);
+  }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes, isExporting]);
 
   // Helper function to calculate winning candidates based on party seats and candidate order
   const calculateWinningCandidatesFromSeats = useCallback((partySeats, partyCandidates) => {
@@ -1377,21 +1406,23 @@ const ElectionResultsPage = ({ readOnly = false }) => {
               <div className="flex gap-2">
                 <button
                   onClick={handleExportPDF}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  disabled={isExporting}
+                  className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isExporting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  PDF İndir
+                  {isExporting ? 'Olusturuluyor...' : 'PDF Indir'}
                 </button>
                 <button
                   onClick={handleExportExcel}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  disabled={isExporting}
+                  className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isExporting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Excel İndir
+                  {isExporting ? 'Olusturuluyor...' : 'Excel Indir'}
                 </button>
               </div>
             )}

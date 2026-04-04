@@ -47,6 +47,7 @@ const MembersPage = () => {
   const [excelImportPreview, setExcelImportPreview] = useState(null); // Excel import preview data
   const [excelImportFile, setExcelImportFile] = useState(null); // Excel file for import
   const [excelImportLoading, setExcelImportLoading] = useState(false); // Excel import loading state
+  const [selectedMemberIds, setSelectedMemberIds] = useState(new Set()); // Toplu islem icin secili uyeler
 
   useEffect(() => {
     fetchMembers();
@@ -407,6 +408,70 @@ const MembersPage = () => {
     setExcelImportFile(null);
   };
 
+  // Toplu islem: secili uyeleri arsivle
+  const handleBulkArchive = async () => {
+    if (selectedMemberIds.size === 0) return;
+    const confirmed = await confirm({
+      title: 'Toplu Arsivle',
+      message: `Secili ${selectedMemberIds.size} uyeyi arsivlemek istediginize emin misiniz?`
+    });
+    if (!confirmed) return;
+    try {
+      const promises = Array.from(selectedMemberIds).map(id => ApiService.archiveMember(id));
+      await Promise.all(promises);
+      toast.success(`${selectedMemberIds.size} uye basariyla arsivlendi`);
+      setSelectedMemberIds(new Set());
+      fetchMembers();
+    } catch (error) {
+      toast.error('Toplu arsivleme sirasinda hata: ' + error.message);
+    }
+  };
+
+  // Toplu islem: secili uyelerin bolgesini degistir
+  const handleBulkRegionChange = async (newRegion) => {
+    if (selectedMemberIds.size === 0 || !newRegion) return;
+    const confirmed = await confirm({
+      title: 'Toplu Bolge Degistir',
+      message: `Secili ${selectedMemberIds.size} uyenin bolgesini "${newRegion}" olarak degistirmek istediginize emin misiniz?`
+    });
+    if (!confirmed) return;
+    try {
+      const promises = Array.from(selectedMemberIds).map(id => {
+        const member = allMembers.find(m => m.id === id);
+        if (member) {
+          return ApiService.updateMember(id, { ...member, region: newRegion });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(promises);
+      toast.success(`${selectedMemberIds.size} uyenin bolgesi guncellendi`);
+      setSelectedMemberIds(new Set());
+      fetchMembers();
+    } catch (error) {
+      toast.error('Toplu bolge degistirme sirasinda hata: ' + error.message);
+    }
+  };
+
+  const handleToggleSelectMember = (id) => {
+    setSelectedMemberIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedMemberIds.size === paginatedMembers.length) {
+      setSelectedMemberIds(new Set());
+    } else {
+      setSelectedMemberIds(new Set(paginatedMembers.map(m => m.id)));
+    }
+  };
+
   const handleExportExcel = async () => {
     const confirmed = await confirm({
       message: 'Bu dosya TC kimlik ve telefon numarası gibi hassas kişisel veriler içermektedir. KVKK kapsamında bu verilerin paylaşımından siz sorumlusunuz. Devam etmek istiyor musunuz?',
@@ -694,9 +759,46 @@ const MembersPage = () => {
         regions={regions}
         onRegionChange={setSelectedRegion}
       />
+      {/* Toplu islem bar */}
+      {selectedMemberIds.size > 0 && (
+        <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+            {selectedMemberIds.size} uye secildi
+          </span>
+          <button
+            onClick={handleBulkArchive}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            Toplu Arsivle
+          </button>
+          <div className="flex items-center gap-2">
+            <select
+              onChange={(e) => {
+                if (e.target.value) handleBulkRegionChange(e.target.value);
+                e.target.value = '';
+              }}
+              className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+              defaultValue=""
+            >
+              <option value="" disabled>Bolge Degistir...</option>
+              {regions.map(r => (
+                <option key={r.id} value={r.name}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => setSelectedMemberIds(new Set())}
+            className="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg transition-colors"
+          >
+            Secimi Kaldir
+          </button>
+        </div>
+      )}
+
       <MembersTable
         members={paginatedMembers}
         meetings={meetings}
+        events={events}
         memberRegistrations={memberRegistrations}
         calculateMeetingStats={calculateMeetingStats}
         getAttendanceColor={getAttendanceColor}
@@ -711,6 +813,9 @@ const MembersPage = () => {
         searchTerm={searchTerm}
         selectedRegion={selectedRegion}
         viewMode={viewMode}
+        selectedMemberIds={selectedMemberIds}
+        onToggleSelect={handleToggleSelectMember}
+        onToggleSelectAll={handleToggleSelectAll}
       />
 
       <Pagination

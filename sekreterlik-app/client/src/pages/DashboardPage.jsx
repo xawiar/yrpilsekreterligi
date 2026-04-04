@@ -241,7 +241,18 @@ const DashboardPage = () => {
   // Desktop görünümü (mevcut)
   return (
     <div className={`py-2 sm:py-4 md:py-6 w-full overflow-x-hidden lg:pb-6`}>
-      <DashboardHeader />
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
+        <button
+          onClick={() => { fetchDashboardData(); fetchAllMeetings(); }}
+          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title="Yenile"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
 
       {/* Stats Cards - Mobilde tek kolon, desktop'ta çoklu kolon */}
       <DashboardStatsCards stats={stats} />
@@ -263,7 +274,7 @@ const DashboardPage = () => {
           {upcomingEvents.length > 0 ? (
             <div className="space-y-3">
               {upcomingEvents.map((event, index) => (
-                <div key={index} className={`p-3 bg-gray-50 dark:bg-gray-700 rounded-lg`}>
+                <div key={index} onClick={() => handleEventClick(event)} className={`p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">{event.name}</h4>
@@ -300,7 +311,7 @@ const DashboardPage = () => {
           {upcomingMeetings.length > 0 ? (
             <div className="space-y-3">
               {upcomingMeetings.map((meeting, index) => (
-                <div key={index} className={`p-3 bg-gray-50 dark:bg-gray-700 rounded-lg`}>
+                <div key={index} onClick={() => handleMeetingClick(meeting)} className={`p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">{meeting.name}</h4>

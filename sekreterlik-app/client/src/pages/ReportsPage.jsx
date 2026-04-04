@@ -719,7 +719,8 @@ const ReportsPage = () => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save('raporlar.pdf');
+      const dateStr = new Date().toISOString().split('T')[0];
+      pdf.save(`raporlar_${dateStr}.pdf`);
       toast.success('PDF başarıyla oluşturuldu ve indirildi!');
     } catch (error) {
       console.error('PDF export error:', error);
@@ -786,7 +787,8 @@ const ReportsPage = () => {
       ];
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Kategori İstatistikleri');
 
-      XLSX.writeFile(workbook, 'raporlar.xlsx');
+      const excelDateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `raporlar_${excelDateStr}.xlsx`);
       toast.success('Excel dosyası başarıyla indirildi!');
     } catch (error) {
       console.error('Excel export error:', error);
@@ -1696,6 +1698,55 @@ const ReportsPage = () => {
         </div>
 
         </div>{/* End reportContentRef */}
+
+        {/* KVKK Uyum Durumu Karti - Sadece Admin */}
+        {isAdmin && (
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                KVKK Uyum Durumu
+              </h3>
+              <a
+                href="/settings?tab=data-retention"
+                className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline"
+              >
+                Detaylar
+              </a>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-800 dark:text-green-300">Aydinlatma Metni</span>
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400">Yayin durumunda</p>
+              </div>
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-800 dark:text-green-300">Acik Riza</span>
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400">Aktif (uye formunda)</p>
+              </div>
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Silme Talepleri</span>
+                </div>
+                <p className="text-xs text-blue-600 dark:text-blue-400">Ayarlardan kontrol edin</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Export Butonları - En Alta */}
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">

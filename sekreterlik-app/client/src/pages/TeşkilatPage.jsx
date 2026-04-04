@@ -72,6 +72,23 @@ const TeşkilatPage = () => {
         </p>
       </div>
 
+      {/* Ozet Istatistikler - Skeleton */}
+      {statsLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-pulse">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg w-10 h-10"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                  <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Ozet Istatistikler */}
       {!statsLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

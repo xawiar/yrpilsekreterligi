@@ -49,7 +49,10 @@ const LoginEnhanced = () => {
     }
   }, [searchParams]);
 
-  // Load saved credentials on mount
+  // Caps Lock state
+  const [capsLock, setCapsLock] = useState(false);
+
+  // Load saved credentials on mount (only once)
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
@@ -60,37 +63,35 @@ const LoginEnhanced = () => {
       setUsername(savedUsername);
       setRememberMe(true);
     }
-    
-    // Load saved Chief Observer credentials
-    const savedBallotNumber = localStorage.getItem('rememberedBallotNumber');
-    const savedTc = localStorage.getItem('rememberedTc');
-    const savedRememberChiefObserver = localStorage.getItem('rememberChiefObserver') === 'true';
-    
+
+    // Load saved Chief Observer credentials (TC artık sessionStorage'da)
+    const savedBallotNumber = sessionStorage.getItem('rememberedBallotNumber');
+    const savedTc = sessionStorage.getItem('rememberedTc');
+    const savedRememberChiefObserver = sessionStorage.getItem('rememberChiefObserver') === 'true';
+    // Eski localStorage'daki TC verilerini temizle (güvenlik iyileştirmesi - sessionStorage'a taşındı)
+    localStorage.removeItem('rememberedBallotNumber');
+    localStorage.removeItem('rememberedTc');
+    localStorage.removeItem('rememberChiefObserver');
+
     if (savedRememberChiefObserver && savedBallotNumber && savedTc) {
       setBallotNumber(savedBallotNumber);
       setTc(savedTc);
       setRememberChiefObserver(true);
     }
-    
-    // Load saved Coordinator credentials (sadece TC saklanır, telefon asla saklanmaz)
-    const savedCoordinatorTc = localStorage.getItem('rememberedCoordinatorTc');
-    const savedRememberCoordinator = localStorage.getItem('rememberCoordinator') === 'true';
-    // Eski telefon varsa temizle (güvenlik iyileştirmesi)
+
+    // Load saved Coordinator credentials (TC artık sessionStorage'da, telefon asla saklanmaz)
+    const savedCoordinatorTc = sessionStorage.getItem('rememberedCoordinatorTc');
+    const savedRememberCoordinator = sessionStorage.getItem('rememberCoordinator') === 'true';
+    // Eski localStorage'daki verileri temizle (güvenlik iyileştirmesi)
+    localStorage.removeItem('rememberedCoordinatorTc');
+    localStorage.removeItem('rememberCoordinator');
     localStorage.removeItem('rememberedCoordinatorPhone');
 
     if (savedRememberCoordinator && savedCoordinatorTc) {
       setCoordinatorTc(savedCoordinatorTc);
       setRememberCoordinator(true);
     }
-    
-    // Auto-focus username field on mount (sadece admin-member sekmesinde)
-    if (activeTab === 'admin-member') {
-      const usernameInput = document.getElementById('username');
-      if (usernameInput) {
-        usernameInput.focus();
-      }
-    }
-  }, [activeTab]);
+  }, []);
 
   // Handle Admin/Üye form submission
   const handleAdminMemberSubmit = async (e) => {
@@ -175,7 +176,13 @@ const LoginEnhanced = () => {
         setError('Geçersiz kullanıcı adı veya şifre');
       }
     } catch (err) {
-      setError('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+      if (err.name === 'AbortError' || err.message?.includes('timeout')) {
+        setError('İstek zaman aşımına uğradı. Lütfen tekrar deneyin.');
+      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.message?.includes('Network request failed')) {
+        setError('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.');
+      } else {
+        setError('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -191,15 +198,15 @@ const LoginEnhanced = () => {
       const result = await ApiService.loginChiefObserver(ballotNumber.trim(), tc.trim());
       
       if (result.success) {
-        // Handle remember me functionality
+        // Handle remember me functionality (TC sessionStorage'da saklanır)
         if (rememberChiefObserver) {
-          localStorage.setItem('rememberedBallotNumber', ballotNumber.trim());
-          localStorage.setItem('rememberedTc', tc.trim());
-          localStorage.setItem('rememberChiefObserver', 'true');
+          sessionStorage.setItem('rememberedBallotNumber', ballotNumber.trim());
+          sessionStorage.setItem('rememberedTc', tc.trim());
+          sessionStorage.setItem('rememberChiefObserver', 'true');
         } else {
-          localStorage.removeItem('rememberedBallotNumber');
-          localStorage.removeItem('rememberedTc');
-          localStorage.removeItem('rememberChiefObserver');
+          sessionStorage.removeItem('rememberedBallotNumber');
+          sessionStorage.removeItem('rememberedTc');
+          sessionStorage.removeItem('rememberChiefObserver');
         }
         
         // Set user in AuthContext (localStorage is managed automatically)
@@ -207,10 +214,20 @@ const LoginEnhanced = () => {
         // Dashboard'a yönlendir
         navigate('/chief-observer-dashboard', { replace: true });
       } else {
-        setChiefObserverError(result.message || 'Giriş başarısız');
+        setChiefObserverError(result.message || 'Sandık numarası veya TC kimlik numarası hatalı.');
       }
     } catch (err) {
-      setChiefObserverError(err.message || 'Giriş sırasında bir hata oluştu');
+      if (err.name === 'AbortError' || err.message?.includes('timeout')) {
+        setChiefObserverError('İstek zaman aşımına uğradı. Lütfen tekrar deneyin.');
+      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.message?.includes('Network request failed')) {
+        setChiefObserverError('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.');
+      } else if (err.message?.includes('500')) {
+        setChiefObserverError('Sunucu hatası. Lütfen daha sonra tekrar deneyin.');
+      } else if (err.message?.includes('401')) {
+        setChiefObserverError('Sandık numarası veya TC kimlik numarası hatalı.');
+      } else {
+        setChiefObserverError('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     } finally {
       setChiefObserverLoading(false);
     }
@@ -226,26 +243,34 @@ const LoginEnhanced = () => {
       const result = await ApiService.loginCoordinator(coordinatorTc.trim(), coordinatorPhone.trim());
       
       if (result.success) {
-        // Handle remember me functionality (sadece TC saklanır, telefon asla saklanmaz)
+        // Handle remember me functionality (TC sessionStorage'da saklanır, telefon asla saklanmaz)
         if (rememberCoordinator) {
-          localStorage.setItem('rememberedCoordinatorTc', coordinatorTc.trim());
-          localStorage.setItem('rememberCoordinator', 'true');
+          sessionStorage.setItem('rememberedCoordinatorTc', coordinatorTc.trim());
+          sessionStorage.setItem('rememberCoordinator', 'true');
         } else {
-          localStorage.removeItem('rememberedCoordinatorTc');
-          localStorage.removeItem('rememberCoordinator');
+          sessionStorage.removeItem('rememberedCoordinatorTc');
+          sessionStorage.removeItem('rememberCoordinator');
         }
-        // Telefon numarası hiçbir zaman localStorage'da saklanmaz
-        localStorage.removeItem('rememberedCoordinatorPhone');
         
         // Set user in AuthContext (localStorage is managed automatically)
         setUserFromLogin(result.user);
         // Dashboard'a yönlendir
         navigate('/coordinator-dashboard', { replace: true });
       } else {
-        setCoordinatorError(result.message || 'Giriş başarısız');
+        setCoordinatorError(result.message || 'TC kimlik numarası veya telefon numarası hatalı.');
       }
     } catch (err) {
-      setCoordinatorError(err.message || 'Giriş sırasında bir hata oluştu');
+      if (err.name === 'AbortError' || err.message?.includes('timeout')) {
+        setCoordinatorError('İstek zaman aşımına uğradı. Lütfen tekrar deneyin.');
+      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.message?.includes('Network request failed')) {
+        setCoordinatorError('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.');
+      } else if (err.message?.includes('500')) {
+        setCoordinatorError('Sunucu hatası. Lütfen daha sonra tekrar deneyin.');
+      } else if (err.message?.includes('401')) {
+        setCoordinatorError('TC kimlik numarası veya telefon numarası hatalı.');
+      } else {
+        setCoordinatorError('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     } finally {
       setCoordinatorLoading(false);
     }
@@ -371,7 +396,7 @@ const LoginEnhanced = () => {
               </>
             ) : activeTab === 'chief-observer' ? (
               /* Başmüşahit Form */
-              <form onSubmit={handleChiefObserverSubmit} className="space-y-6" autoComplete="off">
+              <form onSubmit={handleChiefObserverSubmit} className="space-y-6" autoComplete="off" onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))} onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}>
                 {chiefObserverError && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-start">
@@ -404,6 +429,7 @@ const LoginEnhanced = () => {
                       type="text"
                       value={ballotNumber}
                       onChange={(e) => setBallotNumber(e.target.value)}
+                      autoFocus
                       className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="Örn: 1001"
                       required
@@ -432,6 +458,7 @@ const LoginEnhanced = () => {
                       required
                     />
                   </div>
+                  {capsLock && <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">Caps Lock açık</p>}
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -471,7 +498,7 @@ const LoginEnhanced = () => {
               </form>
             ) : (
               /* Sorumlu Form */
-              <form onSubmit={handleCoordinatorSubmit} className="space-y-6" autoComplete="off">
+              <form onSubmit={handleCoordinatorSubmit} className="space-y-6" autoComplete="off" onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))} onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}>
                 {coordinatorError && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-start">
@@ -504,12 +531,14 @@ const LoginEnhanced = () => {
                       type="text"
                       value={coordinatorTc}
                       onChange={(e) => setCoordinatorTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                      autoFocus
                       className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="11 haneli TC kimlik numaranız"
                       maxLength={11}
                       required
                     />
                   </div>
+                  {capsLock && <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">Caps Lock açık</p>}
                 </div>
 
                 <div>

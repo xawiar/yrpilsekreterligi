@@ -32,6 +32,10 @@ import ApiKeySettings from '../components/ApiKeySettings';
 import VoterListSettings from '../components/VoterListSettings';
 import DataRetentionSettings from '../components/DataRetentionSettings';
 import DataDeletionRequestsAdmin from '../components/DataDeletionRequestsAdmin';
+import DataProcessingInventory from '../components/DataProcessingInventory';
+import KvkkComplianceReport from '../components/KvkkComplianceReport';
+import DataBreachProcedure from '../components/DataBreachProcedure';
+import VerbisGuide from '../components/VerbisGuide';
 import {
   SettingsHeader,
   SettingsSummaryCards,
@@ -92,6 +96,10 @@ const SettingsPage = ({ tab }) => {
       'push-notifications': true, // All authenticated users can manage their own push notifications
       'data-retention': false, // Admin only - KVKK
       'data-deletion-requests': false, // Admin only - KVKK
+      'data-processing-inventory': false, // Admin only - KVKK
+      'kvkk-compliance': false, // Admin only - KVKK
+      'data-breach-procedure': false, // Admin only - KVKK
+      'verbis-guide': false, // Admin only - KVKK
     };
 
     return permissionMap[tabName] || false;
@@ -186,7 +194,11 @@ const SettingsPage = ({ tab }) => {
         { id: 'performance-score', name: 'Performance Score', description: 'Performans skoru ayarları', permission: false },
         { id: 'api-keys', name: 'API Keys', description: 'API anahtarları', permission: false },
         { id: 'data-retention', name: 'Veri Saklama (KVKK)', description: 'Veri saklama suresi ayari', permission: false },
-        { id: 'data-deletion-requests', name: 'Veri Silme Talepleri', description: 'KVKK veri silme talepleri', permission: false }
+        { id: 'data-deletion-requests', name: 'Veri Silme Talepleri', description: 'KVKK veri silme talepleri', permission: false },
+        { id: 'data-processing-inventory', name: 'Veri Isleme Envanteri', description: 'KVKK veri isleme envanteri', permission: false },
+        { id: 'kvkk-compliance', name: 'KVKK Uyum Durumu', description: 'KVKK uyum raporu', permission: false },
+        { id: 'data-breach-procedure', name: 'Veri Ihlali Proseduru', description: 'Veri ihlali bildirim proseduru', permission: false },
+        { id: 'verbis-guide', name: 'VERBIS Kayit Rehberi', description: 'VERBIS kayit bilgilendirme', permission: false }
       );
     }
 
@@ -256,6 +268,10 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
                   {activeTab === 'data-retention' && hasPermission('data-retention') && <DataRetentionSettings />}
                   {activeTab === 'data-deletion-requests' && hasPermission('data-deletion-requests') && <DataDeletionRequestsAdmin />}
+                  {activeTab === 'data-processing-inventory' && hasPermission('data-processing-inventory') && <DataProcessingInventory />}
+                  {activeTab === 'kvkk-compliance' && hasPermission('kvkk-compliance') && <KvkkComplianceReport />}
+                  {activeTab === 'data-breach-procedure' && hasPermission('data-breach-procedure') && <DataBreachProcedure />}
+                  {activeTab === 'verbis-guide' && hasPermission('verbis-guide') && <VerbisGuide />}
                 </>
               )}
             </div>
@@ -313,8 +329,20 @@ const SettingsPage = ({ tab }) => {
       {/* Tab Content */}
       {loadingPermissions ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="p-6 flex justify-center items-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <div className="p-6 min-h-[400px] animate-pulse space-y-4">
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-72"></div>
+            <div className="space-y-3 mt-6">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : (

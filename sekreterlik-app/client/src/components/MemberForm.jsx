@@ -13,6 +13,9 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
   const [successMessage, setSuccessMessage] = useState(''); // Add state for success messages with credentials
   const [showCredentials, setShowCredentials] = useState(false); // Add state to show credentials
   const [kvkkConsent, setKvkkConsent] = useState(false); // KVKK rıza checkbox
+  const [photoFile, setPhotoFile] = useState(null); // Photo file for upload
+  const [photoPreview, setPhotoPreview] = useState(null); // Photo preview URL
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (member) {
@@ -47,6 +50,21 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
     if (error) {
       setError('');
     }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Lutfen sadece resim dosyasi secin');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Dosya boyutu 5MB\'dan kucuk olmalidir');
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e) => {
@@ -108,12 +126,35 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
         console.log('Updating existing member with ID:', member.id); // Debug log
         response = await ApiService.updateMember(member.id, submitData);
         console.log('Update response:', response); // Debug log
+        // Upload photo if selected
+        if (photoFile) {
+          try {
+            setIsUploadingPhoto(true);
+            await ApiService.uploadMemberPhoto(member.id, photoFile);
+          } catch (photoError) {
+            console.error('Photo upload error:', photoError);
+          } finally {
+            setIsUploadingPhoto(false);
+          }
+        }
       } else {
         // Create new member
         console.log('Creating new member'); // Debug log
         response = await ApiService.createMember(submitData);
         console.log('Create response:', response); // Debug log
-        
+
+        // Upload photo for new member if selected
+        if (photoFile && response?.id) {
+          try {
+            setIsUploadingPhoto(true);
+            await ApiService.uploadMemberPhoto(response.id, photoFile);
+          } catch (photoError) {
+            console.error('Photo upload error:', photoError);
+          } finally {
+            setIsUploadingPhoto(false);
+          }
+        }
+
         // Eğer kullanıcı bilgileri varsa göster
         if (response.userCredentials) {
           const { username, password } = response.userCredentials;
@@ -121,16 +162,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
             `Üye başarıyla oluşturuldu!\n\nKullanıcı Bilgileri:\nKullanıcı Adı: ${username}\nŞifre: ${password}\n\nLütfen bu bilgileri not edin.`
           );
           setShowCredentials(true);
-          // 5 saniye sonra modal'ı kapat
-          setTimeout(() => {
-            setShowCredentials(false);
-            setSuccessMessage('');
-            if (onMemberSaved) {
-              onMemberSaved();
-            } else if (onClose) {
-              onClose();
-            }
-          }, 5000);
+          // Manuel kapatmaya bırak, otomatik kapatma yok
           return; // Modal'ı hemen kapatma, kullanıcı bilgilerini göster
         }
       }
@@ -189,16 +221,38 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
                 {successMessage.split('\n').map((line, idx) => {
                   if (line.includes('Kullanıcı Adı:')) {
                     const parts = line.split(':');
+                    const value = parts[1].trim();
                     return (
-                      <div key={idx} className="font-semibold">
-                        {parts[0]}: <span className="font-mono bg-green-100 px-2 py-1 rounded">{parts[1].trim()}</span>
+                      <div key={idx} className="font-semibold flex items-center gap-2">
+                        {parts[0]}: <span className="font-mono bg-green-100 px-2 py-1 rounded">{value}</span>
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(value); }}
+                          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-200 rounded transition-colors"
+                          title="Kopyala"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
                       </div>
                     );
                   } else if (line.includes('Şifre:')) {
                     const parts = line.split(':');
+                    const value = parts[1].trim();
                     return (
-                      <div key={idx} className="font-semibold">
-                        {parts[0]}: <span className="font-mono bg-green-100 px-2 py-1 rounded">{parts[1].trim()}</span>
+                      <div key={idx} className="font-semibold flex items-center gap-2">
+                        {parts[0]}: <span className="font-mono bg-green-100 px-2 py-1 rounded">{value}</span>
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(value); }}
+                          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-200 rounded transition-colors"
+                          title="Kopyala"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
                       </div>
                     );
                   } else if (line.trim() === '') {
@@ -337,7 +391,48 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
             </select>
           </div>
         </div>
-        
+
+        {/* Fotograf Yukleme */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Fotograf
+          </label>
+          <div className="flex items-center gap-4">
+            {photoPreview ? (
+              <img
+                src={photoPreview}
+                alt="Onizleme"
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+              />
+            ) : member?.photo ? (
+              <img
+                src={member.photo}
+                alt={member.name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+            )}
+            <div className="flex-1">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                disabled={isUploadingPhoto}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50"
+              />
+              {isUploadingPhoto && (
+                <p className="text-xs text-gray-500 mt-1">Fotograf yukleniyor...</p>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* KVKK Açık Rıza Checkbox - Sadece yeni üye eklerken göster */}
         {!member && (
           <div className="flex items-start gap-2 mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">

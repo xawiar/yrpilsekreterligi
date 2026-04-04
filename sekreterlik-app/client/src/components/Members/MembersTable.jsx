@@ -12,14 +12,15 @@ import MemberInfo from './MemberInfo';
 import { calculateMemberRegistrations } from './membersUtils';
 import { normalizePhotoUrl } from '../../utils/photoUrlHelper';
 
-const MembersTable = ({ 
-  members, 
-  meetings, 
+const MembersTable = ({
+  members,
+  meetings,
+  events = [],
   memberRegistrations,
-  calculateMeetingStats, 
-  getAttendanceColor, 
-  onShowMember, 
-  onEditMember, 
+  calculateMeetingStats,
+  getAttendanceColor,
+  onShowMember,
+  onEditMember,
   onArchiveMember,
   onAddRegistration,
   onShowRegistrations,
@@ -28,8 +29,25 @@ const MembersTable = ({
   getSortIndicator,
   searchTerm,
   selectedRegion,
-  viewMode = 'table' // 'table' or 'grid'
+  viewMode = 'table', // 'table' or 'grid'
+  selectedMemberIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll
 }) => {
+  // Calculate event attendance for a member
+  const calculateEventStats = (memberId) => {
+    if (!events || !Array.isArray(events)) return { totalEvents: 0, attendedEvents: 0 };
+    const memberIdStr = String(memberId);
+    const memberEvents = events.filter(event =>
+      event.attendees && Array.isArray(event.attendees) &&
+      event.attendees.some(att => String(att.memberId || att.member_id) === memberIdStr)
+    );
+    const attended = memberEvents.filter(event => {
+      const att = event.attendees.find(a => String(a.memberId || a.member_id) === memberIdStr);
+      return att && att.attended;
+    });
+    return { totalEvents: memberEvents.length, attendedEvents: attended.length };
+  };
   // Grid görünümü için card layout
   const renderGridCard = (member) => {
     const stats = calculateMeetingStats(member, meetings);
@@ -159,14 +177,24 @@ const MembersTable = ({
         <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700 hidden md:table-header-group sticky top-0 z-10">
             <tr>
-              <SortableHeader 
-                onSort={onSort} 
-                sortKey="name" 
-                sortConfig={sortConfig} 
+              {onToggleSelect && (
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={members.length > 0 && selectedMemberIds.size === members.length}
+                    onChange={onToggleSelectAll}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                </th>
+              )}
+              <SortableHeader
+                onSort={onSort}
+                sortKey="name"
+                sortConfig={sortConfig}
                 getSortIndicator={getSortIndicator}
                 className="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
-                Üye
+                Uye
               </SortableHeader>
               <SortableHeader 
                 onSort={onSort} 
@@ -225,17 +253,20 @@ const MembersTable = ({
               >
                 Katılım %
               </SortableHeader>
-              <SortableHeader 
-                onSort={onSort} 
-                sortKey="registrations" 
-                sortConfig={sortConfig} 
+              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Etkinlik
+              </th>
+              <SortableHeader
+                onSort={onSort}
+                sortKey="registrations"
+                sortConfig={sortConfig}
                 getSortIndicator={getSortIndicator}
                 className="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider"
               >
-                Kaydettiği
+                Kaydettigi
               </SortableHeader>
               <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                İşlemler
+                Islemler
               </th>
             </tr>
           </thead>
@@ -243,9 +274,20 @@ const MembersTable = ({
             {members
               .map((member) => {
                 const stats = calculateMeetingStats(member, meetings);
+                const eventStatsData = calculateEventStats(member.id);
                 const registrations = calculateMemberRegistrations(member.id, memberRegistrations);
                 return (
-                  <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                  <tr key={member.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 ${selectedMemberIds.has(member.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
+                    {onToggleSelect && (
+                      <td className="px-3 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedMemberIds.has(member.id)}
+                          onChange={() => onToggleSelect(member.id)}
+                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-3">
                       <div className="flex items-center">
                         {(() => {
@@ -281,9 +323,7 @@ const MembersTable = ({
                       </div>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
-                        {member.region}
-                      </span>
+                      <RegionBadge region={member.region} />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 truncate max-w-[100px]">
                       {member.position}
@@ -311,11 +351,16 @@ const MembersTable = ({
                         <span className="text-xs text-gray-500 dark:text-gray-400">{stats.attendancePercentage}%</span>
                       </div>
                     </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <span title={`${eventStatsData.attendedEvents}/${eventStatsData.totalEvents} etkinlik`}>
+                        {eventStatsData.attendedEvents}/{eventStatsData.totalEvents}
+                      </span>
+                    </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm">
                       <button
                         className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 underline"
                         onClick={() => onShowRegistrations && onShowRegistrations(member.id)}
-                        title="Kayıt geçmişini görüntüle"
+                        title="Kayit gecmisini goruntule"
                       >
                         {registrations}
                       </button>
