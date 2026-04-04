@@ -82,13 +82,41 @@ async function setupPush(savedUser) {
     const { doc, setDoc } = await import('firebase/firestore');
     const { db } = await import('./config/firebase');
     if (db) {
-      await setDoc(doc(db, 'push_tokens', userId), {
-        subscription: JSON.stringify(sub),
+      const subJson = JSON.stringify(sub);
+      const tokenData = {
+        subscription: subJson,
         userId: userId,
         updatedAt: new Date().toISOString(),
         isActive: true
-      });
-      console.error('[PUSH] TOKEN SAVED OK for:', userId);
+      };
+      // Auth UID ile kaydet
+      await setDoc(doc(db, 'push_tokens', userId), tokenData);
+      // Members ID ile de kaydet (bildirim sistemi bu ID'yi kullaniyor)
+      const memberId = user.memberId || user.member_id || '';
+      if (memberId && memberId !== userId) {
+        await setDoc(doc(db, 'push_tokens', String(memberId)), { ...tokenData, userId: String(memberId) });
+        console.error('[PUSH] TOKEN SAVED for both:', userId, 'and', memberId);
+      } else {
+        // memberId yoksa, tum members'i tara ve esle
+        try {
+          const { collection: col, getDocs: gd, query: q, where: w } = await import('firebase/firestore');
+          const membersSnap = await gd(col(db, 'members'));
+          const authUid = userId;
+          // member_users'dan bu auth uid ile eslesen member bul
+          const muSnap = await gd(col(db, 'member_users'));
+          let foundMemberId = null;
+          muSnap.forEach((d) => {
+            if (d.data().authUid === authUid || d.data().auth_uid === authUid) {
+              foundMemberId = d.data().memberId || d.data().member_id || d.id;
+            }
+          });
+          if (foundMemberId) {
+            await setDoc(doc(db, 'push_tokens', String(foundMemberId)), { ...tokenData, userId: String(foundMemberId) });
+            console.error('[PUSH] TOKEN SAVED for member:', foundMemberId);
+          }
+        } catch (_e) { /* sessiz */ }
+        console.error('[PUSH] TOKEN SAVED OK for:', userId);
+      }
     } else {
       console.error('[PUSH] No db!');
     }
