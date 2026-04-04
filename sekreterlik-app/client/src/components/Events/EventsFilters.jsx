@@ -34,7 +34,7 @@ const EventsFilters = ({ searchTerm, setSearchTerm, sortConfig, setSortConfig, s
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Search Input */}
         <div className="flex-1">

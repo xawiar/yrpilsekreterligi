@@ -11,7 +11,7 @@ const TasksTable = ({
   getAttendanceColor
 }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
       {/* Desktop Table */}
       <div className="overflow-x-auto table-responsive">
         <table className="min-w-full divide-y divide-gray-100">

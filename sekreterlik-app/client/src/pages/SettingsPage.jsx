@@ -207,13 +207,13 @@ const SettingsPage = ({ tab }) => {
 
         {/* Tab Content */}
         {loadingPermissions ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
             <div className="p-6 flex justify-center items-center min-h-[400px]">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             </div>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
             <div className="p-6">
               {!hasPermission(activeTab) ? (
                 <div className="text-center py-12">
@@ -271,7 +271,7 @@ const SettingsPage = ({ tab }) => {
       {/* Header Section */}
       {isSTKManagement && !loadingPermissions && hasPermission('stks') ? (
         <div className="mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">STK Yönetimi</h1>
@@ -286,7 +286,7 @@ const SettingsPage = ({ tab }) => {
         </div>
       ) : isPublicInstitutionManagement && !loadingPermissions && hasPermission('public-institutions') ? (
         <div className="mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kamu Kurumu Yönetimi</h1>
@@ -312,13 +312,13 @@ const SettingsPage = ({ tab }) => {
 
       {/* Tab Content */}
       {loadingPermissions ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
           <div className="p-6 flex justify-center items-center min-h-[400px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           </div>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
           <div className="p-6">
             {/* STK ve Kamu Kurumu tab'ları - yetki kontrolü ile */}
             {(tab === 'stks' || isSTKManagement) && hasPermission('stks') && <STKSettings />}

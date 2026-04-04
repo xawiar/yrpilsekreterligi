@@ -206,9 +206,9 @@ const Sidebar = ({ onMobileMenuClose }) => {
   };
 
   return (
-    <div className="flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-screen lg:rounded-r-2xl">
+    <div className="flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg h-full lg:rounded-r-2xl">
       {/* Desktop Header - Hidden on mobile */}
-      <div className="hidden lg:flex flex-col items-center justify-center h-auto min-h-16 border-b border-gray-100 dark:border-gray-700 px-4 py-3">
+      <div className="hidden lg:flex flex-col items-center justify-center h-auto min-h-16 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="w-full flex items-start justify-end mb-1 gap-1">
           <button
             onClick={handleToggleMute}
@@ -254,7 +254,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
       </div>
       
       {/* Mobile Header - Hidden on desktop */}
-      <div className="lg:hidden flex items-center justify-between h-16 border-b border-gray-100 dark:border-gray-700 px-4">
+      <div className="lg:hidden flex items-center justify-between h-16 border-b border-gray-200 dark:border-gray-700 px-4">
         <div className="flex items-center space-x-2">
           {branding?.logoUrl && (
             <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" loading="lazy" decoding="async" />
@@ -383,7 +383,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
           })}
         </ul>
       </nav>
-      <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-2 lg:static lg:mt-0 sticky bottom-0 bg-white dark:bg-gray-800 z-10">
+      <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 bg-white dark:bg-gray-800">
         <button
           onClick={toggleTheme}
           className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm"

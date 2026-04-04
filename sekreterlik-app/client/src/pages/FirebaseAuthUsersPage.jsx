@@ -186,7 +186,7 @@ const FirebaseAuthUsersPage = () => {
             <div className="flex gap-2">
               <button
                 onClick={handleCleanupOrphanedAuthUsers}
-                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
               >
                 Temizle (Orphaned)
               </button>
@@ -297,11 +297,11 @@ const FirebaseAuthUsersPage = () => {
           )}
         </div>
 
-        <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+        <div className="mt-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
             ⚠️ Önemli Not:
           </h3>
-          <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside">
+          <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside">
             <li>Bu liste Firestore'daki authUid'lere göre oluşturulmuştur.</li>
             <li>Firebase Auth'daki gerçek kullanıcı sayısını görmek için Firebase Console'a bakmanız gerekir.</li>
             <li>Firestore'da authUid olmayan ama Firebase Auth'da olan kullanıcılar bu listede görünmez.</li>

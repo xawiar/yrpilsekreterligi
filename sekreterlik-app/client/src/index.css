@@ -71,8 +71,8 @@
     line-height: 1.6;
   }
   
-  /* Minimum touch target size (44x44px Apple HIG) */
-  button, a, input, select, textarea {
+  /* Minimum touch target size (44x44px Apple HIG) - sadece .touch-target class'ına uygulanır */
+  .touch-target {
     min-height: 44px;
     min-width: 44px;
   }
@@ -207,9 +207,9 @@ html, body {
     position: relative;
   }
   
-  /* Ensure all containers respect viewport width */
+  /* Ensure containers respect viewport width */
   .container,
-  [class*="max-w"],
+  .prevent-overflow,
   [class*="w-full"] {
     max-width: 100vw;
     overflow-x: hidden;

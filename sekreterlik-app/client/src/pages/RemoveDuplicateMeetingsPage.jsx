@@ -220,7 +220,7 @@ const RemoveDuplicateMeetingsPage = () => {
                   return (
                     <div
                       key={index}
-                      className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4"
+                      className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4"
                     >
                       <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
                         {name} - {date}

@@ -173,7 +173,7 @@ const ManagementChartPage = () => {
 
       {/* İl Başkanı - En Üst Pozisyon */}
       {ilBaskani.length > 0 && (
-        <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl shadow-lg p-8 mb-6 text-white">
+        <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-xl shadow-lg p-8 mb-6 text-white">
           <div className="text-center mb-6">
             <h2 className="text-3xl font-bold mb-2">İl Başkanı</h2>
             <p className="text-red-100">Kurumun en üst yöneticisi</p>
@@ -217,7 +217,7 @@ const ManagementChartPage = () => {
 
       {/* İlçe Başkanı - Özel Bölüm */}
       {ilceBaskani.length > 0 && (
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 mb-6 text-white">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-8 mb-6 text-white">
           <div className="text-center mb-6">
             <h2 className="text-3xl font-bold mb-2">İlçe Başkanı</h2>
             <p className="text-indigo-100">Kurumun en üst yöneticisi</p>
@@ -259,7 +259,7 @@ const ManagementChartPage = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-200">
         <div className="space-y-8">
 
           {/* Divan üyeleri - members whose region contains "divan" */}

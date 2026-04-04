@@ -3,7 +3,7 @@ import React from 'react';
 const MeetingsSummaryStatistics = ({ totalMeetings, plannedMeetings, avgAttendanceRate }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-sm p-5 border border-green-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm p-5 border border-green-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Toplam Toplantı</p>
@@ -17,7 +17,7 @@ const MeetingsSummaryStatistics = ({ totalMeetings, plannedMeetings, avgAttendan
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-sm p-5 border border-amber-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-sm p-5 border border-amber-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Planlanan Toplantı</p>
@@ -31,7 +31,7 @@ const MeetingsSummaryStatistics = ({ totalMeetings, plannedMeetings, avgAttendan
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-sm p-5 border border-indigo-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-sm p-5 border border-indigo-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Ortalama Katılım</p>

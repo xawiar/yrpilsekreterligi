@@ -483,7 +483,7 @@ const CoordinatorsListPage = () => {
                                 coordinator.role === 'provincial_coordinator' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
                                 coordinator.role === 'district_supervisor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                                 coordinator.role === 'region_supervisor' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
                               }`}>
                                 {roleNames[coordinator.role] || coordinator.role}
                               </span>
@@ -648,7 +648,7 @@ const CoordinatorsListPage = () => {
                               coordinator.role === 'provincial_coordinator' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
                               coordinator.role === 'district_supervisor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                               coordinator.role === 'region_supervisor' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
                             }`}>
                               {roleNames[coordinator.role] || coordinator.role}
                             </span>
@@ -741,7 +741,7 @@ const CoordinatorsListPage = () => {
 
       {/* Sorumlu Ekle Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-modal p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
@@ -948,7 +948,7 @@ const CoordinatorsListPage = () => {
                             </div>
                           ) : (
                             <div className="mb-3">
-                              <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                              <p className="text-xs text-amber-600 dark:text-amber-400">
                                 ⚠️ Bu kurum henüz bir bölgeye atanmamış. Sandıkların mahalle/köy bilgilerini kontrol edin.
                               </p>
                             </div>
@@ -1606,7 +1606,7 @@ const RegionsListPage = () => {
 
       {/* Bölge Oluştur Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-modal p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">

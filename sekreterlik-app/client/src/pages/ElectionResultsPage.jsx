@@ -1358,7 +1358,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center flex-wrap gap-2">
@@ -1397,8 +1397,8 @@ const ElectionResultsPage = ({ readOnly = false }) => {
             )}
           </div>
           {!hasResults && (
-            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
                 ⚠️ Henüz seçim sonucu girilmemiş. Sonuçlar girildikçe bu sayfada görünecektir.
               </p>
             </div>
@@ -1406,7 +1406,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
         </div>
 
         {/* Filters - Accordion */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm mb-6 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 overflow-hidden">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -2225,11 +2225,11 @@ const ElectionResultsPage = ({ readOnly = false }) => {
             </h2>
             
             {Object.keys(provincialAssemblyResults.districtResults || {}).length === 0 ? (
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
                   ⚠️ İl Genel Meclisi sonuçları hesaplanamadı. Lütfen kontrol edin:
                 </p>
-                <ul className="mt-2 text-xs text-yellow-700 dark:text-yellow-300 list-disc list-inside space-y-1">
+                <ul className="mt-2 text-xs text-amber-700 dark:text-amber-300 list-disc list-inside space-y-1">
                   <li>İlçe bazlı üye sayıları seçim ayarlarında tanımlı mı?</li>
                   <li>Sandık sonuçlarında İl Genel Meclisi oyları girilmiş mi?</li>
                   <li>Sandıkların ilçe bilgileri doğru mu?</li>
@@ -2398,7 +2398,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
           if (locationAnalysis.length === 0) return null;
           
           return (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
                 <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -2973,7 +2973,7 @@ const ElectionResultsPage = ({ readOnly = false }) => {
       {/* Photo Modal */}
       {modalPhoto && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-modal p-4"
           onClick={() => setModalPhoto(null)}
         >
           <div 

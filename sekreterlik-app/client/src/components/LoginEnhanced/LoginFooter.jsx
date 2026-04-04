@@ -25,7 +25,7 @@ const LoginFooter = () => {
       </div>
 
       <div className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
-        <p>© 2025 <a href="https://www.datdijital.com/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors font-medium">DAT Dijital</a>. Tüm hakları saklıdır.</p>
+        <p>© 2026 <a href="https://www.datdijital.com/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors font-medium">DAT Dijital</a>. Tüm hakları saklıdır.</p>
       </div>
     </div>
   );

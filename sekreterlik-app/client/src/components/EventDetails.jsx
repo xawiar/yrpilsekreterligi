@@ -10,10 +10,10 @@ const NonAttendeesSection = ({ nonAttendees, getMemberInfo }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="w-full px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Katılmayanlar ({nonAttendees.length})
@@ -57,7 +57,7 @@ const NonAttendeesSection = ({ nonAttendees, getMemberInfo }) => {
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {memberInfo.position} - {memberInfo.region}
                             {attendance.excuse && attendance.excuse.hasExcuse && (
-                              <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                              <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
                                 (Mazeret: {attendance.excuse.reason || 'Belirtilmemiş'})
                               </span>
                             )}
@@ -417,7 +417,7 @@ const EventDetails = ({ event, members }) => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Etkinlik Bilgileri</h3>
           <dl className="space-y-3">
             <div className="flex">
@@ -439,7 +439,7 @@ const EventDetails = ({ event, members }) => {
           </dl>
         </div>
 
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">İstatistikler</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -462,8 +462,8 @@ const EventDetails = ({ event, members }) => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Katılımcı Listesi</h3>
         </div>
         <div className="overflow-x-auto">

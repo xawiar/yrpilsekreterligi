@@ -234,35 +234,35 @@ const ApiKeySettings = () => {
 
       {/* Created Key Display (Only shown once) */}
       {createdKey && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg p-6">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-400 dark:border-amber-600 rounded-lg p-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+              <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-2">
                 ⚠️ API Key Oluşturuldu - Lütfen Kaydedin!
               </h3>
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
                 Bu key sadece bir kez gösterilecek. Lütfen güvenli bir yere kaydedin.
               </p>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-amber-300 dark:border-amber-700">
                 <div className="flex items-center justify-between">
                   <code className="text-sm font-mono text-gray-900 dark:text-gray-100 break-all">
                     {createdKey.apiKey}
                   </code>
                   <button
                     onClick={() => copyToClipboard(createdKey.apiKey)}
-                    className="ml-4 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm font-medium transition-colors"
+                    className="ml-4 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-medium transition-colors"
                   >
                     {copiedKey === createdKey.apiKey ? 'Kopyalandı!' : 'Kopyala'}
                   </button>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-yellow-700 dark:text-yellow-300">
-                API kullanımı: <code className="bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">X-API-Key: {createdKey.apiKey}</code>
+              <p className="mt-4 text-xs text-amber-700 dark:text-amber-300">
+                API kullanımı: <code className="bg-amber-100 dark:bg-amber-900 px-2 py-1 rounded">X-API-Key: {createdKey.apiKey}</code>
               </p>
             </div>
             <button
               onClick={() => setCreatedKey(null)}
-              className="ml-4 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
+              className="ml-4 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

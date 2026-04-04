@@ -946,7 +946,7 @@ const TownPresidentDashboardPage = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Town Info Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
           <div className="px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-600">
             <h2 className="text-xl font-bold text-white">Belde Bilgileri</h2>
           </div>
@@ -966,7 +966,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Dashboard View - Management Members */}
         {currentView === 'dashboard' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Yönetim Kurulu Üyeleri</h2>
@@ -1040,7 +1040,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Neighborhoods View */}
         {currentView === 'neighborhoods' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Mahalleler</h2>
@@ -1105,7 +1105,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Villages View */}
         {currentView === 'villages' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Köyler</h2>
@@ -1170,7 +1170,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Representatives View */}
         {currentView === 'representatives' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-yellow-500 to-orange-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Temsilciler</h2>
@@ -1277,7 +1277,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Ballot Boxes View */}
         {currentView === 'ballotBoxes' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Sandıklar</h2>
@@ -1352,7 +1352,7 @@ const TownPresidentDashboardPage = () => {
 
         {/* Observers View */}
         {currentView === 'observers' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <h2 className="text-xl font-bold text-white">Müşahitler</h2>
@@ -1391,7 +1391,7 @@ const TownPresidentDashboardPage = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {observer.is_chief_observer ? (
-                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
                                 Başmüşahit
                               </span>
                             ) : (
@@ -1434,7 +1434,7 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Management Member Modal */}
       {showAddMemberForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -1554,7 +1554,7 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Neighborhood Modal */}
       {showAddNeighborhoodForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -1611,7 +1611,7 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Village Modal */}
       {showAddVillageForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -1668,7 +1668,7 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Representative Modal */}
       {showAddRepresentativeForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -1793,7 +1793,7 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Ballot Box Modal */}
       {showAddBallotBoxForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -1887,7 +1887,7 @@ const TownPresidentDashboardPage = () => {
 
       {/* Add/Edit Observer Modal */}
       {showAddObserverForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">

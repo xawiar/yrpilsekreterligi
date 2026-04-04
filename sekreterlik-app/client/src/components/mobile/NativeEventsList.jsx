@@ -171,7 +171,7 @@ const NativeEventsList = ({
                 </div>
 
                 {/* Mobile action buttons */}
-                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center space-x-3">
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center space-x-3">
                   {onUpdateAttendance && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onUpdateAttendance(event); }}

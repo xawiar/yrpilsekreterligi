@@ -368,7 +368,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
           </button>
           <button
             type="submit"
-            className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+            className="px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
           >
             {member ? 'Güncelle' : 'Kaydet'}
           </button>

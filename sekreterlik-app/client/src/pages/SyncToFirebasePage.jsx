@@ -474,7 +474,7 @@ const SyncToFirebasePage = () => {
                 key={index}
                 className={`p-3 rounded-lg ${
                   result.errors.length > 0
-                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
                     : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
                 }`}
               >
@@ -487,7 +487,7 @@ const SyncToFirebasePage = () => {
                   </span>
                 </div>
                 {result.errors.length > 0 && (
-                  <div className="mt-2 text-xs text-yellow-700 dark:text-yellow-300">
+                  <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
                     {result.errors.length} hata
                   </div>
                 )}

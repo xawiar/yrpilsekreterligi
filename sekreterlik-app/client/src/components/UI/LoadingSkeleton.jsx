@@ -22,7 +22,7 @@ const TableSkeleton = ({ rows = 5, cols = 4 }) => (
     {Array.from({ length: rows }).map((_, rowIdx) => (
       <div
         key={rowIdx}
-        className="grid gap-4 px-4 py-4 border-b border-gray-100 dark:border-gray-700 items-center"
+        className="grid gap-4 px-4 py-4 border-b border-gray-200 dark:border-gray-700 items-center"
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
       >
         {Array.from({ length: cols }).map((_, colIdx) => (
@@ -36,7 +36,7 @@ const TableSkeleton = ({ rows = 5, cols = 4 }) => (
 const CardSkeleton = ({ count = 3 }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+      <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
         <div className="flex items-center gap-3">
           <Circle size="h-10 w-10" />
           <div className="flex-1 space-y-2">
@@ -54,7 +54,7 @@ const CardSkeleton = ({ count = 3 }) => (
 const ListSkeleton = ({ rows = 5 }) => (
   <div className="space-y-3">
     {Array.from({ length: rows }).map((_, i) => (
-      <div key={i} className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+      <div key={i} className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <Circle size="h-8 w-8" />
         <div className="flex-1 space-y-2">
           <Line width="w-1/2" height="h-4" />
@@ -68,7 +68,7 @@ const ListSkeleton = ({ rows = 5 }) => (
 const StatsSkeleton = ({ count = 4 }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 space-y-2">
+      <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-2">
         <Line width="w-1/2" height="h-3" />
         <Line width="w-1/3" height="h-8" />
       </div>

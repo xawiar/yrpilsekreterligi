@@ -287,7 +287,7 @@ const FirebaseTestPage = () => {
                     ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
                     : result.status === 'error'
                     ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                    : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                    : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -297,7 +297,7 @@ const FirebaseTestPage = () => {
                       ? 'text-green-700 dark:text-green-300'
                       : result.status === 'error'
                       ? 'text-red-700 dark:text-red-300'
-                      : 'text-yellow-700 dark:text-yellow-300'
+                      : 'text-amber-700 dark:text-amber-300'
                   }`}>
                     {result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⏳'}
                   </span>

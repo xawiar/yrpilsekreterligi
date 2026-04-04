@@ -381,7 +381,7 @@ const NativeCoordinatorDashboard = ({
       {/* Tutanak Eksik Olanlar */}
       {missingProtocol.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-yellow-600 dark:text-yellow-400 px-1">
+          <h2 className="text-lg font-semibold text-amber-600 dark:text-amber-400 px-1">
             Tutanak Eksik Olanlar ({missingProtocol.length})
           </h2>
           {missingProtocol.map((item, index) => {
@@ -412,7 +412,7 @@ const NativeCoordinatorDashboard = ({
                       </div>
                     )}
                     <div className="mt-2">
-                      <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg">
+                      <span className="px-2 py-1 text-xs font-semibold bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-lg">
                         ⚠️ Tutanak Eksik
                       </span>
                     </div>

@@ -120,7 +120,7 @@ const AdminSettings = () => {
   return (
     <div className="space-y-6">
       {/* Current Admin Info */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Mevcut Admin Bilgileri</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -143,7 +143,7 @@ const AdminSettings = () => {
       </div>
 
       {/* İl Seçimi */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">İl Bilgisi</h3>
         <p className="text-sm text-gray-600 mb-4">
           Programı hangi ilde kullanıyorsanız o ilin adını yazın. Bu bilgi sandık ve başmüşahit ekleme formlarında kullanılacaktır.
@@ -165,7 +165,7 @@ const AdminSettings = () => {
       {/* Update Forms */}
       <div className="space-y-6">
         {/* Kullanıcı Adı Güncelleme */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Kullanıcı Adını Güncelle</h3>
             <button
@@ -260,7 +260,7 @@ const AdminSettings = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200"
                 >
                   {loading ? 'Güncelleniyor...' : 'Kullanıcı Adını Güncelle'}
                 </button>
@@ -270,7 +270,7 @@ const AdminSettings = () => {
         </div>
 
         {/* Şifre Güncelleme */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Şifreyi Güncelle</h3>
             <button
@@ -390,7 +390,7 @@ const AdminSettings = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 disabled:from-gray-400 disabled:to-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition duration-200"
                 >
                   {loading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
                 </button>
@@ -401,7 +401,7 @@ const AdminSettings = () => {
       </div>
 
       {/* Recalculate Visit Counts */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Sayıları Yönetimi</h3>
         <p className="text-sm text-gray-600 mb-4">
           Tüm etkinliklerden ziyaret sayılarını yeniden hesaplamak için bu butonu kullanın. 

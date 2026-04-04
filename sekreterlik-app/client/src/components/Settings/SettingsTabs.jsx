@@ -39,7 +39,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-2 mb-6 border border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2 mb-6 border border-gray-200 dark:border-gray-700">
       <nav className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <button
           onClick={() => setActiveTab('admin')}

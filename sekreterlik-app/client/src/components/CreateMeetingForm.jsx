@@ -333,7 +333,7 @@ const CreateMeetingForm = ({ regions, onClose, onMeetingCreated }) => {
           </button>
           <button
             type="submit"
-            className={`w-full sm:w-auto ${mobileView ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'} bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200`}
+            className={`w-full sm:w-auto ${mobileView ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'} bg-indigo-600 border border-transparent rounded-lg font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200`}
           >
             Toplantıyı Kaydet
           </button>

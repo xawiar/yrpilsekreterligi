@@ -1433,7 +1433,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-modal flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 rounded-t-2xl flex items-center justify-between">
@@ -1582,10 +1582,10 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                 {message.role === 'assistant' && (message.anomalies || message.recommendations) && (
                   <div className="mt-4 space-y-2">
                     {message.anomalies && message.anomalies.length > 0 && (
-                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <h4 className="text-xs font-semibold text-yellow-800 mb-2">⚠️ Tespit Edilen Anomaliler</h4>
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <h4 className="text-xs font-semibold text-amber-800 mb-2">⚠️ Tespit Edilen Anomaliler</h4>
                         {message.anomalies.map((anomaly, idx) => (
-                          <div key={idx} className="text-xs text-yellow-700 mb-1">
+                          <div key={idx} className="text-xs text-amber-700 mb-1">
                             • {anomaly.message}
                           </div>
                         ))}
@@ -1693,7 +1693,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
 
         {/* API Limit Info Modal */}
         {showLimitInfo && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 z-10 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">API Limit Durumu</h3>
@@ -1734,8 +1734,8 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                   </div>
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-xs text-yellow-800">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs text-amber-800">
                     <strong>Not:</strong> Limit aşıldığında 402 hatası alırsınız. Bu durumda Ayarlar {'>'} Gemini AI sayfasından API anahtarınızı güncelleyebilirsiniz.
                   </p>
                 </div>

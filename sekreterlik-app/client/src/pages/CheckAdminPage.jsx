@@ -131,13 +131,13 @@ function CheckAdminPage() {
           <div className={`mb-6 p-4 rounded-lg border ${
             currentUser.uid === adminDoc.uid 
               ? 'bg-green-50 border-green-300' 
-              : 'bg-yellow-50 border-yellow-300'
+              : 'bg-amber-50 border-amber-300'
           }`}>
             <h2 className="font-bold text-lg mb-2">UID Eşleşme:</h2>
             {currentUser.uid === adminDoc.uid ? (
               <p className="text-green-700">✅ UID'ler eşleşiyor</p>
             ) : (
-              <p className="text-yellow-700">
+              <p className="text-amber-700">
                 ⚠️ UID'ler eşleşmiyor:
                 <br />Auth UID: {currentUser.uid}
                 <br />Firestore UID: {adminDoc.uid}

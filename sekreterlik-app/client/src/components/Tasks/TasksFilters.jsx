@@ -16,7 +16,7 @@ const TasksFilters = ({
   members
 }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border border-gray-200">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <div className="relative">

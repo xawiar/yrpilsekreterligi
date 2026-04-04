@@ -107,7 +107,7 @@ const ConfirmDialog = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-[10001] p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-toast p-4"
       onClick={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
       role="presentation"
     >

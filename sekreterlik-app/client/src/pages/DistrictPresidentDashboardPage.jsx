@@ -212,7 +212,7 @@ const DistrictPresidentDashboardPage = () => {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         <div className="space-y-4 sm:space-y-6">
           {/* District Info Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-indigo-600">
               <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">İlçe Bilgileri</h2>
             </div>
@@ -231,7 +231,7 @@ const DistrictPresidentDashboardPage = () => {
           </div>
 
           {/* Management Members Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gradient-to-r from-indigo-500 to-purple-600">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                 <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">Yönetim Kurulu Üyeleri</h2>
@@ -308,7 +308,7 @@ const DistrictPresidentDashboardPage = () => {
 
       {/* Add/Edit Member Modal */}
       {showAddMemberForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">

@@ -12,7 +12,7 @@ const MeetingsFilters = ({
   setEndDate
 }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border border-gray-200">
       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Search Input */}
         <div className="relative flex-1">

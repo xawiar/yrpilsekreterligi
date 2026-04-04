@@ -1948,7 +1948,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
 
             {/* Legacy Support: Eski seçim türleri için geriye dönük uyumluluk */}
             {(election?.type === 'yerel' || election?.type === 'genel') && election?.parties && Array.isArray(election.parties) && election.parties.length > 0 && typeof election.parties[0] === 'string' && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
                   Parti Oyları (Eski Format)
@@ -1978,7 +1978,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             )}
 
             {election?.type === 'cb' && election?.candidates && Array.isArray(election.candidates) && election.candidates.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
                   Aday Oyları (Eski Format)
@@ -2068,7 +2068,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     <button
                       type="button"
                       onClick={handleAIFill}
-                      className="mt-2 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                      className="mt-2 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />

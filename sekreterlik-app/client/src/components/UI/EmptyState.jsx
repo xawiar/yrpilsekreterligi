@@ -11,7 +11,7 @@ const EmptyState = ({ title = 'Kayıt bulunamadı', subtitle = 'Filtreleri deği
   );
 
   if (card) {
-    return <Card className="border border-gray-100">{content}</Card>;
+    return <Card className="border border-gray-200">{content}</Card>;
   }
   return content;
 };

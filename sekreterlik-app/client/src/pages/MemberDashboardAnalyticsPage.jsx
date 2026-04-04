@@ -89,7 +89,7 @@ const MemberDashboardAnalyticsPage = () => {
   if (loading) {
     return (
       <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
           </div>
@@ -101,7 +101,7 @@ const MemberDashboardAnalyticsPage = () => {
   if (error) {
     return (
       <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="text-center py-12">
             <div className="text-red-600 mb-4">{error}</div>
             <button
@@ -118,7 +118,7 @@ const MemberDashboardAnalyticsPage = () => {
 
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Üye Dashboard Analytics</h1>

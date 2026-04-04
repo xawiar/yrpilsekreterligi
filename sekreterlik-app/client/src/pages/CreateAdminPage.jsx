@@ -187,8 +187,8 @@ function CreateAdminPage() {
                 <span className="font-bold text-gray-800 text-xs break-all">{adminInfo.uid}</span>
               </div>
             </div>
-            <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
-              <p className="text-yellow-800 text-sm">
+            <div className="mt-4 p-3 bg-amber-100 border border-amber-300 rounded">
+              <p className="text-amber-800 text-sm">
                 ⚠️ <strong>Önemli:</strong> Production ortamında mutlaka şifreyi değiştirin!
               </p>
             </div>

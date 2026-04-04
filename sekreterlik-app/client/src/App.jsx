@@ -79,7 +79,7 @@ const Sidebar = lazy(() => import('./components/Sidebar'));
 const Footer = lazy(() => import('./components/Footer'));
 const PWANotification = lazy(() => import('./components/PWANotification'));
 const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
-const OfflineStatus = lazy(() => import('./components/OfflineStatus'));
+const OfflineIndicator = lazy(() => import('./components/OfflineIndicator'));
 const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
 const Chatbot = lazy(() => import('./components/Chatbot'));
 const CookieConsent = lazy(() => import('./components/CookieConsent'));
@@ -310,7 +310,7 @@ function RouterContent() {
               <AdminRoute>
                 <div className="flex h-screen">
                   {/* Desktop Sidebar */}
-                  <div className="hidden lg:block">
+                  <div className="hidden lg:block h-full overflow-hidden">
                     <Sidebar />
                   </div>
 
@@ -333,40 +333,55 @@ function RouterContent() {
                     </div>
 
                     {/* Mobile Menu Overlay with Swipe Support */}
-                    {isMobileMenuOpen && (
-                      <div
-                        className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 dark:bg-opacity-70 transition-opacity duration-300"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <div
-                          className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-300"
-                          onClick={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => {
-                            const touch = e.touches[0];
-                            e.currentTarget.dataset.touchStartX = touch.clientX.toString();
-                          }}
-                          onTouchMove={(e) => {
-                            const touch = e.touches[0];
-                            const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
-                            const diff = touch.clientX - startX;
-                            if (diff < 0) {
-                              e.currentTarget.style.transform = `translateX(${diff}px)`;
-                            }
-                          }}
-                          onTouchEnd={(e) => {
-                            const touch = e.changedTouches[0];
-                            const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
-                            const diff = touch.clientX - startX;
-                            if (diff < -100) {
-                              setIsMobileMenuOpen(false);
-                            }
-                            e.currentTarget.style.transform = '';
-                          }}
-                        >
-                          <Sidebar onMobileMenuClose={() => setIsMobileMenuOpen(false)} />
-                        </div>
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {isMobileMenuOpen && (
+                        <>
+                          {/* Overlay */}
+                          <motion.div
+                            key="mobile-overlay"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="lg:hidden fixed inset-0 z-overlay bg-black/50 backdrop-blur-sm"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          />
+                          {/* Sidebar Panel */}
+                          <motion.div
+                            key="mobile-sidebar"
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            className="lg:hidden fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl z-modal"
+                            onClick={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => {
+                              const touch = e.touches[0];
+                              e.currentTarget.dataset.touchStartX = touch.clientX.toString();
+                            }}
+                            onTouchMove={(e) => {
+                              const touch = e.touches[0];
+                              const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
+                              const diff = touch.clientX - startX;
+                              if (diff < 0) {
+                                e.currentTarget.style.transform = `translateX(${diff}px)`;
+                              }
+                            }}
+                            onTouchEnd={(e) => {
+                              const touch = e.changedTouches[0];
+                              const startX = parseFloat(e.currentTarget.dataset.touchStartX || '0');
+                              const diff = touch.clientX - startX;
+                              if (diff < -100) {
+                                setIsMobileMenuOpen(false);
+                              }
+                              e.currentTarget.style.transform = '';
+                            }}
+                          >
+                            <Sidebar onMobileMenuClose={() => setIsMobileMenuOpen(false)} />
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
 
                     <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-6">
                       <div className="w-full max-w-7xl mx-auto">
@@ -430,7 +445,7 @@ function RouterContent() {
         {isLoggedIn && user?.role === 'admin' && (
           <button
             onClick={() => setIsChatbotOpen(!isChatbotOpen)}
-            className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
+            className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
             aria-label="AI Chatbot'u Aç"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -484,7 +499,7 @@ function App() {
             </Router>
             <PWANotification />
             <AppInstallBanner />
-            <OfflineStatus />
+            <OfflineIndicator />
             <Suspense fallback={null}>
               <CookieConsent />
             </Suspense>

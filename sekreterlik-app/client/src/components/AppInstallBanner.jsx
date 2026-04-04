@@ -100,7 +100,7 @@ const AppInstallBanner = () => {
         </div>
 
         {/* Features List */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="mt-3 pt-3 border-t border-gray-200">
           <div className="flex items-center space-x-4 text-xs text-gray-500">
             <div className="flex items-center">
               <svg className="w-3 h-3 mr-1 text-green-500" fill="currentColor" viewBox="0 0 20 20">

@@ -11,7 +11,7 @@ const ArchivedEventsTable = ({ archivedEvents, onDeleteEvent, onRestoreEvent }) 
           archivedEvents.map((ev) => (
             <div
               key={ev.id}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 active:scale-[0.98] transition-transform"
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 active:scale-[0.98] transition-transform"
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{ev.name}</p>

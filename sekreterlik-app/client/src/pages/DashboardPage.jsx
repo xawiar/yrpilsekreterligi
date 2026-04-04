@@ -258,7 +258,7 @@ const DashboardPage = () => {
       {/* Upcoming Events and Meetings - Mobilde tek kolon, desktop'ta çoklu kolon */}
       <div className={`grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mt-6`}>
         {/* Upcoming Events - Mobilde tam genişlik, desktop'ta yarım */}
-        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6`}>
           <h3 className={`text-lg mb-4 font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Etkinlikler</h3>
           {upcomingEvents.length > 0 ? (
             <div className="space-y-3">
@@ -295,7 +295,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Upcoming Meetings - Mobilde tam genişlik, desktop'ta yarım */}
-        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6`}>
           <h3 className={`text-lg mb-4 font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Toplantılar</h3>
           {upcomingMeetings.length > 0 ? (
             <div className="space-y-3">

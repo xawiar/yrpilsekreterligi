@@ -709,7 +709,7 @@ const RepresentativesPage = () => {
             <div className={`p-4 rounded-lg ${
               smsResult.success 
                 ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' 
-                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'
+                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
             }`}>
               <p className="font-medium">{smsResult.message}</p>
               {smsResult.sent > 0 && (

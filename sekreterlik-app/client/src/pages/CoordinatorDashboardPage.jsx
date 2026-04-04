@@ -302,7 +302,7 @@ const CoordinatorDashboardPage = () => {
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Shimmer loading cards */}
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 animate-pulse">
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 animate-pulse">
               <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
               <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
             </div>
@@ -356,7 +356,7 @@ const CoordinatorDashboardPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-4 sm:py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Modern Header with Gradient */}
-        <div className={`relative overflow-hidden bg-gradient-to-r ${getRoleColor(userRole)} rounded-3xl shadow-2xl p-6 sm:p-8 text-white`}>
+        <div className={`relative overflow-hidden bg-gradient-to-r ${getRoleColor(userRole)} rounded-xl shadow-2xl p-6 sm:p-8 text-white`}>
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full blur-3xl animate-blob"></div>
             <div className="absolute top-0 right-0 w-72 h-72 bg-purple-300 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
@@ -421,7 +421,7 @@ const CoordinatorDashboardPage = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Sorumlu Olduğunuz Sandıklar</p>
@@ -436,7 +436,7 @@ const CoordinatorDashboardPage = () => {
           </div>
           
           {regionInfo && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Bölge</p>
@@ -452,7 +452,7 @@ const CoordinatorDashboardPage = () => {
           )}
           
           {electionResults.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Girilen Seçim Sonuçları</p>
@@ -470,7 +470,7 @@ const CoordinatorDashboardPage = () => {
 
         {/* Bölge, Mahalle, Köy Bilgileri */}
         {(regionInfo || neighborhoods.length > 0 || villages.length > 0) && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
               <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
               Sorumluluk Bilgileri
@@ -525,7 +525,7 @@ const CoordinatorDashboardPage = () => {
 
         {/* Üst Sorumlular */}
         {parentCoordinators.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3 mb-6">
               <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
               Üst Sorumlular
@@ -706,7 +706,7 @@ const CoordinatorDashboardPage = () => {
                       </div>
                     )}
                     {item.hasData && !item.hasProtocol && (
-                      <div className="text-xs mt-1 text-yellow-600 dark:text-yellow-400 font-semibold">
+                      <div className="text-xs mt-1 text-amber-600 dark:text-amber-400 font-semibold">
                         ⚠️ Tutanak Eksik
                       </div>
                     )}
@@ -798,7 +798,7 @@ const CoordinatorDashboardPage = () => {
             <>
               {/* İtiraz Edilen Sandıklar */}
               {objected.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
                   <h2 className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-3 mb-6">
                     <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full"></div>
                     İtiraz Edilen Sandıklar ({objected.length})
@@ -811,7 +811,7 @@ const CoordinatorDashboardPage = () => {
               
               {/* Seçimi Tamamlananlar */}
               {completed.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
                   <h2 className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 flex items-center gap-3 mb-6">
                     <div className="w-1 h-8 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
                     Seçimi Tamamlananlar ({completed.length})
@@ -824,9 +824,9 @@ const CoordinatorDashboardPage = () => {
               
               {/* Tutanak Eksik Olanlar */}
               {missingProtocol.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
-                  <h2 className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400 flex items-center gap-3 mb-6">
-                    <div className="w-1 h-8 bg-gradient-to-b from-yellow-500 to-yellow-600 rounded-full"></div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 flex items-center gap-3 mb-6">
+                    <div className="w-1 h-8 bg-gradient-to-b from-amber-500 to-amber-600 rounded-full"></div>
                     Tutanak Eksik Olanlar ({missingProtocol.length})
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -837,7 +837,7 @@ const CoordinatorDashboardPage = () => {
               
               {/* Sadece Tutanak Yüklenenler */}
               {onlyProtocol.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
                   <h2 className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-3 mb-6">
                     <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full"></div>
                     Sadece Tutanak Yüklenenler ({onlyProtocol.length})
@@ -850,7 +850,7 @@ const CoordinatorDashboardPage = () => {
               
               {/* Hiç Veri Girilmeyenler */}
               {noData.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
                   <h2 className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-400 flex items-center gap-3 mb-6">
                     <div className="w-1 h-8 bg-gradient-to-b from-gray-400 to-gray-500 rounded-full"></div>
                     Hiç Veri Girilmeyenler ({noData.length})

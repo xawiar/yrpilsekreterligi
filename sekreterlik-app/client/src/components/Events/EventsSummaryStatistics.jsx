@@ -4,7 +4,7 @@ const EventsSummaryStatistics = ({ totalEvents, activeEvents, totalAttendedCount
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
       {/* Toplam Etkinlik */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -21,7 +21,7 @@ const EventsSummaryStatistics = ({ totalEvents, activeEvents, totalAttendedCount
       </div>
 
       {/* Aktif Etkinlik */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -38,7 +38,7 @@ const EventsSummaryStatistics = ({ totalEvents, activeEvents, totalAttendedCount
       </div>
 
       {/* Toplam Katılan Kişi Sayısı */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 sm:col-span-2 lg:col-span-1">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 sm:col-span-2 lg:col-span-1">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">

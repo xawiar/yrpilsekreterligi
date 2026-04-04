@@ -2,7 +2,7 @@ import React from 'react';
 
 const ArchiveTabs = ({ activeTab, setActiveTab }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-2 mb-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm p-2 mb-6 border border-gray-200">
       <nav className="flex space-x-2">
         <button
           onClick={() => setActiveTab('documents')}

@@ -143,7 +143,7 @@ const NotificationsPage = () => {
       case 'poll_vote':
         return 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400';
       case 'message':
-        return 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400';
+        return 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400';
       default:
         return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
     }

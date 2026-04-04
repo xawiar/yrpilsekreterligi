@@ -141,7 +141,7 @@ const PersonalDocuments = ({ memberId }) => {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+      <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           <span className="ml-2 text-gray-600">Belgeler yükleniyor...</span>
@@ -151,7 +151,7 @@ const PersonalDocuments = ({ memberId }) => {
   }
 
   return (
-    <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-900">Kişisel Belgeler</h3>
         {(isAdmin || isOwnDocuments) && documents.length < 5 && (

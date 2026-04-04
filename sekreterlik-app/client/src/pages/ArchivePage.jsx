@@ -419,7 +419,7 @@ const ArchivePage = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
         {/* Documents Tab */}
         {activeTab === 'documents' && (
           <div>

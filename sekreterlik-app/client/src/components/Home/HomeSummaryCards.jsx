@@ -3,7 +3,7 @@ import React from 'react';
 const HomeSummaryCards = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-sm p-6 border border-blue-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm p-6 border border-blue-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Toplam</p>
@@ -17,7 +17,7 @@ const HomeSummaryCards = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-sm p-6 border border-green-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm p-6 border border-green-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Aktif</p>
@@ -31,7 +31,7 @@ const HomeSummaryCards = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-sm p-6 border border-amber-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-sm p-6 border border-amber-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Kayıtlı</p>

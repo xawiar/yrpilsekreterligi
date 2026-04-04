@@ -61,8 +61,8 @@ const ManagementChartView = ({ members }) => {
   const { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-900">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 overflow-hidden">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-200 bg-gray-50 dark:bg-gray-900">
         <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Yönetim Şeması</h3>
       </div>
       

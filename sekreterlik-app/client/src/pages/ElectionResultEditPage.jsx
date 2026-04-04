@@ -193,9 +193,9 @@ const ElectionResultEditPage = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-8 border-2 border-dashed border-yellow-300 rounded-lg text-center bg-yellow-50 mb-6">
-                    <p className="text-yellow-800 font-medium">⚠️ Seçim sonuç verileri girilmemiş</p>
-                    <p className="text-sm text-yellow-600 mt-2">Sadece tutanak fotoğrafı yüklenmiş</p>
+                  <div className="p-8 border-2 border-dashed border-amber-300 rounded-lg text-center bg-amber-50 mb-6">
+                    <p className="text-amber-800 font-medium">⚠️ Seçim sonuç verileri girilmemiş</p>
+                    <p className="text-sm text-amber-600 mt-2">Sadece tutanak fotoğrafı yüklenmiş</p>
                   </div>
                 )}
 

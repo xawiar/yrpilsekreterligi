@@ -140,7 +140,7 @@ const MembersTable = ({
   // Grid görünümü
   if (viewMode === 'grid') {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 p-4 md:p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700 p-4 md:p-6">
         {members.length === 0 ? (
           <EmptyMembersState variant="card" />
         ) : (
@@ -154,7 +154,7 @@ const MembersTable = ({
 
   // Tablo görünümü (varsayılan)
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto table-responsive">
         <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700 hidden md:table-header-group sticky top-0 z-10">

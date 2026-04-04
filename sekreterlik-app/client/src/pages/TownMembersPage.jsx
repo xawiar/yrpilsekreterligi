@@ -204,8 +204,8 @@ const TownMembersPage = () => {
 
   if (!town) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-yellow-600">Belde bulunamadı</p>
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <p className="text-amber-600">Belde bulunamadı</p>
       </div>
     );
   }

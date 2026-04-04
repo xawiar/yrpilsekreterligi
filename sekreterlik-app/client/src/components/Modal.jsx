@@ -70,7 +70,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (mobileView) {
     return (
       <div 
-        className="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 flex items-center justify-center z-[9999]"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-modal"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             onClose();
@@ -89,8 +89,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           className="bg-white dark:bg-gray-800 rounded-none shadow-2xl w-full h-full overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'relative',
-            zIndex: 10000
+            position: 'relative'
           }}
         >
           {/* Header - Native mobile style */}
@@ -117,7 +116,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   // Desktop görünümü
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-2 md:p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-modal p-2 md:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -128,7 +127,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full h-auto ${getSizeClasses()} max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800 rounded-t-2xl flex-shrink-0">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800 rounded-t-2xl flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-2">{title}</h2>
           <button
             onClick={onClose}

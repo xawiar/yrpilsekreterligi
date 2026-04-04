@@ -143,7 +143,7 @@ const TaskForm = ({ task, onClose, onTaskSaved }) => {
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200"
+            className="px-4 py-2 bg-indigo-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200"
           >
             {task ? 'Görevi Güncelle' : 'Görevi Ekle'}
           </button>

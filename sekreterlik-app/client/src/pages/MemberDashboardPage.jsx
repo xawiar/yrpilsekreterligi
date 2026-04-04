@@ -963,7 +963,7 @@ const MemberDashboardPage = () => {
           ) : (
             <div className="space-y-4 sm:space-y-6 md:space-y-8">
           {/* Welcome Card */}
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-black bg-opacity-10"></div>
             <div className="relative z-10">
               <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
@@ -1012,7 +1012,7 @@ const MemberDashboardPage = () => {
             grantedPermissions.includes('access_neighborhoods_page') ||
             grantedPermissions.includes('access_villages_page') ||
             grantedPermissions.includes('access_groups_page')) && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1385,7 +1385,7 @@ const MemberDashboardPage = () => {
             grantedPermissions.includes('access_neighborhoods_page') ||
             grantedPermissions.includes('access_villages_page') ||
             grantedPermissions.includes('access_groups_page')) && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-900 dark:to-sky-800">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1584,7 +1584,7 @@ const MemberDashboardPage = () => {
 
           {/* Empty state when user has no permissions */}
           {grantedPermissions.length === 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
@@ -1595,7 +1595,7 @@ const MemberDashboardPage = () => {
 
           {/* Active Polls Section */}
           {polls.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900 dark:to-purple-900">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1664,7 +1664,7 @@ const MemberDashboardPage = () => {
 
           {/* Kadın Kolları Yönetim - Sadece kadın kolları başkanı görsün */}
           {isWomenBranchPresident && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 px-6 py-4 border-b border-pink-200 dark:border-pink-700">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
                   <svg className="w-6 h-6 mr-2 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1691,7 +1691,7 @@ const MemberDashboardPage = () => {
 
           {/* Gençlik Kolları Yönetim - Sadece gençlik kolları başkanı görsün */}
           {isYouthBranchPresident && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 px-6 py-4 border-b border-blue-200 dark:border-blue-700">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
                   <svg className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1717,7 +1717,7 @@ const MemberDashboardPage = () => {
           )}
 
           {/* Member Details */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <MemberDetails
               member={member}
               members={members}

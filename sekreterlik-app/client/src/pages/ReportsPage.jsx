@@ -958,7 +958,7 @@ const ReportsPage = () => {
           {/* Dashboard Özellikleri - Upcoming Events and Meetings */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mt-6">
             {/* Upcoming Events */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yaklaşan Etkinlikler</h3>
               {stats.upcomingEvents.length > 0 ? (
                 <div className="space-y-3">
@@ -995,7 +995,7 @@ const ReportsPage = () => {
             </div>
 
             {/* Upcoming Meetings */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yaklaşan Toplantılar</h3>
               {stats.upcomingMeetings.length > 0 ? (
                 <div className="space-y-3">

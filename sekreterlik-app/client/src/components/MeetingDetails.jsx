@@ -246,7 +246,7 @@ const MeetingDetails = ({ meeting }) => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Toplantı Bilgileri</h3>
           <dl className="space-y-3">
             <div className="flex">
@@ -288,7 +288,7 @@ const MeetingDetails = ({ meeting }) => {
             <div className="flex">
               <dt className="w-32 text-sm font-medium text-gray-500">Mazeretli</dt>
               <dd className="text-sm text-gray-900 font-medium">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                   {getExcusedCount()} kişi
                 </span>
               </dd>
@@ -304,7 +304,7 @@ const MeetingDetails = ({ meeting }) => {
           </dl>
         </div>
         
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Toplantı Notları</h3>
           <div className="p-3 bg-white rounded-lg border border-gray-200">
             <p className="text-sm text-gray-700 whitespace-pre-wrap">
@@ -314,8 +314,8 @@ const MeetingDetails = ({ meeting }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-200 bg-gray-50">
           <h3 className="text-lg font-bold text-gray-900">Katılımcılar</h3>
         </div>
         {loading ? (
@@ -372,7 +372,7 @@ const MeetingDetails = ({ meeting }) => {
                                 attendance.attended 
                                   ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
                                   : (attendance.excuse && attendance.excuse.hasExcuse)
-                                    ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                    ? 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
                                     : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                               }`}>
                                 {attendance.attended 
@@ -454,7 +454,7 @@ const MeetingDetails = ({ meeting }) => {
                               attendance.attended 
                                 ? 'bg-green-100 text-green-800' 
                                 : (attendance.excuse && attendance.excuse.hasExcuse)
-                                  ? 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-amber-100 text-amber-800'
                                   : 'bg-red-100 text-red-800'
                             }`}>
                               {attendance.attended 

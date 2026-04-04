@@ -688,7 +688,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     // Footer
     csvContent += '═══════════════════════════════════════════════════════════════════════════════\n';
     csvContent += '                    Parti Sekreterliği Sistemi v2.0\n';
-    csvContent += '                          © 2025 DAT Dijital\n';
+    csvContent += '                          © 2026 DAT Dijital\n';
     csvContent += '═══════════════════════════════════════════════════════════════════════════════\n';
     
     // Create blob and download
@@ -728,7 +728,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Kişisel Bilgiler</h3>
           
           {/* Photo Section */}
@@ -788,7 +788,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
           </dl>
         </div>
         
-        <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Parti Bilgileri</h3>
           <dl className="space-y-2 sm:space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center">
@@ -902,7 +902,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
         </div>
       )}
       
-      <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100">
+      <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
         <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">İstatistikler</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
@@ -941,10 +941,10 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       </div>
 
       {memberRegistrationRows.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <button
             onClick={() => setIsRegistrationsExpanded(!isRegistrationsExpanded)}
-            className="w-full px-4 sm:px-5 py-3 sm:py-4 text-left hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between border-b border-gray-100 bg-gray-50"
+            className="w-full px-4 sm:px-5 py-3 sm:py-4 text-left hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between border-b border-gray-200 bg-gray-50"
           >
             <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center">
               <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -987,7 +987,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
 
       {/* Member Positions Section */}
       {memberPositions.length > 0 && (
-        <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Görev Bilgileri</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {memberPositions.map((position, index) => (
@@ -1009,7 +1009,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
 
       {/* Kişiye Özel Notlar - Sadece Admin */}
       {isAdmin && (
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-900">Kişiye Özel Notlar</h3>
             {!isEditingNotes && (
@@ -1079,10 +1079,10 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
       {/* Kişisel Belgeler - Admin ve kendi belgelerini gören üyeler */}
       <PersonalDocuments memberId={member.id} />
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <button
           onClick={() => setIsMeetingsExpanded(!isMeetingsExpanded)}
-          className="w-full px-4 sm:px-5 py-3 sm:py-4 text-left hover:bg-gray-100 transition-colors duration-200 flex items-center justify-between border-b border-gray-100 bg-gray-50"
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 text-left hover:bg-gray-100 transition-colors duration-200 flex items-center justify-between border-b border-gray-200 bg-gray-50"
         >
           <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center">
             <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1272,7 +1272,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
 
       {/* Yönetim Şeması - Sadece üyeler için */}
       {user && user.role === 'member' && members.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <button
             onClick={() => setIsManagementChartExpanded(!isManagementChartExpanded)}
             className="w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between"

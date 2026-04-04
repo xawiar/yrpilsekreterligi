@@ -403,7 +403,7 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
                         Temsilci Atanmış
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                         Temsilci Atanmamış
                       </span>
                     )}
@@ -619,7 +619,7 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
                             Temsilci Atanmış
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                             Temsilci Atanmamış
                           </span>
                         )}

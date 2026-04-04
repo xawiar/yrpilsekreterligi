@@ -97,7 +97,7 @@ const HomeFeaturesGrid = () => {
       {features.map((feature, index) => (
         <div 
           key={index} 
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
+          className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
         >
           <div className={`bg-gradient-to-r ${feature.color} p-5`}>
             <div className="flex items-center">

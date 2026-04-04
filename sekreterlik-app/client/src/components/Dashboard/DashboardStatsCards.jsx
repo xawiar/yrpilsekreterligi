@@ -6,7 +6,7 @@ const DashboardStatsCards = ({ stats }) => {
   
   return (
     <div className={`grid grid-cols-1 ${mobileView ? 'gap-3 mb-4' : 'md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8'}`}>
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-100 dark:border-gray-700`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center">
           <div className={`${mobileView ? 'p-2' : 'p-3'} rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 ${mobileView ? 'mr-3' : 'mr-4'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" className={`${mobileView ? 'h-5 w-5' : 'h-6 w-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -20,7 +20,7 @@ const DashboardStatsCards = ({ stats }) => {
         </div>
       </div>
 
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-100 dark:border-gray-700`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center">
           <div className={`${mobileView ? 'p-2 mr-3' : 'p-3 mr-4'} rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300`}>
             <svg xmlns="http://www.w3.org/2000/svg" className={`${mobileView ? 'h-5 w-5' : 'h-6 w-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,7 +34,7 @@ const DashboardStatsCards = ({ stats }) => {
         </div>
       </div>
 
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-100 dark:border-gray-700`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center">
           <div className={`${mobileView ? 'p-2 mr-3' : 'p-3 mr-4'} rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300`}>
             <svg xmlns="http://www.w3.org/2000/svg" className={`${mobileView ? 'h-5 w-5' : 'h-6 w-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,7 +48,7 @@ const DashboardStatsCards = ({ stats }) => {
         </div>
       </div>
 
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-100 dark:border-gray-700`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center">
           <div className={`${mobileView ? 'p-2 mr-3' : 'p-3 mr-4'} rounded-full bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300`}>
             <svg xmlns="http://www.w3.org/2000/svg" className={`${mobileView ? 'h-5 w-5' : 'h-6 w-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -62,7 +62,7 @@ const DashboardStatsCards = ({ stats }) => {
         </div>
       </div>
 
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-100 dark:border-gray-700`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center">
           <div className={`${mobileView ? 'p-2 mr-3' : 'p-3 mr-4'} rounded-full bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300`}>
             <svg xmlns="http://www.w3.org/2000/svg" className={`${mobileView ? 'h-5 w-5' : 'h-6 w-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,7 +77,7 @@ const DashboardStatsCards = ({ stats }) => {
         </div>
       </div>
 
-      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-100 dark:border-gray-700`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${mobileView ? 'p-4' : 'p-6'} border border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center">
           <div className={`${mobileView ? 'p-2 mr-3' : 'p-3 mr-4'} rounded-full bg-teal-100 dark:bg-teal-900 text-teal-600 dark:text-teal-300`}>
             <svg xmlns="http://www.w3.org/2000/svg" className={`${mobileView ? 'h-5 w-5' : 'h-6 w-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -14,7 +14,7 @@ const MembersOperationsMenu = ({
   onRegionChange
 }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border border-gray-200">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <div className="relative">
@@ -75,7 +75,7 @@ const MembersOperationsMenu = ({
           />
           <button
             onClick={onAddMember}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

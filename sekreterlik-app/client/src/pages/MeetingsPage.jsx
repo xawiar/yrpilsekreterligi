@@ -539,7 +539,7 @@ const MeetingsPage = () => {
       />
 
       {/* Meetings Table - Responsive Design */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
         <MeetingsTable
           meetings={paginatedMeetings}
           sortConfig={sortConfig}

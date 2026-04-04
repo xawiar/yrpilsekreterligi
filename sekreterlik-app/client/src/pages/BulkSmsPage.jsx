@@ -363,7 +363,7 @@ const BulkSmsPage = () => {
 
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Toplu SMS Gönder</h1>
 
         {/* Bölge Seçimi */}
@@ -561,7 +561,7 @@ const BulkSmsPage = () => {
                               : recipient.type === 'observer'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
                               : recipient.type === 'chief_observer'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
                               : recipient.type === 'town_president'
                               ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
                               : recipient.type === 'neighborhood_representative'
@@ -635,7 +635,7 @@ const BulkSmsPage = () => {
                 (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents && !includeNeighborhoodRepresentatives && !includeVillageRepresentatives) ||
                 (isScheduled && !scheduledDate)
               }
-              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-indigo-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending
                 ? (isScheduled ? 'Planlanıyor...' : 'Gönderiliyor...')
@@ -659,7 +659,7 @@ const BulkSmsPage = () => {
             <div className={`p-4 rounded-lg ${
               result.success 
                 ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' 
-                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'
+                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
             }`}>
               <p className="font-medium">{result.message}</p>
               {result.sent > 0 && (
@@ -740,7 +740,7 @@ const BulkSmsPage = () => {
                       <div className="mt-2">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           sms.status === 'pending' 
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
                             : sms.status === 'sent'
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
                             : sms.status === 'failed'

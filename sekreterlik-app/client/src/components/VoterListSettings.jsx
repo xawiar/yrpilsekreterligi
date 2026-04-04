@@ -128,7 +128,7 @@ const VoterListSettings = () => {
     return (
         <div className="space-y-8">
             {/* Üst Bölüm: Yükleme */}
-            <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div className="px-4 py-5 sm:p-6">
                     <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
                         Seçmen Listesi Yükleme
@@ -271,14 +271,14 @@ const VoterListSettings = () => {
                                         className={`p-4 rounded-md border text-sm ${report.status === 'success'
                                             ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                                             : report.status === 'warning'
-                                                ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                                                ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'
                                                 : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
                                             }`}
                                     >
                                         <div className="flex justify-between items-start">
                                             <h5 className="font-bold text-gray-900 dark:text-gray-100">{report.fileName}</h5>
                                             <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${report.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
-                                                report.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
+                                                report.status === 'warning' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' :
                                                     'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
                                                 }`}>
                                                 {report.status === 'success' ? 'Başarılı' : report.status === 'warning' ? 'Uyarı' : 'Hata'}
@@ -315,7 +315,7 @@ const VoterListSettings = () => {
             </div>
 
             {/* Alt Bölüm: Arama */}
-            <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div className="px-4 py-5 sm:p-6">
                     <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
                         Seçmen Sorgulama

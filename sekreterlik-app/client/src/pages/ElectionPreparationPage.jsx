@@ -251,7 +251,7 @@ const ElectionPreparationPage = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Seçime Hazırlık</h1>
@@ -261,7 +261,7 @@ const ElectionPreparationPage = () => {
         </div>
 
         {/* Tabs - Alt sayfa navigasyonu */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
           <div className="flex flex-wrap gap-2 p-4 overflow-x-auto">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -287,7 +287,7 @@ const ElectionPreparationPage = () => {
         </div>
 
         {/* Content Area - Alt sayfalar burada render edilecek */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[500px]">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[500px]">
           {/* Route-based navigation - Standalone route olarak kullanıldığında çalışır */}
           {location.pathname.startsWith('/election-preparation') ? (
             <Routes>
