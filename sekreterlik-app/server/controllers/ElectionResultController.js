@@ -41,6 +41,89 @@ function validateVoteData(data, res) {
   return true; // valid
 }
 
+// Koordinatör/başmüşahit rol bazlı sandık filtreleme yardımcı fonksiyonu
+async function getCoordinatorBallotBoxIds(user, dbConn) {
+  const coordinatorId = user.id || user.coordinatorId;
+  const role = user.type || user.role;
+
+  if (role === 'provincial_coordinator' || role === 'admin') {
+    return null; // tüm sandıklar
+  }
+
+  if (role === 'institution_supervisor') {
+    // Kendi kurumundaki sandıklar
+    const coordinator = await dbConn.get('SELECT institution_name FROM election_coordinators WHERE id = ?', [coordinatorId]);
+    if (!coordinator?.institution_name) return [];
+    const boxes = await dbConn.all('SELECT id FROM ballot_boxes WHERE institution_name = ?', [coordinator.institution_name]);
+    return boxes.map(b => b.id);
+  }
+
+  if (role === 'region_supervisor') {
+    // Kendi bölgesindeki sandıklar
+    const regions = await dbConn.all('SELECT neighborhood_ids, village_ids FROM election_regions WHERE supervisor_id = ?', [coordinatorId]);
+    if (!regions.length) return [];
+
+    let neighborhoodIds = [];
+    let villageIds = [];
+    for (const region of regions) {
+      const nIds = typeof region.neighborhood_ids === 'string' ? JSON.parse(region.neighborhood_ids || '[]') : (region.neighborhood_ids || []);
+      const vIds = typeof region.village_ids === 'string' ? JSON.parse(region.village_ids || '[]') : (region.village_ids || []);
+      neighborhoodIds.push(...nIds);
+      villageIds.push(...vIds);
+    }
+
+    let conditions = [];
+    let boxParams = [];
+    if (neighborhoodIds.length) {
+      conditions.push(`neighborhood_id IN (${neighborhoodIds.map(() => '?').join(',')})`);
+      boxParams.push(...neighborhoodIds);
+    }
+    if (villageIds.length) {
+      conditions.push(`village_id IN (${villageIds.map(() => '?').join(',')})`);
+      boxParams.push(...villageIds);
+    }
+    if (!conditions.length) return [];
+
+    const boxes = await dbConn.all(`SELECT id FROM ballot_boxes WHERE ${conditions.join(' OR ')}`, boxParams);
+    return boxes.map(b => b.id);
+  }
+
+  if (role === 'district_supervisor') {
+    // Alt koordinatörlerin bölgelerindeki sandıklar
+    const subCoordinators = await dbConn.all('SELECT id FROM election_coordinators WHERE parent_coordinator_id = ?', [coordinatorId]);
+    const subIds = subCoordinators.map(c => c.id);
+    if (!subIds.length) return [];
+
+    const regions = await dbConn.all(`SELECT neighborhood_ids, village_ids FROM election_regions WHERE supervisor_id IN (${subIds.map(() => '?').join(',')})`, subIds);
+
+    let neighborhoodIds = [];
+    let villageIds = [];
+    for (const region of regions) {
+      const nIds = typeof region.neighborhood_ids === 'string' ? JSON.parse(region.neighborhood_ids || '[]') : (region.neighborhood_ids || []);
+      const vIds = typeof region.village_ids === 'string' ? JSON.parse(region.village_ids || '[]') : (region.village_ids || []);
+      neighborhoodIds.push(...nIds);
+      villageIds.push(...vIds);
+    }
+
+    let conditions = [];
+    let boxParams = [];
+    if (neighborhoodIds.length) {
+      conditions.push(`neighborhood_id IN (${neighborhoodIds.map(() => '?').join(',')})`);
+      boxParams.push(...neighborhoodIds);
+    }
+    if (villageIds.length) {
+      conditions.push(`village_id IN (${villageIds.map(() => '?').join(',')})`);
+      boxParams.push(...villageIds);
+    }
+    if (!conditions.length) return [];
+
+    const boxes = await dbConn.all(`SELECT id FROM ballot_boxes WHERE ${conditions.join(' OR ')}`, boxParams);
+    return boxes.map(b => b.id);
+  }
+
+  return null; // bilinmeyen rol — tüm sonuçlar
+}
+
 class ElectionResultController {
   static async getAll(req, res) {
     try {
@@ -50,6 +133,31 @@ class ElectionResultController {
                  LEFT JOIN elections e ON er.election_id = e.id
                  WHERE 1=1`;
       const params = [];
+
+      // Rol bazlı sonuç filtreleme
+      if (req.user) {
+        const userType = req.user.type || req.user.role;
+
+        if (userType === 'chief_observer') {
+          // Başmüşahit sadece kendi sandığının sonuçlarını görebilir
+          if (req.user.ballot_box_id) {
+            sql += ' AND er.ballot_box_id = ?';
+            params.push(req.user.ballot_box_id);
+          }
+        } else if (['region_supervisor', 'district_supervisor', 'institution_supervisor'].includes(userType)) {
+          // Koordinatörler sadece kendi sandıklarının sonuçlarını görebilir
+          const allowedBallotBoxIds = await getCoordinatorBallotBoxIds(req.user, db);
+          if (allowedBallotBoxIds && allowedBallotBoxIds.length > 0) {
+            sql += ` AND er.ballot_box_id IN (${allowedBallotBoxIds.map(() => '?').join(',')})`;
+            params.push(...allowedBallotBoxIds);
+          } else if (allowedBallotBoxIds !== null) {
+            // Boş dizi döndü — hiç sandık yok, boş sonuç dönsün
+            sql += ' AND 1=0';
+          }
+          // allowedBallotBoxIds === null → tüm sonuçlar (filtre yok)
+        }
+        // admin ve provincial_coordinator → tüm sonuçlar (filtre yok)
+      }
 
       if (election_id) {
         sql += ' AND er.election_id = ?';
