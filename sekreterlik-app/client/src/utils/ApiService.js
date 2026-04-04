@@ -2813,7 +2813,26 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/push-subscriptions/unsubscribe`, {
+      // Get userId from localStorage
+      let userId = null;
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          userId = user?.id || user?.memberId || user?.uid;
+        }
+      } catch (e) {
+        console.warn('Could not get userId from localStorage:', e);
+      }
+
+      if (!userId) {
+        return {
+          success: false,
+          message: 'Kullanici ID bulunamadi'
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/push-subscriptions/unsubscribe/${userId}`, {
         method: 'DELETE',
         headers: this.getAuthHeaders(),
       });

@@ -71,15 +71,22 @@ class PushSubscriptionController {
   // Get VAPID public key
   static async getVapidKey(req, res) {
     try {
-      res.json({ 
-        success: true, 
-        publicKey: 'BO9vjwvHvLDxeP-H2IY92hsQlWGYTCW7NpX3M0GAyooyTbT30Y_0q_ahIsomr38bsL2Nbh7DHEZKMD7YTsiEYf8'
+      const publicKey = process.env.VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        return res.status(500).json({
+          success: false,
+          message: 'VAPID_PUBLIC_KEY environment variable is not set'
+        });
+      }
+      res.json({
+        success: true,
+        publicKey
       });
     } catch (error) {
       console.error('Error getting VAPID key:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'VAPID anahtarı alınırken hata oluştu' 
+      res.status(500).json({
+        success: false,
+        message: 'VAPID anahtarı alınırken hata oluştu'
       });
     }
   }
@@ -93,11 +100,11 @@ class PushSubscriptionController {
       if (!userId) {
         // If no userId, send to all subscribers
         const subscriptions = await PushSubscription.getAll();
-        
+
         if (subscriptions.length === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: 'Aktif push subscription bulunamadı' 
+          return res.status(404).json({
+            success: false,
+            message: 'Aktif push subscription bulunamadı'
           });
         }
 
@@ -109,21 +116,29 @@ class PushSubscriptionController {
           { type: 'test', action: 'view' }
         );
 
-        const results = await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
-        
-        return res.json({ 
-          success: true, 
+        // Format subscriptions for web-push
+        const formattedSubscriptions = subscriptions.map(sub => ({
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh || sub.keys?.p256dh,
+            auth: sub.auth || sub.keys?.auth
+          }
+        }));
+        const results = await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
+
+        return res.json({
+          success: true,
           message: `Test bildirimi ${subscriptions.length} kullanıcıya gönderildi`,
-          results 
+          results
         });
       }
 
       const subscriptions = await PushSubscription.getByUserId(userId);
-      
+
       if (subscriptions.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Kullanıcının aktif push subscription\'ı bulunamadı' 
+        return res.status(404).json({
+          success: false,
+          message: 'Kullanıcının aktif push subscription\'ı bulunamadı'
         });
       }
 
@@ -135,7 +150,15 @@ class PushSubscriptionController {
         { type: 'test', action: 'view' }
       );
 
-      const results = await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+      // Format subscriptions for web-push
+      const formattedSubs = subscriptions.map(sub => ({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh || sub.keys?.p256dh,
+          auth: sub.auth || sub.keys?.auth
+        }
+      }));
+      const results = await PushNotificationService.sendToMultipleUsers(formattedSubs, payload);
       
       res.json({ 
         success: true, 
@@ -164,26 +187,35 @@ class PushSubscriptionController {
       }
 
       const subscriptions = await PushSubscription.getAll();
-      
+
       if (subscriptions.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Aktif push subscription bulunamadı' 
+        return res.status(404).json({
+          success: false,
+          message: 'Aktif push subscription bulunamadı'
         });
       }
 
+      // Format subscriptions for web-push
+      const formattedSubscriptions = subscriptions.map(sub => ({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh || sub.keys?.p256dh,
+          auth: sub.auth || sub.keys?.auth
+        }
+      }));
+
       const results = await PushNotificationService.sendGeneralNotification(
-        subscriptions, 
-        title, 
+        formattedSubscriptions,
+        title,
         body
       );
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         message: 'Bildirim tüm kullanıcılara gönderildi',
         sentCount: results.filter(r => r.success).length,
         totalCount: subscriptions.length,
-        results 
+        results
       });
     } catch (error) {
       console.error('Error sending notification to all:', error);

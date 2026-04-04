@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import FirebaseService from '../services/FirebaseService';
 import { decryptData, encryptData } from '../utils/crypto';
+import ApiService from '../utils/ApiService';
 
 const GeminiApiSettings = () => {
   const [geminiApiKey, setGeminiApiKey] = useState('');
@@ -9,6 +10,7 @@ const GeminiApiSettings = () => {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
 
   useEffect(() => {
     loadApiKey();
@@ -66,6 +68,22 @@ const GeminiApiSettings = () => {
         return;
       }
 
+      // Admin şifresi doğrulama
+      if (!adminPassword.trim()) {
+        setMessage('Lütfen admin şifresini girin');
+        setMessageType('error');
+        return;
+      }
+
+      // Admin şifresini doğrula
+      const verifyResult = await ApiService.verifyAdminPassword(adminPassword.trim());
+      if (!verifyResult.success) {
+        setMessage(verifyResult.message || 'Admin şifresi yanlış');
+        setMessageType('error');
+        setAdminPassword('');
+        return;
+      }
+
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
 
       if (USE_FIREBASE) {
@@ -86,6 +104,7 @@ const GeminiApiSettings = () => {
 
         setMessage('Gemini API anahtarı başarıyla kaydedildi');
         setMessageType('success');
+        setAdminPassword('');
       } else {
         setMessage('Firebase kullanılmıyor. API anahtarı environment variable olarak ayarlanmalıdır.');
         setMessageType('error');
@@ -94,6 +113,7 @@ const GeminiApiSettings = () => {
       console.error('Error saving Gemini API key:', error);
       setMessage('API anahtarı kaydedilirken hata oluştu: ' + error.message);
       setMessageType('error');
+      setAdminPassword('');
     } finally {
       setSaving(false);
     }
@@ -110,7 +130,7 @@ const GeminiApiSettings = () => {
       }
 
       const testResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey.trim()}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey.trim()}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -200,6 +220,23 @@ const GeminiApiSettings = () => {
             </p>
           </div>
 
+          {/* Admin Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Admin Şifresi <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="API anahtarını kaydetmek için admin şifresini girin"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              API anahtarı değişiklikleri için admin şifresi gereklidir
+            </p>
+          </div>
+
           {message && (
             <div className={`p-3 rounded-lg ${
               messageType === 'success'
@@ -213,7 +250,7 @@ const GeminiApiSettings = () => {
           <div className="flex items-center space-x-3">
             <button
               onClick={handleSave}
-              disabled={saving || !geminiApiKey.trim()}
+              disabled={saving || !geminiApiKey.trim() || !adminPassword.trim()}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? 'Kaydediliyor...' : 'Kaydet'}

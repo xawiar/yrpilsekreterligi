@@ -266,7 +266,15 @@ class ScheduledNotificationService {
         unreadCount + 1
       );
 
-      await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+      // Format subscriptions for web-push
+      const formattedSubscriptions = subscriptions.map(sub => ({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh || sub.keys?.p256dh,
+          auth: sub.auth || sub.keys?.auth
+        }
+      }));
+      await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
       console.log(`✅ Zamanlanmış bildirim gönderildi: ${title} - ${subscriptions.length} kullanıcı`);
 
       // Database'e bildirim kaydet

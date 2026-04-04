@@ -61,6 +61,7 @@ const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
 const CoordinatorLoginPage = lazy(() => import('./pages/CoordinatorLoginPage'));
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 // Debug pages
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
@@ -212,6 +213,16 @@ function RouterContent() {
             element={
               <MemberRoute>
                 <MemberDashboardPage />
+              </MemberRoute>
+            }
+          />
+
+          {/* Member Notifications Route */}
+          <Route
+            path="/member-notifications"
+            element={
+              <MemberRoute>
+                <NotificationsPage />
               </MemberRoute>
             }
           />
@@ -379,6 +390,7 @@ function RouterContent() {
                             <Route path="/archive" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ArchivePage /></Suspense></PageTransition>} />
                             <Route path="/management-chart" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ManagementChartPage /></Suspense></PageTransition>} />
                             <Route path="/settings/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense></PageTransition>} />
+                            <Route path="/notifications" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><NotificationsPage /></Suspense></PageTransition>} />
                             <Route path="/sync-to-firebase" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SyncToFirebasePage /></Suspense></PageTransition>} />
                             <Route path="/remove-duplicate-meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><RemoveDuplicateMeetingsPage /></Suspense></PageTransition>} />
 

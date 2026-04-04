@@ -93,12 +93,12 @@ class EventController {
       
       // Send push notification to all subscribed users and save to database
       try {
+        const Notification = require('../models/Notification');
         const subscriptions = await PushSubscription.getAll();
         if (subscriptions.length > 0) {
           // Get unread count for badge
-          const Notification = require('../models/Notification');
           const unreadCount = await Notification.getUnreadCount(null);
-          
+
           const payload = PushNotificationService.createPayload(
             'Yeni Etkinlik Oluşturuldu',
             `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
@@ -107,12 +107,20 @@ class EventController {
             { type: 'event', id: result.lastID, action: 'view' },
             unreadCount + 1
           );
-          await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
+
+          // Format subscriptions for web-push
+          const formattedSubscriptions = subscriptions.map(sub => ({
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh || sub.keys?.p256dh,
+              auth: sub.auth || sub.keys?.auth
+            }
+          }));
+          await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
           console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
         }
-        
+
         // Save notification to database for all members
-        const Notification = require('../models/Notification');
         await Notification.create({
           memberId: null, // null = all members
           title: 'Yeni Etkinlik Oluşturuldu',

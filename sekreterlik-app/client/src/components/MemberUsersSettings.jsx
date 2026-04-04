@@ -39,6 +39,9 @@ const MemberUsersSettings = () => {
   const [passwordResetUser, setPasswordResetUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isCleaningOrphaned, setIsCleaningOrphaned] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [isClearingAuthUids, setIsClearingAuthUids] = useState(false);
 
   useEffect(() => {
     fetchMemberUsers();
@@ -882,17 +885,25 @@ const MemberUsersSettings = () => {
       
       // Admin bilgilerini al (Firestore'dan)
       let adminEmail = 'admin@ilsekreterlik.local';
-      let adminPassword = 'admin123';
+      let adminPassword = null;
       try {
         const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
         const adminDoc = await FirebaseService.getById(FirebaseApiService.COLLECTIONS.ADMIN, 'main');
         if (adminDoc && adminDoc.email) {
           adminEmail = adminDoc.email;
         }
+        if (adminDoc && adminDoc.password) {
+          adminPassword = adminDoc.password;
+        }
       } catch (error) {
-        console.warn('Admin bilgileri alınamadı, varsayılan kullanılıyor');
+        console.warn('Admin bilgileri alınamadı');
       }
-      
+
+      if (!adminPassword) {
+        toast.error('Admin şifresi alınamadı. Lütfen tekrar giriş yapın ve işlemi tekrarlayın.');
+        return;
+      }
+
       // Tüm üye kullanıcılarını al
       const allMemberUsers = memberUsers.filter(user => user.isActive !== false);
       setSyncProgress({ current: 0, total: allMemberUsers.length });
@@ -1145,17 +1156,25 @@ const MemberUsersSettings = () => {
       
       // Admin bilgilerini al (Firestore'dan)
       let adminEmail = 'admin@ilsekreterlik.local';
-      let adminPassword = 'admin123';
+      let adminPassword = null;
       try {
         const { default: FirebaseApiService } = await import('../utils/FirebaseApiService');
         const adminDoc = await FirebaseService.getById(FirebaseApiService.COLLECTIONS.ADMIN, 'main');
         if (adminDoc && adminDoc.email) {
           adminEmail = adminDoc.email;
         }
+        if (adminDoc && adminDoc.password) {
+          adminPassword = adminDoc.password;
+        }
       } catch (error) {
-        console.warn('Admin bilgileri alınamadı, varsayılan kullanılıyor');
+        console.warn('Admin bilgileri alınamadı');
       }
-      
+
+      if (!adminPassword) {
+        toast.error('Admin şifresi alınamadı. Lütfen tekrar giriş yapın ve işlemi tekrarlayın.');
+        return;
+      }
+
       // Tüm üye kullanıcılarını al
       const allMemberUsers = memberUsers.filter(user => user.isActive !== false);
       setSyncProgress({ current: 0, total: allMemberUsers.length });

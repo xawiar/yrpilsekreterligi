@@ -45,14 +45,10 @@ const EventCategoriesSettings = () => {
       const events = await ApiService.getEvents();
       const counts = {};
       
-      // Count events by category name
+      // Count events by category_id
       events.forEach(event => {
-        if (event.name) {
-          // Find the category that matches this event name
-          const matchingCategory = categories.find(cat => cat.name === event.name);
-          if (matchingCategory) {
-            counts[matchingCategory.id] = (counts[matchingCategory.id] || 0) + 1;
-          }
+        if (event.category_id) {
+          counts[event.category_id] = (counts[event.category_id] || 0) + 1;
         }
       });
       

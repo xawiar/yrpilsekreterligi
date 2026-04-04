@@ -11,11 +11,11 @@ const PerformanceScoreSettings = () => {
   const [settings, setSettings] = useState({
     meetingAttendancePoints: 10,
     eventAttendancePoints: 10,
-    absencePenalty: -5,
+    absencePenalty: -10,
     memberRegistrationPoints: 5,
     perfectMeetingBonus: 50,
     perfectEventBonus: 50,
-    maxMonthlyRegistrations: null,
+    maxMonthlyRegistrations: 5,
     useAttendanceWeightForRegistrations: false,
     minAttendanceRateForFullRegistrationPoints: 0
   });
@@ -36,11 +36,11 @@ const PerformanceScoreSettings = () => {
             setSettings({
               meetingAttendancePoints: configDoc.meetingAttendancePoints || 10,
               eventAttendancePoints: configDoc.eventAttendancePoints || 10,
-              absencePenalty: configDoc.absencePenalty || -5,
+              absencePenalty: configDoc.absencePenalty ?? -10,
               memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
               perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
               perfectEventBonus: configDoc.perfectEventBonus || 50,
-              maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations || null,
+              maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations ?? 5,
               useAttendanceWeightForRegistrations: configDoc.useAttendanceWeightForRegistrations || false,
               minAttendanceRateForFullRegistrationPoints: configDoc.minAttendanceRateForFullRegistrationPoints || 0
             });
@@ -182,7 +182,7 @@ const PerformanceScoreSettings = () => {
               value={settings.absencePenalty}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              placeholder="-5"
+              placeholder="-10"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Mazeretsiz katılmadığı her toplantı için düşülecek puan (negatif değer)
@@ -216,7 +216,7 @@ const PerformanceScoreSettings = () => {
               value={settings.maxMonthlyRegistrations || ''}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              placeholder="Boş bırakılırsa limit yok"
+              placeholder="5"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Bir ay içinde maksimum kaç üye kaydı için puan verileceği (ör: 15). Boş bırakılırsa sınırsız.

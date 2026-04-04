@@ -46,8 +46,18 @@ class MessageController {
         const sender = subscriptions.find(sub => sub.user_id === senderId);
         const senderName = sender ? sender.chairman_name || sender.username : 'Bilinmeyen';
 
+        // Format subscriptions for web-push
+        const formattedSubscriptions = subscriptions
+          .filter(sub => sub.user_id !== senderId)
+          .map(sub => ({
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh || sub.keys?.p256dh,
+              auth: sub.auth || sub.keys?.auth
+            }
+          }));
         await PushNotificationService.sendMessageNotification(
-          subscriptions.filter(sub => sub.user_id !== senderId),
+          formattedSubscriptions,
           senderName,
           message
         );

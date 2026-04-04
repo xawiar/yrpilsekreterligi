@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import FirebaseService from '../services/FirebaseService';
 import { decryptData, encryptData } from '../utils/crypto';
 import ApiService from '../utils/ApiService';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from './UI/ConfirmDialog';
 
 const SmsSettings = () => {
+  const { confirm, confirmDialogProps } = useConfirm();
   const [provider, setProvider] = useState('netgsm'); // 'netgsm', 'twilio', etc.
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
@@ -14,7 +17,12 @@ const SmsSettings = () => {
   const [messageType, setMessageType] = useState('success');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showApiSecret, setShowApiSecret] = useState(false);
-  
+  const [adminPassword, setAdminPassword] = useState('');
+
+  // Test SMS modal
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testPhone, setTestPhone] = useState('');
+
   // Otomatik SMS ayarları
   const [autoSmsForMeetings, setAutoSmsForMeetings] = useState(false);
   const [autoSmsForEvents, setAutoSmsForEvents] = useState(false);
@@ -104,8 +112,24 @@ const SmsSettings = () => {
         return;
       }
 
+      // Admin şifresi doğrulama
+      if (!adminPassword.trim()) {
+        setMessage('Lütfen admin şifresini girin');
+        setMessageType('error');
+        return;
+      }
+
+      // Admin şifresini doğrula
+      const verifyResult = await ApiService.verifyAdminPassword(adminPassword.trim());
+      if (!verifyResult.success) {
+        setMessage(verifyResult.message || 'Admin şifresi yanlış');
+        setMessageType('error');
+        setAdminPassword('');
+        return;
+      }
+
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      
+
       if (USE_FIREBASE) {
         // SMS yapılandırmasını kaydet
         const configData = {
@@ -132,42 +156,49 @@ const SmsSettings = () => {
         
         setMessage('SMS yapılandırması başarıyla kaydedildi');
         setMessageType('success');
+        setAdminPassword('');
       }
     } catch (error) {
       console.error('Error saving SMS config:', error);
       setMessage('SMS yapılandırması kaydedilirken hata oluştu: ' + error.message);
       setMessageType('error');
+      setAdminPassword('');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleTestSms = async () => {
+  const handleTestSmsClick = () => {
+    if (!apiKey || !apiSecret) {
+      setMessage('Lütfen önce SMS yapılandırmasını kaydedin');
+      setMessageType('error');
+      return;
+    }
+    setTestPhone('');
+    setShowTestModal(true);
+  };
+
+  const handleTestSmsSend = async () => {
     try {
       setSaving(true);
       setMessage('');
-      
-      if (!apiKey || !apiSecret) {
-        setMessage('Lütfen önce SMS yapılandırmasını kaydedin');
+      setShowTestModal(false);
+
+      if (!testPhone || !testPhone.trim()) {
+        setMessage('Lütfen telefon numarası girin');
         setMessageType('error');
         return;
       }
 
-      // Test SMS gönder (kendi numarasına veya test numarasına)
-      const testPhone = prompt('Test SMS göndermek için telefon numarası girin (5XXXXXXXXX formatında):');
-      if (!testPhone) {
-        return;
-      }
-
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
-      
+
       if (USE_FIREBASE) {
         // SMS servisini kullanarak test SMS gönder
         const { default: smsService } = await import('../services/SmsService');
         await smsService.loadConfig();
-        
-        const result = await smsService.sendSms(testPhone, 'Bu bir test SMS mesajıdır. SMS yapılandırması başarılı!');
-        
+
+        const result = await smsService.sendSms(testPhone.trim(), 'Bu bir test SMS mesajıdır. SMS yapılandırması başarılı!');
+
         if (result.success) {
           setMessage('Test SMS başarıyla gönderildi!');
           setMessageType('success');
@@ -415,10 +446,69 @@ const SmsSettings = () => {
         </div>
       </div>
 
+      {/* Admin Şifresi */}
+      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+        <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">Güvenlik</h4>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Admin Şifresi <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            placeholder="Yapılandırmayı kaydetmek için admin şifresini girin"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            SMS yapılandırma değişiklikleri için admin şifresi gereklidir
+          </p>
+        </div>
+      </div>
+
+      {/* Test SMS Modal */}
+      {showTestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Test SMS Gönder</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Telefon Numarası
+              </label>
+              <input
+                type="text"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="5XXXXXXXXX"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                5XXXXXXXXX formatında telefon numarası girin
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleTestSmsSend}
+                disabled={!testPhone.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Gönder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex justify-end space-x-3">
         <button
-          onClick={handleTestSms}
+          onClick={handleTestSmsClick}
           disabled={saving || !apiKey || !apiSecret}
           className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
         >
@@ -426,7 +516,7 @@ const SmsSettings = () => {
         </button>
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !adminPassword.trim()}
           className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? 'Kaydediliyor...' : 'Kaydet'}
@@ -437,4 +527,5 @@ const SmsSettings = () => {
 };
 
 export default SmsSettings;
+
 

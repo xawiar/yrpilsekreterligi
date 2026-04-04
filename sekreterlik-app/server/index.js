@@ -134,6 +134,7 @@ const MemberUser = require('./models/MemberUser');
 const PersonalDocument = require('./models/PersonalDocument');
 const PositionPermission = require('./models/PositionPermission');
 const Voter = require('./models/Voter');
+const PushSubscription = require('./models/PushSubscription');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -201,6 +202,7 @@ Promise.all([
   Voter.init(),
   MemberDashboardAnalytics.init(),
   Notification.init(),
+  PushSubscription.init(),
   ApiKey.initTable(),
   connectToMongoDB()
 ]).then(() => {

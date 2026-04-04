@@ -233,7 +233,7 @@ const TownsSettings = () => {
         const username = normalizedTownName;
         const password = formData.chairman_phone.replace(/\D/g, ''); // Sadece rakamlar
         
-        setMessage(`Belde başarıyla kaydedildi. Belde başkanı kullanıcı bilgileri:\nKullanıcı Adı: ${username}\nŞifre: ${password}`);
+        setMessage(`Belde başarıyla kaydedildi. Belde başkanı kullanıcı bilgileri:\nKullanıcı Adı: ${username}\nŞifre: ${'*'.repeat(password.length)}`);
       } else {
         setMessage('Belde başarıyla kaydedildi');
       }

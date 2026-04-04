@@ -4,7 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import * as XLSX from 'xlsx';
 
 const VoterListSettings = () => {
-    const { showToast } = useToast();
+    const toast = useToast();
     const [files, setFiles] = useState(null); // Tek dosya yerine files listesi
     const [uploading, setUploading] = useState(false);
     const [uploadResult, setUploadResult] = useState(null);
@@ -64,7 +64,7 @@ const VoterListSettings = () => {
     // Dosya yükleme handler
     const handleUpload = async () => {
         if (!files || files.length === 0) {
-            showToast('Lütfen en az bir dosya seçin', 'error');
+            toast.error('Lütfen en az bir dosya seçin');
             return;
         }
 
@@ -76,9 +76,9 @@ const VoterListSettings = () => {
             setPreviewData([]); // Upload başarılıysa preview'i temizle
 
             if (result.globalStats && result.globalStats.skippedRows > 0) {
-                showToast(`İşlem tamamlandı ancak ${result.globalStats.skippedRows} kayıt atlandı/hatalı.`, 'warning');
+                toast.warning(`İşlem tamamlandı ancak ${result.globalStats.skippedRows} kayıt atlandı/hatalı.`);
             } else {
-                showToast('Tüm dosyalar başarıyla yüklendi ve işlendi', 'success');
+                toast.success('Tüm dosyalar başarıyla yüklendi ve işlendi');
             }
 
             setFiles(null); // İşlem sonrası dosya seçimini temizle
@@ -88,7 +88,7 @@ const VoterListSettings = () => {
 
         } catch (error) {
             console.error('Upload error:', error);
-            showToast(error.message, 'error');
+            toast.error(error.message);
         } finally {
             setUploading(false);
         }
