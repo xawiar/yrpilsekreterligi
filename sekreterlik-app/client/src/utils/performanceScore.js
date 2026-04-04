@@ -9,8 +9,8 @@
  * - Kaydettiği üye başına: +5 puan
  * 
  * Bonus Puanlar (Ay Sonu, varsayılan):
- * - O ay tüm toplantılara katılmışsa: +50 puan/ay
- * - O ay tüm etkinliklere katılmışsa: +50 puan/ay
+ * - O ay tüm toplantılara katılmışsa: +30 puan/ay
+ * - O ay tüm etkinliklere katılmışsa: +30 puan/ay
  * 
  * Dinamik Seviye Sistemi:
  * - Sistemdeki ilk toplantı tarihini baz alarak max puan hesaplanır
@@ -55,8 +55,8 @@ export const loadPerformanceScoreSettings = async () => {
               eventAttendancePoints: configDoc.eventAttendancePoints || 10,
               absencePenalty: configDoc.absencePenalty ?? -10,
               memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
-              perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
-              perfectEventBonus: configDoc.perfectEventBonus || 50,
+              perfectMeetingBonus: configDoc.perfectMeetingBonus || 30,
+              perfectEventBonus: configDoc.perfectEventBonus || 30,
               maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations ?? 5,
               useAttendanceWeightForRegistrations: configDoc.useAttendanceWeightForRegistrations || false,
               minAttendanceRateForFullRegistrationPoints: configDoc.minAttendanceRateForFullRegistrationPoints || 0
@@ -74,8 +74,8 @@ export const loadPerformanceScoreSettings = async () => {
         eventAttendancePoints: 10,
         absencePenalty: -10,
         memberRegistrationPoints: 5,
-        perfectMeetingBonus: 50,
-        perfectEventBonus: 50,
+        perfectMeetingBonus: 30,
+        perfectEventBonus: 30,
         maxMonthlyRegistrations: 5,
         useAttendanceWeightForRegistrations: false,
         minAttendanceRateForFullRegistrationPoints: 0
@@ -89,8 +89,8 @@ export const loadPerformanceScoreSettings = async () => {
         eventAttendancePoints: 10,
         absencePenalty: -10,
         memberRegistrationPoints: 5,
-        perfectMeetingBonus: 50,
-        perfectEventBonus: 50,
+        perfectMeetingBonus: 30,
+        perfectEventBonus: 30,
         maxMonthlyRegistrations: 5,
         useAttendanceWeightForRegistrations: false,
         minAttendanceRateForFullRegistrationPoints: 0
@@ -606,8 +606,8 @@ const calculateMaxScore = (meetings, events, firstMeetingDate, settings = null) 
     meetingAttendancePoints: 10,
     eventAttendancePoints: 10,
     memberRegistrationPoints: 5,
-    perfectMeetingBonus: 50,
-    perfectEventBonus: 50
+    perfectMeetingBonus: 30,
+    perfectEventBonus: 30
   };
   const scoreSettings = settings || defaultSettings;
   if (!firstMeetingDate) return 1000; // Default max score if no meetings
@@ -643,21 +643,27 @@ const calculateMaxScore = (meetings, events, firstMeetingDate, settings = null) 
   
   // Toplantı puanları (ilk toplantı tarihinden sonraki toplantılar)
   const meetingPoints = meetingsAfterFirst.length * scoreSettings.meetingAttendancePoints;
-  
+
   // Etkinlik puanları (ilk toplantı tarihinden sonraki etkinlikler)
   const eventPoints = eventsAfterFirst.length * scoreSettings.eventAttendancePoints;
-  
+
+  // Hafif üstel ilerleme eğrisi: İlk aylar daha hızlı, sonraki aylar daha yavaş birikir
+  // progressFactor: 0-1 arası, ilk aylar hızlı artar (~%60 ilk 6 ayda), sonra yavaşlar
+  const progressFactor = 1 - Math.pow(0.97, monthsSinceFirst);
+  // Üstel maks ay sayısı: doğrusal monthsSinceFirst yerine eğrili karşılık
+  const effectiveMonths = monthsSinceFirst * progressFactor;
+
   // Üye kayıt puanları (aylık 3 üye * memberRegistrationPoints puan)
-  const registrationPoints = monthsSinceFirst * 3 * scoreSettings.memberRegistrationPoints; // Aylık 3 üye
-  
+  const registrationPoints = effectiveMonths * 3 * scoreSettings.memberRegistrationPoints;
+
   // Bonus puanlar (her ay için mükemmel katılım)
   // Her ay tüm toplantılara katılım bonusu (ayarlardan)
-  const meetingBonus = monthsSinceFirst * scoreSettings.perfectMeetingBonus;
-  
+  const meetingBonus = effectiveMonths * scoreSettings.perfectMeetingBonus;
+
   // Her ay tüm etkinliklere katılım bonusu (ayarlardan)
-  const eventBonus = monthsSinceFirst * scoreSettings.perfectEventBonus;
-  
-  return meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus;
+  const eventBonus = effectiveMonths * scoreSettings.perfectEventBonus;
+
+  return Math.round(meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus);
 };
 
 /**

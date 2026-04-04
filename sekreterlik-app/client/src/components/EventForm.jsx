@@ -315,12 +315,21 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
         setSelectedLocations(event.selectedLocations);
       }
       
-      // Initialize attendance data from existing event
+      // Initialize attendance data from existing event with 3 states
       if (event.attendees) {
         const initialAttendance = {};
         event.attendees.forEach(attendee => {
           const memberId = String(attendee.memberId);
-          initialAttendance[memberId] = attendee.attended === true;
+          let status = 'notAttended';
+          if (attendee.excuse && attendee.excuse.hasExcuse) {
+            status = 'excused';
+          } else if (attendee.attended === true) {
+            status = 'attended';
+          }
+          initialAttendance[memberId] = {
+            status: status,
+            excuseReason: attendee.excuse?.reason || ''
+          };
         });
         setAttendance(initialAttendance);
       }
@@ -442,7 +451,7 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
           responsible.forEach(member => {
             const stringId = String(member.id);
             if (!(stringId in newAttendance)) {
-              newAttendance[stringId] = true; // Default to attended
+              newAttendance[stringId] = { status: 'attended', excuseReason: '' }; // Default to attended
             }
           });
           return newAttendance;
@@ -591,13 +600,23 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
         selectedLocationTypes: selectedLocationTypes, // Store selected location types
         selectedLocations: selectedLocations, // Store selected locations
         attendees: sortedMembers.map(member => {
-          // ID'leri string'e çevirerek tutarlılık sağla
           const memberId = String(member.id);
-          const attended = attendance[memberId] === true;
-          
+          const attData = attendance[memberId];
+          let attended = false;
+          let excuse = { hasExcuse: false, reason: '' };
+          if (typeof attData === 'object' && attData !== null) {
+            attended = attData.status === 'attended';
+            if (attData.status === 'excused') {
+              excuse = { hasExcuse: true, reason: attData.excuseReason || '' };
+            }
+          } else {
+            attended = attData === true;
+          }
+
           return {
-            memberId: memberId, // String olarak sakla (Firebase ID'leri string)
-            attended: attended
+            memberId: memberId,
+            attended: attended,
+            excuse: excuse
           };
         })
       };
@@ -622,13 +641,36 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
     }
   };
 
-  const handleAttendanceChange = (memberId, attended) => {
-    // ID'yi string'e çevirerek tutarlılık sağla
+  const handleAttendanceChange = (memberId, status) => {
+    // status: 'attended', 'notAttended', 'excused'
     const stringId = String(memberId);
     setAttendance(prev => ({
       ...prev,
-      [stringId]: attended
+      [stringId]: {
+        ...(prev[stringId] || {}),
+        status: status,
+        excuseReason: status === 'excused' ? (prev[stringId]?.excuseReason || '') : ''
+      }
     }));
+  };
+
+  const handleExcuseReasonChange = (memberId, reason) => {
+    const stringId = String(memberId);
+    setAttendance(prev => ({
+      ...prev,
+      [stringId]: {
+        ...(prev[stringId] || {}),
+        excuseReason: reason
+      }
+    }));
+  };
+
+  const getAttendanceStatus = (memberId) => {
+    const stringId = String(memberId);
+    const attData = attendance[stringId];
+    if (!attData) return 'notAttended';
+    if (typeof attData === 'boolean') return attData ? 'attended' : 'notAttended';
+    return attData.status || 'notAttended';
   };
 
   return (
@@ -794,28 +836,48 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
                     <div className="text-sm text-gray-500 dark:text-gray-400">{member.region}</div>
                   </div>
                   
-                  <div className="flex items-center space-x-4">
-                    <label className="flex items-center">
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name={`responsible_${member.id}`}
+                          checked={getAttendanceStatus(member.id) === 'attended'}
+                          onChange={() => handleAttendanceChange(member.id, 'attended')}
+                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Katıldı</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name={`responsible_${member.id}`}
+                          checked={getAttendanceStatus(member.id) === 'notAttended'}
+                          onChange={() => handleAttendanceChange(member.id, 'notAttended')}
+                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 dark:border-gray-600"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Katılmadı</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name={`responsible_${member.id}`}
+                          checked={getAttendanceStatus(member.id) === 'excused'}
+                          onChange={() => handleAttendanceChange(member.id, 'excused')}
+                          className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 dark:border-gray-600"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Mazeretli</span>
+                      </label>
+                    </div>
+                    {getAttendanceStatus(member.id) === 'excused' && (
                       <input
-                        type="radio"
-                        name={`responsible_${member.id}`}
-                        checked={attendance[String(member.id)] === true}
-                        onChange={() => handleAttendanceChange(member.id, true)}
-                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600"
+                        type="text"
+                        value={attendance[String(member.id)]?.excuseReason || ''}
+                        onChange={(e) => handleExcuseReasonChange(member.id, e.target.value)}
+                        placeholder="Mazeret sebebi"
+                        className="mt-1 w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       />
-                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Katıldı</span>
-                    </label>
-                    
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name={`responsible_${member.id}`}
-                        checked={attendance[String(member.id)] === false}
-                        onChange={() => handleAttendanceChange(member.id, false)}
-                        className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 dark:border-gray-600"
-                      />
-                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Katılmadı</span>
-                    </label>
+                    )}
                   </div>
                 </div>
               ))}
@@ -886,17 +948,48 @@ const EventForm = ({ event, onClose, onEventSaved, members }) => {
                       <div className="text-sm text-gray-500 dark:text-gray-400">{member.position} - {member.region}</div>
                     </div>
                     
-                    <div className="flex items-center">
-                      {/* Attendance Checkbox */}
-                      <label className="flex items-center">
+                    <div className="flex flex-col space-y-1">
+                      <div className="flex items-center space-x-3">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`member_att_${member.id}`}
+                            checked={getAttendanceStatus(member.id) === 'attended'}
+                            onChange={() => handleAttendanceChange(member.id, 'attended')}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600"
+                          />
+                          <span className="ml-1 text-sm text-gray-700 dark:text-gray-300">Katıldı</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`member_att_${member.id}`}
+                            checked={getAttendanceStatus(member.id) === 'notAttended'}
+                            onChange={() => handleAttendanceChange(member.id, 'notAttended')}
+                            className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 dark:border-gray-600"
+                          />
+                          <span className="ml-1 text-sm text-gray-700 dark:text-gray-300">Katılmadı</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`member_att_${member.id}`}
+                            checked={getAttendanceStatus(member.id) === 'excused'}
+                            onChange={() => handleAttendanceChange(member.id, 'excused')}
+                            className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 dark:border-gray-600"
+                          />
+                          <span className="ml-1 text-sm text-gray-700 dark:text-gray-300">Mazeretli</span>
+                        </label>
+                      </div>
+                      {getAttendanceStatus(member.id) === 'excused' && (
                         <input
-                          type="checkbox"
-                          checked={attendance[String(member.id)] === true}
-                          onChange={(e) => handleAttendanceChange(member.id, e.target.checked)}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                          type="text"
+                          value={attendance[String(member.id)]?.excuseReason || ''}
+                          onChange={(e) => handleExcuseReasonChange(member.id, e.target.value)}
+                          placeholder="Mazeret sebebi"
+                          className="mt-1 w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Katıldı</span>
-                      </label>
+                      )}
                     </div>
                   </div>
                 );

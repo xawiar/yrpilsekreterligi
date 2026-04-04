@@ -1,5 +1,71 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import FirebaseService from '../services/FirebaseService';
+
+/**
+ * Ornek uye verileriyle puan simulasyonu yapan onizleme bileşeni.
+ * Ayarlar degistikce canli olarak guncellenir.
+ */
+const SimulationPreview = ({ settings }) => {
+  // Ornek uye profilleri
+  const examples = useMemo(() => {
+    const s = settings;
+    // Ornek uye: 10 toplanti katilim, 5 etkinlik, 2 kayit, 1 mazeretsiz, 1 mukemmel ay
+    const meetingPts = 10 * (s.meetingAttendancePoints || 0);
+    const eventPts = 5 * (s.eventAttendancePoints || 0);
+    const absencePts = 1 * (s.absencePenalty || 0);
+    const regPts = 2 * (s.memberRegistrationPoints || 0);
+    const bonusPts = 1 * (s.perfectMeetingBonus || 0) + 1 * (s.perfectEventBonus || 0);
+    const total = Math.max(0, meetingPts + eventPts + absencePts + regPts + bonusPts);
+
+    // Ideal uye: 20 toplanti, 10 etkinlik, 5 kayit, 0 mazeretsiz, 3 mukemmel ay
+    const idealMeeting = 20 * (s.meetingAttendancePoints || 0);
+    const idealEvent = 10 * (s.eventAttendancePoints || 0);
+    const idealReg = 5 * (s.memberRegistrationPoints || 0);
+    const idealBonus = 3 * (s.perfectMeetingBonus || 0) + 3 * (s.perfectEventBonus || 0);
+    const idealTotal = Math.max(0, idealMeeting + idealEvent + idealReg + idealBonus);
+
+    return [
+      {
+        label: 'Ortalama Uye',
+        desc: '10 toplanti, 5 etkinlik, 2 kayit, 1 mazeretsiz, 1 mukemmel ay',
+        score: total,
+        details: { meetingPts, eventPts, absencePts, regPts, bonusPts }
+      },
+      {
+        label: 'Ideal Uye',
+        desc: '20 toplanti, 10 etkinlik, 5 kayit, 0 mazeretsiz, 3 mukemmel ay',
+        score: idealTotal,
+        details: { meetingPts: idealMeeting, eventPts: idealEvent, absencePts: 0, regPts: idealReg, bonusPts: idealBonus }
+      }
+    ];
+  }, [settings]);
+
+  return (
+    <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
+      <h4 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-3">
+        Puan Simulasyonu (Onizleme)
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {examples.map((ex, idx) => (
+          <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">{ex.label}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{ex.desc}</div>
+            <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+              {ex.score} puan
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+              <div>Toplanti: +{ex.details.meetingPts}</div>
+              <div>Etkinlik: +{ex.details.eventPts}</div>
+              {ex.details.absencePts < 0 && <div className="text-red-600 dark:text-red-400">Mazeretsiz: {ex.details.absencePts}</div>}
+              <div>Kayit: +{ex.details.regPts}</div>
+              <div className="text-green-600 dark:text-green-400">Bonus: +{ex.details.bonusPts}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const PerformanceScoreSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -12,8 +78,8 @@ const PerformanceScoreSettings = () => {
     eventAttendancePoints: 10,
     absencePenalty: -10,
     memberRegistrationPoints: 5,
-    perfectMeetingBonus: 50,
-    perfectEventBonus: 50,
+    perfectMeetingBonus: 30,
+    perfectEventBonus: 30,
     maxMonthlyRegistrations: 5,
     useAttendanceWeightForRegistrations: false,
     minAttendanceRateForFullRegistrationPoints: 0
@@ -37,8 +103,8 @@ const PerformanceScoreSettings = () => {
               eventAttendancePoints: configDoc.eventAttendancePoints || 10,
               absencePenalty: configDoc.absencePenalty ?? -10,
               memberRegistrationPoints: configDoc.memberRegistrationPoints || 5,
-              perfectMeetingBonus: configDoc.perfectMeetingBonus || 50,
-              perfectEventBonus: configDoc.perfectEventBonus || 50,
+              perfectMeetingBonus: configDoc.perfectMeetingBonus || 30,
+              perfectEventBonus: configDoc.perfectEventBonus || 30,
               maxMonthlyRegistrations: configDoc.maxMonthlyRegistrations ?? 5,
               useAttendanceWeightForRegistrations: configDoc.useAttendanceWeightForRegistrations || false,
               minAttendanceRateForFullRegistrationPoints: configDoc.minAttendanceRateForFullRegistrationPoints || 0
@@ -272,13 +338,13 @@ const PerformanceScoreSettings = () => {
               value={settings.perfectMeetingBonus}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              placeholder="50"
+              placeholder="30"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               O ay tüm toplantılara katılmışsa verilecek bonus puan
             </p>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Mükemmel Etkinlik Bonusu (Aylık)
@@ -289,7 +355,7 @@ const PerformanceScoreSettings = () => {
               value={settings.perfectEventBonus}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              placeholder="50"
+              placeholder="30"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               O ay tüm etkinliklere katılmışsa verilecek bonus puan
@@ -297,6 +363,9 @@ const PerformanceScoreSettings = () => {
           </div>
         </div>
         
+        {/* Puan Simulasyonu Onizleme */}
+        <SimulationPreview settings={settings} />
+
         <div className="mt-6">
           <button
             onClick={handleSave}

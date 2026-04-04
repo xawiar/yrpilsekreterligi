@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../../utils/ApiService';
+import { EmptyState } from '../UI';
 
 const EventsTable = ({ 
   events, 
@@ -111,13 +112,15 @@ const EventsTable = ({
   if (events.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="text-center py-12">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Etkinlik bulunamadı</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Henüz hiç etkinlik oluşturulmamış.</p>
-        </div>
+        <EmptyState
+          icon={
+            <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          }
+          title="Etkinlik bulunamadı"
+          description="Henüz hiç etkinlik oluşturulmamış."
+        />
       </div>
     );
   }

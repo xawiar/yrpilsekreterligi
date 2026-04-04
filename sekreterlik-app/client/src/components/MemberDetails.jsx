@@ -89,8 +89,8 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
             meetingAttendancePoints: 10,
             eventAttendancePoints: 10,
             memberRegistrationPoints: 5,
-            perfectMeetingBonus: 50,
-            perfectEventBonus: 50
+            perfectMeetingBonus: 30,
+            perfectEventBonus: 30
           };
           const scoreSettings = settings || defaultSettings;
           if (!firstMeetingDate) return 1000;
@@ -114,10 +114,13 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
           monthsSinceFirst = Math.max(1, monthsSinceFirst);
           const meetingPoints = meetingsAfterFirst.length * scoreSettings.meetingAttendancePoints;
           const eventPoints = eventsAfterFirst.length * scoreSettings.eventAttendancePoints;
-          const registrationPoints = monthsSinceFirst * 3 * scoreSettings.memberRegistrationPoints;
-          const meetingBonus = monthsSinceFirst * scoreSettings.perfectMeetingBonus;
-          const eventBonus = monthsSinceFirst * scoreSettings.perfectEventBonus;
-          return meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus;
+          // Hafif ustel ilerleme egrisi
+          const progressFactor = 1 - Math.pow(0.97, monthsSinceFirst);
+          const effectiveMonths = monthsSinceFirst * progressFactor;
+          const registrationPoints = effectiveMonths * 3 * scoreSettings.memberRegistrationPoints;
+          const meetingBonus = effectiveMonths * scoreSettings.perfectMeetingBonus;
+          const eventBonus = effectiveMonths * scoreSettings.perfectEventBonus;
+          return Math.round(meetingPoints + eventPoints + registrationPoints + meetingBonus + eventBonus);
         };
         const max = calculateLocalMaxScore();
         
@@ -835,8 +838,20 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
             </div>
             <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
               <div className="text-xs sm:text-sm text-gray-500 mb-1">Seviye</div>
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: levelInfo?.levelColor || '#808080' }}>
-                {loadingScore ? '...' : (levelInfo?.level || 'Pasif Üye')}
+              <div className="flex items-center gap-2">
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: levelInfo?.levelColor || '#808080' }}>
+                  {loadingScore ? '...' : (levelInfo?.level || 'Pasif Üye')}
+                </div>
+                {!loadingScore && levelInfo?.level === 'Gold' && (
+                  <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 24 24" title="Gold Rozet">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                )}
+                {!loadingScore && levelInfo?.level === 'Platinyum' && (
+                  <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 24 24" title="Platinyum Rozet">
+                    <path d="M12 2L8.5 8.5 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21 17 14.14l5-4.87-6.5-.77L12 2zm0 3.5L14.39 10l4.86.57-3.52 3.43.83 4.85L12 16.1l-4.56 2.75.83-4.85L4.75 10.57 9.61 10 12 5.5z"/>
+                  </svg>
+                )}
               </div>
               {levelInfo?.percentage && (
                 <div className="text-xs text-gray-400 mt-1">

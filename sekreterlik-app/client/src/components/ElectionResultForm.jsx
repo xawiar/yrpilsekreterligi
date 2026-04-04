@@ -2055,6 +2055,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) handlePhotoUpload(file, 'signed');
@@ -2126,6 +2127,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) handlePhotoUpload(file, 'objection');

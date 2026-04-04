@@ -27,6 +27,7 @@ const ReportsPage = () => {
   });
   const [savingStars, setSavingStars] = useState({});
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [showAllMembers, setShowAllMembers] = useState(false);
   const mobileView = isMobile();
   const [stats, setStats] = useState({
     // Genel İstatistikler
@@ -95,6 +96,18 @@ const ReportsPage = () => {
       );
     });
   }, [stats.performanceScores, memberSearchTerm]);
+
+  // Top %10 leaderboard limiti - arama aktifse tum sonuclari goster
+  const topTenPercentCount = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredScores.length * 0.1));
+  }, [filteredScores.length]);
+
+  const displayedScores = useMemo(() => {
+    if (showAllMembers || memberSearchTerm) {
+      return filteredScores;
+    }
+    return filteredScores.slice(0, topTenPercentCount);
+  }, [filteredScores, showAllMembers, memberSearchTerm, topTenPercentCount]);
 
   useEffect(() => {
     fetchReportsData();
@@ -1389,10 +1402,10 @@ const ReportsPage = () => {
             </div>
           </div>
           
-          {filteredScores.length === 0 ? (
+          {displayedScores.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {stats.performanceScores.length === 0 
+                {stats.performanceScores.length === 0
                   ? 'Henüz performans puanı hesaplanamadı'
                   : 'Arama kriterlerine uygun üye bulunamadı'}
               </p>
@@ -1400,7 +1413,7 @@ const ReportsPage = () => {
           ) : mobileView ? (
             // Mobilde kart görünümü
             <div className="space-y-3">
-                  {filteredScores.map((item, index) => {
+                  {displayedScores.map((item, index) => {
                     if (!item || !item.member) return null;
                     return (
                     <NativeCard key={item.member?.id || index}>
@@ -1418,15 +1431,21 @@ const ReportsPage = () => {
                             {item.member.name}
                           </div>
                           <div className="flex items-center space-x-2 mb-2">
-                            <span 
+                            <span
                               className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                              style={{ 
+                              style={{
                                 backgroundColor: `${item.levelColor}20`,
                                 color: item.levelColor,
                                 border: `1px solid ${item.levelColor}40`
                               }}
                             >
                               {item.level}
+                              {item.level === 'Gold' && (
+                                <svg className="w-3 h-3 ml-1 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                              )}
+                              {item.level === 'Platinyum' && (
+                                <svg className="w-3 h-3 ml-1 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L8.5 8.5 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21 17 14.14l5-4.87-6.5-.77L12 2zm0 3.5L14.39 10l4.86.57-3.52 3.43.83 4.85L12 16.1l-4.56 2.75.83-4.85L4.75 10.57 9.61 10 12 5.5z"/></svg>
+                              )}
                             </span>
                             <div className="flex items-center space-x-0.5">
                               {canSetStars ? (
@@ -1513,7 +1532,7 @@ const ReportsPage = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredScores.map((item, index) => {
+                      {displayedScores.map((item, index) => {
                         if (!item || !item.member) return null;
                         return (
                         <tr key={item.member?.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -1532,15 +1551,21 @@ const ReportsPage = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
-                              <span 
+                              <span
                                 className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-                                style={{ 
+                                style={{
                                   backgroundColor: `${item.levelColor}20`,
                                   color: item.levelColor,
                                   border: `1px solid ${item.levelColor}40`
                                 }}
                               >
                                 {item.level}
+                                {item.level === 'Gold' && (
+                                  <svg className="w-3.5 h-3.5 ml-1 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                )}
+                                {item.level === 'Platinyum' && (
+                                  <svg className="w-3.5 h-3.5 ml-1 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L8.5 8.5 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21 17 14.14l5-4.87-6.5-.77L12 2zm0 3.5L14.39 10l4.86.57-3.52 3.43.83 4.85L12 16.1l-4.56 2.75.83-4.85L4.75 10.57 9.61 10 12 5.5z"/></svg>
+                                )}
                               </span>
                               <div className="flex items-center space-x-0.5">
                                 {canSetStars ? (
@@ -1613,10 +1638,10 @@ const ReportsPage = () => {
                             {item.details.breakdown.bonusPoints > 0 && (
                               <div className="text-green-600 dark:text-green-400 space-y-0.5">
                                 {item.details.bonuses.perfectMeetingAttendance > 0 && (
-                                  <div>⭐ Toplantı Bonus: {item.details.bonuses.perfectMeetingMonths} ay × 50 = +{item.details.bonuses.perfectMeetingAttendance}</div>
+                                  <div>⭐ Toplantı Bonus: {item.details.bonuses.perfectMeetingMonths} ay × {item.details.bonuses.perfectMeetingMonths > 0 ? Math.round(item.details.bonuses.perfectMeetingAttendance / item.details.bonuses.perfectMeetingMonths) : 0} = +{item.details.bonuses.perfectMeetingAttendance}</div>
                                 )}
                                 {item.details.bonuses.perfectEventAttendance > 0 && (
-                                  <div>⭐ Etkinlik Bonus: {item.details.bonuses.perfectEventMonths} ay × 50 = +{item.details.bonuses.perfectEventAttendance}</div>
+                                  <div>⭐ Etkinlik Bonus: {item.details.bonuses.perfectEventMonths} ay × {item.details.bonuses.perfectEventMonths > 0 ? Math.round(item.details.bonuses.perfectEventAttendance / item.details.bonuses.perfectEventMonths) : 0} = +{item.details.bonuses.perfectEventAttendance}</div>
                                 )}
                                 <div className="font-semibold">Toplam Bonus: +{item.details.breakdown.bonusPoints}</div>
                               </div>
@@ -1630,6 +1655,33 @@ const ReportsPage = () => {
               </table>
             </div>
           </div>
+          )}
+
+          {/* Tumunu Goster / Top %10 toggle butonu */}
+          {!memberSearchTerm && filteredScores.length > topTenPercentCount && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setShowAllMembers(!showAllMembers)}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors duration-200"
+              >
+                {showAllMembers ? (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7"/></svg>
+                    Sadece Top %10 Goster ({topTenPercentCount} uye)
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                    Tumunu Goster ({filteredScores.length} uye)
+                  </>
+                )}
+              </button>
+              {!showAllMembers && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {filteredScores.length} uyeden en yuksek puanli {topTenPercentCount} uye gosteriliyor
+                </p>
+              )}
+            </div>
           )}
         </div>
 

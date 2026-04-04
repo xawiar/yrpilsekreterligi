@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import Modal from '../components/Modal';
@@ -260,6 +261,48 @@ const EventsPage = () => {
     closeAttendanceModal();
   };
 
+  const handleExportExcel = () => {
+    try {
+      const excelData = filteredEvents.map(event => {
+        const stats = calculateAttendanceStats(event);
+        return {
+          'Etkinlik Adı': event.name,
+          'Tarih': event.date,
+          'Yer': event.location || '-',
+          'Açıklama': event.description || '-',
+          'Toplam Katılımcı': stats.totalAttendees,
+          'Katılan': stats.attendedCount,
+          'Katılmayan': stats.notAttendedCount,
+          'Katılım Oranı (%)': stats.attendancePercentage
+        };
+      });
+
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Auto-calculate column widths
+      if (excelData.length > 0) {
+        const keys = Object.keys(excelData[0]);
+        worksheet['!cols'] = keys.map(key => {
+          const maxDataLen = excelData.reduce((max, row) => {
+            const val = row[key];
+            const len = val != null ? String(val).length : 0;
+            return Math.max(max, len);
+          }, key.length);
+          return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+        });
+      }
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Etkinlikler');
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `etkinlikler_${dateStr}.xlsx`);
+      toast.success('Etkinlikler Excel dosyası olarak indirildi!');
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast.error('Excel dosyası oluşturulurken hata oluştu: ' + error.message);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -339,9 +382,17 @@ const EventsPage = () => {
           size="xl"
         >
           {selectedEvent && (
-            <EventDetails 
+            <EventDetails
               event={selectedEvent}
               members={members}
+              onEditEvent={(evt) => {
+                closeDetailsModal();
+                handleEditEvent(evt);
+              }}
+              onUpdateAttendance={(evt) => {
+                closeDetailsModal();
+                handleUpdateAttendance(evt);
+              }}
             />
           )}
         </Modal>
@@ -370,9 +421,10 @@ const EventsPage = () => {
   return (
     <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
       {/* Header Section */}
-      <EventsHeader 
+      <EventsHeader
         onCreateEvent={handleCreateEvent}
         onPlanEvent={handlePlanEvent}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Summary Statistics Cards - Responsive Grid Layout */}

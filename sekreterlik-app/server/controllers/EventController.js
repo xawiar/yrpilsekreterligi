@@ -187,13 +187,51 @@ class EventController {
       ];
       
       const result = await db.run(sql, params);
-      
+
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Etkinlik bulunamadı' });
       }
-      
+
       const updatedEvent = await db.get('SELECT * FROM events WHERE id = ?', [parseInt(id)]);
       try { invalidate('/api/events'); } catch (_) {}
+
+      // Send push notification and save to database for event update
+      try {
+        const Notification = require('../models/Notification');
+        const subscriptions = await PushSubscription.getAll();
+        if (subscriptions.length > 0) {
+          const unreadCount = await Notification.getUnreadCount(null);
+
+          const payload = PushNotificationService.createPayload(
+            'Etkinlik Güncellendi',
+            `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
+            '/icon-192x192.png',
+            '/badge-72x72.png',
+            { type: 'event', id: parseInt(id), action: 'view' },
+            unreadCount + 1
+          );
+
+          const formattedSubscriptions = subscriptions.map(sub => ({
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh || sub.keys?.p256dh,
+              auth: sub.auth || sub.keys?.auth
+            }
+          }));
+          await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
+        }
+
+        await Notification.create({
+          memberId: null,
+          title: 'Etkinlik Güncellendi',
+          body: `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
+          type: 'event',
+          data: { eventId: parseInt(id), eventName: eventData.name, date: eventData.date }
+        });
+      } catch (pushError) {
+        console.warn('Push notification hatası (event update):', pushError.message);
+      }
+
       res.json(updatedEvent);
     } catch (error) {
       console.error('Error updating event:', error);

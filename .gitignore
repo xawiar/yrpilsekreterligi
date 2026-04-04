@@ -9,10 +9,12 @@ sekreterlik-app/server/node_modules/
 *.db
 sekreterlik-app/server/database.sqlite
 sekreterlik-app/server/backups/*.sqlite
+sekreterlik-app/server/backups/firestore/
 
 # Environment variables
 .env
 .env.local
+.env.staging
 .env.production
 .env.development
 

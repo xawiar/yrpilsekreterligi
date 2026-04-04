@@ -76,7 +76,7 @@ const NonAttendeesSection = ({ nonAttendees, getMemberInfo }) => {
   );
 };
 
-const EventDetails = ({ event, members }) => {
+const EventDetails = ({ event, members, onEditEvent, onUpdateAttendance }) => {
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
   const [loading, setLoading] = useState(true);
@@ -410,8 +410,30 @@ const EventDetails = ({ event, members }) => {
 
   return (
     <div id="event-details-container" className="space-y-6">
-      {/* Export buttons */}
-      <div className="flex justify-end space-x-3">
+      {/* Action buttons */}
+      <div className="flex flex-wrap justify-end gap-2">
+        {onEditEvent && (
+          <button
+            onClick={() => onEditEvent(event)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Düzenle
+          </button>
+        )}
+        {onUpdateAttendance && (
+          <button
+            onClick={() => onUpdateAttendance(event)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            Yoklama Güncelle
+          </button>
+        )}
         <button
           onClick={exportToCSV}
           disabled={isExporting}
@@ -458,18 +480,22 @@ const EventDetails = ({ event, members }) => {
 
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">İstatistikler</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="text-sm text-gray-500 dark:text-gray-400">Toplam Katılımcı</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{event.attendees ? event.attendees.length : 0}</div>
             </div>
             <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="text-sm text-gray-500 dark:text-gray-400">Katılan</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{event.attendees ? event.attendees.filter(a => a.attended).length : 0}</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{event.attendees ? event.attendees.filter(a => a.attended).length : 0}</div>
             </div>
             <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="text-sm text-gray-500 dark:text-gray-400">Katılmayan</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{getNonAttendedCount()}</div>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">{getNonAttendedCount()}</div>
+            </div>
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Mazeretli</div>
+              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{getExcusedCount()}</div>
             </div>
             <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="text-sm text-gray-500 dark:text-gray-400">Katılım Oranı</div>
