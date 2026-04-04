@@ -62,6 +62,7 @@ const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashb
 const CoordinatorLoginPage = lazy(() => import('./pages/CoordinatorLoginPage'));
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 
 // Debug pages
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
@@ -81,6 +82,7 @@ const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
 const OfflineStatus = lazy(() => import('./components/OfflineStatus'));
 const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
 const Chatbot = lazy(() => import('./components/Chatbot'));
+const CookieConsent = lazy(() => import('./components/CookieConsent'));
 
 // Page transition wrapper component
 const PageTransition = ({ children }) => (
@@ -168,6 +170,10 @@ function RouterContent() {
                 <LoginPage />
               </PublicRoute>
             }
+          />
+          <Route
+            path="/privacy-policy"
+            element={<PrivacyPolicyPage />}
           />
           {/* Debug/Admin Routes - Only available in development mode */}
           {import.meta.env.DEV && (
@@ -479,6 +485,9 @@ function App() {
             <PWANotification />
             <AppInstallBanner />
             <OfflineStatus />
+            <Suspense fallback={null}>
+              <CookieConsent />
+            </Suspense>
             {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
             {/* <PerformanceMonitor /> */}
           </ToastProvider>

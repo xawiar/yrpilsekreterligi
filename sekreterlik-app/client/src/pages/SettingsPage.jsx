@@ -30,6 +30,8 @@ import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
 import SeçimEkleSettings from '../components/SeçimEkleSettings';
 import ApiKeySettings from '../components/ApiKeySettings';
 import VoterListSettings from '../components/VoterListSettings';
+import DataRetentionSettings from '../components/DataRetentionSettings';
+import DataDeletionRequestsAdmin from '../components/DataDeletionRequestsAdmin';
 import {
   SettingsHeader,
   SettingsSummaryCards,
@@ -88,6 +90,8 @@ const SettingsPage = ({ tab }) => {
       'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
       'voter-list': isAdmin || grantedPermissions.includes('manage_voters'),
       'push-notifications': true, // All authenticated users can manage their own push notifications
+      'data-retention': false, // Admin only - KVKK
+      'data-deletion-requests': false, // Admin only - KVKK
     };
 
     return permissionMap[tabName] || false;
@@ -180,7 +184,9 @@ const SettingsPage = ({ tab }) => {
         { id: 'sms-config', name: 'SMS Config', description: 'SMS ayarları', permission: false },
         { id: 'firebase-sync', name: 'Firebase Sync', description: 'Firebase senkronizasyonu', permission: false },
         { id: 'performance-score', name: 'Performance Score', description: 'Performans skoru ayarları', permission: false },
-        { id: 'api-keys', name: 'API Keys', description: 'API anahtarları', permission: false }
+        { id: 'api-keys', name: 'API Keys', description: 'API anahtarları', permission: false },
+        { id: 'data-retention', name: 'Veri Saklama (KVKK)', description: 'Veri saklama suresi ayari', permission: false },
+        { id: 'data-deletion-requests', name: 'Veri Silme Talepleri', description: 'KVKK veri silme talepleri', permission: false }
       );
     }
 
@@ -248,6 +254,8 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                   {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
                   {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
+                  {activeTab === 'data-retention' && hasPermission('data-retention') && <DataRetentionSettings />}
+                  {activeTab === 'data-deletion-requests' && hasPermission('data-deletion-requests') && <DataDeletionRequestsAdmin />}
                 </>
               )}
             </div>
@@ -379,6 +387,8 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                     {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
                     {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
+                    {activeTab === 'data-retention' && hasPermission('data-retention') && <DataRetentionSettings />}
+                    {activeTab === 'data-deletion-requests' && hasPermission('data-deletion-requests') && <DataDeletionRequestsAdmin />}
                   </>
                 )}
               </>

@@ -114,6 +114,8 @@ const smsRouter = require('./routes/sms');
 console.log('SMS router imported');
 const publicApiRouter = require('./routes/publicApi');
 console.log('Public API router imported');
+const dataDeletionRequestsRouter = require('./routes/dataDeletionRequests');
+console.log('Data deletion requests router imported');
 const PollController = require('./controllers/PollController');
 
 // Import middleware
@@ -137,6 +139,7 @@ const PersonalDocument = require('./models/PersonalDocument');
 const PositionPermission = require('./models/PositionPermission');
 const Voter = require('./models/Voter');
 const PushSubscription = require('./models/PushSubscription');
+const DataDeletionRequest = require('./models/DataDeletionRequest');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -205,6 +208,7 @@ Promise.all([
   MemberDashboardAnalytics.init(),
   Notification.init(),
   PushSubscription.init(),
+  DataDeletionRequest.init(),
   ApiKey.initTable(),
   connectToMongoDB()
 ]).then(() => {
@@ -379,6 +383,7 @@ app.use('/api/dashboard', authenticateToken, dashboardRouter);
 app.use('/api/notifications', authenticateToken, notificationsRouter);
 app.use('/api/api-keys', authenticateToken, apiKeysRouter);
 app.use('/api/sms', authenticateToken, smsRouter);
+app.use('/api/data-deletion-requests', authenticateToken, dataDeletionRequestsRouter);
 // Public election results routes - NO AUTHENTICATION REQUIRED
 app.use('/api/public/election-results', require('./routes/publicElectionResults'));
 

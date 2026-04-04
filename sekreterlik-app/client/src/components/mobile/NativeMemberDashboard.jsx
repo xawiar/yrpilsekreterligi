@@ -5,6 +5,7 @@
 import React from 'react';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
+import DataDeletionRequestButton from '../DataDeletionRequestButton';
 
 const NativeMemberDashboard = ({
   member = null,
@@ -271,6 +272,9 @@ const NativeMemberDashboard = ({
           })}
         </div>
       )}
+
+      {/* KVKK - Veri Silme Talep Butonu */}
+      <DataDeletionRequestButton memberId={member?.id} />
 
       {/* Logout Button */}
       <NativeButton

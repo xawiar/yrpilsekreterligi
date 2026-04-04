@@ -1,22 +1,19 @@
 import React from 'react';
 import RegionBadge from '../Members/RegionBadge';
 
-const MeetingsTable = ({ 
-  meetings, 
-  searchTerm, 
-  sortConfig, 
-  handleSort, 
-  handleShowMeeting, 
-  handleEditMeeting, 
+const MeetingsTable = ({
+  meetings,
+  sortConfig,
+  handleSort,
+  handleShowMeeting,
+  handleEditMeeting,
   handleArchiveMeeting,
   handleUpdateAttendance,
   calculateAttendanceStats,
   getAttendanceColor
 }) => {
-  const filteredMeetings = meetings.filter(meeting => 
-    meeting.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    meeting.date.includes(searchTerm)
-  );
+  // meetings is already filtered and paginated from parent
+  const filteredMeetings = meetings;
 
   // Mobile Card View
   const renderMobileCard = (meeting) => {
@@ -25,9 +22,16 @@ const MeetingsTable = ({
       <div key={meeting.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4 hover:shadow-md transition-shadow duration-200">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">
-              {meeting.name}
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                {meeting.name}
+              </h3>
+              {meeting.isPlanned && (
+                <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                  Planlandi
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
               {meeting.date}
             </p>
@@ -205,7 +209,14 @@ const MeetingsTable = ({
               return (
                 <tr key={meeting.id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{meeting.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">{meeting.name}</span>
+                      {meeting.isPlanned && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                          Planlandi
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-gray-500 md:hidden mt-1">{meeting.date}</div>
                     <div className="flex flex-wrap gap-1 mt-2 md:hidden">
                       {meeting.regions.slice(0, 2).map((region, index) => (

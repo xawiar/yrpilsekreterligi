@@ -4091,6 +4091,64 @@ class ApiService {
     if (!response.ok) throw new Error('Arama hatası');
     return response.json();
   }
+
+  // ============================================
+  // KVKK - Veri Silme Talepleri
+  // ============================================
+
+  static async createDataDeletionRequest(member_id, reason) {
+    const response = await fetch(`${API_BASE_URL}/data-deletion-requests`, {
+      method: 'POST',
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_id, reason })
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Talep oluşturulurken hata oluştu');
+    }
+    return response.json();
+  }
+
+  static async getDataDeletionRequests() {
+    const response = await fetch(`${API_BASE_URL}/data-deletion-requests`, {
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Talepler yüklenirken hata oluştu');
+    return response.json();
+  }
+
+  static async getMyDataDeletionRequests(memberId) {
+    const response = await fetch(`${API_BASE_URL}/data-deletion-requests/member/${memberId}`, {
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Talepler yüklenirken hata oluştu');
+    return response.json();
+  }
+
+  static async approveDataDeletionRequest(id) {
+    const response = await fetch(`${API_BASE_URL}/data-deletion-requests/${id}/approve`, {
+      method: 'PUT',
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Talep onaylanırken hata oluştu');
+    }
+    return response.json();
+  }
+
+  static async rejectDataDeletionRequest(id, rejection_reason) {
+    const response = await fetch(`${API_BASE_URL}/data-deletion-requests/${id}/reject`, {
+      method: 'PUT',
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rejection_reason })
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Talep reddedilirken hata oluştu');
+    }
+    return response.json();
+  }
 }
 
 export default ApiService;

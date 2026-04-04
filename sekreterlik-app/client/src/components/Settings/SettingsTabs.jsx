@@ -31,6 +31,8 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
       'api-keys': false, // Admin only
       'voter-list': isAdmin || grantedPermissions.includes('manage_voters'),
       'push-notifications': true,
+      'data-retention': false, // Admin only - KVKK
+      'data-deletion-requests': false, // Admin only - KVKK
     };
 
     return permissionMap[tabName] || false;
@@ -454,6 +456,37 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
           </button>
         )}
 
+        {/* KVKK - Veri Saklama Süresi - Admin only */}
+        {hasPermission('data-retention') && (
+          <button
+            onClick={() => setActiveTab('data-retention')}
+            className={`${activeTab === 'data-retention'
+              ? 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Veri Saklama (KVKK)
+          </button>
+        )}
+
+        {/* KVKK - Veri Silme Talepleri - Admin only */}
+        {hasPermission('data-deletion-requests') && (
+          <button
+            onClick={() => setActiveTab('data-deletion-requests')}
+            className={`${activeTab === 'data-deletion-requests'
+              ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+              } px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Veri Silme Talepleri
+          </button>
+        )}
 
       </nav>
     </div>

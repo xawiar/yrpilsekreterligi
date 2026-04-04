@@ -15,7 +15,7 @@ import {
   MeetingsFilters,
   MeetingsTable
 } from '../components/Meetings';
-import { LoadingSpinner } from '../components/UI';
+import { LoadingSpinner, Pagination } from '../components/UI';
 import NativeMeetingsList from '../components/mobile/NativeMeetingsList';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
@@ -40,6 +40,11 @@ const MeetingsPage = () => {
   const [regions, setRegions] = useState([]);
   const [searchTerm, setSearchTerm] = useState(''); // For meeting search
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // Default sort by date, newest first
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   useEffect(() => {
     fetchMeetings();
@@ -354,6 +359,58 @@ const MeetingsPage = () => {
 
   const summaryStats = calculateSummaryStats();
 
+  // Helper: parse meeting date to YYYY-MM-DD for comparison
+  const parseMeetingDate = (dateStr) => {
+    if (!dateStr) return '';
+    if (dateStr.includes('T')) {
+      return dateStr.split('T')[0];
+    }
+    if (dateStr.includes('.')) {
+      const [day, month, year] = dateStr.split('.');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return dateStr;
+  };
+
+  // Filter meetings based on search, region, and date range
+  const filteredMeetings = meetings.filter(meeting => {
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = (
+        meeting.name.toLowerCase().includes(searchLower) ||
+        meeting.date.includes(searchTerm)
+      );
+      if (!matchesSearch) return false;
+    }
+
+    // Region filter
+    if (selectedRegion) {
+      if (!meeting.regions || !meeting.regions.includes(selectedRegion)) {
+        return false;
+      }
+    }
+
+    // Date range filter
+    const meetingDateParsed = parseMeetingDate(meeting.date);
+    if (startDate && meetingDateParsed < startDate) return false;
+    if (endDate && meetingDateParsed > endDate) return false;
+
+    return true;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredMeetings.length / ITEMS_PER_PAGE);
+  const paginatedMeetings = filteredMeetings.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRegion, startDate, endDate]);
+
   if (loading) {
     return (
       <div className="py-2 sm:py-4 md:py-6 w-full overflow-x-hidden pb-24 lg:pb-6">
@@ -479,17 +536,23 @@ const MeetingsPage = () => {
         avgAttendanceRate={summaryStats.avgAttendanceRate}
       />
 
-      {/* Filters Section - Removed showArchived prop */}
-      <MeetingsFilters 
+      {/* Filters Section */}
+      <MeetingsFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        regions={regions}
+        selectedRegion={selectedRegion}
+        setSelectedRegion={setSelectedRegion}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
       />
 
       {/* Meetings Table - Responsive Design */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-        <MeetingsTable 
-          meetings={meetings}
-          searchTerm={searchTerm}
+        <MeetingsTable
+          meetings={paginatedMeetings}
           sortConfig={sortConfig}
           handleSort={handleSort}
           handleShowMeeting={handleShowMeeting}
@@ -501,6 +564,15 @@ const MeetingsPage = () => {
           getAttendanceColor={getAttendanceColor}
         />
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        totalItems={filteredMeetings.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+      />
 
       {/* Plan Meeting Modal */}
       <Modal

@@ -1,7 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import ApiService from '../utils/ApiService';
 
 const TeşkilatPage = () => {
+  const [statsData, setStatsData] = useState({ districts: 0, assignedPresidents: 0, towns: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [districts, towns] = await Promise.all([
+          ApiService.getDistricts(),
+          ApiService.getTowns()
+        ]);
+        const districtList = Array.isArray(districts) ? districts : [];
+        const townList = Array.isArray(towns) ? towns : [];
+        const assignedPresidents = districtList.filter(d => d.president || d.president_name || d.presidentName).length;
+        setStatsData({
+          districts: districtList.length,
+          assignedPresidents,
+          towns: townList.length
+        });
+      } catch (error) {
+        console.error('Error fetching organization stats:', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
   const subPages = [
     {
       name: 'İlçeler',
@@ -44,6 +71,52 @@ const TeşkilatPage = () => {
           Teşkilat yönetim sayfaları
         </p>
       </div>
+
+      {/* Ozet Istatistikler */}
+      {!statsLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Toplam Ilce</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData.districts}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Atanmis Ilce Baskani</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData.assignedPresidents}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Toplam Belde</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData.towns}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {subPages.map((page) => (

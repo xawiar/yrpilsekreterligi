@@ -29,6 +29,7 @@ import PollResultsComponent from '../components/PollResultsComponent';
 import Modal from '../components/Modal';
 import MobileBottomNav from '../components/MobileBottomNav';
 import BranchManagementSection from '../components/BranchManagementSection';
+import DataDeletionRequestButton from '../components/DataDeletionRequestButton';
 
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
@@ -1726,6 +1727,9 @@ const MemberDashboardPage = () => {
               calculateMeetingStats={calculateMeetingStats}
             />
           </div>
+
+          {/* KVKK - Veri Silme Talep Butonu */}
+          <DataDeletionRequestButton memberId={member?.id} />
         </div>
           )}
         </>

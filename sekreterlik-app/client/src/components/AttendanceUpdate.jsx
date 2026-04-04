@@ -130,11 +130,41 @@ const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdate
       return nameA.localeCompare(nameB, 'tr', { sensitivity: 'base' });
     }) : [];
 
+  const handleMarkAll = (status) => {
+    const newAttendance = {};
+    effectiveAttendees.forEach(att => {
+      newAttendance[att.memberId] = {
+        attended: status === 'attended',
+        hasExcuse: false,
+        excuseReason: ''
+      };
+    });
+    setAttendance(newAttendance);
+  };
+
   return (
     <div className={`space-y-4 ${mobileView ? 'h-full flex flex-col' : ''}`}>
       <form onSubmit={handleSubmit} className={mobileView ? 'flex-1 flex flex-col min-h-0' : ''}>
         <div className={mobileView ? 'flex-1 overflow-y-auto min-h-0' : ''}>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Yoklama Güncelle</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Yoklama Guncelle</h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleMarkAll('attended')}
+                className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+              >
+                Tumunu Katildi
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMarkAll('notAttended')}
+                className="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              >
+                Tumunu Katilmadi
+              </button>
+            </div>
+          </div>
           
           {mobileView ? (
             // Mobile Card Layout

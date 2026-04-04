@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { isMobile } from '../utils/capacitorUtils';
 
 const CalendarPage = () => {
+  const mobileView = isMobile();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [meetings, setMeetings] = useState([]);
@@ -199,13 +201,29 @@ const CalendarPage = () => {
 
   const daysInMonth = getDaysInMonth(currentDate);
 
+  // Collect all events/meetings for the current month (for mobile list view)
+  const getMonthItems = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const items = [];
+
+    for (let day = 1; day <= lastDay; day++) {
+      const dayItems = getEventsForDate(day);
+      if (dayItems.length > 0) {
+        items.push({ day, date: new Date(year, month, day), items: dayItems });
+      }
+    }
+    return items;
+  };
+
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Takvim</h1>
-          <p className="text-gray-600 dark:text-gray-400">Etkinlik ve toplantılarınızı takip edin</p>
+          <p className="text-gray-600 dark:text-gray-400">Etkinlik ve toplantilerinizi takip edin</p>
         </div>
 
         {/* Calendar Controls */}
@@ -220,11 +238,11 @@ const CalendarPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
                 {months[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
-              
+
               <button
                 onClick={() => navigateMonth(1)}
                 className="p-2 hover:bg-gray-100 dark:bg-gray-700 rounded-lg transition duration-200"
@@ -238,152 +256,212 @@ const CalendarPage = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={goToToday}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition duration-200"
               >
-                Bugün
+                Bugun
               </button>
-              
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <span className="px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 text-blue-600 shadow-sm">
-                  Ay
-                </span>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            {days.map(day => (
-              <div key={day} className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7">
-            {daysInMonth.map((day, index) => {
-              const dayEvents = getEventsForDate(day);
-              const isCurrentDay = isToday(day);
-              const isSelectedDay = isSelected(day);
-
-              return (
-                <div
-                  key={index}
-                  className={`min-h-[120px] border-r border-b border-gray-200 dark:border-gray-700 p-2 ${
-                    day ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
-                  } ${isCurrentDay ? 'bg-blue-50' : ''} ${isSelectedDay ? 'bg-blue-100' : ''}`}
-                  onClick={() => handleDateClick(day)}
-                >
-                  {day && (
-                    <>
-                      <div className={`text-sm font-medium mb-1 ${
-                        isCurrentDay ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'
-                      }`}>
-                        {day}
-                      </div>
-                      
-                      <div className="space-y-1">
-                        {dayEvents.slice(0, 3).map((item, eventIndex) => (
-                          <div
-                            key={eventIndex}
-                            className={`text-xs p-1 rounded truncate ${
+        {/* Mobile List View */}
+        {mobileView ? (
+          <div className="space-y-3">
+            {(() => {
+              const monthItems = getMonthItems();
+              if (monthItems.length === 0) {
+                return (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+                    <p className="text-gray-500 dark:text-gray-400">Bu ayda etkinlik veya toplanti bulunmuyor</p>
+                  </div>
+                );
+              }
+              return monthItems.map(({ day, date, items: dayItems }) => (
+                <div key={day} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                  <div className={`text-sm font-semibold mb-3 ${isToday(day) ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                    {date.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {isToday(day) && (
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">Bugun</span>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {dayItems.map((item, idx) => (
+                      <div key={idx} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                          item._type === 'meeting' ? 'bg-blue-500' : 'bg-green-500'
+                        }`}></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                              {item.name || item.title}
+                            </h4>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded flex-shrink-0 ${
                               item._type === 'meeting'
                                 ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
                                 : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                            }`}
-                            title={item.name || item.title}
-                          >
-                            {item._type === 'meeting' ? '🤝 ' : '📌 '}
-                            {item.name || item.title}
+                            }`}>
+                              {item._type === 'meeting' ? 'Toplanti' : 'Etkinlik'}
+                            </span>
                           </div>
-                        ))}
-                        {dayEvents.length > 3 && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            +{dayEvents.length - 3} daha
-                          </div>
-                        )}
+                          {item.location && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                              {item.location}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Selected Date Details */}
-        {selectedDate && (
-          <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              {selectedDate.toLocaleDateString('tr-TR', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </h3>
-            
-            <div className="space-y-4">
-              {getEventsForDate(selectedDate.getDate()).map((item, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`w-3 h-3 rounded-full mt-1 ${
-                    item._type === 'meeting' ? 'bg-blue-500' : 'bg-green-500'
-                  }`}></div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                        {item._type === 'meeting' ? '🤝 ' : '📌 '}
-                        {item.name || item.title}
-                      </h4>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                        item._type === 'meeting'
-                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                          : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                      }`}>
-                        {item._type === 'meeting' ? 'Toplanti' : 'Etkinlik'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {formatTime(item.date)}
-                    </p>
-                    {item.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {item.description}
-                      </p>
-                    )}
-                    {item.location && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        📍 {item.location}
-                      </p>
-                    )}
+                    ))}
                   </div>
                 </div>
-              ))}
-              
-              {getEventsForDate(selectedDate.getDate()).length === 0 && (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                  Bu tarihte etkinlik veya toplantı bulunmuyor
-                </p>
-              )}
+              ));
+            })()}
+
+            {/* Legend */}
+            <div className="flex items-center space-x-6 text-sm pt-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600 dark:text-gray-400">Etkinlikler</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-gray-600 dark:text-gray-400">Toplantilar</span>
+              </div>
             </div>
           </div>
-        )}
+        ) : (
+          <>
+            {/* Desktop Calendar Grid */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                {days.map(day => (
+                  <div key={day} className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-        {/* Legend */}
-        <div className="mt-6 flex items-center space-x-6 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-gray-600 dark:text-gray-400">Etkinlikler</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-gray-600 dark:text-gray-400">Toplantılar</span>
-          </div>
-        </div>
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7">
+                {daysInMonth.map((day, index) => {
+                  const dayEvents = getEventsForDate(day);
+                  const isCurrentDay = isToday(day);
+                  const isSelectedDay = isSelected(day);
+
+                  return (
+                    <div
+                      key={index}
+                      className={`min-h-[120px] border-r border-b border-gray-200 dark:border-gray-700 p-2 ${
+                        day ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
+                      } ${isCurrentDay ? 'bg-blue-50' : ''} ${isSelectedDay ? 'bg-blue-100' : ''}`}
+                      onClick={() => handleDateClick(day)}
+                    >
+                      {day && (
+                        <>
+                          <div className={`text-sm font-medium mb-1 ${
+                            isCurrentDay ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'
+                          }`}>
+                            {day}
+                          </div>
+
+                          <div className="space-y-1">
+                            {dayEvents.slice(0, 3).map((item, eventIndex) => (
+                              <div
+                                key={eventIndex}
+                                className={`text-xs p-1 rounded truncate ${
+                                  item._type === 'meeting'
+                                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                                    : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                }`}
+                                title={item.name || item.title}
+                              >
+                                {item.name || item.title}
+                              </div>
+                            ))}
+                            {dayEvents.length > 3 && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                +{dayEvents.length - 3} daha
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Date Details */}
+            {selectedDate && (
+              <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                  {selectedDate.toLocaleDateString('tr-TR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </h3>
+
+                <div className="space-y-4">
+                  {getEventsForDate(selectedDate.getDate()).map((item, index) => (
+                    <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className={`w-3 h-3 rounded-full mt-1 ${
+                        item._type === 'meeting' ? 'bg-blue-500' : 'bg-green-500'
+                      }`}></div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                            {item.name || item.title}
+                          </h4>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            item._type === 'meeting'
+                              ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                              : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                          }`}>
+                            {item._type === 'meeting' ? 'Toplanti' : 'Etkinlik'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {formatTime(item.date)}
+                        </p>
+                        {item.description && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {item.description}
+                          </p>
+                        )}
+                        {item.location && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {item.location}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {getEventsForDate(selectedDate.getDate()).length === 0 && (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                      Bu tarihte etkinlik veya toplanti bulunmuyor
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="mt-6 flex items-center space-x-6 text-sm">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600 dark:text-gray-400">Etkinlikler</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-gray-600 dark:text-gray-400">Toplantilar</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

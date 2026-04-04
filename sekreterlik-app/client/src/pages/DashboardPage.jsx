@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { 
-  DashboardHeader, 
-  DashboardStatsCards, 
-  TopRegistrarsTable, 
-  TopAttendeesTable 
+import {
+  DashboardHeader,
+  DashboardStatsCards,
+  TopRegistrarsTable,
+  TopAttendeesTable
 } from '../components/Dashboard';
 import NativeDashboardExample from '../components/mobile/NativeDashboardExample';
 import Modal from '../components/Modal';
 import MeetingDetails from '../components/MeetingDetails';
 import { useNavigate } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -31,10 +32,69 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  const [allMeetings, setAllMeetings] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchAllMeetings();
   }, []);
+
+  const fetchAllMeetings = async () => {
+    try {
+      const data = await ApiService.getMeetings(false);
+      setAllMeetings(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching meetings for trend:', error);
+    }
+  };
+
+  // Compute 6-month attendance trend data
+  const attendanceTrendData = useMemo(() => {
+    const months = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    const now = new Date();
+    const result = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = targetDate.getFullYear();
+      const month = targetDate.getMonth();
+      const label = `${months[month]} ${year}`;
+
+      // Find meetings in this month
+      const monthMeetings = allMeetings.filter(m => {
+        if (!m.date) return false;
+        let d;
+        if (m.date.includes('.')) {
+          const [day, mon, yr] = m.date.split('.');
+          d = new Date(yr, parseInt(mon) - 1, day);
+        } else if (m.date.includes('T') || m.date.includes('-')) {
+          d = new Date(m.date);
+        } else {
+          d = new Date(m.date);
+        }
+        return d.getFullYear() === year && d.getMonth() === month;
+      });
+
+      let totalRate = 0;
+      let validCount = 0;
+      monthMeetings.forEach(meeting => {
+        if (meeting.attendees && Array.isArray(meeting.attendees) && meeting.attendees.length > 0) {
+          const attended = meeting.attendees.filter(a => a.attended === true || a.attended === 1).length;
+          const rate = (attended / meeting.attendees.length) * 100;
+          totalRate += rate;
+          validCount++;
+        }
+      });
+
+      result.push({
+        name: label,
+        katilim: validCount > 0 ? Math.round(totalRate / validCount) : 0,
+        toplanti: monthMeetings.length
+      });
+    }
+
+    return result;
+  }, [allMeetings]);
 
   const fetchDashboardData = async () => {
     try {
@@ -289,30 +349,67 @@ const DashboardPage = () => {
             }`}>
               %{stats.avgAttendanceRate || 0}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ort. Katılım</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ort. Katilim</div>
           </div>
           {/* Toplam Üye */}
           <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {stats.totalMembers || 0}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Üye</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Uye</div>
           </div>
           {/* Toplantı Sayısı */}
           <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
               {stats.totalMeetings || 0}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplantı Sayısı</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplanti Sayisi</div>
           </div>
           {/* Etkinlik Sayısı */}
           <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {stats.totalEvents || 0}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Etkinlik Sayısı</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Etkinlik Sayisi</div>
           </div>
         </div>
+      </div>
+
+      {/* Son 6 Ay Katilim Trendi */}
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Son 6 Ay Katilim Trendi
+        </h3>
+        {attendanceTrendData.some(d => d.toplanti > 0) ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={attendanceTrendData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9ca3af" unit="%" />
+              <Tooltip
+                formatter={(value, name) => {
+                  if (name === 'katilim') return [`%${value}`, 'Ort. Katilim'];
+                  if (name === 'toplanti') return [value, 'Toplanti Sayisi'];
+                  return [value, name];
+                }}
+                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+              />
+              <Line
+                type="monotone"
+                dataKey="katilim"
+                stroke="#6366f1"
+                strokeWidth={2}
+                dot={{ fill: '#6366f1', r: 4 }}
+                activeDot={{ r: 6 }}
+                name="katilim"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            Son 6 ayda toplanti verisi bulunmuyor
+          </div>
+        )}
       </div>
     </div>
   );

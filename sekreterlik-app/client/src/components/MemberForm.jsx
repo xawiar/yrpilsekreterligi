@@ -12,6 +12,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
   const [error, setError] = useState(''); // Add state for error messages
   const [successMessage, setSuccessMessage] = useState(''); // Add state for success messages with credentials
   const [showCredentials, setShowCredentials] = useState(false); // Add state to show credentials
+  const [kvkkConsent, setKvkkConsent] = useState(false); // KVKK rıza checkbox
 
   useEffect(() => {
     if (member) {
@@ -51,6 +52,12 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // KVKK rıza kontrolü (sadece yeni üye eklerken)
+    if (!member && !kvkkConsent) {
+      setError('KVKK kapsamında kişisel verilerin işlenmesine onay vermeniz gerekmektedir.');
+      return;
+    }
+
     // Basic validation
     if (!formData.tc || !formData.name || !formData.phone ||
         !formData.position || !formData.region) {
@@ -88,17 +95,23 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
     }
     
     try {
-      console.log('Sending member data:', formData); // Debug log
+      // KVKK onay tarihini ekle (yeni üye)
+      const submitData = { ...formData };
+      if (!member && kvkkConsent) {
+        submitData.kvkk_consent_date = new Date().toISOString();
+      }
+
+      console.log('Sending member data:', submitData); // Debug log
       let response;
       if (member) {
         // Update existing member
         console.log('Updating existing member with ID:', member.id); // Debug log
-        response = await ApiService.updateMember(member.id, formData);
+        response = await ApiService.updateMember(member.id, submitData);
         console.log('Update response:', response); // Debug log
       } else {
         // Create new member
         console.log('Creating new member'); // Debug log
-        response = await ApiService.createMember(formData);
+        response = await ApiService.createMember(submitData);
         console.log('Create response:', response); // Debug log
         
         // Eğer kullanıcı bilgileri varsa göster
@@ -325,6 +338,26 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
           </div>
         </div>
         
+        {/* KVKK Açık Rıza Checkbox - Sadece yeni üye eklerken göster */}
+        {!member && (
+          <div className="flex items-start gap-2 mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+            <input
+              type="checkbox"
+              id="kvkkConsent"
+              checked={kvkkConsent}
+              onChange={(e) => setKvkkConsent(e.target.checked)}
+              className="mt-1 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              required
+            />
+            <label htmlFor="kvkkConsent" className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="font-medium">KVKK kapsamında</span> kişisel verilerimin işlenmesini ve özel nitelikli kişisel verilerimin (siyasi parti üyeliği) kayıt altına alınmasını kabul ediyorum.
+              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline ml-1">
+                Aydınlatma Metni
+              </a>
+            </label>
+          </div>
+        )}
+
         <div className="flex justify-end space-x-3 pt-4">
           <button
             type="button"
