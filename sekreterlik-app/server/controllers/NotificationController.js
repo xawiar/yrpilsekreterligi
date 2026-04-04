@@ -49,18 +49,19 @@ class NotificationController {
   static async markAsRead(req, res) {
     try {
       const { notificationId } = req.params;
-      
-      await Notification.markAsRead(notificationId);
-      
-      res.json({ 
-        success: true, 
-        message: 'Bildirim okundu olarak işaretlendi' 
+      const memberId = req.query.memberId || req.user?.id || req.user?.memberId || null;
+
+      await Notification.markAsRead(notificationId, memberId);
+
+      res.json({
+        success: true,
+        message: 'Bildirim okundu olarak işaretlendi'
       });
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Bildirim işaretlenirken hata oluştu' 
+      res.status(500).json({
+        success: false,
+        message: 'Bildirim işaretlenirken hata oluştu'
       });
     }
   }

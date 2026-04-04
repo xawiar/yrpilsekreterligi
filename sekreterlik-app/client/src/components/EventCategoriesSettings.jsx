@@ -136,8 +136,8 @@ const EventCategoriesSettings = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Etkinlik Kategorileri Yönetimi</h2>
-          <p className="text-sm text-gray-600">Etkinlik kategorileri ekleyin, düzenleyin veya silin</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Etkinlik Kategorileri Yönetimi</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Etkinlik kategorileri ekleyin, düzenleyin veya silin</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -163,13 +163,13 @@ const EventCategoriesSettings = () => {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             {editingCategory ? 'Etkinlik Kategorisi Düzenle' : 'Yeni Etkinlik Kategorisi Ekle'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Kategori Adı *
               </label>
               <input
@@ -178,13 +178,13 @@ const EventCategoriesSettings = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Etkinlik kategorisi adını girin"
                 required
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Açıklama
               </label>
               <textarea
@@ -193,7 +193,7 @@ const EventCategoriesSettings = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Kategori açıklamasını girin (isteğe bağlı)"
               />
             </div>
@@ -207,7 +207,7 @@ const EventCategoriesSettings = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200"
               >
                 İptal
               </button>
@@ -217,13 +217,13 @@ const EventCategoriesSettings = () => {
       )}
 
       {/* Categories List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Mevcut Etkinlik Kategorileri</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Mevcut Etkinlik Kategorileri</h3>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {categories.length === 0 ? (
-            <div className="px-6 py-8 text-center text-gray-500">
+            <div className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
@@ -234,7 +234,7 @@ const EventCategoriesSettings = () => {
               <div key={category.id} className="px-6 py-4 flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-1">
-                    <h4 className="text-sm font-medium text-gray-900">{category.name}</h4>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{category.name}</h4>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -243,7 +243,7 @@ const EventCategoriesSettings = () => {
                     </span>
                   </div>
                   {category.description && (
-                    <p className="text-sm text-gray-500 mt-1">{category.description}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{category.description}</p>
                   )}
                 </div>
                 <div className="flex space-x-2">

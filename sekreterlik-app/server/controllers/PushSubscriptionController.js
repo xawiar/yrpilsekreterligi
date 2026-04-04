@@ -226,6 +226,61 @@ class PushSubscriptionController {
     }
   }
 
+  // Send notification to users with a specific role/user_type
+  static async sendToRole(req, res) {
+    try {
+      const { title, body, role, url } = req.body;
+
+      if (!title || !body || !role) {
+        return res.status(400).json({
+          success: false,
+          message: 'Baslik, icerik ve rol bilgisi gerekli'
+        });
+      }
+
+      const subscriptions = await PushSubscription.getByUserType(role);
+
+      if (subscriptions.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: `"${role}" rolune sahip aktif push subscription bulunamadi`
+        });
+      }
+
+      const formattedSubscriptions = subscriptions.map(sub => ({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh || sub.keys?.p256dh,
+          auth: sub.auth || sub.keys?.auth
+        }
+      }));
+
+      const payload = PushNotificationService.createPayload(
+        title,
+        body,
+        '/icon-192x192.png',
+        '/badge-72x72.png',
+        { type: 'role_notification', action: 'view', url: url || '/notifications' }
+      );
+
+      const results = await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
+
+      res.json({
+        success: true,
+        message: `Bildirim "${role}" rolundeki ${subscriptions.length} kullaniciya gonderildi`,
+        sentCount: results.filter(r => r.success).length,
+        totalCount: subscriptions.length,
+        results
+      });
+    } catch (error) {
+      console.error('Error sending notification to role:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Bildirim gonderilirken hata olustu'
+      });
+    }
+  }
+
   // Get all subscriptions (admin only)
   static async getAll(req, res) {
     try {

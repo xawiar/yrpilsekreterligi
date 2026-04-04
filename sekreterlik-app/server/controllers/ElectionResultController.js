@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const Notification = require('../models/Notification');
 
 function validateVoteData(data, res) {
   const errors = [];
@@ -428,7 +429,29 @@ class ElectionResultController {
       );
 
       const newResult = await db.get('SELECT * FROM election_results WHERE id = ?', [dbResult.lastID]);
-      
+
+      // Admin kullanicilara bildirim gonder
+      try {
+        const admins = await db.all("SELECT id FROM member_users WHERE user_type = 'admin'");
+        const ballotBoxInfo = ballotBox ? (ballotBox.ballot_number || resultData.ballot_box_id) : resultData.ballot_box_id;
+        for (const admin of admins) {
+          await Notification.create({
+            memberId: admin.id,
+            title: 'Yeni Secim Sonucu',
+            body: `${election.name} - Sandik ${ballotBoxInfo} icin sonuc girildi.`,
+            type: 'election_result',
+            data: {
+              electionId: resultData.election_id,
+              ballotBoxId: resultData.ballot_box_id,
+              resultId: dbResult.lastID,
+              url: '/elections'
+            }
+          });
+        }
+      } catch (notifErr) {
+        console.warn('Secim sonucu bildirimi gonderilemedi:', notifErr.message);
+      }
+
       res.status(201).json({ message: 'Seçim sonucu başarıyla kaydedildi', result: newResult });
     } catch (error) {
       console.error('Error creating election result:', error);

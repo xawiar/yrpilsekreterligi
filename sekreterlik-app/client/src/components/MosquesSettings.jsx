@@ -256,8 +256,8 @@ const MosquesSettings = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Cami Yönetimi</h2>
-          <p className="text-sm text-gray-600">Cami ekleyin, düzenleyin veya silin</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Cami Yönetimi</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Cami ekleyin, düzenleyin veya silin</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -283,13 +283,13 @@ const MosquesSettings = () => {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             {editingMosque ? 'Cami Düzenle' : 'Yeni Cami Ekle'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="district_id" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="district_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 İlçe Seçimi *
               </label>
               <select
@@ -297,7 +297,7 @@ const MosquesSettings = () => {
                 name="district_id"
                 value={formData.district_id}
                 onChange={handleDistrictChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 required
               >
                 <option value="">İlçe seçin</option>
@@ -310,7 +310,7 @@ const MosquesSettings = () => {
             </div>
 
             <div>
-              <label htmlFor="town_id" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="town_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Belde Seçimi (İsteğe Bağlı)
               </label>
               <select
@@ -318,7 +318,7 @@ const MosquesSettings = () => {
                 name="town_id"
                 value={formData.town_id}
                 onChange={handleTownChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 disabled={!formData.district_id}
               >
                 <option value="">Belde seçin (isteğe bağlı)</option>
@@ -331,7 +331,7 @@ const MosquesSettings = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Konum Türü *
               </label>
               <div className="flex space-x-4">
@@ -362,7 +362,7 @@ const MosquesSettings = () => {
 
             {formData.location_type === 'neighborhood' && (
               <div>
-                <label htmlFor="neighborhood_id" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="neighborhood_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Mahalle Seçimi *
                 </label>
                 <select
@@ -370,7 +370,7 @@ const MosquesSettings = () => {
                   name="neighborhood_id"
                   value={formData.neighborhood_id}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   disabled={!formData.district_id}
                   required
                 >
@@ -386,7 +386,7 @@ const MosquesSettings = () => {
 
             {formData.location_type === 'village' && (
               <div>
-                <label htmlFor="village_id" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="village_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Köy Seçimi *
                 </label>
                 <select
@@ -394,7 +394,7 @@ const MosquesSettings = () => {
                   name="village_id"
                   value={formData.village_id}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   disabled={!formData.district_id}
                   required
                 >
@@ -409,7 +409,7 @@ const MosquesSettings = () => {
             )}
 
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Cami Adı *
               </label>
               <input
@@ -418,7 +418,7 @@ const MosquesSettings = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Cami adını girin"
                 required
               />
@@ -434,7 +434,7 @@ const MosquesSettings = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200"
               >
                 İptal
               </button>
@@ -444,13 +444,13 @@ const MosquesSettings = () => {
       )}
 
       {/* Mosques List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Mevcut Camiler</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Mevcut Camiler</h3>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {mosques.length === 0 ? (
-            <div className="px-6 py-8 text-center text-gray-500">
+            <div className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
@@ -461,7 +461,7 @@ const MosquesSettings = () => {
               <div key={mosque.id} className="px-6 py-4 flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-1">
-                    <h4 className="text-sm font-medium text-gray-900">{mosque.name}</h4>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{mosque.name}</h4>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -470,7 +470,7 @@ const MosquesSettings = () => {
                       {visitCounts[mosque.id] || 0} ziyaret
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     İlçe: {mosque.district_name}
                     {mosque.town_name && ` • Belde: ${mosque.town_name}`}
                     {mosque.neighborhood_name && ` • Mahalle: ${mosque.neighborhood_name}`}

@@ -135,23 +135,61 @@ self.addEventListener('push', (event) => {
 // Notification click event
 self.addEventListener('notificationclick', (event) => {
   console.log('Notification click received:', event);
-  
+
   event.notification.close();
-  
-  if (event.action === 'view') {
-    // Open the app
-    event.waitUntil(
-      clients.openWindow('/')
-    );
-  } else if (event.action === 'close') {
+
+  if (event.action === 'close') {
     // Just close the notification
     console.log('Notification closed');
-  } else {
-    // Default action - open the app
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+    return;
   }
+
+  // Bildirim verisinden hedef URL belirle
+  const data = event.notification.data || {};
+  let targetUrl = '/';
+
+  if (data.url) {
+    // Eger bildirimde acik URL varsa onu kullan
+    targetUrl = data.url;
+  } else if (data.type) {
+    // Bildirim tipine gore yonlendir
+    switch (data.type) {
+      case 'meeting':
+        targetUrl = '/meetings';
+        break;
+      case 'event':
+        targetUrl = '/events';
+        break;
+      case 'election':
+      case 'election_result':
+        targetUrl = '/elections';
+        break;
+      case 'member':
+        targetUrl = '/members';
+        break;
+      case 'message':
+        targetUrl = '/notifications';
+        break;
+      default:
+        targetUrl = '/notifications';
+        break;
+    }
+  }
+
+  // Mevcut acik pencereyi bul veya yeni pencere ac
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Zaten acik bir pencere varsa ona yonlendir
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      // Yoksa yeni pencere ac
+      return clients.openWindow(targetUrl);
+    })
+  );
 });
 
 // Background sync function

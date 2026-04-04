@@ -116,6 +116,39 @@ class PushSubscription {
     });
   }
 
+  static async getByUserType(userType) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT ps.*, mu.username, mu.chairman_name, mu.user_type
+        FROM push_subscriptions ps
+        LEFT JOIN member_users mu ON ps.user_id = mu.id
+        WHERE ps.is_active = 1 AND mu.user_type = ?
+      `;
+
+      db.all(sql, [userType], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  static async deleteById(id) {
+    return new Promise((resolve, reject) => {
+      const sql = 'DELETE FROM push_subscriptions WHERE id = ?';
+
+      db.run(sql, [id], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ changes: this.changes });
+        }
+      });
+    });
+  }
+
   static async deleteByEndpoint(endpoint) {
     return new Promise((resolve, reject) => {
       const sql = 'UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?';

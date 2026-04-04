@@ -21,6 +21,7 @@ import GeminiApiSettings from '../components/GeminiApiSettings';
 import FirebaseConfigSettings from '../components/FirebaseConfigSettings';
 import DeploymentConfigSettings from '../components/DeploymentConfigSettings';
 import SmsSettings from '../components/SmsSettings';
+import PushNotificationSettings from '../components/PushNotificationSettings';
 import SyncToFirebasePage from './SyncToFirebasePage';
 import PollsPage from './PollsPage';
 import MemberDashboardAnalyticsPage from './MemberDashboardAnalyticsPage';
@@ -86,6 +87,7 @@ const SettingsPage = ({ tab }) => {
       'app-branding': grantedPermissions.includes('manage_app_branding'),
       'seçim-ekle': isAdmin || grantedPermissions.includes('manage_elections'),
       'voter-list': isAdmin || grantedPermissions.includes('manage_voters'),
+      'push-notifications': true, // All authenticated users can manage their own push notifications
     };
 
     return permissionMap[tabName] || false;
@@ -148,6 +150,7 @@ const SettingsPage = ({ tab }) => {
   const getTabsList = () => {
     const tabs = [
       { id: 'admin', name: 'Kullanıcı Bilgileri', description: 'Mevcut admin bilgileri', permission: '*' },
+      { id: 'push-notifications', name: 'Bildirim Ayarları', description: 'Push notification yönetimi', permission: '*' },
       { id: 'regions', name: 'Bölge Ekle', description: 'Bölge tanımlama', permission: 'add_region' },
       { id: 'positions', name: 'Görev Ekle', description: 'Görev tanımlama', permission: 'add_position' },
       { id: 'member-users', name: 'Üye Kullanıcıları', description: 'Üye kullanıcı yönetimi', permission: 'manage_member_users' },
@@ -219,6 +222,7 @@ const SettingsPage = ({ tab }) => {
               ) : (
                 <>
                   {activeTab === 'admin' && <AdminSettings />}
+                  {activeTab === 'push-notifications' && hasPermission('push-notifications') && <PushNotificationSettings />}
                   {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
                   {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
                   {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}
@@ -349,6 +353,7 @@ const SettingsPage = ({ tab }) => {
                 ) : (
                   <>
                     {activeTab === 'admin' && <AdminSettings />}
+                    {activeTab === 'push-notifications' && hasPermission('push-notifications') && <PushNotificationSettings />}
                     {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
                     {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
                     {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}

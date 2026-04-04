@@ -108,30 +108,30 @@ const AuthorizationSettings = () => {
   return (
     <div className="space-y-6">
       {/* Mevcut Yetkilendirmeler Özeti */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h3 className="text-base font-semibold text-gray-900">Mevcut Yetkilendirmeler</h3>
-          <p className="text-sm text-gray-500 mt-1">Görevlerin sahip olduğu yetkileri burada görürsünüz.</p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Mevcut Yetkilendirmeler</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Görevlerin sahip olduğu yetkileri burada görürsünüz.</p>
         </div>
         <div className="p-4 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Görev</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yetkiler</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Görev</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Yetkiler</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlem</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
               {Object.keys(positionPermissions).length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm text-gray-500">Kayıtlı yetkilendirme yok.</td>
+                  <td colSpan={3} className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Kayıtlı yetkilendirme yok.</td>
                 </tr>
               )}
               {Object.entries(positionPermissions).map(([posName, perms]) => (
                 <tr key={posName}>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{posName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">{posName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                     {(perms || []).length === 0 ? (
                       <span className="text-gray-400">Yetki yok</span>
                     ) : (
@@ -164,11 +164,11 @@ const AuthorizationSettings = () => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Görev Seç</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Görev Seç</label>
         <select
           value={selectedPosition}
           onChange={(e) => setSelectedPosition(e.target.value)}
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+          className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         >
           <option value="">Görev seçin</option>
           {positions.map(p => (
@@ -178,8 +178,8 @@ const AuthorizationSettings = () => {
       </div>
 
       {selectedPosition && (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">Yetkiler</h4>
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Yetkiler</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {AVAILABLE_PERMISSIONS.map(ap => (
               <label key={ap.key} className="inline-flex items-center space-x-2">
@@ -188,7 +188,7 @@ const AuthorizationSettings = () => {
                   checked={permissionsForSelected.includes(ap.key)}
                   onChange={() => togglePermission(ap.key)}
                 />
-                <span className="text-sm text-gray-700">{ap.label}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{ap.label}</span>
               </label>
             ))}
           </div>

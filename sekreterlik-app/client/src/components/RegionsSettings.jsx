@@ -172,8 +172,8 @@ const RegionsSettings = () => {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 transition duration-300 hover:shadow-xl">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Bölgeler</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition duration-300 hover:shadow-xl">
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Bölgeler</h2>
       
       <div className="flex mb-4">
         <input
@@ -181,7 +181,7 @@ const RegionsSettings = () => {
           value={newRegion}
           onChange={(e) => setNewRegion(e.target.value)}
           placeholder="Yeni bölge adı"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
+          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-200"
         />
         <button
           onClick={handleAddRegion}
@@ -192,16 +192,16 @@ const RegionsSettings = () => {
       </div>
 
       <div className="border rounded-lg overflow-hidden shadow-sm">
-        <ul className="divide-y divide-gray-200">
+        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {regions.map((region) => (
-            <li key={region.id} className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition duration-150">
+            <li key={region.id} className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150">
               {editingRegion === region.id ? (
                 <div className="flex-1 flex items-center space-x-2">
                   <input
                     type="text"
                     value={editRegionName}
                     onChange={(e) => setEditRegionName(e.target.value)}
-                    className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="flex-1 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     autoFocus
                   />
                   <button
@@ -212,7 +212,7 @@ const RegionsSettings = () => {
                   </button>
                   <button
                     onClick={handleCancelEdit}
-                    className="text-gray-600 hover:text-gray-900 text-sm font-medium px-2 py-1 rounded hover:bg-gray-50 transition duration-200"
+                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 text-sm font-medium px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-200"
                   >
                     İptal
                   </button>
@@ -239,7 +239,7 @@ const RegionsSettings = () => {
             </li>
           ))}
           {regions.length === 0 && (
-            <li className="px-4 py-3 text-gray-500 text-center italic">
+            <li className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center italic">
               Henüz bölge eklenmemiş
             </li>
           )}

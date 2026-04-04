@@ -17,14 +17,33 @@ class Notification {
           FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE
         )
       `;
-      
+
       db.run(sql, (err) => {
         if (err) {
           console.error('Error creating notifications table:', err);
           reject(err);
         } else {
           console.log('Notifications table created successfully');
-          resolve();
+          // Broadcast bildirimler icin per-user okundu takip tablosu
+          const readsSql = `
+            CREATE TABLE IF NOT EXISTS notification_reads (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              notification_id INTEGER NOT NULL,
+              member_id INTEGER NOT NULL,
+              read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(notification_id, member_id),
+              FOREIGN KEY (notification_id) REFERENCES notifications (id) ON DELETE CASCADE
+            )
+          `;
+          db.run(readsSql, (err2) => {
+            if (err2) {
+              console.error('Error creating notification_reads table:', err2);
+              reject(err2);
+            } else {
+              console.log('Notification reads table created successfully');
+              resolve();
+            }
+          });
         }
       });
     });
@@ -63,36 +82,44 @@ class Notification {
   // Get notifications for a specific member
   static async getByMemberId(memberId, unreadOnly = false) {
     return new Promise((resolve, reject) => {
+      // Broadcast (member_id IS NULL) bildirimlerin okundu durumu notification_reads tablosundan kontrol edilir
       let sql = `
-        SELECT 
-          id,
-          member_id,
-          title,
-          body,
-          type,
-          data,
-          read,
-          created_at,
-          expires_at
-        FROM notifications
-        WHERE (member_id = ? OR member_id IS NULL)
-        AND (expires_at IS NULL OR expires_at > datetime('now'))
+        SELECT
+          n.id,
+          n.member_id,
+          n.title,
+          n.body,
+          n.type,
+          n.data,
+          CASE
+            WHEN n.member_id IS NULL THEN COALESCE(nr.id IS NOT NULL, 0)
+            ELSE n.read
+          END as read,
+          n.created_at,
+          n.expires_at
+        FROM notifications n
+        LEFT JOIN notification_reads nr ON n.id = nr.notification_id AND nr.member_id = ?
+        WHERE (n.member_id = ? OR n.member_id IS NULL)
+        AND (n.expires_at IS NULL OR n.expires_at > datetime('now'))
       `;
-      
+
       if (unreadOnly) {
-        sql += ' AND read = 0';
+        sql += ` AND (
+          (n.member_id IS NOT NULL AND n.read = 0)
+          OR (n.member_id IS NULL AND nr.id IS NULL)
+        )`;
       }
-      
-      sql += ' ORDER BY created_at DESC LIMIT 50';
-      
-      db.all(sql, [memberId], (err, rows) => {
+
+      sql += ' ORDER BY n.created_at DESC LIMIT 50';
+
+      db.all(sql, [memberId, memberId], (err, rows) => {
         if (err) {
           reject(err);
         } else {
           const notifications = rows.map(row => ({
             ...row,
             data: row.data ? JSON.parse(row.data) : null,
-            read: row.read === 1
+            read: row.read === 1 || row.read === true
           }));
           resolve(notifications);
         }
@@ -105,13 +132,17 @@ class Notification {
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT COUNT(*) as count
-        FROM notifications
-        WHERE (member_id = ? OR member_id IS NULL)
-        AND read = 0
-        AND (expires_at IS NULL OR expires_at > datetime('now'))
+        FROM notifications n
+        LEFT JOIN notification_reads nr ON n.id = nr.notification_id AND nr.member_id = ?
+        WHERE (n.member_id = ? OR n.member_id IS NULL)
+        AND (
+          (n.member_id IS NOT NULL AND n.read = 0)
+          OR (n.member_id IS NULL AND nr.id IS NULL)
+        )
+        AND (n.expires_at IS NULL OR n.expires_at > datetime('now'))
       `;
-      
-      db.get(sql, [memberId], (err, row) => {
+
+      db.get(sql, [memberId, memberId], (err, row) => {
         if (err) {
           reject(err);
         } else {
@@ -122,33 +153,66 @@ class Notification {
   }
 
   // Mark notification as read
-  static async markAsRead(notificationId) {
+  static async markAsRead(notificationId, memberId = null) {
+    // Bildirimin broadcast olup olmadigini kontrol et
+    const notification = await new Promise((resolve, reject) => {
+      db.get('SELECT member_id FROM notifications WHERE id = ?', [notificationId], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
+    if (notification && notification.member_id === null && memberId) {
+      // Broadcast bildirim: notification_reads tablosuna kayit ekle
+      return new Promise((resolve, reject) => {
+        const sql = 'INSERT OR IGNORE INTO notification_reads (notification_id, member_id) VALUES (?, ?)';
+        db.run(sql, [notificationId, memberId], function(err) {
+          if (err) reject(err);
+          else resolve({ changes: this.changes });
+        });
+      });
+    }
+
+    // Kisisel bildirim: dogrudan guncelle
     return new Promise((resolve, reject) => {
       const sql = 'UPDATE notifications SET read = 1 WHERE id = ?';
-      
       db.run(sql, [notificationId], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ changes: this.changes });
-        }
+        if (err) reject(err);
+        else resolve({ changes: this.changes });
       });
     });
   }
 
   // Mark all notifications as read for a member
   static async markAllAsRead(memberId) {
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE notifications SET read = 1 WHERE (member_id = ? OR member_id IS NULL) AND read = 0';
-      
+    // 1. Kullanicinin kendi bildirimlerini okundu yap
+    const personalUpdate = new Promise((resolve, reject) => {
+      const sql = 'UPDATE notifications SET read = 1 WHERE member_id = ? AND read = 0';
       db.run(sql, [memberId], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ changes: this.changes });
-        }
+        if (err) reject(err);
+        else resolve(this.changes);
       });
     });
+
+    // 2. Broadcast (member_id IS NULL) bildirimler icin notification_reads tablosuna kayit ekle
+    const broadcastUpdate = new Promise((resolve, reject) => {
+      const sql = `
+        INSERT OR IGNORE INTO notification_reads (notification_id, member_id)
+        SELECT n.id, ?
+        FROM notifications n
+        LEFT JOIN notification_reads nr ON n.id = nr.notification_id AND nr.member_id = ?
+        WHERE n.member_id IS NULL
+        AND nr.id IS NULL
+        AND (n.expires_at IS NULL OR n.expires_at > datetime('now'))
+      `;
+      db.run(sql, [memberId, memberId], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+
+    const [personalChanges, broadcastChanges] = await Promise.all([personalUpdate, broadcastUpdate]);
+    return { changes: personalChanges + broadcastChanges };
   }
 
   // Delete expired notifications

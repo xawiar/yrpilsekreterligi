@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const Member = require('../models/Member');
 const MemberUser = require('../models/MemberUser');
+const Notification = require('../models/Notification');
 const xlsx = require('xlsx');
 const { encryptField, decryptField } = require('../utils/crypto');
 const { invalidate } = require('../middleware/cache');
@@ -164,7 +165,27 @@ class MemberController {
         console.warn('⚠️ Firebase sync hatası (member create):', syncError.message);
         // Sync hatası ana işlemi durdurmamalı
       }
-      
+
+      // Admin kullanicilara yeni uye bildirimi gonder
+      try {
+        const admins = await db.all("SELECT id FROM member_users WHERE user_type = 'admin'");
+        for (const admin of admins) {
+          await Notification.create({
+            memberId: admin.id,
+            title: 'Yeni Uye Eklendi',
+            body: `${memberData.name} isimli yeni uye ${memberData.region || ''} bolgesine eklendi.`,
+            type: 'member',
+            data: {
+              memberId: result.lastID,
+              memberName: memberData.name,
+              url: '/members'
+            }
+          });
+        }
+      } catch (notifErr) {
+        console.warn('Yeni uye bildirimi gonderilemedi:', notifErr.message);
+      }
+
       res.status(201).json({
         ...newMember,
         tc: decryptField(newMember.tc),

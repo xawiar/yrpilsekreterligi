@@ -58,21 +58,21 @@ const PushNotificationSettings = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Push Notification Ayarları
         </h3>
         
         <div className="space-y-4">
           {/* Status */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
             <div className="flex items-center">
               <div className={`w-3 h-3 rounded-full mr-3 ${isSubscribed ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {isSubscribed ? 'Push notifications aktif' : 'Push notifications pasif'}
               </span>
             </div>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {isSubscribed ? 'Bildirimler alınıyor' : 'Bildirimler alınmıyor'}
             </span>
           </div>

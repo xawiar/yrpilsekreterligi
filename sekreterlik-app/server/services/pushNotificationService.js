@@ -1,4 +1,5 @@
 const webpush = require('web-push');
+const PushSubscription = require('../models/PushSubscription');
 
 // VAPID keys from environment variables
 const vapidKeys = {
@@ -25,25 +26,43 @@ class PushNotificationService {
       console.log('Push notification sent successfully:', result);
       return { success: true, result };
     } catch (error) {
+      // Expired veya gecersiz subscription'lari otomatik temizle
+      if (error.statusCode === 410 || error.statusCode === 404) {
+        console.warn(`Expired/invalid subscription detected (${error.statusCode}), cleaning up:`, subscription.endpoint);
+        try {
+          await PushSubscription.deleteByEndpoint(subscription.endpoint);
+        } catch (cleanupErr) {
+          console.error('Error cleaning up expired subscription:', cleanupErr);
+        }
+      }
       console.error('Error sending push notification:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message, statusCode: error.statusCode };
     }
   }
 
   // Send notification to multiple users
   static async sendToMultipleUsers(subscriptions, payload) {
     const results = [];
-    
+
     for (const subscription of subscriptions) {
       try {
         const result = await webpush.sendNotification(subscription, JSON.stringify(payload));
         results.push({ success: true, subscription, result });
       } catch (error) {
+        // Expired veya gecersiz subscription'lari otomatik temizle
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          console.warn(`Expired/invalid subscription detected (${error.statusCode}), cleaning up:`, subscription.endpoint);
+          try {
+            await PushSubscription.deleteByEndpoint(subscription.endpoint);
+          } catch (cleanupErr) {
+            console.error('Error cleaning up expired subscription:', cleanupErr);
+          }
+        }
         console.error('Error sending to subscription:', error);
-        results.push({ success: false, subscription, error: error.message });
+        results.push({ success: false, subscription, error: error.message, statusCode: error.statusCode });
       }
     }
-    
+
     return results;
   }
 
@@ -93,9 +112,9 @@ class PushNotificationService {
       `${eventTitle} - ${eventDate}`,
       '/icon-192x192.png',
       '/badge-72x72.png',
-      { type: 'event', action: 'view' }
+      { type: 'event', action: 'view', url: '/events' }
     );
-    
+
     return await this.sendToMultipleUsers(subscriptions, payload);
   }
 
@@ -106,9 +125,9 @@ class PushNotificationService {
       message.length > 100 ? message.substring(0, 100) + '...' : message,
       '/icon-192x192.png',
       '/badge-72x72.png',
-      { type: 'message', action: 'view' }
+      { type: 'message', action: 'view', url: '/notifications' }
     );
-    
+
     return await this.sendToMultipleUsers(subscriptions, payload);
   }
 
