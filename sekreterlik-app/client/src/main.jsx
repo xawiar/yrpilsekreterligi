@@ -42,15 +42,24 @@ async function setupPush(savedUser) {
   try {
     console.error('[PUSH] User found, starting push setup...');
     const user = JSON.parse(savedUser);
+    console.error('[PUSH] User object keys:', Object.keys(user));
+    console.error('[PUSH] User object:', JSON.stringify(user).slice(0, 500));
     const userId = user.id || user.uid || '';
     if (!userId) { console.error('[PUSH] No userId'); return; }
     // Tum olasi ID'leri topla
     const allIds = new Set();
-    allIds.add(userId);
+    // Her olasi alani ekle
+    Object.values(user).forEach(function(v) {
+      if (v && (typeof v === 'string' || typeof v === 'number')) {
+        allIds.add(String(v));
+      }
+    });
+    // Ozellikle bunlari ekle
     if (user.uid) allIds.add(user.uid);
     if (user.id) allIds.add(String(user.id));
     if (user.memberId) allIds.add(String(user.memberId));
     if (user.member_id) allIds.add(String(user.member_id));
+    if (user.username) allIds.add(String(user.username));
     console.error('[PUSH] All IDs to save:', Array.from(allIds));
 
     // Bildirim izni iste
