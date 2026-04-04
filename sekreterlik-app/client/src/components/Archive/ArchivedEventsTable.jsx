@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ArchivedEventsTable = ({ archivedEvents, onDeleteEvent }) => {
+const ArchivedEventsTable = ({ archivedEvents, onDeleteEvent, onRestoreEvent }) => {
   return (
     <div>
       {/* Mobile card list */}
@@ -20,7 +20,18 @@ const ArchivedEventsTable = ({ archivedEvents, onDeleteEvent }) => {
               {ev.location && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">{ev.location}</p>
               )}
-              <div className="mt-3 flex items-center">
+              <div className="mt-3 flex items-center space-x-2">
+                {onRestoreEvent && (
+                  <button
+                    onClick={() => onRestoreEvent(ev.id)}
+                    className="text-green-600 dark:text-green-400 p-1.5 rounded-full hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                    title="Geri Al"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={() => onDeleteEvent(ev.id)}
                   className="text-red-600 dark:text-red-400 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -54,15 +65,28 @@ const ArchivedEventsTable = ({ archivedEvents, onDeleteEvent }) => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{ev.date}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{ev.location}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => onDeleteEvent(ev.id)}
-                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
-                    title="Sil"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {onRestoreEvent && (
+                      <button
+                        onClick={() => onRestoreEvent(ev.id)}
+                        className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 transition-colors p-1 rounded-full hover:bg-green-50 dark:hover:bg-green-900/20"
+                        title="Geri Al"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4" />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onDeleteEvent(ev.id)}
+                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="Sil"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -1,11 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
-import { stringify } from 'csv-stringify/browser/esm/sync';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+
+const NonAttendeesSection = ({ nonAttendees, getMemberInfo }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      >
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          Katılmayanlar ({nonAttendees.length})
+        </h3>
+        <svg
+          className={`w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Katılmayan Kişiler
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+              {nonAttendees.map((attendance) => {
+                const attendeeMemberId = attendance.memberId || attendance.member_id;
+                const memberInfo = getMemberInfo(attendeeMemberId);
+                return (
+                  <tr key={attendeeMemberId} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                          <span className="text-red-800 dark:text-red-200 text-xs font-medium">
+                            {memberInfo.name.charAt(0)}
+                          </span>
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {memberInfo.name}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {memberInfo.position} - {memberInfo.region}
+                            {attendance.excuse && attendance.excuse.hasExcuse && (
+                              <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                                (Mazeret: {attendance.excuse.reason || 'Belirtilmemiş'})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EventDetails = ({ event, members }) => {
   const toast = useToast();
@@ -348,65 +417,65 @@ const EventDetails = ({ event, members }) => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Etkinlik Bilgileri</h3>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Etkinlik Bilgileri</h3>
           <dl className="space-y-3">
             <div className="flex">
-              <dt className="w-32 text-sm font-medium text-gray-500">Etkinlik Adı</dt>
-              <dd className="text-sm text-gray-900 font-medium">{event.name}</dd>
+              <dt className="w-32 text-sm font-medium text-gray-500 dark:text-gray-400">Etkinlik Adı</dt>
+              <dd className="text-sm text-gray-900 dark:text-gray-100 font-medium">{event.name}</dd>
             </div>
             <div className="flex">
-              <dt className="w-32 text-sm font-medium text-gray-500">Tarih</dt>
-              <dd className="text-sm text-gray-900 font-medium">{event.date}</dd>
+              <dt className="w-32 text-sm font-medium text-gray-500 dark:text-gray-400">Tarih</dt>
+              <dd className="text-sm text-gray-900 dark:text-gray-100 font-medium">{event.date}</dd>
             </div>
             <div className="flex">
-              <dt className="w-32 text-sm font-medium text-gray-500">Yer</dt>
-              <dd className="text-sm text-gray-900 font-medium">{event.location}</dd>
+              <dt className="w-32 text-sm font-medium text-gray-500 dark:text-gray-400">Yer</dt>
+              <dd className="text-sm text-gray-900 dark:text-gray-100 font-medium">{event.location}</dd>
             </div>
             <div className="flex">
-              <dt className="w-32 text-sm font-medium text-gray-500">Açıklama</dt>
-              <dd className="text-sm text-gray-900 font-medium">{event.description || 'Açıklama eklenmemiş'}</dd>
+              <dt className="w-32 text-sm font-medium text-gray-500 dark:text-gray-400">Açıklama</dt>
+              <dd className="text-sm text-gray-900 dark:text-gray-100 font-medium">{event.description || 'Açıklama eklenmemiş'}</dd>
             </div>
           </dl>
         </div>
-        
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">İstatistikler</h3>
+
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">İstatistikler</h3>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Toplam Katılımcı</div>
-              <div className="text-2xl font-bold text-gray-900">{event.attendees ? event.attendees.length : 0}</div>
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Toplam Katılımcı</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{event.attendees ? event.attendees.length : 0}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Katılan</div>
-              <div className="text-2xl font-bold text-gray-900">{event.attendees ? event.attendees.filter(a => a.attended).length : 0}</div>
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Katılan</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{event.attendees ? event.attendees.filter(a => a.attended).length : 0}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Katılmayan</div>
-              <div className="text-2xl font-bold text-gray-900">{getNonAttendedCount()}</div>
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Katılmayan</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{getNonAttendedCount()}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Katılım Oranı</div>
-              <div className="text-2xl font-bold text-gray-900">{getAttendanceRate()}%</div>
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Katılım Oranı</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{getAttendanceRate()}%</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-900">Katılımcı Listesi</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Katılımcı Listesi</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Katılan Kişiler
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
               {event.attendees && event.attendees.length > 0 ? (
                 event.attendees
                   .filter(attendance => {
@@ -499,19 +568,19 @@ const EventDetails = ({ event, members }) => {
                   const attendeeMemberId = attendance.memberId || attendance.member_id;
                   const memberInfo = getMemberInfo(attendeeMemberId);
                   return (
-                    <tr key={attendeeMemberId} className="hover:bg-gray-50 transition-colors duration-150">
+                    <tr key={attendeeMemberId} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                            <span className="text-green-800 text-xs font-medium">
+                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                            <span className="text-green-800 dark:text-green-200 text-xs font-medium">
                               {memberInfo.name.charAt(0)}
                             </span>
                           </div>
                           <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {memberInfo.name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
                               {memberInfo.position} - {memberInfo.region}
                             </div>
                           </div>
@@ -522,7 +591,7 @@ const EventDetails = ({ event, members }) => {
                 })
               ) : (
                 <tr>
-                  <td className="px-6 py-8 text-center text-sm text-gray-500">
+                  <td className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                     Bu etkinliğe katılımcı eklenmemiş
                   </td>
                 </tr>
@@ -531,6 +600,25 @@ const EventDetails = ({ event, members }) => {
           </table>
         </div>
       </div>
+
+      {/* Non-attendees section (#4) */}
+      {event.attendees && event.attendees.length > 0 && (() => {
+        const nonAttendees = event.attendees
+          .filter(a => !a.attended)
+          .sort((a, b) => {
+            const memberInfoA = getMemberInfo(a.memberId || a.member_id);
+            const memberInfoB = getMemberInfo(b.memberId || b.member_id);
+            return memberInfoA.name.localeCompare(memberInfoB.name, 'tr', { sensitivity: 'base' });
+          });
+        if (nonAttendees.length === 0) return null;
+        return (
+          <NonAttendeesSection
+            nonAttendees={nonAttendees}
+            getMemberInfo={getMemberInfo}
+          />
+        );
+      })()}
+
       <ConfirmDialog {...confirmDialogProps} />
     </div>
   );

@@ -17,6 +17,9 @@ router.put('/:id', EventController.update);
 // Archive event
 router.put('/:id/archive', EventController.archive);
 
+// Unarchive event (restore from archive)
+router.put('/:id/unarchive', EventController.unarchive);
+
 // Delete event
 router.delete('/:id', EventController.delete);
 

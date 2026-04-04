@@ -292,6 +292,19 @@ const ArchivePage = () => {
     }
   };
 
+  const handleRestoreEvent = async (id) => {
+    const confirmed = await confirm({ title: 'Etkinliği Geri Al', message: 'Bu etkinliği arşivden geri almak istediğinize emin misiniz?' });
+    if (!confirmed) return;
+    try {
+      await ApiService.unarchiveEvent(id);
+      await fetchArchivedData();
+      toast.success('Etkinlik başarıyla geri alındı');
+    } catch (error) {
+      console.error('Error restoring event:', error);
+      toast.error('Etkinlik geri alınırken hata oluştu: ' + error.message);
+    }
+  };
+
   const handleDeleteArchivedEvent = async (id) => {
     const confirmed = await confirm({ title: 'Etkinliği Kalıcı Sil', message: 'Bu arşivlenmiş etkinliği kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' });
     if (!confirmed) return;
@@ -462,9 +475,10 @@ const ArchivePage = () => {
         {/* Archived Events Tab */}
         {activeTab === 'events' && (
           <div>
-            <ArchivedEventsTable 
+            <ArchivedEventsTable
               archivedEvents={archivedEvents}
               onDeleteEvent={handleDeleteArchivedEvent}
+              onRestoreEvent={handleRestoreEvent}
             />
           </div>
         )}

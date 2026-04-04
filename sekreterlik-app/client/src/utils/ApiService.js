@@ -1131,6 +1131,25 @@ class ApiService {
     return response.json();
   }
 
+  static async unarchiveEvent(id) {
+    if (USE_FIREBASE) {
+      // Firebase: update archived field to false
+      return FirebaseApiService.updateEvent(id, { archived: false });
+    }
+
+    const response = await fetch(`${API_BASE_URL}/events/${id}/unarchive`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Etkinlik geri alınırken hata oluştu');
+    }
+
+    return response.json();
+  }
+
   static async deleteEvent(id) {
     if (USE_FIREBASE) {
       return FirebaseApiService.deleteEvent(id);

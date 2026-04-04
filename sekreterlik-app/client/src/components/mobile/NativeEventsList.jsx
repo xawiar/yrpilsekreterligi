@@ -6,11 +6,14 @@ import React from 'react';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
 
-const NativeEventsList = ({ 
+const NativeEventsList = ({
   events = [],
   onEventClick,
   onCreateEvent,
   onPlanEvent,
+  onEditEvent,
+  onArchiveEvent,
+  onUpdateAttendance,
   searchTerm = '',
   onSearchChange,
   loading = false,
@@ -102,11 +105,11 @@ const NativeEventsList = ({
             const attendanceColor = getAttendanceColor(stats.attendancePercentage);
             
             return (
-              <NativeCard
-                key={event.id}
-                onClick={() => onEventClick && onEventClick(event)}
-              >
-                <div className="flex items-start space-x-4">
+              <NativeCard key={event.id}>
+                <div
+                  className="flex items-start space-x-4"
+                  onClick={() => onEventClick && onEventClick(event)}
+                >
                   {/* Event Icon */}
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
                     <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,14 +124,14 @@ const NativeEventsList = ({
                     </div>
                     {event.location && (
                       <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        📍 {event.location}
+                        {event.location}
                       </div>
                     )}
                     {event.date && (
                       <div className="text-sm text-gray-500 dark:text-gray-500 mb-2">
-                        📅 {new Date(event.date).toLocaleDateString('tr-TR', { 
-                          day: 'numeric', 
-                          month: 'long', 
+                        {new Date(event.date).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'long',
                           year: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit'
@@ -165,6 +168,43 @@ const NativeEventsList = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
+                </div>
+
+                {/* Mobile action buttons */}
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center space-x-3">
+                  {onUpdateAttendance && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onUpdateAttendance(event); }}
+                      className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg active:scale-95 transition-transform"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                      <span>Yoklama</span>
+                    </button>
+                  )}
+                  {onEditEvent && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditEvent(event); }}
+                      className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg active:scale-95 transition-transform"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Düzenle</span>
+                    </button>
+                  )}
+                  {onArchiveEvent && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onArchiveEvent(event.id); }}
+                      className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded-lg active:scale-95 transition-transform"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l6 6m0 0l6-6m-6 6V4" />
+                      </svg>
+                      <span>Arşivle</span>
+                    </button>
+                  )}
                 </div>
               </NativeCard>
             );

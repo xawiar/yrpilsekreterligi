@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { formatMemberName } from '../utils/nameFormatter';
-import { stringify } from 'csv-stringify/browser/esm/sync';
 import ApiService from '../utils/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import PersonalDocuments from './PersonalDocuments';

@@ -14,7 +14,7 @@ import {
   EventsFilters,
   EventsTable
 } from '../components/Events';
-import { LoadingSpinner } from '../components/UI';
+import { LoadingSpinner, Pagination } from '../components/UI';
 import NativeEventsList from '../components/mobile/NativeEventsList';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
@@ -36,6 +36,10 @@ const EventsPage = () => {
   const [members, setMembers] = useState([]);
   const [searchTerm, setSearchTerm] = useState(''); // For event search
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // Default sort by date, newest first
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   useEffect(() => {
     fetchEvents();
@@ -144,18 +148,38 @@ const EventsPage = () => {
 
   const summaryStats = calculateSummaryStats();
 
-  // Filter events based on search term
+  // Filter events based on search term and date range
   const filteredEvents = events.filter(event => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      event.name.toLowerCase().includes(searchLower) ||
-      event.location.toLowerCase().includes(searchLower) ||
-      event.description?.toLowerCase().includes(searchLower) ||
-      event.date.toLowerCase().includes(searchLower)
-    );
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = (
+        event.name.toLowerCase().includes(searchLower) ||
+        event.location.toLowerCase().includes(searchLower) ||
+        event.description?.toLowerCase().includes(searchLower) ||
+        event.date.toLowerCase().includes(searchLower)
+      );
+      if (!matchesSearch) return false;
+    }
+
+    // Date range filter
+    if (startDate && event.date < startDate) return false;
+    if (endDate && event.date > endDate) return false;
+
+    return true;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredEvents.length / ITEMS_PER_PAGE);
+  const paginatedEvents = filteredEvents.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate]);
 
   const handleCreateEvent = () => {
     setFormMode('create');
@@ -251,6 +275,9 @@ const EventsPage = () => {
           onEventClick={handleShowEvent}
           onCreateEvent={handleCreateEvent}
           onPlanEvent={handlePlanEvent}
+          onEditEvent={handleEditEvent}
+          onArchiveEvent={handleArchiveEvent}
+          onUpdateAttendance={handleUpdateAttendance}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           loading={loading}
@@ -356,21 +383,34 @@ const EventsPage = () => {
       />
 
       {/* Filters Section */}
-      <EventsFilters 
+      <EventsFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         sortConfig={sortConfig}
         setSortConfig={setSortConfig}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
       />
 
       {/* Events Table */}
-      <EventsTable 
-        events={filteredEvents}
+      <EventsTable
+        events={paginatedEvents}
         onShowEvent={handleShowEvent}
         onEditEvent={handleEditEvent}
         onUpdateAttendance={handleUpdateAttendance}
         onArchiveEvent={handleArchiveEvent}
         calculateAttendanceStats={calculateAttendanceStats}
+      />
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        totalItems={filteredEvents.length}
+        itemsPerPage={ITEMS_PER_PAGE}
       />
 
       {/* Plan Event Modal */}

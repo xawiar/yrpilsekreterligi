@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
-import { stringify } from 'csv-stringify/browser/esm/sync'; // Import csv-stringify
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { isMobile } from '../utils/capacitorUtils';

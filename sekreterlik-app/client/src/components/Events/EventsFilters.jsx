@@ -1,6 +1,6 @@
 import React from 'react';
 
-const EventsFilters = ({ searchTerm, setSearchTerm, sortConfig, setSortConfig }) => {
+const EventsFilters = ({ searchTerm, setSearchTerm, sortConfig, setSortConfig, startDate, setStartDate, endDate, setEndDate }) => {
   const handleSort = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -34,7 +34,7 @@ const EventsFilters = ({ searchTerm, setSearchTerm, sortConfig, setSortConfig })
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Search Input */}
         <div className="flex-1">
@@ -52,6 +52,36 @@ const EventsFilters = ({ searchTerm, setSearchTerm, sortConfig, setSortConfig })
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             />
           </div>
+        </div>
+
+        {/* Date Range Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="block px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            title="Başlangıç tarihi"
+          />
+          <span className="text-gray-400 text-sm">-</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="block px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            title="Bitiş tarihi"
+          />
+          {(startDate || endDate) && (
+            <button
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+              title="Tarih filtresini temizle"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Sort Options */}

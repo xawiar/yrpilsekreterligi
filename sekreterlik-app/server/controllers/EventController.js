@@ -90,9 +90,30 @@ class EventController {
       const result = await db.run(sql, params);
       const newEvent = await db.get('SELECT * FROM events WHERE id = ?', [result.lastID]);
       
+      // Increment visit counts for locations selected in this event
+      try {
+        if (eventData.selectedLocationTypes && eventData.selectedLocations) {
+          const selectedLocationTypes = eventData.selectedLocationTypes;
+          const selectedLocations = eventData.selectedLocations;
+
+          for (const locationType of selectedLocationTypes) {
+            const locationIds = selectedLocations[locationType];
+            if (locationIds && Array.isArray(locationIds)) {
+              for (const locationId of locationIds) {
+                await VisitController.incrementVisit(locationType, locationId);
+              }
+            }
+          }
+          console.log(`Visit counts incremented for new event ID ${result.lastID}`);
+        }
+      } catch (visitError) {
+        console.error('Error incrementing visit counts for new event:', visitError);
+        // Continue with event creation even if visit count increment fails
+      }
+
       // Invalidate events cache so new event appears immediately
       try { invalidate('/api/events'); } catch (_) {}
-      
+
       // Send push notification to all subscribed users and save to database
       try {
         const Notification = require('../models/Notification');
@@ -195,6 +216,25 @@ class EventController {
       res.json({ message: 'Etkinlik başarıyla arşivlendi' });
     } catch (error) {
       console.error('Error archiving event:', error);
+      res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
+    }
+  }
+
+  // Unarchive event (restore from archive)
+  static async unarchive(req, res) {
+    try {
+      const { id } = req.params;
+      const sql = 'UPDATE events SET archived = 0 WHERE id = ? AND archived = 1';
+      const result = await db.run(sql, [parseInt(id)]);
+
+      if (result.changes === 0) {
+        return res.status(404).json({ message: 'Arşivlenmiş etkinlik bulunamadı' });
+      }
+
+      try { invalidate('/api/events'); } catch (_) {}
+      res.json({ message: 'Etkinlik başarıyla geri alındı' });
+    } catch (error) {
+      console.error('Error unarchiving event:', error);
       res.status(500).json({ message: 'İşlem sırasında bir hata oluştu' });
     }
   }

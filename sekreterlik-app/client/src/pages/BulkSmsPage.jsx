@@ -620,22 +620,31 @@ const BulkSmsPage = () => {
         )}
 
         {/* Gönder Butonu */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleSend}
-            disabled={
-              sending || 
-              !message.trim() || 
-              (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents && !includeNeighborhoodRepresentatives && !includeVillageRepresentatives) ||
-              (isScheduled && !scheduledDate)
-            }
-            className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {sending 
-              ? (isScheduled ? 'Planlanıyor...' : 'Gönderiliyor...') 
-              : (isScheduled ? 'SMS Planla' : 'SMS Gönder')
-            }
-          </button>
+        <div className="flex items-center justify-between">
+          {selectedRecipients.length > 0 && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">{selectedRecipients.length}</span> kişiye gönderilecek
+            </p>
+          )}
+          <div className="ml-auto">
+            <button
+              onClick={handleSend}
+              disabled={
+                sending ||
+                !message.trim() ||
+                (selectedRegions.length === 0 && !includeObservers && !includeChiefObservers && !includeTownPresidents && !includeNeighborhoodRepresentatives && !includeVillageRepresentatives) ||
+                (isScheduled && !scheduledDate)
+              }
+              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 border border-transparent rounded-lg text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sending
+                ? (isScheduled ? 'Planlanıyor...' : 'Gönderiliyor...')
+                : (isScheduled
+                    ? `SMS Planla${selectedRecipients.length > 0 ? ` (${selectedRecipients.length})` : ''}`
+                    : `SMS Gönder${selectedRecipients.length > 0 ? ` (${selectedRecipients.length})` : ''}`)
+              }
+            </button>
+          </div>
         </div>
       </div>
 
