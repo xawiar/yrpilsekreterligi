@@ -65,6 +65,7 @@ const CoordinatorLoginPage = lazy(() => import('./pages/CoordinatorLoginPage'));
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const PublicApplicationPage = lazy(() => import('./pages/PublicApplicationPage'));
 
 // Debug pages
 const CreateAdminPage = lazy(() => import('./pages/CreateAdminPage'));
@@ -153,6 +154,14 @@ function PublicRoutesWrapper() {
     return (
       <Suspense fallback={<LoadingSpinner />}>
         <PublicElectionResultsPage electionIdProp={electionId} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === '/public/apply') {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <PublicApplicationPage />
       </Suspense>
     );
   }

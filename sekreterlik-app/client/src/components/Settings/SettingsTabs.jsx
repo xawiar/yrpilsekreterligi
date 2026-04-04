@@ -50,6 +50,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
       tabs: [
         { id: 'admin', name: 'Kullanici Bilgileri' },
         { id: 'member-users', name: 'Uye Kullanicilari' },
+        { id: 'membership-applications', name: 'Basvurular' },
         { id: 'authorization', name: 'Yetkilendirme' },
         { id: 'push-notifications', name: 'Bildirim Ayarlari' },
         { id: 'notification-panel', name: 'Bildirim Gonder' },

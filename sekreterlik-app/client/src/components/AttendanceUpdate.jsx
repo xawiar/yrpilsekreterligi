@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import { useToast } from '../contexts/ToastContext';
@@ -32,15 +34,50 @@ const AttendanceUpdate = ({ meeting, event, members, onClose, onAttendanceUpdate
 
     setEffectiveAttendees(attendeesList);
 
-    const initialAttendance = {};
-    attendeesList.forEach(att => {
-      initialAttendance[att.memberId] = {
-        attended: att.attended,
-        hasExcuse: att.excuse ? att.excuse.hasExcuse : false,
-        excuseReason: att.excuse ? att.excuse.reason : ''
-      };
-    });
-    setAttendance(initialAttendance);
+    // RSVP verilerini cek ve yoklama varsayilanlarini ayarla
+    const initializeWithRsvp = async () => {
+      let rsvpMap = {};
+      try {
+        if (data.id && db) {
+          const rsvpQuery = query(
+            collection(db, 'meeting_rsvp'),
+            where('meetingId', '==', data.id)
+          );
+          const rsvpSnapshot = await getDocs(rsvpQuery);
+          rsvpSnapshot.docs.forEach(d => {
+            const rsvp = d.data();
+            if (rsvp.userId) {
+              rsvpMap[rsvp.userId] = rsvp.status;
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('RSVP data fetch for attendance defaults:', err);
+      }
+
+      const initialAttendance = {};
+      attendeesList.forEach(att => {
+        const rsvpStatus = rsvpMap[att.memberId];
+        // Yoklama henuz doldurulmamissa ve RSVP varsa, varsayilan degerleri ata
+        const hasExistingData = att.attended || (att.excuse && att.excuse.hasExcuse);
+        if (!hasExistingData && rsvpStatus) {
+          initialAttendance[att.memberId] = {
+            attended: rsvpStatus === 'attending',
+            hasExcuse: rsvpStatus === 'not_attending',
+            excuseReason: rsvpStatus === 'not_attending' ? 'RSVP: Katilamayacak' : ''
+          };
+        } else {
+          initialAttendance[att.memberId] = {
+            attended: att.attended,
+            hasExcuse: att.excuse ? att.excuse.hasExcuse : false,
+            excuseReason: att.excuse ? att.excuse.reason : ''
+          };
+        }
+      });
+      setAttendance(initialAttendance);
+    };
+
+    initializeWithRsvp();
   }, [meeting, event, members]);
 
   const handleAttendanceChange = (memberId, status) => {

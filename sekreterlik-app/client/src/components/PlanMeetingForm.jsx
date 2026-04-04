@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import NotificationService, { NOTIFICATION_TYPES, TARGET_TYPES } from '../services/NotificationService';
 import { useToast } from '../contexts/ToastContext';
 
 const PlanMeetingForm = ({ onClose, onMeetingPlanned, regions }) => {
@@ -47,7 +48,25 @@ const PlanMeetingForm = ({ onClose, onMeetingPlanned, regions }) => {
         attendees: [] // Planlanan toplantılar için yoklama yok
       };
       
-      await ApiService.createMeeting(meetingData);
+      const createdMeeting = await ApiService.createMeeting(meetingData);
+
+      // Secili bolgelerdeki uyelere toplanti davet bildirimi gonder
+      const meetingId = createdMeeting?.id || createdMeeting?.meetingId || '';
+      for (const region of selectedRegions) {
+        try {
+          await NotificationService.createNotification({
+            title: `Toplanti Daveti: ${meetingName}`,
+            body: `${meetingDate} tarihinde toplanti planlanmistir. Katilim durumunuzu bildiriniz.`,
+            type: NOTIFICATION_TYPES.MEETING_INVITE,
+            target: { type: TARGET_TYPES.REGION, value: region },
+            url: '/member-dashboard?view=meetings-page',
+            data: meetingId ? { meetingId } : undefined,
+          });
+        } catch (notifErr) {
+          console.warn('Meeting invite notification error for region', region, notifErr);
+        }
+      }
+
       toast.success('Toplantı başarıyla planlandı');
       if (onMeetingPlanned) {
         onMeetingPlanned();

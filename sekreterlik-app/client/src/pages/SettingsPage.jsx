@@ -39,6 +39,7 @@ import DataBreachProcedure from '../components/DataBreachProcedure';
 import VerbisGuide from '../components/VerbisGuide';
 import AuditLogSettings from '../components/AuditLogSettings';
 import AdminNotificationPanel from '../components/AdminNotificationPanel';
+import MembershipApplicationsAdmin from '../components/MembershipApplicationsAdmin';
 import {
   SettingsHeader,
   SettingsSummaryCards,
@@ -133,6 +134,7 @@ const SettingsPage = ({ tab }) => {
       { id: 'regions', name: 'Bölge Ekle', description: 'Bölge tanımlama', permission: 'add_region' },
       { id: 'positions', name: 'Görev Ekle', description: 'Görev tanımlama', permission: 'add_position' },
       { id: 'member-users', name: 'Üye Kullanıcıları', description: 'Üye kullanıcı yönetimi', permission: 'manage_member_users' },
+      { id: 'membership-applications', name: 'Basvurular', description: 'Uyelik basvuru yonetimi', permission: '*' },
       { id: 'districts', name: 'İlçe Ekle', description: 'İlçe tanımlama', permission: 'add_district' },
       { id: 'towns', name: 'Belde Ekle', description: 'Belde tanımlama', permission: 'add_town' },
       { id: 'neighborhoods', name: 'Mahalle Ekle', description: 'Mahalle tanımlama', permission: 'add_neighborhood' },
@@ -213,6 +215,7 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
                   {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
                   {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}
+                  {activeTab === 'membership-applications' && hasPermission('membership-applications') && <MembershipApplicationsAdmin />}
                   {activeTab === 'districts' && hasPermission('districts') && <DistrictsSettings />}
                   {activeTab === 'towns' && hasPermission('towns') && <TownsSettings />}
                   {activeTab === 'neighborhoods' && hasPermission('neighborhoods') && <NeighborhoodsSettings />}
@@ -364,6 +367,7 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'regions' && hasPermission('regions') && <RegionsSettings />}
                     {activeTab === 'positions' && hasPermission('positions') && <PositionsSettings />}
                     {activeTab === 'member-users' && hasPermission('member-users') && <MemberUsersSettings />}
+                    {activeTab === 'membership-applications' && hasPermission('membership-applications') && <MembershipApplicationsAdmin />}
                     {activeTab === 'districts' && hasPermission('districts') && <DistrictsSettings />}
                     {activeTab === 'towns' && hasPermission('towns') && <TownsSettings />}
                     {activeTab === 'neighborhoods' && hasPermission('neighborhoods') && <NeighborhoodsSettings />}

@@ -82,12 +82,14 @@ const NotificationsPage = () => {
         case 'poll_result':
         case 'poll':
         case 'poll_vote':
-          navigate('/polls');
+          navigate('/settings?tab=polls');
           break;
+        case 'meeting_invite':
         case 'meeting':
         case 'meeting_reminder':
           navigate('/meetings');
           break;
+        case 'event_invite':
         case 'event':
         case 'event_reminder':
           navigate('/events');
@@ -102,12 +104,14 @@ const NotificationsPage = () => {
         case 'poll_result':
         case 'poll':
         case 'poll_vote':
-          navigate('/member-dashboard?view=dashboard');
+          navigate('/member-dashboard?view=polls-page');
           break;
+        case 'meeting_invite':
         case 'meeting':
         case 'meeting_reminder':
           navigate('/member-dashboard?view=meetings-page');
           break;
+        case 'event_invite':
         case 'event':
         case 'event_reminder':
           navigate('/member-dashboard?view=events-page');
@@ -153,6 +157,7 @@ const NotificationsPage = () => {
 
   const getTypeIcon = (type) => {
     switch (type) {
+      case 'meeting_invite':
       case 'meeting':
       case 'meeting_reminder':
         return (
@@ -160,6 +165,7 @@ const NotificationsPage = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         );
+      case 'event_invite':
       case 'event':
       case 'event_reminder':
         return (
@@ -193,9 +199,11 @@ const NotificationsPage = () => {
 
   const getTypeBgColor = (type) => {
     switch (type) {
+      case 'meeting_invite':
       case 'meeting':
       case 'meeting_reminder':
         return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'event_invite':
       case 'event':
       case 'event_reminder':
         return 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400';

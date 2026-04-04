@@ -53,7 +53,7 @@ class NotificationService {
   // =====================================================
   // Madde 1: Fan-out pattern — Bildirim olustur ve dagit
   // =====================================================
-  static async createNotification({ title, body, type, target, url, scheduledAt }) {
+  static async createNotification({ title, body, type, target, url, scheduledAt, data }) {
     try {
       const currentUser = await this._getCurrentUserId();
 
@@ -68,6 +68,7 @@ class NotificationService {
         createdBy: currentUser,
         createdAt: new Date().toISOString(),
         status: scheduledAt ? 'scheduled' : 'sent',
+        ...(data ? { data } : {}),
       };
 
       const masterId = await FirebaseService.create(
@@ -98,6 +99,7 @@ class NotificationService {
             url: url || null,
             read: false,  // Madde 4: per-user okundu durumu
             createdAt: new Date().toISOString(),
+            ...(data ? data : {}),
           });
 
           // Geriye uyumluluk: mevcut notifications koleksiyonuna da yaz

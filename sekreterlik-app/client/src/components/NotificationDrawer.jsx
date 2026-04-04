@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
@@ -166,7 +168,7 @@ const getNavigationUrl = (notification, user) => {
     case 'poll_invite':
     case 'poll':
     case 'poll_vote':
-      return '/member-dashboard?view=dashboard';
+      return '/member-dashboard?view=polls-page';
     case 'election_update':
       return '/member-dashboard?view=election-preparation-page';
     case 'message':
@@ -233,6 +235,31 @@ const NotificationDrawer = ({ isOpen, onClose }) => {
       await ApiService.deleteNotification(notificationId);
     } catch (error) {
       console.error('Delete error:', error);
+    }
+  };
+
+  // RSVP handler — Firestore'a kaydet
+  const handleRsvp = async (e, notification, status) => {
+    e.stopPropagation();
+    const meetingId = notification.meetingId || notification.url?.split('meetings/')[1];
+    if (!meetingId) return;
+    const userId = user?.memberId || user?.id || user?.uid;
+    if (!userId) return;
+    try {
+      await setDoc(doc(db, 'meeting_rsvp', `${meetingId}_${userId}`), {
+        meetingId,
+        userId,
+        status,
+        timestamp: serverTimestamp()
+      });
+      toast?.success?.(
+        status === 'attending' ? 'Katilacaginiz kaydedildi' :
+        status === 'not_attending' ? 'Katilamayacaginiz kaydedildi' :
+        'Yanitiniz kaydedildi'
+      );
+    } catch (error) {
+      console.error('RSVP error:', error);
+      toast?.error?.('RSVP kaydedilemedi');
     }
   };
 
@@ -382,6 +409,29 @@ const NotificationDrawer = ({ isOpen, onClose }) => {
                           <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                             {timeAgo(notification.createdAt || notification.created_at)}
                           </p>
+                          {/* RSVP butonlari — meeting_invite ve event_invite icin */}
+                          {(notification.type === 'meeting_invite' || notification.type === 'event_invite') && (
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={(e) => handleRsvp(e, notification, 'attending')}
+                                className="px-3 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                              >
+                                Katilacagim
+                              </button>
+                              <button
+                                onClick={(e) => handleRsvp(e, notification, 'not_attending')}
+                                className="px-3 py-1 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                              >
+                                Katilamayacagim
+                              </button>
+                              <button
+                                onClick={(e) => handleRsvp(e, notification, 'maybe')}
+                                className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                              >
+                                Belirsiz
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

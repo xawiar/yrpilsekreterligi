@@ -9,6 +9,7 @@ const PERMISSION_MAP = {
   'regions': { requires: 'add_region' },
   'positions': { requires: 'add_position' },
   'member-users': { requires: 'manage_member_users' },
+  'membership-applications': { adminOnly: true },
   'districts': { requires: 'add_district' },
   'towns': { requires: 'add_town' },
   'neighborhoods': { requires: 'add_neighborhood' },

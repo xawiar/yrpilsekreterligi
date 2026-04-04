@@ -82,23 +82,13 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
     isInitialLoad.current = true;
     previousUnreadRef.current = 0;
 
+    // Primary: user_notifications subcollection (fan-out pattern)
     var userNotifsRef = collection(db, 'user_notifications/' + memberId + '/items');
     var q = query(userNotifsRef, orderBy('createdAt', 'desc'), limit(50));
 
-    var oldNotifsRef = collection(db, 'notifications');
-    var oldQ = query(oldNotifsRef, orderBy('createdAt', 'desc'), limit(100));
-
-    var newNotifsList = [];
-    var oldNotifsList = [];
-
-    function mergeAndUpdate() {
+    function processAndUpdate(notifsList) {
       var prefs = getStoredPreferences();
-      var allMap = new Map();
-      var combined = newNotifsList.concat(oldNotifsList);
-      for (var i = 0; i < combined.length; i++) {
-        if (!allMap.has(combined[i].id)) allMap.set(combined[i].id, combined[i]);
-      }
-      var allNotifs = Array.from(allMap.values())
+      var sorted = notifsList
         .sort(function(a, b) {
           var dateA = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
           var dateB = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
@@ -106,7 +96,7 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
         })
         .slice(0, 50);
 
-      var filtered = allNotifs.filter(function(n) { return isNotificationAllowed(n.type, prefs); });
+      var filtered = sorted.filter(function(n) { return isNotificationAllowed(n.type, prefs); });
       var unread = filtered.filter(function(n) { return !n.read; }).length;
 
       setNotifications(filtered);
@@ -128,26 +118,45 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
       previousUnreadRef.current = unread;
     }
 
+    var userNotifsLoaded = false;
+    var fallbackUnsub = null;
+
     var unsub1 = onSnapshot(q, function(snapshot) {
-      newNotifsList = [];
+      var newNotifsList = [];
       snapshot.forEach(function(docSnap) {
         newNotifsList.push({ id: docSnap.id, ...docSnap.data() });
       });
-      mergeAndUpdate();
+
+      // user_notifications is primary — if it has data, use it exclusively
+      if (newNotifsList.length > 0) {
+        userNotifsLoaded = true;
+        // Cancel old notifications fallback listener if active
+        if (fallbackUnsub) {
+          fallbackUnsub();
+          fallbackUnsub = null;
+        }
+        processAndUpdate(newNotifsList);
+      } else if (!userNotifsLoaded) {
+        // user_notifications empty on first load — activate fallback from old 'notifications' collection
+        var oldNotifsRef = collection(db, 'notifications');
+        var oldQ = query(oldNotifsRef, orderBy('createdAt', 'desc'), limit(100));
+        fallbackUnsub = onSnapshot(oldQ, function(oldSnapshot) {
+          var oldNotifsList = [];
+          oldSnapshot.forEach(function(docSnap) {
+            var data = { id: docSnap.id, ...docSnap.data() };
+            if (data.memberId === memberId || data.memberId === null || !data.memberId) {
+              oldNotifsList.push(data);
+            }
+          });
+          processAndUpdate(oldNotifsList);
+        }, function(err) { console.warn('old notifications fallback listener error:', err); });
+      }
     }, function(err) { console.warn('user_notifications listener error:', err); });
 
-    var unsub2 = onSnapshot(oldQ, function(snapshot) {
-      oldNotifsList = [];
-      snapshot.forEach(function(docSnap) {
-        var data = { id: docSnap.id, ...docSnap.data() };
-        if (data.memberId === memberId || data.memberId === null || !data.memberId) {
-          oldNotifsList.push(data);
-        }
-      });
-      mergeAndUpdate();
-    }, function(err) { console.warn('old notifications listener error:', err); });
-
-    return function() { unsub1(); unsub2(); };
+    return function() {
+      unsub1();
+      if (fallbackUnsub) fallbackUnsub();
+    };
   }, [memberId, enabled]);
 
   // Backend modu: polling

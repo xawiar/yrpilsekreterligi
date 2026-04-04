@@ -47,11 +47,29 @@ service cloud.firestore {
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
     }
 
-    // Notifications - owner read, admin write
+    // Districts - public read for application form dropdown, admin write
+    match /districts/{districtId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Membership applications - public create, admin read/update
+    match /membership_applications/{applicationId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Master notifications - admin read/write, public create for system events
+    match /master_notifications/{notifId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Notifications - owner read, admin write, public create for system notifications
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() &&
         (resource.data.memberId == request.auth.uid || resource.data.memberId == null);
-      allow create: if isAdmin();
+      allow create: if true;
       allow update: if isAuthenticated() &&
         (resource.data.memberId == request.auth.uid || resource.data.memberId == null);
       allow delete: if isAdmin() ||
@@ -70,6 +88,13 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['chief_observer', 'provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor']);
+    }
+
+    // Meeting RSVP - authenticated users can read/write their own
+    match /meeting_rsvp/{rsvpId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     // Polls - authenticated read, admin create/delete

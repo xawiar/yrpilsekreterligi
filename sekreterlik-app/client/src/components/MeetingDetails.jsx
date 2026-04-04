@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import ApiService from '../utils/ApiService';
+import NotificationService, { NOTIFICATION_TYPES, TARGET_TYPES } from '../services/NotificationService';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { isMobile } from '../utils/capacitorUtils';
@@ -13,10 +16,77 @@ const MeetingDetails = ({ meeting }) => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [rsvpData, setRsvpData] = useState([]);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
     fetchMembers();
+    if (meeting?.id) fetchRsvpData();
   }, [meeting]);
+
+  const fetchRsvpData = async () => {
+    if (!meeting?.id) return;
+    setRsvpLoading(true);
+    try {
+      const rsvpQuery = query(
+        collection(db, 'meeting_rsvp'),
+        where('meetingId', '==', meeting.id)
+      );
+      const rsvpSnapshot = await getDocs(rsvpQuery);
+      setRsvpData(rsvpSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (error) {
+      console.error('RSVP data fetch error:', error);
+    } finally {
+      setRsvpLoading(false);
+    }
+  };
+
+  // Cevap vermeyenlere hatirlatma bildirimi gonder
+  const sendRsvpReminder = async () => {
+    if (!meeting?.id) return;
+    setSendingReminder(true);
+    try {
+      // RSVP yapanlarin userId'lerini topla
+      const respondedUserIds = new Set(rsvpData.map(r => r.userId));
+      // Toplantiya davetli olup cevap vermeyenleri bul
+      const allMembers = await ApiService.getMembers();
+      const regionMembers = meeting.regions
+        ? allMembers.filter(m => m.region && meeting.regions.includes(m.region))
+        : allMembers;
+      const noResponseMembers = regionMembers.filter(m => !respondedUserIds.has(String(m.id)));
+
+      if (noResponseMembers.length === 0) {
+        toast.success('Tum uyeler zaten cevap vermis');
+        setSendingReminder(false);
+        return;
+      }
+
+      // Her cevapsiz uye icin bildirim gonder
+      let sentCount = 0;
+      for (const member of noResponseMembers) {
+        try {
+          await NotificationService.createNotification({
+            title: `Hatirlatma: ${meeting.name}`,
+            body: `${meeting.date} tarihli toplantiya henuz cevap vermediniz. Lutfen katilim durumunuzu bildiriniz.`,
+            type: NOTIFICATION_TYPES.MEETING_REMINDER,
+            target: { type: TARGET_TYPES.SINGLE, value: String(member.id) },
+            url: '/member-dashboard?view=meetings-page',
+          });
+          sentCount++;
+        } catch (err) {
+          console.error(`Reminder send error for member ${member.id}:`, err);
+        }
+      }
+
+      toast.success(`${sentCount} kisiye hatirlatma gonderildi`);
+    } catch (error) {
+      console.error('Send reminder error:', error);
+      toast.error('Hatirlatma gonderilirken hata olustu');
+    } finally {
+      setSendingReminder(false);
+    }
+  };
 
   const fetchMembers = async () => {
     try {
@@ -330,6 +400,69 @@ const MeetingDetails = ({ meeting }) => {
           </div>
         </div>
       </div>
+
+      {/* RSVP Ozet Bolumu */}
+      {rsvpData.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900">RSVP Ozeti</h3>
+            <button
+              onClick={sendRsvpReminder}
+              disabled={sendingReminder}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {sendingReminder ? (
+                <>
+                  <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-1.5"></span>
+                  Gonderiliyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  Hatirlatma Gonder
+                </>
+              )}
+            </button>
+          </div>
+          <div className="p-5">
+            {rsvpLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : (() => {
+              const attending = rsvpData.filter(r => r.status === 'attending').length;
+              const notAttending = rsvpData.filter(r => r.status === 'not_attending').length;
+              const maybe = rsvpData.filter(r => r.status === 'maybe').length;
+              const totalExpected = meeting.attendees ? meeting.attendees.length : 0;
+              const noResponse = totalExpected > 0 ? Math.max(0, totalExpected - attending - notAttending - maybe) : 0;
+              return (
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
+                    <span className="text-green-600 font-bold text-lg">{attending}</span>
+                    <span className="text-green-700 text-sm">Katilacak</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 bg-red-50 rounded-lg border border-red-200">
+                    <span className="text-red-600 font-bold text-lg">{notAttending}</span>
+                    <span className="text-red-700 text-sm">Katilamayacak</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-lg border border-amber-200">
+                    <span className="text-amber-600 font-bold text-lg">{maybe}</span>
+                    <span className="text-amber-700 text-sm">Belirsiz</span>
+                  </div>
+                  {totalExpected > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                      <span className="text-gray-600 font-bold text-lg">{noResponse}</span>
+                      <span className="text-gray-700 text-sm">Cevapsiz</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 bg-gray-50">
