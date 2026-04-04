@@ -113,7 +113,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || 'Yeni bildirim',
     icon: data.icon || '/icon-192x192.png',
-    badge: badgeCount !== null ? badgeCount.toString() : (data.badge || '/badge-72x72.png'),
+    badge: '/badge-72x72.png',
     data: {
       ...(data.data || {}),
       timestamp: data.timestamp || Date.now()

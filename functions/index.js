@@ -261,6 +261,122 @@ exports.onMemberUserUpdate = onDocumentUpdated(
 );
 
 /**
+ * FCM Push Notification — Bildirim kuyrugunu dinle ve gercek push gonder
+ * fcm_notification_queue koleksiyonuna yeni dokuman yazildiginda tetiklenir
+ */
+exports.sendFcmNotification = onDocumentCreated(
+    {
+      document: "fcm_notification_queue/{docId}",
+      region: "europe-west1",
+    },
+    async (event) => {
+      const data = event.data.data();
+      const docId = event.params.docId;
+
+      logger.info("FCM notification queue triggered:", docId);
+
+      try {
+        const userIds = data.userIds || [];
+        const title = data.title || "Yeni Bildirim";
+        const body = data.body || "";
+        const notifType = data.type || "announcement";
+        const url = data.url || "/";
+
+        if (userIds.length === 0) {
+          logger.warn("No userIds in notification queue:", docId);
+          await event.data.ref.update({status: "skipped", reason: "no_users"});
+          return null;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+        const failedTokens = [];
+
+        for (const userId of userIds) {
+          try {
+            // Kullanicinin FCM token'ini al
+            const tokenDoc = await admin.firestore()
+                .doc("fcm_tokens/" + userId).get();
+
+            if (!tokenDoc.exists || !tokenDoc.data().token) {
+              logger.info("No FCM token for user:", userId);
+              failCount++;
+              continue;
+            }
+
+            const token = tokenDoc.data().token;
+
+            // FCM mesaji gonder
+            await admin.messaging().send({
+              token: token,
+              notification: {
+                title: title,
+                body: body,
+              },
+              data: {
+                type: notifType,
+                url: url,
+                notificationId: docId,
+              },
+              webpush: {
+                notification: {
+                  icon: "/icon-192x192.png",
+                  badge: "/badge-72x72.png",
+                  vibrate: [200, 100, 200],
+                },
+                fcmOptions: {
+                  link: url,
+                },
+              },
+            });
+
+            successCount++;
+            logger.info("FCM sent to user:", userId);
+          } catch (sendError) {
+            failCount++;
+            // Token gecersizse sil
+            if (sendError.code === "messaging/invalid-registration-token" ||
+                sendError.code === "messaging/registration-token-not-registered") {
+              logger.warn("Invalid FCM token, removing:", userId);
+              failedTokens.push(userId);
+              await admin.firestore()
+                  .doc("fcm_tokens/" + userId).delete()
+                  .catch(() => {});
+            } else {
+              logger.error("FCM send error for user:", userId, sendError.message);
+            }
+          }
+        }
+
+        // Kuyruk durumunu guncelle
+        await event.data.ref.update({
+          status: "sent",
+          successCount: successCount,
+          failCount: failCount,
+          failedTokens: failedTokens,
+          processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        logger.info(
+            "FCM notification processed:",
+            docId,
+            "success:", successCount,
+            "fail:", failCount,
+        );
+
+        return null;
+      } catch (error) {
+        logger.error("FCM notification error:", docId, error);
+        await event.data.ref.update({
+          status: "error",
+          error: error.message,
+        }).catch(() => {});
+        throw error;
+      }
+    },
+);
+
+/**
  * Member User silindiğinde Firebase Auth'dan da sil
  */
 exports.onMemberUserDelete = onDocumentDeleted(
