@@ -1817,7 +1817,6 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
         </form>
       </div>
     </div>
-    </div>
   );
 };
 
