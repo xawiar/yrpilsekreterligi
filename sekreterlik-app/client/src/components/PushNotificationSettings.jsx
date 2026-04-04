@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import useNotificationPreferences from '../hooks/useNotificationPreferences';
 
 const PushNotificationSettings = () => {
+  const { user } = useAuth();
+  const userId = user?.id || user?.memberId || user?.uid || null;
+
   const {
     isSupported,
     isSubscribed,
@@ -11,7 +16,9 @@ const PushNotificationSettings = () => {
     unsubscribe,
     sendTestNotification,
     requestPermission
-  } = usePushNotifications();
+  } = usePushNotifications(userId);
+
+  const { preferences, updatePreference } = useNotificationPreferences();
 
   const [testMessage, setTestMessage] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
@@ -163,6 +170,43 @@ const PushNotificationSettings = () => {
                 )}
               </button>
             )}
+          </div>
+
+          {/* Bildirim Tercihleri */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+              Bildirim Tercihleri
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Hangi bildirim turlerini almak istediginizi secin.
+            </p>
+            <div className="space-y-3">
+              {[
+                { key: 'meeting', label: 'Toplanti Bildirimleri', desc: 'Yeni toplanti olusturuldiginda veya hatirlatma geldiginde' },
+                { key: 'event', label: 'Etkinlik Bildirimleri', desc: 'Yeni etkinlik olusturuldiginda veya hatirlatma geldiginde' },
+                { key: 'election', label: 'Secim Sonucu Bildirimleri', desc: 'Secim sonuclari girildiginde' },
+                { key: 'member', label: 'Yeni Uye Bildirimleri', desc: 'Yeni uye kaydedildiginde' },
+              ].map(({ key, label, desc }) => (
+                <label
+                  key={key}
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  <div className="flex-1 min-w-0 mr-3">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{label}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 block">{desc}</span>
+                  </div>
+                  <div className="relative inline-flex items-center shrink-0">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={preferences[key]}
+                      onChange={(e) => updatePreference(key, e.target.checked)}
+                    />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Info */}

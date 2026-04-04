@@ -1,5 +1,3 @@
-import React from 'react';
-
 const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmin = false }) => {
   // Check if user has permission for a tab
   const hasPermission = (tabName) => {

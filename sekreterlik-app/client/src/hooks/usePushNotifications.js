@@ -1,5 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ApiService from '../utils/ApiService';
+
+/**
+ * userId'yi hook parametresinden veya localStorage'dan cozumler.
+ * window.userId global kirliligi olmadan calisir.
+ */
+const resolveUserId = (hookUserId) => {
+  if (hookUserId) return hookUserId;
+  try {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      return user?.id || user?.memberId || user?.uid || null;
+    }
+  } catch (e) {
+    // sessizce devam
+  }
+  return null;
+};
 
 export const usePushNotifications = (userId = null) => {
   const [isSupported, setIsSupported] = useState(false);
@@ -8,11 +26,8 @@ export const usePushNotifications = (userId = null) => {
   const [vapidKey, setVapidKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Store userId globally for use in subscribe function
-  if (userId && typeof window !== 'undefined') {
-    window.userId = userId;
-  }
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   // Check if push notifications are supported
   useEffect(() => {
@@ -106,10 +121,10 @@ export const usePushNotifications = (userId = null) => {
         console.log('✅ Already subscribed to push notifications');
         
         // Still send to server to ensure it's registered
-        const userId = window.userId || null;
+        const resolvedId = resolveUserId(userIdRef.current);
         try {
           await ApiService.subscribeToPush({
-            userId,
+            userId: resolvedId,
             subscription: existingSubscription
           });
         } catch (e) {
@@ -128,15 +143,14 @@ export const usePushNotifications = (userId = null) => {
       console.log('Push subscription created:', newSubscription);
 
       // Send subscription to server
-      // Get userId from auth context or pass as parameter
-      const userId = window.userId || null;
-      
-      if (!userId) {
+      const resolvedId = resolveUserId(userIdRef.current);
+
+      if (!resolvedId) {
         console.warn('No userId available, subscription may not be linked to user');
       }
-      
+
       const response = await ApiService.subscribeToPush({
-        userId,
+        userId: resolvedId,
         subscription: newSubscription
       });
 
@@ -215,8 +229,8 @@ export const usePushNotifications = (userId = null) => {
     setError(null);
 
     try {
-      const userId = window.userId || null;
-      const response = await ApiService.sendTestNotification(userId);
+      const resolvedId = resolveUserId(userIdRef.current);
+      const response = await ApiService.sendTestNotification(resolvedId);
       if (response.success) {
         console.log('Test notification sent successfully:', response.message);
         return true;

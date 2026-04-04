@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import FirebaseService from '../services/FirebaseService';
 import { decryptData, encryptData } from '../utils/crypto';
 import ApiService from '../utils/ApiService';
-import { useConfirm } from '../hooks/useConfirm';
-import ConfirmDialog from './UI/ConfirmDialog';
 
 const SmsSettings = () => {
-  const { confirm, confirmDialogProps } = useConfirm();
   const [provider, setProvider] = useState('netgsm'); // 'netgsm', 'twilio', etc.
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');

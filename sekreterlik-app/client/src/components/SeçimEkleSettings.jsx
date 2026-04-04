@@ -697,7 +697,7 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
   const handleCreateSecondRound = async (electionId) => {
     const confirmed = await confirm({
       title: '2. Tur Oluştur',
-      message: 'Bu CB seçimi için 2. tur oluşturulacak. İlk turda en çok oy alan 2 aday 2. tura taşınacak. Devam etmek istiyor musunuz?'
+      message: 'Bu seçim için CB 2. tur oluşturulacak. İlk turda en çok oy alan 2 aday 2. tura taşınacak. Devam etmek istiyor musunuz?'
     });
     if (!confirmed) return;
 
@@ -2985,7 +2985,7 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                       <option key={s} value={s}>{getStatusLabel(s)}</option>
                     ))}
                   </select>
-                  {election.type === 'cb' && election.status === 'closed' && (parseInt(election.round) || 1) === 1 && (
+                  {(election.type === 'cb' || election.type === 'genel') && election.status === 'closed' && (parseInt(election.round) || 1) === 1 && (
                     <button
                       onClick={() => handleCreateSecondRound(election.id)}
                       className="w-full text-xs px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
@@ -3104,7 +3104,7 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
                           <option key={s} value={s}>{getStatusLabel(s)}</option>
                         ))}
                       </select>
-                      {election.type === 'cb' && election.status === 'closed' && (parseInt(election.round) || 1) === 1 && (
+                      {(election.type === 'cb' || election.type === 'genel') && election.status === 'closed' && (parseInt(election.round) || 1) === 1 && (
                         <button
                           onClick={() => handleCreateSecondRound(election.id)}
                           className="text-xs px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors font-medium"

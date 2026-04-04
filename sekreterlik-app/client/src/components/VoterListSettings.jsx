@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
 import * as XLSX from 'xlsx';
@@ -8,6 +8,7 @@ const VoterListSettings = () => {
     const [files, setFiles] = useState(null); // Tek dosya yerine files listesi
     const [uploading, setUploading] = useState(false);
     const [uploadResult, setUploadResult] = useState(null);
+    const [searchInput, setSearchInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
@@ -94,24 +95,35 @@ const VoterListSettings = () => {
         }
     };
 
-    // Arama fonksiyonu (Debounce)
-    const handleSearch = async (query) => {
-        setSearchQuery(query);
-        if (query.length < 2) {
+    // Debounce: searchInput -> searchQuery (300ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchQuery(searchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    // searchQuery degistiginde API cagrisi yap
+    useEffect(() => {
+        if (searchQuery.length < 2) {
             setSearchResults([]);
             return;
         }
 
-        setSearching(true);
-        try {
-            const results = await ApiService.searchVoters(query);
-            setSearchResults(results);
-        } catch (error) {
-            console.error('Search error:', error);
-        } finally {
-            setSearching(false);
-        }
-    };
+        const fetchResults = async () => {
+            setSearching(true);
+            try {
+                const results = await ApiService.searchVoters(searchQuery);
+                setSearchResults(results);
+            } catch (error) {
+                console.error('Search error:', error);
+            } finally {
+                setSearching(false);
+            }
+        };
+
+        fetchResults();
+    }, [searchQuery]);
 
     return (
         <div className="space-y-8">
@@ -325,8 +337,8 @@ const VoterListSettings = () => {
                                 id="search"
                                 className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md py-2"
                                 placeholder="TC, İsim Soyisim veya Telefon (En az 2 karakter)"
-                                value={searchQuery}
-                                onChange={(e) => handleSearch(e.target.value)}
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
                             />
                             {searching && (
                                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -379,7 +391,7 @@ const VoterListSettings = () => {
                                 </table>
                             </div>
                         ) : (
-                            searchQuery.length >= 2 && !searching && (
+                            searchInput.length >= 2 && !searching && (
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Sonuç bulunamadı.</p>
                             )
                         )}

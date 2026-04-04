@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import FirebaseService from '../services/FirebaseService';
-import { encryptData, decryptData } from '../utils/crypto';
 
 const PerformanceScoreSettings = () => {
   const [loading, setLoading] = useState(true);

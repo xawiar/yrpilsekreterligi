@@ -2760,10 +2760,7 @@ class ApiService {
           subscriptionData.userId = user?.id || user?.memberId || user?.uid;
         }
 
-        // Also try from window.userId (set by usePushNotifications hook)
-        if (!subscriptionData.userId && typeof window !== 'undefined' && window.userId) {
-          subscriptionData.userId = window.userId;
-        }
+        // window.userId kaldirildi — userId localStorage'dan zaten cozumleniyor
       } catch (e) {
         console.warn('Could not get userId from localStorage:', e);
       }
@@ -2861,10 +2858,7 @@ class ApiService {
           userId = user?.id || user?.memberId || user?.uid;
         }
 
-        // Also try from window.userId
-        if (!userId && typeof window !== 'undefined' && window.userId) {
-          userId = window.userId;
-        }
+        // window.userId kaldirildi — userId localStorage'dan zaten cozumleniyor
       } catch (e) {
         console.warn('Could not get userId from localStorage:', e);
       }

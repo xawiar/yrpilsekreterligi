@@ -68,14 +68,11 @@ const AuthorizationSettings = () => {
     try {
       await ApiService.setPermissionsForPosition(selectedPosition, positionPermissions[selectedPosition] || []);
       toast.success('Yetkiler kaydedildi');
-      // Kaydedilen kısmı kaldır ve sayfayı yenile
       setSelectedPosition('');
       try {
         const all = await ApiService.getAllPermissions();
         setPositionPermissions(all || {});
       } catch (_) {}
-      // Tam istek: sayfayı yenile
-      window.location.reload();
     } catch (e) {
       toast.error('Hata: ' + e.message);
     } finally {
@@ -91,13 +88,10 @@ const AuthorizationSettings = () => {
       // Boş array göndererek tüm yetkileri siliyoruz
       await ApiService.setPermissionsForPosition(posName, []);
       toast.success('Yetkiler başarıyla silindi');
-      // Listeyi yenile
       try {
         const all = await ApiService.getAllPermissions();
         setPositionPermissions(all || {});
       } catch (_) {}
-      // Sayfayı yenile
-      window.location.reload();
     } catch (e) {
       toast.error('Hata: ' + e.message);
     } finally {

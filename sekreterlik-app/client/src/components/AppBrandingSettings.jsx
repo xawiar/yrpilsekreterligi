@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ApiService from '../utils/ApiService';
 import FirebaseService from '../services/FirebaseService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
@@ -109,8 +108,15 @@ const AppBrandingSettings = () => {
     }
   };
 
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
   const handleFileChange = (field, file) => {
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Dosya boyutu 2MB\'dan kucuk olmalidir');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
