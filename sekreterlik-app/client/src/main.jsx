@@ -25,15 +25,21 @@ import('./utils/fcmTokenManager').then(({ listenToFcmMessages }) => {
   });
 }).catch(() => {});
 
-// Push token kaydet — sayfa her yuklendiginde (maliisler pattern)
-setTimeout(async () => {
+// Push token kaydet — login olunca calisir
+// localStorage'da user olana kadar bekle (max 30sn)
+function tryPushSetup(attempt) {
+  if (attempt > 15) return; // 30sn sonra vazgec
+  const savedUser = localStorage.getItem('user');
+  if (!savedUser) {
+    setTimeout(function() { tryPushSetup(attempt + 1); }, 2000);
+    return;
+  }
+  setupPush(savedUser);
+}
+setTimeout(function() { tryPushSetup(0); }, 2000);
+
+async function setupPush(savedUser) {
   try {
-    // Kullanici login olmus mu kontrol et
-    const savedUser = localStorage.getItem('user');
-    if (!savedUser) {
-      console.error('[PUSH] No user in localStorage');
-      return;
-    }
     console.error('[PUSH] User found, starting push setup...');
     const user = JSON.parse(savedUser);
     const userId = user.id || user.uid || '';
@@ -89,7 +95,7 @@ setTimeout(async () => {
   } catch (err) {
     console.error('[PUSH] FATAL ERROR:', err.message, err);
   }
-}, 3000);
+}
 
 // Firebase kullanımı kontrolü
 const USE_FIREBASE = 
