@@ -65,13 +65,11 @@ class MemberController {
 
   // Get member by ID
   static async getById(req, res) {
-    console.log('getById method called with id:', req.params.id);
     try {
       const { id } = req.params;
       const member = await db.get('SELECT * FROM members WHERE id = ?', [parseInt(id)]);
       
       if (!member) {
-        console.log('Member not found for id:', id);
         return res.status(404).json({ message: 'Üye bulunamadı' });
       }
       
@@ -90,21 +88,17 @@ class MemberController {
   static async create(req, res) {
     try {
       const memberData = req.body;
-      console.log('Received member data in backend:', memberData); // Debug log
-      
+
       const errors = Member.validate(memberData);
-      console.log('Validation errors:', errors); // Debug log
-      
+
       if (errors.length > 0) {
-        console.log('Returning validation error response'); // Debug log
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
       }
-      
+
       // Check if TC already exists (compare with encrypted value)
       const encTc = encryptField(memberData.tc);
       const existingMember = await db.get('SELECT * FROM members WHERE tc = ?', [encTc]);
       if (existingMember) {
-        console.log('TC already exists, returning error'); // Debug log
         return res.status(400).json({ message: 'Bu TC kimlik numarası zaten kayıtlı' });
       }
       
@@ -125,28 +119,20 @@ class MemberController {
       
       const result = await db.run(sql, params);
       const newMember = await db.get('SELECT * FROM members WHERE id = ?', [result.lastID]);
-      
-      console.log('Member added to database successfully'); // Debug log
-      
+
       // Automatically create member_user for the new member
       try {
         const username = memberData.tc; // Use TC as username
         const password = memberData.phone.replace(/\D/g, ''); // Normalize password (remove non-digits)
-        
-        console.log(`Attempting to create user for member ID ${result.lastID}, username: ${username}`);
-        
+
         // Check if username already exists
         const existingUserWithSameUsername = await db.get('SELECT * FROM member_users WHERE username = ?', [username]);
-        
+
         if (!existingUserWithSameUsername) {
           await MemberUser.createMemberUser(result.lastID, username, password);
-          console.log(`✓ Member user created automatically for member ID ${result.lastID} (username: ${username})`);
-        } else {
-          console.log(`⚠ Username ${username} already exists, skipping member user creation for member ID ${result.lastID}`);
         }
       } catch (userError) {
-        console.error('❌ Error creating member user automatically:', userError);
-        console.error('Error details:', userError.stack);
+        console.error('Error creating member user automatically:', userError);
         // Don't fail the member creation if user creation fails
       }
       
@@ -248,7 +234,6 @@ class MemberController {
           if (memberUser) {
             // Update existing user
             await MemberUser.updateMemberUser(parseInt(id), memberData.tc, memberData.phone);
-            console.log('Member user updated for member ID:', id);
             
             // Firebase kullanılıyorsa Firebase Auth'u da güncelle
             const USE_FIREBASE = process.env.VITE_USE_FIREBASE === 'true' || process.env.USE_FIREBASE === 'true';
@@ -311,7 +296,6 @@ class MemberController {
             const username = memberData.tc;
             const password = memberData.phone.replace(/\D/g, '');
             await MemberUser.createMemberUser(parseInt(id), username, password);
-            console.log('Member user created for member ID:', id);
           }
         } catch (userError) {
           console.error('Error updating/creating member user:', userError);
@@ -356,11 +340,8 @@ class MemberController {
         return res.status(404).json({ message: 'Üye bulunamadı' });
       }
       
-      console.log('Archiving member:', member);
-      
       // Update in database
       const result = await db.run('UPDATE members SET archived = 1 WHERE id = ?', [parseInt(id)]);
-      console.log('Database update result:', result);
       
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Üye bulunamadı' });
@@ -421,11 +402,8 @@ class MemberController {
         return res.status(404).json({ message: 'Arşivlenmiş üye bulunamadı' });
       }
       
-      console.log('Restoring member:', member);
-      
       // Update in database
       const result = await db.run('UPDATE members SET archived = 0 WHERE id = ?', [parseInt(id)]);
-      console.log('Database update result:', result);
       
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Arşivlenmiş üye bulunamadı' });
@@ -483,30 +461,18 @@ class MemberController {
   // Import members from Excel
   static async importFromExcel(req, res) {
     try {
-      console.log('Import endpoint called');
-      console.log('Request files:', req.files);
-      console.log('File object:', req.file);
-      
       // Check if file was uploaded - support both req.files.file and req.file
       const file = req.files?.file || req.file;
       if (!file) {
-        console.log('No file found in request');
         return res.status(400).json({ message: 'Dosya bulunamadı' });
       }
 
       // Handle both buffer and data properties
       const fileData = file.data || file.buffer;
       if (!fileData) {
-        console.log('File data is missing');
         return res.status(400).json({ message: 'Dosya verisi bulunamadı' });
       }
 
-      console.log('File received:', {
-        name: file.name || file.originalname,
-        size: file.size,
-        mimetype: file.mimetype
-      });
-      
       const workbook = xlsx.read(fileData, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -514,8 +480,7 @@ class MemberController {
 
       // Remove header row
       const rows = data.slice(1);
-      console.log('Excel rows to process:', rows.length);
-      
+
       let importedCount = 0;
       const errors = [];
 
@@ -523,9 +488,7 @@ class MemberController {
       for (let i = 0; i < rows.length; i++) {
         try {
           const row = rows[i];
-          console.log(`Processing row ${i + 1}:`, row);
           if (row.length < 3) {
-            console.log(`Skipping row ${i + 1} due to insufficient columns (en az 3 sütun gerekli: TC, İsim, Telefon)`);
             continue; // Skip incomplete rows
           }
 
@@ -546,19 +509,15 @@ class MemberController {
             region = 'Üye';
           }
 
-          console.log(`Mapped data - TC: ${tc}, Name: ${name}, Phone: ${phone}, Position: ${position}, Region: ${region}`);
-
           // Validate required fields (İlçe artık zorunlu değil)
           if (!tc || !name || !phone) {
             errors.push(`Satır ${i + 2}: Gerekli alanlar eksik (TC, İsim Soyisim, Telefon zorunludur)`);
-            console.log(`Validation failed for row ${i + 2}`);
             continue;
           }
 
           // Validate TC length
           if (tc.length !== 11) {
             errors.push(`Satır ${i + 2}: TC kimlik numarası 11 haneli olmalıdır`);
-            console.log(`TC validation failed for row ${i + 2}`);
             continue;
           }
 
@@ -566,7 +525,6 @@ class MemberController {
           const existingMember = await db.get('SELECT * FROM members WHERE tc = ?', [tc]);
           if (existingMember) {
             errors.push(`Satır ${i + 2}: Bu TC kimlik numarası zaten kayıtlı`);
-            console.log(`TC already exists for row ${i + 2}`);
             continue;
           }
 
@@ -580,7 +538,6 @@ class MemberController {
           }
 
           // Insert member into database (İlçe kaldırıldı)
-          console.log(`Inserting member: ${name}`);
           const result = await db.run(
             'INSERT INTO members (tc, name, phone, position, region) VALUES (?, ?, ?, ?, ?)',
             [tc, name, phone, position, region]
@@ -599,7 +556,6 @@ class MemberController {
           db.add('members', newMember);
           
           importedCount++;
-          console.log(`Successfully imported member: ${name}`);
         } catch (rowError) {
           console.error(`Error processing row ${i + 2}:`, rowError);
           errors.push(`Satır ${i + 2}: ${rowError.message}`);
@@ -683,11 +639,9 @@ class MemberController {
 
   // Archive all members
   static async archiveAll(req, res) {
-    console.log('archiveAll method called');
     try {
       // Get all members
       const members = db.get('members');
-      console.log('Members to archive:', members);
       
       // Move each member to archivedMembers and update in database
       for (const member of members) {
@@ -709,7 +663,6 @@ class MemberController {
 
   // New method to handle bulk archive via POST
   static bulkArchive(req, res) {
-    console.log('bulkArchive method called');
     return MemberController.archiveAll(req, res);
   }
 

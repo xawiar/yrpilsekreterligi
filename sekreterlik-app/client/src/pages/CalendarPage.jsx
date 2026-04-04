@@ -146,8 +146,9 @@ const CalendarPage = () => {
       return matches;
     });
 
-    const result = [...dayEvents, ...dayMeetings];
-    // console.log('Events for date', dateString, ':', result);
+    const taggedEvents = dayEvents.map(e => ({ ...e, _type: 'event' }));
+    const taggedMeetings = dayMeetings.map(m => ({ ...m, _type: 'meeting' }));
+    const result = [...taggedEvents, ...taggedMeetings];
     return result;
   };
 
@@ -203,30 +204,30 @@ const CalendarPage = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Takvim</h1>
-          <p className="text-gray-600">Etkinlik ve toplantılarınızı takip edin</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Takvim</h1>
+          <p className="text-gray-600 dark:text-gray-400">Etkinlik ve toplantılarınızı takip edin</p>
         </div>
 
         {/* Calendar Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigateMonth(-1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition duration-200"
+                className="p-2 hover:bg-gray-100 dark:bg-gray-700 rounded-lg transition duration-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 {months[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
               
               <button
                 onClick={() => navigateMonth(1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition duration-200"
+                className="p-2 hover:bg-gray-100 dark:bg-gray-700 rounded-lg transition duration-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -242,8 +243,8 @@ const CalendarPage = () => {
                 Bugün
               </button>
               
-              <div className="flex bg-gray-100 rounded-lg">
-                <span className="px-3 py-1 rounded-lg text-sm bg-white text-blue-600 shadow-sm">
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <span className="px-3 py-1 rounded-lg text-sm bg-white dark:bg-gray-800 text-blue-600 shadow-sm">
                   Ay
                 </span>
               </div>
@@ -252,11 +253,11 @@ const CalendarPage = () => {
         </div>
 
         {/* Calendar Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Day Headers */}
-          <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             {days.map(day => (
-              <div key={day} className="p-3 text-center text-sm font-medium text-gray-700">
+              <div key={day} className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
                 {day}
               </div>
             ))}
@@ -272,15 +273,15 @@ const CalendarPage = () => {
               return (
                 <div
                   key={index}
-                  className={`min-h-[120px] border-r border-b border-gray-200 p-2 ${
-                    day ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50'
+                  className={`min-h-[120px] border-r border-b border-gray-200 dark:border-gray-700 p-2 ${
+                    day ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
                   } ${isCurrentDay ? 'bg-blue-50' : ''} ${isSelectedDay ? 'bg-blue-100' : ''}`}
                   onClick={() => handleDateClick(day)}
                 >
                   {day && (
                     <>
                       <div className={`text-sm font-medium mb-1 ${
-                        isCurrentDay ? 'text-blue-600' : 'text-gray-900'
+                        isCurrentDay ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'
                       }`}>
                         {day}
                       </div>
@@ -290,20 +291,18 @@ const CalendarPage = () => {
                           <div
                             key={eventIndex}
                             className={`text-xs p-1 rounded truncate ${
-                              item.isPlanned 
-                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
-                                : item.name 
-                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-                                  : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                              item._type === 'meeting'
+                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                                : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             }`}
                             title={item.name || item.title}
                           >
-                            {item.isPlanned && '📅 '}
+                            {item._type === 'meeting' ? '🤝 ' : '📌 '}
                             {item.name || item.title}
                           </div>
                         ))}
                         {dayEvents.length > 3 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
                             +{dayEvents.length - 3} daha
                           </div>
                         )}
@@ -318,8 +317,8 @@ const CalendarPage = () => {
 
         {/* Selected Date Details */}
         {selectedDate && (
-          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {selectedDate.toLocaleDateString('tr-TR', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -332,34 +331,32 @@ const CalendarPage = () => {
               {getEventsForDate(selectedDate.getDate()).map((item, index) => (
                 <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className={`w-3 h-3 rounded-full mt-1 ${
-                    item.isPlanned 
-                      ? 'bg-blue-500' 
-                      : item.name 
-                        ? 'bg-green-500' 
-                        : 'bg-blue-500'
+                    item._type === 'meeting' ? 'bg-blue-500' : 'bg-green-500'
                   }`}></div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                        {item.isPlanned && '📅 '}
+                        {item._type === 'meeting' ? '🤝 ' : '📌 '}
                         {item.name || item.title}
                       </h4>
-                      {item.isPlanned && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-                          Planlandı
-                        </span>
-                      )}
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        item._type === 'meeting'
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                          : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                      }`}>
+                        {item._type === 'meeting' ? 'Toplanti' : 'Etkinlik'}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       {formatTime(item.date)}
                     </p>
                     {item.description && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {item.description}
                       </p>
                     )}
                     {item.location && (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         📍 {item.location}
                       </p>
                     )}
@@ -368,7 +365,7 @@ const CalendarPage = () => {
               ))}
               
               {getEventsForDate(selectedDate.getDate()).length === 0 && (
-                <p className="text-gray-500 text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">
                   Bu tarihte etkinlik veya toplantı bulunmuyor
                 </p>
               )}
@@ -380,11 +377,11 @@ const CalendarPage = () => {
         <div className="mt-6 flex items-center space-x-6 text-sm">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-gray-600">Etkinlikler</span>
+            <span className="text-gray-600 dark:text-gray-400">Etkinlikler</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-gray-600">Toplantılar</span>
+            <span className="text-gray-600 dark:text-gray-400">Toplantılar</span>
           </div>
         </div>
       </div>

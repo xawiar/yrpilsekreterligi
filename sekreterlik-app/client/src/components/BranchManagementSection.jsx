@@ -3,6 +3,7 @@ import ApiService from '../utils/ApiService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { maskTC } from '../utils/maskingUtils';
 
 const BranchManagementSection = ({ branchType, memberRegion, memberId, management, setManagement }) => {
   const toast = useToast();
@@ -21,7 +22,33 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
   const [editingId, setEditingId] = useState(null);
 
   const branchLabel = branchType === 'women' ? 'Kadın Kolları' : 'Gençlik Kolları';
-  const branchColor = branchType === 'women' ? 'pink' : 'blue';
+
+  // Static class map - Tailwind JIT can't detect dynamic classes like `bg-${color}-600`
+  const colorClasses = {
+    pink: {
+      bg: 'bg-pink-600',
+      hover: 'hover:bg-pink-700',
+      text: 'text-pink-600',
+      hoverText: 'hover:text-pink-900',
+      darkText: 'dark:text-pink-400',
+      badgeBg: 'bg-pink-100',
+      badgeDarkBg: 'dark:bg-pink-900',
+      badgeText: 'text-pink-800',
+      badgeDarkText: 'dark:text-pink-200',
+    },
+    blue: {
+      bg: 'bg-blue-600',
+      hover: 'hover:bg-blue-700',
+      text: 'text-blue-600',
+      hoverText: 'hover:text-blue-900',
+      darkText: 'dark:text-blue-400',
+      badgeBg: 'bg-blue-100',
+      badgeDarkBg: 'dark:bg-blue-900',
+      badgeText: 'text-blue-800',
+      badgeDarkText: 'dark:text-blue-200',
+    },
+  };
+  const classes = colorClasses[branchType === 'women' ? 'pink' : 'blue'];
 
   useEffect(() => {
     fetchManagement();
@@ -168,13 +195,13 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
                     {person.name} {person.surname}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-mono">
-                    {person.tc}
+                    {maskTC(person.tc)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                     {person.phone}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium bg-${branchColor}-100 dark:bg-${branchColor}-900 text-${branchColor}-800 dark:text-${branchColor}-200`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${classes.badgeBg} ${classes.badgeDarkBg} ${classes.badgeText} ${classes.badgeDarkText}`}>
                       {person.position}
                     </span>
                   </td>
@@ -182,7 +209,7 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleEdit(person)}
-                        className={`text-${branchColor}-600 hover:text-${branchColor}-900 dark:text-${branchColor}-400`}
+                        className={`${classes.text} ${classes.hoverText} ${classes.darkText}`}
                       >
                         Düzenle
                       </button>
@@ -205,7 +232,7 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className={`w-full py-3 bg-${branchColor}-600 hover:bg-${branchColor}-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center`}
+          className={`w-full py-3 ${classes.bg} ${classes.hover} text-white rounded-lg font-medium transition-colors flex items-center justify-center`}
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -297,7 +324,7 @@ const BranchManagementSection = ({ branchType, memberRegion, memberId, managemen
           <div className="flex space-x-2">
             <button
               type="submit"
-              className={`flex-1 py-2 bg-${branchColor}-600 hover:bg-${branchColor}-700 text-white rounded-lg font-medium transition-colors`}
+              className={`flex-1 py-2 ${classes.bg} ${classes.hover} text-white rounded-lg font-medium transition-colors`}
             >
               {editingId ? 'Güncelle' : 'Ekle'}
             </button>

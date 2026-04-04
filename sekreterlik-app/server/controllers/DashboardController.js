@@ -134,7 +134,13 @@ class DashboardController {
           if (err) {
             reject(err);
           } else {
-            resolve(rows || []);
+            // Parse attendees JSON string from SQLite
+            const parsed = (rows || []).map(m => ({
+              ...m,
+              attendees: m.attendees ? (typeof m.attendees === 'string' ? JSON.parse(m.attendees) : m.attendees) : [],
+              regions: m.regions ? (typeof m.regions === 'string' ? JSON.parse(m.regions) : m.regions) : []
+            }));
+            resolve(parsed);
           }
         });
       });
@@ -166,7 +172,12 @@ class DashboardController {
           if (err) {
             reject(err);
           } else {
-            resolve(rows || []);
+            // Parse attendees JSON string from SQLite
+            const parsed = (rows || []).map(e => ({
+              ...e,
+              attendees: e.attendees ? (typeof e.attendees === 'string' ? JSON.parse(e.attendees) : e.attendees) : []
+            }));
+            resolve(parsed);
           }
         });
       });

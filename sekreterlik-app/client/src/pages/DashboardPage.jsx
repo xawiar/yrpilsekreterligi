@@ -138,11 +138,6 @@ const DashboardPage = () => {
     { disabled: !mobileView }
   );
   
-  // Debug log (production'da kaldırılacak)
-  if (typeof window !== 'undefined') {
-    console.log('[DEBUG] Dashboard - isMobile:', mobileView, 'window.innerWidth:', window.innerWidth);
-  }
-
   // Native mobile görünümü için
   if (mobileView) {
     return (

@@ -61,9 +61,9 @@ const ManagementChartView = ({ members }) => {
   const { ilBaskani, ilceBaskani, divanUyeleri, digerUyeler } = categorizeMembers();
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 bg-gray-50">
-        <h3 className="text-base sm:text-lg font-bold text-gray-900">Yönetim Şeması</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 overflow-hidden">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-900">
+        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Yönetim Şeması</h3>
       </div>
       
       <div className="p-4 sm:p-6">
@@ -80,7 +80,7 @@ const ManagementChartView = ({ members }) => {
                 {ilBaskani.map(member => (
                   <div 
                     key={member.id} 
-                    className="bg-white/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 lg:p-6 border border-white/20 max-w-sm w-full"
+                    className="bg-white dark:bg-gray-800/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 lg:p-6 border border-white/20 max-w-sm w-full"
                   >
                     <div className="text-center">
                       {member.photo ? (
@@ -94,7 +94,7 @@ const ManagementChartView = ({ members }) => {
                           }}
                         />
                       ) : null}
-                      <div className={`bg-white/20 rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center mx-auto mb-2 sm:mb-4 ${member.photo ? 'hidden' : ''}`}>
+                      <div className={`bg-white dark:bg-gray-800/20 rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center mx-auto mb-2 sm:mb-4 ${member.photo ? 'hidden' : ''}`}>
                         <span className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
                           {member.name.charAt(0)}
                         </span>
@@ -122,7 +122,7 @@ const ManagementChartView = ({ members }) => {
                 {ilceBaskani.map(member => (
                   <div 
                     key={member.id} 
-                    className="bg-white/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 lg:p-6 border border-white/20 max-w-sm w-full"
+                    className="bg-white dark:bg-gray-800/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 lg:p-6 border border-white/20 max-w-sm w-full"
                   >
                     <div className="text-center">
                       {member.photo ? (
@@ -136,7 +136,7 @@ const ManagementChartView = ({ members }) => {
                           }}
                         />
                       ) : null}
-                      <div className={`bg-white/20 rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center mx-auto mb-2 sm:mb-4 ${member.photo ? 'hidden' : ''}`}>
+                      <div className={`bg-white dark:bg-gray-800/20 rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center mx-auto mb-2 sm:mb-4 ${member.photo ? 'hidden' : ''}`}>
                         <span className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
                           {member.name.charAt(0)}
                         </span>
@@ -154,7 +154,7 @@ const ManagementChartView = ({ members }) => {
 
           {/* Divan üyeleri */}
           {divanUyeleri.length > 0 && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 sm:px-6 py-3 sm:py-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Divan Üyeleri</h2>
                 <p className="text-blue-100 text-xs sm:text-sm mt-1">{divanUyeleri.length} kişi</p>
@@ -165,7 +165,7 @@ const ManagementChartView = ({ members }) => {
                   {divanUyeleri.map(member => (
                     <div 
                       key={member.id} 
-                      className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200"
+                      className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700"
                     >
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
@@ -188,8 +188,8 @@ const ManagementChartView = ({ members }) => {
                           </div>
                         </div>
                         <div className="ml-3 sm:ml-4">
-                          <h3 className="text-xs sm:text-sm font-medium text-gray-900">{formatMemberName(member.name)}</h3>
-                          <p className="text-xs text-gray-500 mt-1">{member.position}</p>
+                          <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{formatMemberName(member.name)}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.position}</p>
                           <p className="text-xs text-gray-400 mt-1">Bölge: {member.region || 'Belirtilmemiş'}</p>
                           <p className="text-xs text-gray-400 mt-1">Tel: {member.phone || 'Belirtilmemiş'}</p>
                         </div>
@@ -203,7 +203,7 @@ const ManagementChartView = ({ members }) => {
 
           {/* Diğer üyeler */}
           {digerUyeler.length > 0 && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
               <div className="bg-gradient-to-r from-green-600 to-teal-600 px-4 sm:px-6 py-3 sm:py-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Diğer Üyeler</h2>
                 <p className="text-green-100 text-xs sm:text-sm mt-1">{digerUyeler.length} kişi</p>
@@ -214,7 +214,7 @@ const ManagementChartView = ({ members }) => {
                   {digerUyeler.map(member => (
                     <div 
                       key={member.id} 
-                      className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200"
+                      className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700"
                     >
                       <div className="flex items-start">
                         <div className="flex-shrink-0">
@@ -236,8 +236,8 @@ const ManagementChartView = ({ members }) => {
                           </div>
                         </div>
                         <div className="ml-3 sm:ml-4">
-                          <h3 className="text-xs sm:text-sm font-medium text-gray-900">{formatMemberName(member.name)}</h3>
-                          <p className="text-xs text-gray-500 mt-1">{member.position}</p>
+                          <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{formatMemberName(member.name)}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.position}</p>
                           <p className="text-xs text-gray-400 mt-1">Bölge: {member.region || 'Belirtilmemiş'}</p>
                           <p className="text-xs text-gray-400 mt-1">Tel: {member.phone || 'Belirtilmemiş'}</p>
                         </div>
