@@ -62,7 +62,7 @@ const LoginForm = ({
             autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:shadow-lg focus:shadow-emerald-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
+            className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
             style={{
               boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
             }}
@@ -92,7 +92,7 @@ const LoginForm = ({
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))}
             onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
-            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:shadow-lg focus:shadow-emerald-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
+            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200/60 dark:border-gray-600 rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/20 text-sm transition-all bg-white/90 dark:bg-gray-700 text-gray-900 dark:text-gray-100 backdrop-blur-sm"
             style={{
               boxShadow: '0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.5) inset'
             }}
@@ -129,7 +129,7 @@ const LoginForm = ({
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-gray-600 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
           />
           <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
             Beni hatırla
@@ -137,7 +137,7 @@ const LoginForm = ({
         </div>
 
         <div className="text-sm">
-          <a href="#" className="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors">
+          <a href="#" className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300 transition-colors">
             Şifrenizi mi unuttunuz?
           </a>
         </div>
@@ -149,7 +149,7 @@ const LoginForm = ({
           whileTap={{ scale: 0.98, y: 0 }}
           type="submit"
           disabled={isLoading}
-          className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl text-sm font-medium text-white bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 hover:from-emerald-700 hover:via-green-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+          className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl text-sm font-medium text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
           style={{
             boxShadow: '0 10px 30px -10px rgba(16, 185, 129, 0.5), 0 0 0 1px rgba(255,255,255,0.1) inset, 0 1px 0 rgba(255,255,255,0.2) inset'
           }}

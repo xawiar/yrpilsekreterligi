@@ -395,52 +395,7 @@ const ThemeSettings = () => {
         </div>
       </div>
 
-      <hr className="border-gray-200 dark:border-gray-700" />
-
-      {/* Footer Ozellestirme */}
-      <div className="space-y-4">
-        <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
-          Footer (Alt Bilgi)
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Firma Adi
-            </label>
-            <input
-              type="text"
-              value={themeSettings.footerCompanyName}
-              onChange={(e) => setThemeSettings(prev => ({ ...prev, footerCompanyName: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
-              placeholder="Orn: DAT Dijital"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Firma Web Sitesi
-            </label>
-            <input
-              type="url"
-              value={themeSettings.footerCompanyUrl}
-              onChange={(e) => setThemeSettings(prev => ({ ...prev, footerCompanyUrl: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
-              placeholder="Orn: https://www.datdijital.com/"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Copyright Metni (Bos birakilirsa varsayilan kullanilir)
-            </label>
-            <input
-              type="text"
-              value={themeSettings.footerText}
-              onChange={(e) => setThemeSettings(prev => ({ ...prev, footerText: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
-              placeholder="Orn: Tum haklari saklidir."
-            />
-          </div>
-        </div>
-      </div>
+      {/* Footer sabit — DAT Dijital (gelistirici bilgisi, degistirilemez) */}
 
       <hr className="border-gray-200 dark:border-gray-700" />
 
