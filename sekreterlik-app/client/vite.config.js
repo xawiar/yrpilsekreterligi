@@ -11,10 +11,11 @@ export default defineConfig({
   plugins: [
     react(),
     // Production'da console.log'ları kaldır (performans için)
-    removeConsole({
-      includes: ['log', 'warn', 'info', 'debug'],
-      exclude: ['error'] // Error'lar production'da da gösterilmeli
-    }),
+    // removeConsole devre disi — plugin build hatasi veriyor
+    // removeConsole({
+    //   includes: ['log', 'warn', 'info', 'debug'],
+    //   exclude: ['error']
+    // }),
     // PWA Plugin - Tam aktif
     VitePWA({
       registerType: 'autoUpdate',

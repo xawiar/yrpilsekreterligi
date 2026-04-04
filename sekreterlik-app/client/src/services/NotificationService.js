@@ -126,58 +126,44 @@ async function getMemberIdsByRole(positionName) {
 // Push Notification Gonder
 // =====================================================
 async function sendPushNotifications(userIds, { title, body, type, url }) {
+  // Maliisler pattern: push_tokens koleksiyonundan subscription al,
+  // Cloud Function sendPush endpoint'ine POST at
   try {
-    const snapshot = await getDocs(collection(db, 'push_subscriptions'));
-    if (snapshot.empty) return;
-
-    const targetSubs = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (userIds.includes(data.userId)) {
-        targetSubs.push(data);
-      }
-    });
-
-    if (targetSubs.length === 0) return;
-
-    const API_BASE_URL =
-      import.meta.env.VITE_API_BASE_URL ||
-      (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
-
-    let authToken = null;
-    try {
-      authToken = localStorage.getItem('token');
-    } catch (_) {
-      // sessizce devam
+    // Push token'lari topla (maliisler: getPushTokensForUsers)
+    var subscriptions = [];
+    for (var i = 0; i < userIds.length; i++) {
+      try {
+        var tokenDoc = await getDoc(doc(db, 'push_tokens', userIds[i]));
+        if (tokenDoc.exists() && tokenDoc.data().subscription && tokenDoc.data().isActive) {
+          subscriptions.push(tokenDoc.data().subscription);
+        }
+      } catch (e) { /* skip */ }
     }
 
-    const headers = { 'Content-Type': 'application/json' };
-    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    if (subscriptions.length === 0) return;
 
-    const formattedSubscriptions = targetSubs.map((sub) => ({
-      endpoint: sub.endpoint,
-      keys: { p256dh: sub.p256dh, auth: sub.auth },
-    }));
+    // Cloud Function HTTP endpoint'ine POST (maliisler: /api/send-push)
+    var PUSH_URL = 'https://europe-west1-spilsekreterligi.cloudfunctions.net/sendPush';
 
     try {
-      const response = await fetch(`${API_BASE_URL}/push-subscriptions/send-direct`, {
+      var response = await fetch(PUSH_URL, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
-          body,
-          subscriptions: formattedSubscriptions,
+          subscriptions: subscriptions,
+          title: title || 'Yeni Bildirim',
+          body: body || '',
           data: { type: type || 'general', url: url || '/notifications' },
         }),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log(`[Push] Sent: ${result.sentCount || 0} successful`);
+        var result = await response.json();
+        console.log('[Push] Sent:', result.sent, 'failed:', result.failed);
         return;
       }
-    } catch (backendErr) {
-      console.warn('[Push] Backend push failed, trying SW fallback:', backendErr.message);
+    } catch (pushErr) {
+      console.warn('[Push] Cloud Function push failed:', pushErr.message);
     }
 
     // Fallback: Service Worker ile dogrudan bildirim goster

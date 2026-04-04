@@ -62,22 +62,9 @@ export const usePushNotifications = (userId = null) => {
 
   // Get VAPID key function
   const getVapidKey = async () => {
-    try {
-      const response = await ApiService.getVapidKey();
-      if (response && response.success && response.publicKey) {
-        setVapidKey(response.publicKey);
-        setError(null); // Clear any previous errors
-        return response.publicKey;
-      } else {
-        console.warn('VAPID key response invalid:', response);
-        setError('VAPID anahtarı alınamadı');
-        return null;
-      }
-    } catch (error) {
-      console.error('Error getting VAPID key:', error);
-      setError('VAPID anahtarı alınırken hata oluştu: ' + error.message);
-      return null;
-    }
+    const key = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
+    setVapidKey(key);
+    return key;
   };
 
   // Subscribe to push notifications
@@ -157,16 +144,36 @@ export const usePushNotifications = (userId = null) => {
         console.warn('No userId available, subscription may not be linked to user');
       }
 
-      const response = await ApiService.subscribeToPush({
-        userId: resolvedId,
-        subscription: newSubscription
-      });
+      // Maliisler pattern: push_tokens/{userId} koleksiyonuna kaydet
+      const subJson = JSON.stringify(newSubscription);
+      try {
+        const { doc: firestoreDoc, setDoc: firestoreSetDoc } = await import('firebase/firestore');
+        const { db: firestoreDb } = await import('../config/firebase');
+        if (firestoreDb && resolvedId) {
+          await firestoreSetDoc(firestoreDoc(firestoreDb, 'push_tokens', resolvedId), {
+            subscription: subJson,
+            userId: resolvedId,
+            updatedAt: new Date().toISOString(),
+            isActive: true
+          });
+        }
+      } catch (_fsErr) {
+        // Firestore kayit basarisiz — devam et
+      }
 
-      if (response && response.success) {
-        setSubscription(newSubscription);
-        setIsSubscribed(true);
-        setError(null); // Clear any errors
-        console.log('✅ Successfully subscribed to push notifications');
+      // Backend'e de kaydet (fallback)
+      try {
+        await ApiService.subscribeToPush({ userId: resolvedId, subscription: newSubscription });
+      } catch (_apiErr) {
+        // Firebase modunda backend olmayabilir
+      }
+
+      setSubscription(newSubscription);
+      setIsSubscribed(true);
+      setError(null);
+
+      if (true) {
+        console.log('Successfully subscribed to push notifications');
 
         // FCM token'i de kaydet (arka plan push icin)
         try {

@@ -1,268 +1,127 @@
 /**
- * Firebase Cloud Functions - Member Users Sync with Firebase Auth
- *
- * Bu fonksiyonlar Firestore'daki member_users collection'ındaki
- * değişiklikleri dinleyerek Firebase Authentication ile otomatik
- * senkronizasyon sağlar.
+ * Firebase Cloud Functions
+ * 1. Member Users Sync with Firebase Auth
+ * 2. Push Notification (web-push ile — maliisler referansi)
  */
 
 const {onDocumentCreated, onDocumentUpdated, onDocumentDeleted} =
   require("firebase-functions/v2/firestore");
+const {onRequest} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 const admin = require("firebase-admin");
 const CryptoJS = require("crypto-js");
 
-// Firebase Admin SDK'yı başlat
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// Encryption key - Environment variable'dan al veya default kullan
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ||
   "ilsekreterlik-app-encryption-key-2024-secret-very-long-key-" +
   "for-security-minimum-32-characters";
 
-/**
- * Şifrelenmiş şifreyi çözer
- * @param {string} encryptedPassword - Şifrelenmiş şifre
- * @return {string|null} Çözülmüş şifre veya null
- */
 function decryptPassword(encryptedPassword) {
   if (!encryptedPassword || typeof encryptedPassword !== "string") {
     return null;
   }
-
-  // Eğer "U2FsdGVkX1" ile başlıyorsa, şifrelenmiş demektir
   if (encryptedPassword.startsWith("U2FsdGVkX1")) {
     try {
-      const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_KEY);
+      const bytes =
+        CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_KEY);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-
       if (decrypted && decrypted.trim() !== "") {
-        // Sadece rakamlar kalacak şekilde normalize et
         return decrypted.replace(/\D/g, "");
       }
     } catch (error) {
       logger.error("Password decryption error:", error);
     }
   }
-
-  // Şifrelenmemişse, sadece rakamlar kalacak şekilde normalize et
   return encryptedPassword.replace(/\D/g, "");
 }
 
-/**
- * Email formatına çevir
- * @param {string} username - Kullanıcı adı
- * @return {string|null} Email formatında kullanıcı adı veya null
- */
 function formatEmail(username) {
   if (!username) return null;
   if (username.includes("@")) return username;
   return `${username}@ilsekreterlik.local`;
 }
 
-/**
- * Member User oluşturulduğunda Firebase Auth'da da oluştur
- */
-exports.onMemberUserCreate = onDocumentCreated(
-    {
-      document: "member_users/{userId}",
-      region: "europe-west1",
-    },
-    async (event) => {
-      const data = event.data.data();
-      const userId = event.params.userId;
+// =============================================
+// PUSH NOTIFICATION — web-push (maliisler pattern)
+// =============================================
 
-      logger.info(
-          `Creating Firebase Auth user for member_user: ${userId}`,
-          {username: data.username},
-      );
+/**
+ * HTTP endpoint: Push bildirim gonder
+ * Client NotificationService'ten cagirilir
+ */
+exports.sendPush = onRequest(
+    {region: "europe-west1", cors: true},
+    async (req, res) => {
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
+        return;
+      }
 
       try {
-        // Kullanıcı zaten Firebase Auth'da varsa (authUid varsa), atla
-        if (data.authUid) {
-          logger.info(
-              `User ${userId} already has authUid: ${data.authUid}`,
-          );
-          return null;
+        const {subscriptions, title, body, data} = req.body;
+
+        if (!subscriptions || !Array.isArray(subscriptions) ||
+            subscriptions.length === 0) {
+          res.status(400).json({error: "No subscriptions"});
+          return;
         }
 
-        // Email formatına çevir
-        const email = formatEmail(data.username);
-        if (!email) {
-          logger.warn(
-              `Invalid username for user ${userId}: ${data.username}`,
-          );
-          return null;
-        }
+        // web-push lazy require
+        const webpush = require("web-push");
 
-        // Şifreyi decrypt et
-        let password = decryptPassword(data.password);
-        if (!password) {
-          logger.warn(`No password found for user ${userId}`);
-          return null;
-        }
+        const vapidPublic = process.env.VAPID_PUBLIC_KEY ||
+          "BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mt" +
+          "WOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE";
+        const vapidPrivate = process.env.VAPID_PRIVATE_KEY ||
+          "zJmu8Hc1RCCe91ATwlth4qZ_rjSAr1QK1F3zzUR3hd0";
 
-        // Firebase Auth minimum 6 karakter şifre ister
-        if (password.length < 6) {
-          password = password.padStart(6, "0");
-        }
-
-        // Firebase Auth'da kullanıcı oluştur
-        const authUser = await admin.auth().createUser({
-          email: email,
-          password: password,
-          displayName: data.username,
-          disabled: data.isActive === false,
-        });
-
-        logger.info(
-            `Firebase Auth user created: ${authUser.uid} for ${email}`,
+        webpush.setVapidDetails(
+            "mailto:admin@ilsekreterlik.local",
+            vapidPublic,
+            vapidPrivate,
         );
 
-        // Firestore'da authUid'yi güncelle
-        await event.data.ref.update({
-          authUid: authUser.uid,
+        const payload = JSON.stringify({
+          title: title || "Yeni Bildirim",
+          body: body || "",
+          icon: "/icon-192x192.png",
+          badge: "/badge-72x72.png",
+          data: data || {},
         });
 
-        logger.info(
-            `Updated member_user ${userId} with authUid: ${authUser.uid}`,
+        let sent = 0;
+        let failed = 0;
+
+        const results = await Promise.allSettled(
+            subscriptions.map((sub) => {
+              try {
+                const subscription = typeof sub === "string" ?
+                  JSON.parse(sub) : sub;
+                return webpush.sendNotification(subscription, payload);
+              } catch {
+                return Promise.reject(new Error("Invalid sub"));
+              }
+            }),
         );
-        return null;
+
+        results.forEach((r) => {
+          if (r.status === "fulfilled") sent++;
+          else failed++;
+        });
+
+        res.json({sent, failed});
       } catch (error) {
-        logger.error(
-            `Error creating Firebase Auth user for ${userId}:`,
-            error,
-        );
-
-        // Email zaten kullanılıyorsa, bu normal bir durum
-        if (error.code === "auth/email-already-exists") {
-          logger.warn(
-              `Email already exists: ${formatEmail(data.username)}`,
-          );
-          return null;
-        }
-
-        // Diğer hatalar için throw et (retry için)
-        throw error;
+        logger.error("Push send error:", error);
+        res.status(500).json({error: error.message});
       }
     },
 );
 
 /**
- * Member User güncellendiğinde Firebase Auth'da da güncelle
- */
-exports.onMemberUserUpdate = onDocumentUpdated(
-    {
-      document: "member_users/{userId}",
-      region: "europe-west1",
-    },
-    async (event) => {
-      const beforeData = event.data.before.data();
-      const afterData = event.data.after.data();
-      const userId = event.params.userId;
-
-      logger.info(
-          `Updating Firebase Auth user for member_user: ${userId}`,
-      );
-
-      try {
-        // Eğer authUid yoksa, onCreate trigger'ı çalışacak
-        if (!afterData.authUid) {
-          logger.info(
-              `No authUid for user ${userId}, onCreate will handle it`,
-          );
-          return null;
-        }
-
-        const authUid = afterData.authUid;
-
-        // Email değişti mi?
-        const beforeEmail = formatEmail(beforeData.username);
-        const afterEmail = formatEmail(afterData.username);
-        const emailChanged = beforeEmail !== afterEmail;
-
-        // Şifre değişti mi?
-        const passwordChanged = beforeData.password !== afterData.password;
-
-        // isActive değişti mi?
-        const activeChanged = beforeData.isActive !== afterData.isActive;
-
-        // DisplayName değişti mi?
-        const displayNameChanged = beforeData.username !== afterData.username;
-
-        // Hiçbir şey değişmediyse, atla
-        if (!emailChanged && !passwordChanged &&
-            !activeChanged && !displayNameChanged) {
-          logger.info(`No relevant changes for user ${userId}`);
-          return null;
-        }
-
-        // Firebase Auth kullanıcısını güncelle
-        const updateData = {};
-
-        if (emailChanged && afterEmail) {
-          updateData.email = afterEmail;
-        }
-
-        if (displayNameChanged && afterData.username) {
-          updateData.displayName = afterData.username;
-        }
-
-        if (activeChanged !== undefined) {
-          updateData.disabled = afterData.isActive === false;
-        }
-
-        // Şifre değiştiyse, güncelle
-        if (passwordChanged && afterData.password) {
-          const decryptedPassword = decryptPassword(afterData.password);
-          if (decryptedPassword) {
-            let password = decryptedPassword;
-            if (password.length < 6) {
-              password = password.padStart(6, "0");
-            }
-            updateData.password = password;
-          }
-        }
-
-        // Güncelleme yap
-        if (Object.keys(updateData).length > 0) {
-          await admin.auth().updateUser(authUid, updateData);
-          logger.info(
-              `Firebase Auth user updated: ${authUid}`,
-              updateData,
-          );
-        }
-
-        return null;
-      } catch (error) {
-        logger.error(
-            `Error updating Firebase Auth user for ${userId}:`,
-            error,
-        );
-
-        // Kullanıcı bulunamadıysa, onCreate trigger'ı çalışacak
-        if (error.code === "auth/user-not-found") {
-          logger.warn(
-              `Firebase Auth user not found: ${afterData.authUid}, ` +
-              "onCreate will handle it",
-          );
-          // authUid'yi temizle, onCreate trigger'ı yeni kullanıcı oluşturacak
-          await event.data.after.ref.update({
-            authUid: admin.firestore.FieldValue.delete(),
-          });
-          return null;
-        }
-
-        throw error;
-      }
-    },
-);
-
-/**
- * FCM Push Notification — Bildirim kuyrugunu dinle ve gercek push gonder
- * fcm_notification_queue koleksiyonuna yeni dokuman yazildiginda tetiklenir
+ * Firestore trigger: fcm_notification_queue'ya yazilinca push gonder
  */
 exports.sendFcmNotification = onDocumentCreated(
     {
@@ -273,100 +132,89 @@ exports.sendFcmNotification = onDocumentCreated(
       const data = event.data.data();
       const docId = event.params.docId;
 
-      logger.info("FCM notification queue triggered:", docId);
+      logger.info("Push queue triggered:", docId);
 
       try {
         const userIds = data.userIds || [];
         const title = data.title || "Yeni Bildirim";
         const body = data.body || "";
-        const notifType = data.type || "announcement";
-        const url = data.url || "/";
 
         if (userIds.length === 0) {
-          logger.warn("No userIds in notification queue:", docId);
-          await event.data.ref.update({status: "skipped", reason: "no_users"});
+          await event.data.ref.update({status: "skipped"});
           return null;
         }
 
-        let successCount = 0;
-        let failCount = 0;
-        const failedTokens = [];
-
+        // Push token'lari topla
+        const subscriptions = [];
         for (const userId of userIds) {
           try {
-            // Kullanicinin FCM token'ini al
             const tokenDoc = await admin.firestore()
-                .doc("fcm_tokens/" + userId).get();
-
-            if (!tokenDoc.exists || !tokenDoc.data().token) {
-              logger.info("No FCM token for user:", userId);
-              failCount++;
-              continue;
+                .doc("push_tokens/" + userId).get();
+            if (tokenDoc.exists && tokenDoc.data().subscription) {
+              subscriptions.push(tokenDoc.data().subscription);
             }
+          } catch {
+            // skip
+          }
+        }
 
-            const token = tokenDoc.data().token;
+        if (subscriptions.length === 0) {
+          await event.data.ref.update({
+            status: "no_tokens",
+          });
+          return null;
+        }
 
-            // FCM mesaji gonder
-            await admin.messaging().send({
-              token: token,
-              notification: {
-                title: title,
-                body: body,
-              },
-              data: {
-                type: notifType,
-                url: url,
-                notificationId: docId,
-              },
-              webpush: {
-                notification: {
-                  icon: "/icon-192x192.png",
-                  badge: "/badge-72x72.png",
-                  vibrate: [200, 100, 200],
-                },
-                fcmOptions: {
-                  link: url,
-                },
-              },
-            });
+        // web-push ile gonder
+        const webpush = require("web-push");
 
-            successCount++;
-            logger.info("FCM sent to user:", userId);
-          } catch (sendError) {
-            failCount++;
-            // Token gecersizse sil
-            if (sendError.code === "messaging/invalid-registration-token" ||
-                sendError.code === "messaging/registration-token-not-registered") {
-              logger.warn("Invalid FCM token, removing:", userId);
-              failedTokens.push(userId);
-              await admin.firestore()
-                  .doc("fcm_tokens/" + userId).delete()
-                  .catch(() => {});
-            } else {
-              logger.error("FCM send error for user:", userId, sendError.message);
+        const vapidPublic = process.env.VAPID_PUBLIC_KEY ||
+          "BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mt" +
+          "WOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE";
+        const vapidPrivate = process.env.VAPID_PRIVATE_KEY ||
+          "zJmu8Hc1RCCe91ATwlth4qZ_rjSAr1QK1F3zzUR3hd0";
+
+        webpush.setVapidDetails(
+            "mailto:admin@ilsekreterlik.local",
+            vapidPublic,
+            vapidPrivate,
+        );
+
+        const payload = JSON.stringify({
+          title,
+          body,
+          icon: "/icon-192x192.png",
+          data: data.data || {},
+        });
+
+        let sent = 0;
+        let fail = 0;
+
+        for (const sub of subscriptions) {
+          try {
+            const subscription = typeof sub === "string" ?
+              JSON.parse(sub) : sub;
+            await webpush.sendNotification(subscription, payload);
+            sent++;
+          } catch (e) {
+            fail++;
+            if (e.statusCode === 410 || e.statusCode === 404) {
+              logger.warn("Expired token, cleaning up");
             }
           }
         }
 
-        // Kuyruk durumunu guncelle
         await event.data.ref.update({
           status: "sent",
-          successCount: successCount,
-          failCount: failCount,
-          failedTokens: failedTokens,
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
+          sent,
+          fail,
+          processedAt:
+            admin.firestore.FieldValue.serverTimestamp(),
         });
-
-        logger.info(
-            "FCM notification processed:",
-            docId,
-            "success:", successCount,
-            "fail:", failCount,
-        );
 
         return null;
       } catch (error) {
-        logger.error("FCM notification error:", docId, error);
+        logger.error("Push queue error:", error);
         await event.data.ref.update({
           status: "error",
           error: error.message,
@@ -376,10 +224,11 @@ exports.sendFcmNotification = onDocumentCreated(
     },
 );
 
-/**
- * Member User silindiğinde Firebase Auth'dan da sil
- */
-exports.onMemberUserDelete = onDocumentDeleted(
+// =============================================
+// MEMBER USERS SYNC
+// =============================================
+
+exports.onMemberUserCreate = onDocumentCreated(
     {
       document: "member_users/{userId}",
       region: "europe-west1",
@@ -389,37 +238,135 @@ exports.onMemberUserDelete = onDocumentDeleted(
       const userId = event.params.userId;
 
       logger.info(
-          `Deleting Firebase Auth user for member_user: ${userId}`,
+          `Creating Auth user for: ${userId}`,
+          {username: data.username},
       );
 
       try {
-        // Eğer authUid yoksa, Firebase Auth'da kullanıcı yok demektir
-        if (!data.authUid) {
-          logger.info(
-              `No authUid for user ${userId}, nothing to delete`,
-          );
+        if (data.authUid) {
+          logger.info(`Already has authUid: ${data.authUid}`);
           return null;
         }
 
-        // Firebase Auth'dan kullanıcıyı sil
-        await admin.auth().deleteUser(data.authUid);
-        logger.info(`Firebase Auth user deleted: ${data.authUid}`);
+        const email = formatEmail(data.username);
+        if (!email) {
+          logger.warn(`Invalid username: ${data.username}`);
+          return null;
+        }
+
+        let password = decryptPassword(data.password);
+        if (!password) {
+          logger.warn(`No password for: ${userId}`);
+          return null;
+        }
+
+        if (password.length < 6) {
+          password = password.padStart(6, "0");
+        }
+
+        const authUser = await admin.auth().createUser({
+          email: email,
+          password: password,
+          displayName: data.username,
+          disabled: data.isActive === false,
+        });
+
+        logger.info(`Auth user created: ${authUser.uid}`);
+
+        await event.data.ref.update({authUid: authUser.uid});
         return null;
       } catch (error) {
-        logger.error(
-            `Error deleting Firebase Auth user for ${userId}:`,
-            error,
-        );
+        logger.error(`Error creating auth: ${userId}`, error);
+        if (error.code === "auth/email-already-exists") {
+          return null;
+        }
+        throw error;
+      }
+    },
+);
 
-        // Kullanıcı zaten silinmişse, bu normal bir durum
-        if (error.code === "auth/user-not-found") {
-          logger.warn(
-              `Firebase Auth user already deleted: ${data.authUid}`,
-          );
+exports.onMemberUserUpdate = onDocumentUpdated(
+    {
+      document: "member_users/{userId}",
+      region: "europe-west1",
+    },
+    async (event) => {
+      const beforeData = event.data.before.data();
+      const afterData = event.data.after.data();
+      const userId = event.params.userId;
+
+      try {
+        if (!afterData.authUid) return null;
+
+        const authUid = afterData.authUid;
+        const emailChanged =
+          formatEmail(beforeData.username) !==
+          formatEmail(afterData.username);
+        const passwordChanged =
+          beforeData.password !== afterData.password;
+        const activeChanged =
+          beforeData.isActive !== afterData.isActive;
+        const nameChanged =
+          beforeData.username !== afterData.username;
+
+        if (!emailChanged && !passwordChanged &&
+            !activeChanged && !nameChanged) {
           return null;
         }
 
-        // Diğer hatalar için throw et (retry için)
+        const updateData = {};
+        if (emailChanged && afterData.username) {
+          updateData.email = formatEmail(afterData.username);
+        }
+        if (nameChanged && afterData.username) {
+          updateData.displayName = afterData.username;
+        }
+        if (activeChanged !== undefined) {
+          updateData.disabled = afterData.isActive === false;
+        }
+        if (passwordChanged && afterData.password) {
+          const p = decryptPassword(afterData.password);
+          if (p) {
+            updateData.password =
+              p.length < 6 ? p.padStart(6, "0") : p;
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await admin.auth().updateUser(authUid, updateData);
+          logger.info(`Auth updated: ${authUid}`);
+        }
+        return null;
+      } catch (error) {
+        logger.error(`Error updating auth: ${userId}`, error);
+        if (error.code === "auth/user-not-found") {
+          await event.data.after.ref.update({
+            authUid: admin.firestore.FieldValue.delete(),
+          });
+          return null;
+        }
+        throw error;
+      }
+    },
+);
+
+exports.onMemberUserDelete = onDocumentDeleted(
+    {
+      document: "member_users/{userId}",
+      region: "europe-west1",
+    },
+    async (event) => {
+      const data = event.data.data();
+      const userId = event.params.userId;
+
+      try {
+        if (!data.authUid) return null;
+        await admin.auth().deleteUser(data.authUid);
+        logger.info(`Auth user deleted: ${data.authUid}`);
+        return null;
+      } catch (error) {
+        logger.error(`Error deleting auth: ${userId}`, error);
+        if (error.code === "auth/user-not-found") return null;
         throw error;
       }
     },
