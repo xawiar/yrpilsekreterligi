@@ -73,17 +73,12 @@ const DataRetentionSettings = () => {
 
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <svg className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <div>
-            <p className="text-sm font-medium text-orange-800 dark:text-orange-300">
-              Not: Bu ayar su an sadece politika kaydi olarak saklanmaktadir.
-            </p>
-            <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-              Otomatik silme mekanizmasi Faz 6'da eklenecektir. Simdilik arsivlenen verilerin saklama suresi ayarini belirleyebilirsiniz.
-            </p>
-          </div>
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            KVKK kapsamında arşivlenen verilerin saklama süresini belirleyin. Süre dolduğunda veriler otomatik olarak kalıcı silinecektir.
+          </p>
         </div>
       </div>
 
