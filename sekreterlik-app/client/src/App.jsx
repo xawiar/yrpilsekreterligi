@@ -143,15 +143,30 @@ function PublicElectionResultsWrapper() {
 
 // Public route'lar icin auth gerektirmeyen wrapper
 function PublicRoutesWrapper() {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <Routes>
-        <Route path="/public/election-results/:electionId" element={<PublicElectionResultsWrapper />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Suspense>
-  );
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  // Dogrudan pathname kontrolu — nested Routes sorununu onler
+  if (pathname.startsWith('/public/election-results/')) {
+    // Route disinda useParams calismaz — pathname'den electionId parse et
+    const electionId = pathname.split('/public/election-results/')[1]?.split('/')[0] || '';
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <PublicElectionResultsPage electionIdProp={electionId} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === '/privacy-policy') {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <PrivacyPolicyPage />
+      </Suspense>
+    );
+  }
+
+  // Bilinmeyen public route → login'e yonlendir
+  return <Navigate to="/login" replace />;
 }
 
 // Router içinde kullanılacak component - public/auth route ayırımı

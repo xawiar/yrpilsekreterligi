@@ -29,8 +29,9 @@ const getApiBaseUrl = () => {
  * Visitor tracking ile anlık izleyen kişi sayısı takip edilir
  * TAMAMEN BAĞIMSIZ - Hiçbir admin panel layout'u yok
  */
-const PublicElectionResultsPage = () => {
-  const { electionId } = useParams();
+const PublicElectionResultsPage = ({ electionIdProp }) => {
+  const params = useParams();
+  const electionId = electionIdProp || params.electionId;
   const [visitorCount, setVisitorCount] = useState(0);
   const visitorIdRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
