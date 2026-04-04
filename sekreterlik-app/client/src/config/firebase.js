@@ -4,6 +4,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -30,6 +31,7 @@ let analytics = null;
 let auth = null;
 let db = null;
 let storage = null;
+let messaging = null;
 
 // Firestore database adı
 const FIRESTORE_DATABASE_NAME = 'yrpilsekreterligi';
@@ -41,8 +43,21 @@ if (typeof window !== 'undefined') {
     // Belirtilen database adı ile Firestore'u başlat
     db = getFirestore(app, FIRESTORE_DATABASE_NAME);
     storage = getStorage(app);
+
+    // FCM Messaging baslat (destekleniyorsa)
+    isMessagingSupported().then((supported) => {
+      if (supported) {
+        messaging = getMessaging(app);
+        console.log('✅ Firebase Messaging initialized');
+      } else {
+        console.warn('⚠️ Firebase Messaging is not supported in this browser');
+      }
+    }).catch((err) => {
+      console.warn('⚠️ Firebase Messaging init check failed:', err);
+    });
+
     console.log('✅ Firebase initialized with database:', FIRESTORE_DATABASE_NAME);
-    
+
     // QUIC protokol hatalarını azaltmak için network bağlantısını optimize et
     // enableNetwork ile bağlantıyı aktif tut
     enableNetwork(db).catch(err => {
@@ -70,7 +85,10 @@ if (typeof window !== 'undefined') {
   storage = getStorage(app);
 }
 
-export { analytics, auth, db, storage };
+// FCM messaging nesnesini lazy olarak al (async init sebebiyle)
+export const getFirebaseMessaging = () => messaging;
+
+export { analytics, auth, db, storage, messaging };
 
 export default app;
 

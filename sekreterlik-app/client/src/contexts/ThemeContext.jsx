@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { applyThemeColors } from '../utils/themeUtils';
 
 const ThemeContext = createContext();
 
@@ -12,7 +13,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // localStorage'dan tema tercihini yükle
+    // localStorage'dan tema tercihini yukle
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       return savedTheme === 'dark';
@@ -24,10 +25,21 @@ export const ThemeProvider = ({ children }) => {
     return false;
   });
 
+  const [primaryColor, setPrimaryColor] = useState(() => {
+    try {
+      const cached = localStorage.getItem('themeSettings');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return parsed.primaryColor || '#4f46e5';
+      }
+    } catch (_) {}
+    return '#4f46e5';
+  });
+
   useEffect(() => {
-    // Tema değiştiğinde localStorage'a kaydet ve html class'ını güncelle
+    // Tema degistiginde localStorage'a kaydet ve html class'ini guncelle
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-    
+
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -35,13 +47,44 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [isDarkMode]);
 
+  // Renk temasini dinle
+  useEffect(() => {
+    const handleThemeUpdate = () => {
+      try {
+        const cached = localStorage.getItem('themeSettings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.colors) {
+            applyThemeColors(parsed.colors);
+          }
+          if (parsed.primaryColor) {
+            setPrimaryColor(parsed.primaryColor);
+          }
+        }
+      } catch (_) {}
+    };
+
+    window.addEventListener('themeUpdated', handleThemeUpdate);
+    window.addEventListener('storage', handleThemeUpdate);
+
+    // Baslangicta renk temasini uygula
+    handleThemeUpdate();
+
+    return () => {
+      window.removeEventListener('themeUpdated', handleThemeUpdate);
+      window.removeEventListener('storage', handleThemeUpdate);
+    };
+  }, []);
+
   const toggleTheme = () => {
     setIsDarkMode(prev => !prev);
   };
 
   const value = {
     isDarkMode,
-    toggleTheme
+    toggleTheme,
+    primaryColor,
+    setPrimaryColor
   };
 
   return (
@@ -50,4 +93,3 @@ export const ThemeProvider = ({ children }) => {
     </ThemeContext.Provider>
   );
 };
-

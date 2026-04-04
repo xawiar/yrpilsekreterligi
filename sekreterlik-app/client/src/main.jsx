@@ -3,13 +3,28 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import * as Sentry from '@sentry/react'
-import { loadBrandingSettings } from './utils/brandingLoader'
+import { loadBrandingSettings, loadThemeSettings } from './utils/brandingLoader'
 
-// Uygulama başladığında branding ayarlarını yükle
+// Uygulama basladiginda branding ve tema ayarlarini yukle
 loadBrandingSettings().then(settings => {
   if (settings) {
     console.log('✅ Branding settings loaded');
   }
+});
+
+loadThemeSettings().then(theme => {
+  if (theme) {
+    console.log('✅ Theme settings loaded');
+  }
+});
+
+// FCM foreground mesaj dinleyicisini baslat
+import('./utils/fcmTokenManager').then(({ listenToFcmMessages }) => {
+  listenToFcmMessages((payload) => {
+    console.log('📬 FCM message in foreground:', payload?.notification?.title);
+  });
+}).catch(() => {
+  // FCM desteklenmiyorsa sessizce devam et
 });
 
 // Firebase kullanımı kontrolü

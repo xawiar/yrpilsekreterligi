@@ -27,6 +27,7 @@ import SyncToFirebasePage from './SyncToFirebasePage';
 import PollsPage from './PollsPage';
 import MemberDashboardAnalyticsPage from './MemberDashboardAnalyticsPage';
 import AppBrandingSettings from '../components/AppBrandingSettings';
+import ThemeSettings from '../components/ThemeSettings';
 import PerformanceScoreSettings from '../components/PerformanceScoreSettings';
 import SeçimEkleSettings from '../components/SeçimEkleSettings';
 import ApiKeySettings from '../components/ApiKeySettings';
@@ -148,6 +149,7 @@ const SettingsPage = ({ tab }) => {
       { id: 'polls', name: 'Anketler', description: 'Anket yönetimi', permission: 'manage_polls' },
       { id: 'member-dashboard-analytics', name: 'Üye Dashboard Analitik', description: 'Dashboard analitikleri', permission: 'access_member_dashboard_analytics' },
       { id: 'app-branding', name: 'Uygulama Markası', description: 'Uygulama marka ayarları', permission: 'manage_app_branding' },
+      { id: 'theme-settings', name: 'Tema Ozellestirme', description: 'Renk temasi ve gorunum ayarlari', permission: 'manage_app_branding' },
       { id: 'voter-list', name: 'Seçmen Listesi', description: 'Seçmen listesi yönetimi', permission: 'voter-list' },
       { id: 'seçim-ekle', name: 'Seçim Ekle', description: 'Seçim yönetimi', permission: 'manage_elections' },
     ];
@@ -235,6 +237,7 @@ const SettingsPage = ({ tab }) => {
                   {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
                   {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
                   {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
+                  {activeTab === 'theme-settings' && hasPermission('theme-settings') && <ThemeSettings />}
                   {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                   {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
                   {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}
@@ -387,6 +390,7 @@ const SettingsPage = ({ tab }) => {
                     {activeTab === 'performance-score' && hasPermission('performance-score') && <PerformanceScoreSettings />}
                     {activeTab === 'member-dashboard-analytics' && hasPermission('member-dashboard-analytics') && <MemberDashboardAnalyticsPage />}
                     {activeTab === 'app-branding' && hasPermission('app-branding') && <AppBrandingSettings />}
+                    {activeTab === 'theme-settings' && hasPermission('theme-settings') && <ThemeSettings />}
                     {activeTab === 'seçim-ekle' && hasPermission('seçim-ekle') && <SeçimEkleSettings />}
                     {activeTab === 'api-keys' && hasPermission('api-keys') && <ApiKeySettings />}
                     {activeTab === 'voter-list' && hasPermission('voter-list') && <VoterListSettings />}

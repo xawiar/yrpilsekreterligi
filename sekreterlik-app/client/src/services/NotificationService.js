@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import FirebaseApiService from '../utils/FirebaseApiService';
+import { queueFcmNotification } from '../utils/fcmTokenManager';
 
 // =====================================================
 // Koleksiyon isimleri
@@ -276,6 +277,13 @@ class NotificationService {
         await sendPushNotifications(targetUsers, { title, body, type, url });
       } catch (pushErr) {
         console.warn('[NotificationService] Push error (non-blocking):', pushErr);
+      }
+
+      // FCM push notification kuyruguna ekle (uygulama kapali/arka planda bile gelsin)
+      try {
+        await queueFcmNotification({ userIds: targetUsers, title, body, type, url });
+      } catch (fcmErr) {
+        console.warn('[NotificationService] FCM queue error (non-blocking):', fcmErr);
       }
 
       return { success: true, masterId: masterRef.id, targetCount: successCount, status: 'sent' };

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sekreterlik-v7-notif-cleanup-20260403';
+const CACHE_NAME = 'sekreterlik-v8-fcm-20260403';
 // Vite geliştirme ortamında sabit bundle yolları yok; yalnızca güvenli, mevcut dosyaları önbelleğe al
 const urlsToCache = [
   '/',

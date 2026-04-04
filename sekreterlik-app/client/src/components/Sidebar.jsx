@@ -245,7 +245,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
         {branding?.logoUrl ? (
           <img src={branding.logoUrl} alt="Logo" className="h-10 w-auto mb-2 object-contain" loading="lazy" decoding="async" />
         ) : null}
-        <h1 className="text-lg font-bold text-indigo-700 dark:text-indigo-400 text-center">
+        <h1 className="text-lg font-bold text-primary-700 dark:text-primary-400 text-center">
           {branding?.appName || 'Parti Sekreterliği'}
         </h1>
         {branding?.headerInfoText && (
@@ -261,7 +261,7 @@ const Sidebar = ({ onMobileMenuClose }) => {
           {branding?.logoUrl && (
             <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" loading="lazy" decoding="async" />
           )}
-          <h1 className="text-lg font-bold text-indigo-700 dark:text-indigo-400">
+          <h1 className="text-lg font-bold text-primary-700 dark:text-primary-400">
             {branding?.appName || 'Parti Sekreterliği'}
           </h1>
         </div>
@@ -321,12 +321,12 @@ const Sidebar = ({ onMobileMenuClose }) => {
                       onClick={() => toggleGroup(group.id)}
                       className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
                         isGroupActive
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
                       <div className="flex items-center">
-                        <span className={`mr-2 ${isGroupActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        <span className={`mr-2 ${isGroupActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`}>
                           {group.icon}
                         </span>
                         <span>{group.title}</span>
@@ -349,11 +349,11 @@ const Sidebar = ({ onMobileMenuClose }) => {
                               onClick={() => onMobileMenuClose && onMobileMenuClose()}
                               className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                                 isActive(item.href)
-                                  ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900 dark:to-purple-900 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-700 shadow-sm'
+                                  ? 'bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900 dark:to-primary-900/80 text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-700 shadow-sm'
                                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                               }`}
                             >
-                              <span className={`mr-2 ${isActive(item.href) ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                              <span className={`mr-2 ${isActive(item.href) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {item.icon}
                               </span>
                               {item.name}
@@ -369,11 +369,11 @@ const Sidebar = ({ onMobileMenuClose }) => {
                     onClick={() => onMobileMenuClose && onMobileMenuClose()}
                     className={`flex items-center px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       isActive(group.items[0].href)
-                        ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900 dark:to-purple-900 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-700 shadow-sm'
+                        ? 'bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900 dark:to-primary-900/80 text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-700 shadow-sm'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
-                    <span className={`mr-2 ${isActive(group.items[0].href) ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`mr-2 ${isActive(group.items[0].href) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`}>
                       {group.icon}
                     </span>
                     {group.title}

@@ -92,6 +92,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
         { id: 'performance-score', name: 'Yildiz Hesaplama Ayarlari' },
         { id: 'member-dashboard-analytics', name: 'Uye Dashboard Analitik' },
         { id: 'app-branding', name: 'Uygulama Gorunumu' },
+        { id: 'theme-settings', name: 'Tema Ozellestirme' },
       ]
     },
     {

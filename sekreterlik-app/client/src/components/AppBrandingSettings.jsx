@@ -3,6 +3,7 @@ import FirebaseService from '../services/FirebaseService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { updateFavicon } from '../utils/themeUtils';
 
 const AppBrandingSettings = () => {
   const toast = useToast();
@@ -182,9 +183,15 @@ const AppBrandingSettings = () => {
       // Service Worker'ı güncelle (PWA güncellemesi için)
       await triggerServiceWorkerUpdate();
       
+      // Favicon guncelle (logo veya icon192 ile)
+      const faviconSource = settings.icon192Url || settings.logoUrl;
+      if (faviconSource) {
+        updateFavicon(faviconSource);
+      }
+
       // Branding updated event'i gönder (diğer component'lerin güncellenmesi için)
       window.dispatchEvent(new Event('brandingUpdated'));
-      
+
       toast.success('Ayarlar kaydedildi! Uygulama güncellemesi için "Uygulama Güncelle" butonuna tıklayın.');
     } catch (error) {
       console.error('Error saving branding settings:', error);
@@ -196,6 +203,11 @@ const AppBrandingSettings = () => {
 
   const updateManifest = async () => {
     try {
+      // Tema rengini al
+      const { getThemeSettings } = await import('../utils/themeUtils');
+      const themeData = getThemeSettings();
+      const themeColor = themeData?.primaryColor || '#3b82f6';
+
       const manifest = {
         name: settings.appName || 'Sekreterlik Yönetim Sistemi',
         short_name: settings.appName?.substring(0, 12) || 'Sekreterlik',
@@ -203,7 +215,7 @@ const AppBrandingSettings = () => {
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
-        theme_color: '#3b82f6',
+        theme_color: themeColor,
         orientation: 'portrait-primary',
         scope: '/',
         lang: 'tr',

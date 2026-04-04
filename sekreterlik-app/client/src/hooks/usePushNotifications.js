@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ApiService from '../utils/ApiService';
+import { registerFcmToken } from '../utils/fcmTokenManager';
 
 /**
  * userId'yi hook parametresinden veya localStorage'dan cozumler.
@@ -119,7 +120,7 @@ export const usePushNotifications = (userId = null) => {
         setIsSubscribed(true);
         setIsLoading(false);
         console.log('✅ Already subscribed to push notifications');
-        
+
         // Still send to server to ensure it's registered
         const resolvedId = resolveUserId(userIdRef.current);
         try {
@@ -130,7 +131,14 @@ export const usePushNotifications = (userId = null) => {
         } catch (e) {
           console.warn('Error updating existing subscription on server:', e);
         }
-        
+
+        // FCM token'i da kaydet (arka plan push icin)
+        try {
+          await registerFcmToken(resolvedId);
+        } catch (fcmErr) {
+          console.warn('FCM token registration skipped:', fcmErr.message);
+        }
+
         return true;
       }
 
@@ -159,6 +167,14 @@ export const usePushNotifications = (userId = null) => {
         setIsSubscribed(true);
         setError(null); // Clear any errors
         console.log('✅ Successfully subscribed to push notifications');
+
+        // FCM token'i de kaydet (arka plan push icin)
+        try {
+          await registerFcmToken(resolvedId);
+        } catch (fcmErr) {
+          console.warn('FCM token registration skipped:', fcmErr.message);
+        }
+
         return true;
       } else {
         const errorMessage = response?.message || 'Subscription failed';

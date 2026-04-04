@@ -86,7 +86,16 @@ export const loadBrandingSettings = async () => {
         ]
       };
       localStorage.setItem('appManifest', JSON.stringify(manifest));
-      
+
+      // Favicon guncelle (logo veya icon192 ile)
+      const faviconSource = settings.icon192Url || settings.logoUrl;
+      if (faviconSource) {
+        try {
+          const { updateFavicon } = await import('./themeUtils');
+          updateFavicon(faviconSource);
+        } catch (_) {}
+      }
+
       return settings;
     }
     
@@ -108,6 +117,75 @@ export const getBrandingSettings = () => {
     }
   } catch (e) {
     console.warn('Error getting branding settings:', e);
+  }
+  return null;
+};
+
+/**
+ * Tema ayarlarini yukle ve CSS custom properties olarak uygula
+ */
+export const loadThemeSettings = async () => {
+  try {
+    const { applyThemeColors } = await import('./themeUtils');
+
+    // Oncelikle localStorage'dan hizli yukle
+    const cached = localStorage.getItem('themeSettings');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.colors) {
+          applyThemeColors(parsed.colors);
+        }
+        // Favicon guncelle
+        if (parsed.faviconUrl) {
+          const { updateFavicon } = await import('./themeUtils');
+          updateFavicon(parsed.faviconUrl);
+        }
+        return parsed;
+      } catch (e) {
+        console.warn('Error parsing cached theme:', e);
+      }
+    }
+
+    // Firebase'den yukle
+    const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+    if (USE_FIREBASE) {
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        const themeDoc = await getDoc(doc(db, 'settings', 'theme'));
+
+        if (themeDoc.exists()) {
+          const data = themeDoc.data();
+          if (data.colors) {
+            applyThemeColors(data.colors);
+          }
+          localStorage.setItem('themeSettings', JSON.stringify(data));
+          return data;
+        }
+      } catch (error) {
+        console.warn('Error loading theme from Firebase:', error);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.warn('Error loading theme settings:', error);
+    return null;
+  }
+};
+
+/**
+ * Tema ayarlarini al (localStorage'dan)
+ */
+export const getThemeSettingsCached = () => {
+  try {
+    const cached = localStorage.getItem('themeSettings');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    // Sessizce devam
   }
   return null;
 };
