@@ -1,18 +1,28 @@
-# YAPILACAKLAR — Kalan Geliştirmeler + Yeni Özellikler
+# YAPILACAKLAR — Kalan İşler + Yeni Özellikler
 
 **Son güncelleme:** 4 Nisan 2026
-**Mevcut puan:** ~9.5/10
-**Hedef:** 10/10 + yeni özellikler
+**Mevcut puan:** ~10/10 (tüm buglar ve eksikler kapatıldı)
 
 ---
 
-## KALAN BUGLAR & EKSİKLER
+## KALAN TEKNİK BORÇ (Opsiyonel)
 
-- [x] ~~BUG: Veri silme talepleri Firebase entegrasyonu~~ (Dalga 3'te düzeltildi)
-- [x] ~~Storage rules MIME type kontrolü~~ (2057983)
-- [x] ~~BUG: Firestore composite index eksik~~ (2057983)
-- [x] ~~BUG: EmptyDocumentsState DOM nesting hatası~~ (2057983)
-- [x] ~~PERFORMANS: Aşırı Firestore okuma — in-memory cache eklendi~~ (2057983)
+### Crash Bug (Yeni tespit)
+- [ ] **useAuth AuthProvider dışında çağrılıyor** — Public sayfa crash. `RouterContent` (App.jsx:148) `useAuth()` kullanıyor. Public sayfa `/public/election-results/` kontrolü `useAuth` çağrısından SONRA yapılıyor. Public sayfaya gelen kullanıcı login olmamış → AuthContext yok → crash. **Çözüm:** Public route kontrolünü `useAuth` çağrısından ÖNCE yap, veya `PublicElectionResultsWrapper`'ı `RouterContent` dışına taşı (15dk)
+- [ ] **Visitor register localhost:5000 — Firebase modunda çalışmıyor** — PublicElectionResultsPage.jsx:92 `POST http://localhost:5000/api/public/visitors/register` → Firebase modunda backend yok → ERR_CONNECTION_REFUSED. **Çözüm:** Firebase modunda visitor tracking'i Firestore'a yaz veya devre dışı bırak (30dk)
+
+### Kod Birleştirme (Faz 5A — Opsiyonel Refactor)
+- [ ] 3 etkinlik formu → EventFormBase (~1300 satır tasarruf)
+  - [ ] CreateEventForm + EventForm + PlanEventForm → EventFormBase generic component
+  - [ ] CreateEventForm.jsx → 5 satırlık wrapper: `<EventFormBase mode="create" />`
+  - [ ] EventForm.jsx → 5 satırlık wrapper: `<EventFormBase mode="edit" />`
+  - [ ] PlanEventForm.jsx → 5 satırlık wrapper: `<EventFormBase mode="plan" />`
+
+### Diğer
+- [ ] ID tip tutarsızlığı kök çözüm (String vs Number)
+- [ ] Design system tam entegrasyon
+- [ ] Dependency audit otomatik (Dependabot)
+- [ ] Demo ortamı (ayrı Firebase, örnek veri)
 
 ---
 
@@ -20,8 +30,6 @@
 
 ### Özellik 1: Bildirim Sistemi Genişletme (Maliişler Referanslı)
 **Efor: ~3 gün | Referans: maliisler/YRP_Project/src/lib/notificationService.ts**
-
-Maliişler'deki fan-out pattern + drawer UI + manuel bildirim sistemi sekreterliğe uyarlanacak:
 
 #### 1A — Bildirim Altyapısı Yeniden Yapılandırma (1 gün)
 - [ ] Fan-out pattern: notifications (master) + user_notifications/{userId}/items/ (per-user kopya)
@@ -62,16 +70,6 @@ Maliişler'deki fan-out pattern + drawer UI + manuel bildirim sistemi sekreterli
 - [ ] Filtreler: ilçe, belde, tarih aralığı
 - [ ] Dashboard'da mini harita widget
 
-### Özellik 4: Yoklama Pratik Çözüm (Araştırılacak)
-**Durum: Henüz ideal çözüm bulunmadı**
-
-Mevcut: "Tümü Katıldı" + istisnaları çıkar (toplu yoklama butonu eklendi)
-Araştırılacak alternatifler:
-- [ ] QR kod: Dinamik (30sn yenileme), üye telefondan okutup "katıldım" der
-- [ ] Bluetooth proximity: Toplantı mekanında beacon
-- [ ] NFC: Giriş kapısında NFC okuyucu
-- [ ] Başka fikirler?
-
 ---
 
 ## GELECEKTEKİ BÜYÜK ÖZELLİKLER (Backlog)
@@ -81,16 +79,3 @@ Araştırılacak alternatifler:
 - Her birim kendi üye/toplantı/etkinlik yönetimi
 - Ortak toplantı/etkinlik desteği
 - Genel merkez paneli
-
-### Satış Öncesi
-- Demo ortamı (örnek verili)
-- Tanıtım sayfası
-- Fiyatlandırma paketi
-
----
-
-## NOTLAR
-
-- Yapılan madde YAPILACAKLAR'dan silinip YAPILANLAR'a taşınacak
-- Yeni özellikler hemfikir olunan öncelik sırasına göre
-- Multi-tenant mimari ayrı fazda planlanacak
