@@ -129,16 +129,44 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
   try {
     console.error('[PUSH-SEND] Starting push for', userIds.length, 'users:', userIds);
     var subscriptions = [];
-    for (var i = 0; i < userIds.length; i++) {
-      try {
-        console.error('[PUSH-SEND] Reading push_tokens for:', userIds[i]);
-        var tokenDoc = await getDoc(doc(db, 'push_tokens', userIds[i]));
-        console.error('[PUSH-SEND] Token exists:', tokenDoc.exists(), 'data:', tokenDoc.exists() ? Object.keys(tokenDoc.data()) : 'N/A');
-        if (tokenDoc.exists() && tokenDoc.data().subscription && tokenDoc.data().isActive) {
-          subscriptions.push(tokenDoc.data().subscription);
+
+    // Tum push_tokens'lari bir kez oku (ID eslestirme sorunu cozumu)
+    var allTokens = {};
+    try {
+      var tokensSnap = await getDocs(collection(db, 'push_tokens'));
+      tokensSnap.forEach(function(d) {
+        var data = d.data();
+        if (data.subscription && data.isActive) {
+          allTokens[d.id] = data.subscription;
+          if (data.userId) allTokens[String(data.userId)] = data.subscription;
         }
-      } catch (e) {
-        console.error('[PUSH-SEND] Token read error:', e.message);
+      });
+      console.error('[PUSH-SEND] All tokens loaded:', Object.keys(allTokens).length);
+    } catch (e) {
+      console.error('[PUSH-SEND] Token load error:', e.message);
+    }
+
+    // Her userId icin token bul
+    for (var i = 0; i < userIds.length; i++) {
+      var uid = String(userIds[i]);
+      if (allTokens[uid]) {
+        subscriptions.push(allTokens[uid]);
+        console.error('[PUSH-SEND] Token found for:', uid);
+      } else {
+        // Auth UID ile eslestirme dene (member_users'dan)
+        try {
+          var muSnap = await getDocs(collection(db, 'member_users'));
+          muSnap.forEach(function(d) {
+            var data = d.data();
+            if (String(data.memberId || data.member_id || d.id) === uid) {
+              var authUid = data.authUid || data.auth_uid;
+              if (authUid && allTokens[authUid]) {
+                subscriptions.push(allTokens[authUid]);
+                console.error('[PUSH-SEND] Token found via authUid:', authUid, 'for member:', uid);
+              }
+            }
+          });
+        } catch (e2) { /* skip */ }
       }
     }
 
