@@ -30,24 +30,33 @@ setTimeout(async () => {
   try {
     // Kullanici login olmus mu kontrol et
     const savedUser = localStorage.getItem('user');
-    if (!savedUser) return;
+    if (!savedUser) {
+      console.error('[PUSH] No user in localStorage');
+      return;
+    }
+    console.error('[PUSH] User found, starting push setup...');
     const user = JSON.parse(savedUser);
     const userId = user.id || user.uid || '';
-    if (!userId) return;
+    if (!userId) { console.error('[PUSH] No userId'); return; }
+    console.error('[PUSH] userId:', userId);
 
     // Bildirim izni iste
-    if (typeof Notification === 'undefined') return;
-    if (Notification.permission === 'denied') return;
+    if (typeof Notification === 'undefined') { console.error('[PUSH] No Notification API'); return; }
+    if (Notification.permission === 'denied') { console.error('[PUSH] Permission denied'); return; }
 
     let perm = Notification.permission;
+    console.error('[PUSH] Current permission:', perm);
     if (perm !== 'granted') {
       perm = await Notification.requestPermission();
+      console.error('[PUSH] After request:', perm);
     }
-    if (perm !== 'granted') return;
+    if (perm !== 'granted') { console.error('[PUSH] Still not granted'); return; }
 
     // Service worker hazir mi
-    if (!('serviceWorker' in navigator)) return;
+    if (!('serviceWorker' in navigator)) { console.error('[PUSH] No SW'); return; }
+    console.error('[PUSH] Waiting for SW ready...');
     const reg = await navigator.serviceWorker.ready;
+    console.error('[PUSH] SW ready');
 
     // VAPID key
     const vapidKey = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
@@ -73,10 +82,12 @@ setTimeout(async () => {
         updatedAt: new Date().toISOString(),
         isActive: true
       });
-      console.log('Push token saved for:', userId);
+      console.error('[PUSH] TOKEN SAVED OK for:', userId);
+    } else {
+      console.error('[PUSH] No db!');
     }
   } catch (err) {
-    console.error('Push token save error:', err);
+    console.error('[PUSH] FATAL ERROR:', err.message, err);
   }
 }, 3000);
 
