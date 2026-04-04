@@ -101,7 +101,7 @@ exports.sendPush = onRequest(
                 const subscription = typeof sub === "string" ?
                   JSON.parse(sub) : sub;
                 return webpush.sendNotification(subscription, payload);
-              } catch {
+              } catch (ignored) {
                 return Promise.reject(new Error("Invalid sub"));
               }
             }),
@@ -153,7 +153,7 @@ exports.sendFcmNotification = onDocumentCreated(
             if (tokenDoc.exists && tokenDoc.data().subscription) {
               subscriptions.push(tokenDoc.data().subscription);
             }
-          } catch {
+          } catch (ignored) {
             // skip
           }
         }
