@@ -166,9 +166,9 @@ const GeminiApiSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Gemini AI API Ayarları
-        </h3>
+        </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Google Gemini API anahtarınızı girin. API anahtarı değiştiğinde buraya yeni anahtarı girebilirsiniz.
         </p>
@@ -178,11 +178,12 @@ const GeminiApiSettings = () => {
       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="setting-gemini-api-key" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Google Gemini API Anahtarı
             </label>
             <div className="flex items-center space-x-2">
               <input
+                id="setting-gemini-api-key"
                 type={showApiKey ? 'text' : 'password'}
                 value={geminiApiKey}
                 onChange={(e) => setGeminiApiKey(e.target.value)}
@@ -222,10 +223,11 @@ const GeminiApiSettings = () => {
 
           {/* Admin Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="setting-gemini-admin-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Admin Şifresi <span className="text-red-500">*</span>
             </label>
             <input
+              id="setting-gemini-admin-password"
               type="password"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}

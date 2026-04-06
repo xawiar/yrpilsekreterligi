@@ -1,3 +1,43 @@
+/**
+ * SERVER STATUS: Hybrid mode
+ * - Firebase mode (VITE_USE_FIREBASE=true): Most data comes from Firestore directly
+ * - This server provides (active routes used by client even in Firebase mode):
+ *     /api/auth/* — login, 2FA, Firebase Auth user management, member-users CRUD
+ *     /api/push-subscriptions/* — VAPID key, subscribe, send-direct, send-to-all
+ *     /api/health — SystemHealthWidget health check
+ *     /api/sms/* — bulk SMS, scheduled SMS
+ *     /api/mongo-messages/* — group messaging via MongoDB
+ *     /api/messages/* — user messaging, groups, unread count
+ *     /api/notifications/* — member notifications
+ *     /api/permissions/* — position permissions
+ *     /api/member-dashboard-analytics/* — session tracking, analytics
+ *     /api/polls/* — poll CRUD, voting, results
+ *     /api/voters/* — voter upload, search
+ *     /api/data-deletion-requests/* — KVKK data deletion
+ *     /api/settings/* — branding settings
+ *     /api/audit-logs — audit log viewer (admin only)
+ *     /api/public/* — public API, public election results, visitors
+ *     /api/api-keys/* — API key management
+ *     /api/metrics — Prometheus metrics (admin only)
+ * - Legacy routes (Firebase-replaced, only used by ApiService in non-Firebase fallback mode):
+ *     /api/members, /api/meetings, /api/events, /api/regions, /api/positions,
+ *     /api/tasks, /api/member-registrations, /api/archive, /api/personal-documents,
+ *     /api/districts, /api/towns, /api/neighborhoods, /api/villages,
+ *     /api/stks, /api/public-institutions, /api/mosques, /api/event-categories,
+ *     /api/neighborhood-representatives, /api/village-representatives,
+ *     /api/neighborhood-supervisors, /api/village-supervisors,
+ *     /api/district-officials, /api/town-officials, /api/visits,
+ *     /api/district-deputy-inspectors, /api/town-deputy-inspectors,
+ *     /api/district-management-members, /api/town-management-members,
+ *     /api/ballot-boxes, /api/ballot-box-observers, /api/elections,
+ *     /api/election-results, /api/alliances, /api/election-coordinators,
+ *     /api/election-regions, /api/bylaws, /api/financial, /api/sync,
+ *     /api/dashboard, /api/branch-members
+ * - Consider removing legacy routes in future cleanup
+ */
+// Express v5.x compatibility verified — no deprecated patterns found
+// Checked: no app.del() usage, no req.host (req.hostname used instead),
+// req.query access is safe, error middleware uses correct (err,req,res,next) signature.
 const express = require('express');
 const cors = require('cors');
 const path = require('path');

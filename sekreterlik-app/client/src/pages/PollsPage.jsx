@@ -374,10 +374,11 @@ const PollsPage = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="poll-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Başlık *
             </label>
             <input
+              id="poll-title"
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -387,10 +388,11 @@ const PollsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="poll-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Açıklama
             </label>
             <textarea
+              id="poll-description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
@@ -399,10 +401,11 @@ const PollsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="poll-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tip *
             </label>
             <select
+              id="poll-type"
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
@@ -448,10 +451,11 @@ const PollsPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="poll-end-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Bitiş Tarihi *
               </label>
               <input
+                id="poll-end-date"
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -460,10 +464,11 @@ const PollsPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="poll-end-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Bitiş Saati *
               </label>
               <input
+                id="poll-end-time"
                 type="time"
                 value={formData.endTime}
                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}

@@ -3,7 +3,7 @@
  * Edge cases and stress tests for the seat allocation algorithm.
  */
 import { describe, test, expect } from 'vitest';
-import { calculateDHondt, applyThreshold } from '../utils/dhondt';
+import { calculateDHondt, applyThreshold, checkRunoffEligibility } from '../utils/dhondt';
 
 describe('calculateDHondt — many parties', () => {
   test('handles 10+ parties correctly', () => {
@@ -149,5 +149,30 @@ describe('applyThreshold — edge cases', () => {
   test('threshold of 50% works correctly', () => {
     expect(applyThreshold(50000, 100000, 50.0)).toBe(true);
     expect(applyThreshold(49999, 100000, 50.0)).toBe(false);
+  });
+});
+
+describe('checkRunoffEligibility', () => {
+  test('winner with majority - no second round', () => {
+    const result = checkRunoffEligibility({ 'A': 600, 'B': 300, 'C': 100 }, 1000);
+    expect(result.needsSecondRound).toBe(false);
+    expect(result.winner).toBe('A');
+  });
+
+  test('no majority - second round needed', () => {
+    const result = checkRunoffEligibility({ 'A': 400, 'B': 350, 'C': 250 }, 1000);
+    expect(result.needsSecondRound).toBe(true);
+    expect(result.runoffCandidates).toEqual(['A', 'B']);
+  });
+
+  test('exact 50% is not majority', () => {
+    const result = checkRunoffEligibility({ 'A': 500, 'B': 500 }, 1000);
+    expect(result.needsSecondRound).toBe(true);
+  });
+
+  test('single candidate always wins', () => {
+    const result = checkRunoffEligibility({ 'A': 1000 }, 1000);
+    expect(result.needsSecondRound).toBe(false);
+    expect(result.winner).toBe('A');
   });
 });

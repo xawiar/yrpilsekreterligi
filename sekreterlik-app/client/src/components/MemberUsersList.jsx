@@ -1,4 +1,5 @@
 import React from 'react';
+import { getMemberId, compareIds } from '../utils/normalizeId';
 
 // Shared table row for password reset action
 const PasswordResetButton = ({ user, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => (
@@ -166,7 +167,7 @@ const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, se
       displayName = user.chairmanName || 'Bilinmeyen İlçe';
       displayInfo = 'İlçe Başkanı';
     } else {
-      const member = members.find(m => m.id === user.member_id || m.id === user.memberId || String(m.id) === String(user.member_id) || String(m.id) === String(user.memberId));
+      const member = members.find(m => compareIds(m.id, getMemberId(user)));
       displayName = member?.name || 'Bilinmeyen Üye';
       const memberRegion = member?.region || member?.region_name || '-';
       const memberPosition = member?.position || member?.position_name || '-';
@@ -210,7 +211,7 @@ const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, se
                 displayInfo = 'İlçe Başkanı';
                 userTypeLabel = 'İlçe Başkanı';
               } else {
-                const member = members.find(m => m.id === user.member_id || m.id === user.memberId || String(m.id) === String(user.member_id) || String(m.id) === String(user.memberId));
+                const member = members.find(m => compareIds(m.id, getMemberId(user)));
                 displayName = member?.name || 'Bilinmeyen Üye';
                 const memberRegion = member?.region || member?.region_name || '-';
                 const memberPosition = member?.position || member?.position_name || '-';

@@ -2109,6 +2109,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           alt="İmzalı Tutanak"
                           className="w-full h-full object-cover rounded"
                           loading="lazy"
+                          onError={(e) => { e.target.style.display = 'none'; }}
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                           <span className="text-white text-xs font-medium">Yeniden Yükle</span>
@@ -2182,6 +2183,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                           alt="İtiraz Tutanağı"
                           className="w-full h-full object-cover rounded"
                           loading="lazy"
+                          onError={(e) => { e.target.style.display = 'none'; }}
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                           <span className="text-white text-xs font-medium">Yeniden Yükle</span>

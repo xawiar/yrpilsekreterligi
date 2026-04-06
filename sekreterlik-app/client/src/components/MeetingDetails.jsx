@@ -9,6 +9,7 @@ import { isMobile } from '../utils/capacitorUtils';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { getMemberId } from '../utils/normalizeId';
 
 var RSVP_STYLES = {
   attending: { border: 'border-green-200', bg: 'bg-green-50', title: 'text-green-700', badge: 'bg-green-100 text-green-800', label: 'Katilacak' },
@@ -216,7 +217,7 @@ const MeetingDetails = ({ meeting }) => {
       if (meeting.attendees && meeting.attendees.length > 0) {
         meeting.attendees.forEach(attendance => {
           // Handle both string and number memberId values
-          const attendeeMemberId = attendance.memberId || attendance.member_id;
+          const attendeeMemberId = getMemberId(attendance);
           const member = getMember(attendeeMemberId);
           const memberName = member ? member.name : 'Bilinmeyen Üye';
           const memberTc = member ? (member.tc || '-') : '-';
@@ -518,8 +519,8 @@ const MeetingDetails = ({ meeting }) => {
             const mobileView = isMobile();
             const sortedAttendees = meeting.attendees && [...meeting.attendees]
               .sort((a, b) => {
-                const attendeeMemberIdA = a.memberId || a.member_id;
-                const attendeeMemberIdB = b.memberId || b.member_id;
+                const attendeeMemberIdA = getMemberId(a);
+                const attendeeMemberIdB = getMemberId(b);
                 const memberA = getMember(attendeeMemberIdA);
                 const memberB = getMember(attendeeMemberIdB);
                 const nameA = memberA ? memberA.name : 'Bilinmeyen Üye';
@@ -532,7 +533,7 @@ const MeetingDetails = ({ meeting }) => {
               return (
                 <div className="space-y-2 p-4">
                   {sortedAttendees.map((attendance) => {
-                    const attendeeMemberId = attendance.memberId || attendance.member_id;
+                    const attendeeMemberId = getMemberId(attendance);
                     const member = getMember(attendeeMemberId);
                     return (
                       <div key={attendance.memberId} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
@@ -612,7 +613,7 @@ const MeetingDetails = ({ meeting }) => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {sortedAttendees.map((attendance) => {
-                      const attendeeMemberId = attendance.memberId || attendance.member_id;
+                      const attendeeMemberId = getMemberId(attendance);
                       const member = getMember(attendeeMemberId);
                       return (
                         <tr key={attendance.memberId} className="hover:bg-gray-50 transition-colors duration-150">

@@ -754,6 +754,7 @@ const ChiefObserverDashboardPage = () => {
                                 className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity shadow-md"
                                 loading="lazy"
                                 onClick={() => window.open(result.signed_protocol_photo, '_blank')}
+                                onError={(e) => { e.target.style.display = 'none'; }}
                               />
                             </div>
                           )}

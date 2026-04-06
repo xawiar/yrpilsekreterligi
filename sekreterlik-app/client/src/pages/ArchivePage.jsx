@@ -426,7 +426,7 @@ const ArchivePage = () => {
             {/* Admin Belgeleri */}
             <div className="mb-6">
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Admin Belgeleri</h3>
+                <h2 className="text-lg font-semibold text-gray-900">Admin Belgeleri</h2>
               </div>
               <DocumentsTable 
                 documents={documents} 
@@ -438,7 +438,7 @@ const ArchivePage = () => {
             {/* Üye Belgeleri */}
             <div className="mt-8">
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Üye Belgeleri</h3>
+                <h2 className="text-lg font-semibold text-gray-900">Üye Belgeleri</h2>
               </div>
               <MemberDocumentsTable 
                 documents={memberDocuments} 

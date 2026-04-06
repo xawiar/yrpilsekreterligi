@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
@@ -22,6 +23,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const EventsPage = () => {
+  const { t } = useTranslation();
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -449,7 +451,7 @@ const EventsPage = () => {
       {/* Events Table */}
       {filteredEvents.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <p className="text-lg">Henüz etkinlik yok</p>
+          <p className="text-lg">{t('events.noEvents')}</p>
         </div>
       ) : (
         <EventsTable

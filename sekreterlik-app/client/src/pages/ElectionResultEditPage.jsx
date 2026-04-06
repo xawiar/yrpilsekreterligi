@@ -112,6 +112,7 @@ const ElectionResultEditPage = () => {
                     className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
                     loading="lazy"
                     onClick={() => window.open(protocolPhoto, '_blank')}
+                    onError={(e) => { e.target.style.display = 'none'; }}
                   />
                 </div>
               </div>
@@ -131,6 +132,7 @@ const ElectionResultEditPage = () => {
                     className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
                     loading="lazy"
                     onClick={() => window.open(objectionPhoto, '_blank')}
+                    onError={(e) => { e.target.style.display = 'none'; }}
                   />
                 </div>
               </div>

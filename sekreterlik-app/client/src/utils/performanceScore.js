@@ -22,6 +22,8 @@
  *   - 0-20%: Pasif Üye (1 yıldız)
  */
 
+import { getMemberId } from './normalizeId';
+
 /**
  * Performans puanı ayarlarını Firebase'den yükle
  * @returns {Promise<Object>} Performans puanı ayarları
@@ -195,10 +197,7 @@ export const calculatePerformanceScore = async (member, meetings, events, member
   meetings.forEach(meeting => {
     if (!isInRange(meeting.date)) return;
 
-    const attendee = meeting.attendees?.find(att => {
-      const attId = String(att.memberId || att.member_id);
-      return attId === memberId;
-    });
+    const attendee = meeting.attendees?.find(att => getMemberId(att) === memberId);
 
     if (attendee) {
       recentMeetingCount++;
@@ -258,10 +257,7 @@ export const calculatePerformanceScore = async (member, meetings, events, member
   events.forEach(event => {
     if (!isInRange(event.date)) return;
 
-    const attendee = event.attendees?.find(att => {
-      const attId = String(att.memberId || att.member_id);
-      return attId === memberId;
-    });
+    const attendee = event.attendees?.find(att => getMemberId(att) === memberId);
 
     if (attendee && attendee.attended) {
       details.eventAttendance++;
@@ -370,11 +366,8 @@ export const calculatePerformanceScore = async (member, meetings, events, member
     meetings.forEach(meeting => {
       if (!isInRange(meeting.date)) return;
       
-      const attendee = meeting.attendees?.find(att => {
-        const attId = String(att.memberId || att.member_id);
-        return attId === memberId;
-      });
-      
+      const attendee = meeting.attendees?.find(att => getMemberId(att) === memberId);
+
       if (!attendee) return; // Üye bu toplantıya davet edilmemiş
       
       try {
@@ -413,11 +406,8 @@ export const calculatePerformanceScore = async (member, meetings, events, member
     events.forEach(event => {
       if (!isInRange(event.date)) return;
       
-      const attendee = event.attendees?.find(att => {
-        const attId = String(att.memberId || att.member_id);
-        return attId === memberId;
-      });
-      
+      const attendee = event.attendees?.find(att => getMemberId(att) === memberId);
+
       if (!attendee) return; // Üye bu etkinliğe davet edilmemiş
       
       try {
@@ -776,10 +766,7 @@ export const calculateAllMemberScores = async (members, meetings, events, member
     const memberFirstMeetingDate = (() => {
       let earliest = null;
       meetings.forEach(meeting => {
-        const attendee = meeting.attendees?.find(att => {
-          const attId = String(att.memberId || att.member_id);
-          return attId === String(member.id);
-        });
+        const attendee = meeting.attendees?.find(att => getMemberId(att) === String(member.id));
         if (attendee && attendee.attended) {
           const meetingDate = parseDate(meeting.date);
           if (meetingDate && (!earliest || meetingDate < earliest)) {

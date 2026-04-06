@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import { PAGINATION } from '../utils/constants';
@@ -23,6 +24,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 
 const MeetingsPage = () => {
+  const { t } = useTranslation();
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -542,7 +544,7 @@ const MeetingsPage = () => {
       {/* Meetings Table - Responsive Design */}
       {filteredMeetings.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <p className="text-lg">Henüz toplantı yok</p>
+          <p className="text-lg">{t('meetings.noMeetings')}</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">

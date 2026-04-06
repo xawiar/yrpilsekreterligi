@@ -22,6 +22,7 @@ const Chatbot = ({ isOpen, onClose }) => {
   const [showQuickActions, setShowQuickActions] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < BREAKPOINTS.MOBILE);
   const messagesEndRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
@@ -31,6 +32,15 @@ const Chatbot = ({ isOpen, onClose }) => {
     const handleResize = () => setIsMobile(window.innerWidth < BREAKPOINTS.MOBILE);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Cleanup: abort any in-flight Gemini request when component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   // Scroll to bottom when new message is added
@@ -872,6 +882,13 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
       // Araç çağrıları için en güncel site verisini GeminiService'e aktar
       GeminiService.setSiteData(siteData);
 
+      // Abort any previous in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+      const { signal } = abortControllerRef.current;
+
       // Add a "typing" streaming message first
       const typingMsgId = Date.now() + 1;
       setMessages(prev => [...prev, { id: typingMsgId, role: 'assistant', content: '', isStreaming: true }]);
@@ -886,7 +903,8 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
             setMessages(prev => prev.map(msg =>
               msg.id === typingMsgId ? { ...msg, content: fullText } : msg
             ));
-          }
+          },
+          { signal }
         );
 
         // Mark streaming as done
@@ -894,8 +912,14 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
           msg.id === typingMsgId ? { ...msg, isStreaming: false } : msg
         ));
       } catch (streamError) {
+        if (streamError.name === 'AbortError') {
+          // Request was intentionally aborted, clean up typing message
+          setMessages(prev => prev.filter(msg => msg.id !== typingMsgId));
+          setLoading(false);
+          return;
+        }
         console.warn('Streaming failed, falling back to non-streaming:', streamError.message);
-        finalResponse = await GeminiService.chat(userMessage, enhancedContext, conversationHistory);
+        finalResponse = await GeminiService.chat(userMessage, enhancedContext, conversationHistory, { signal });
         setMessages(prev => prev.map(msg =>
           msg.id === typingMsgId ? { ...msg, content: finalResponse, isStreaming: false } : msg
         ));
@@ -1000,6 +1024,11 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
           : msg
       ));
     } catch (error) {
+      // If the request was intentionally aborted, do not show an error
+      if (error.name === 'AbortError') {
+        setLoading(false);
+        return;
+      }
       console.error('Chat error:', error);
       setError(error.message || 'Mesaj gönderilirken hata oluştu');
 

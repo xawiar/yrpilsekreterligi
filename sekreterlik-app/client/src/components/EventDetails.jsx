@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
+import { getMemberId } from '../utils/normalizeId';
 
 const NonAttendeesSection = ({ nonAttendees, getMemberInfo }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +40,7 @@ const NonAttendeesSection = ({ nonAttendees, getMemberInfo }) => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
               {nonAttendees.map((attendance) => {
-                const attendeeMemberId = attendance.memberId || attendance.member_id;
+                const attendeeMemberId = getMemberId(attendance);
                 const memberInfo = getMemberInfo(attendeeMemberId);
                 return (
                   <tr key={attendeeMemberId} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
@@ -274,7 +275,7 @@ const EventDetails = ({ event, members, onEditEvent, onUpdateAttendance }) => {
       if (event.attendees && event.attendees.length > 0) {
         event.attendees.forEach(attendance => {
           // Handle both string and number memberId values
-          const attendeeMemberId = attendance.memberId || attendance.member_id;
+          const attendeeMemberId = getMemberId(attendance);
           const memberInfo = getMemberInfo(attendeeMemberId);
           const memberIdStr = String(attendeeMemberId);
           const memberIdNum = Number(attendeeMemberId);
@@ -527,7 +528,7 @@ const EventDetails = ({ event, members, onEditEvent, onUpdateAttendance }) => {
                     
                     // Eğer etkinlikte seçilen konumlar varsa, sadece o konumlardaki temsilcileri göster
                     if (event.selectedLocationTypes && event.selectedLocations) {
-                      const attendeeMemberId = attendance.memberId || attendance.member_id;
+                      const attendeeMemberId = getMemberId(attendance);
                       const memberId = String(attendeeMemberId);
                       const memberIdNum = Number(attendeeMemberId);
                       
@@ -600,15 +601,15 @@ const EventDetails = ({ event, members, onEditEvent, onUpdateAttendance }) => {
                   })
                   .sort((a, b) => {
                     // Handle both string and number memberId values
-                    const attendeeMemberIdA = a.memberId || a.member_id;
-                    const attendeeMemberIdB = b.memberId || b.member_id;
+                    const attendeeMemberIdA = getMemberId(a);
+                    const attendeeMemberIdB = getMemberId(b);
                     const memberInfoA = getMemberInfo(attendeeMemberIdA);
                     const memberInfoB = getMemberInfo(attendeeMemberIdB);
                     return memberInfoA.name.localeCompare(memberInfoB.name, 'tr', { sensitivity: 'base' });
                   })
                   .map((attendance) => {
                   // Handle both string and number memberId values
-                  const attendeeMemberId = attendance.memberId || attendance.member_id;
+                  const attendeeMemberId = getMemberId(attendance);
                   const memberInfo = getMemberInfo(attendeeMemberId);
                   return (
                     <tr key={attendeeMemberId} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
@@ -649,8 +650,8 @@ const EventDetails = ({ event, members, onEditEvent, onUpdateAttendance }) => {
         const nonAttendees = event.attendees
           .filter(a => !a.attended)
           .sort((a, b) => {
-            const memberInfoA = getMemberInfo(a.memberId || a.member_id);
-            const memberInfoB = getMemberInfo(b.memberId || b.member_id);
+            const memberInfoA = getMemberInfo(getMemberId(a));
+            const memberInfoB = getMemberInfo(getMemberId(b));
             return memberInfoA.name.localeCompare(memberInfoB.name, 'tr', { sensitivity: 'base' });
           });
         if (nonAttendees.length === 0) return null;

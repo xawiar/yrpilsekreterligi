@@ -1,6 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto flex-shrink-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -12,12 +15,12 @@ const Footer = () => {
                 className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-medium transition-colors">
                 DAT Dijital
               </a>
-              . Tum haklari saklidir.
+              . {t('footer.allRightsReserved')}
             </p>
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400 text-center md:text-right">
             <p>
-              Teknik destek ve iletisim icin:{' '}
+              {t('footer.technicalSupport')}{' '}
               <a href="https://www.datdijital.com/" target="_blank" rel="noopener noreferrer"
                 className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-medium transition-colors">
                 DAT Dijital

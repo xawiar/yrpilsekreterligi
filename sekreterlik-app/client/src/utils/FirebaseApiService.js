@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { decryptData, encryptData } from '../utils/crypto';
+import { getMemberId } from './normalizeId';
 
 /**
  * Firebase tabanlı API Service
@@ -313,7 +314,7 @@ class FirebaseApiService {
           userData.role = memberUser[0].userType || 'member';
 
           // memberId alanını kontrol et - hem memberId hem member_id olabilir
-          let memberId = memberUser[0].memberId || memberUser[0].member_id;
+          let memberId = getMemberId(memberUser[0]);
 
           // Eğer memberId yoksa ve userType 'member' ise, username (TC) ile member bul
           if (!memberId && memberUser[0].userType === 'member' && memberUser[0].username) {
@@ -1345,16 +1346,16 @@ class FirebaseApiService {
       // Create a map of memberId -> memberUser for quick lookup
       const memberUserMap = new Map();
       allMemberUsers.forEach(user => {
-        const memberId = user.memberId || user.member_id;
+        const memberId = getMemberId(user);
         if (memberId) {
-          memberUserMap.set(String(memberId), user);
+          memberUserMap.set(memberId, user);
         }
       });
 
       // Update or create member users
       for (const member of allMembers) {
         try {
-          const memberId = String(member.id || member.memberId || member.member_id);
+          const memberId = getMemberId(member);
           if (!memberId) {
             results.memberUsers.errors.push(`Member has no ID: ${member.name || 'Unknown'}`);
             continue;
@@ -1453,8 +1454,8 @@ class FirebaseApiService {
             const userWithSameUsername = allMemberUsers.find(
               u => {
                 const uUsername = (u.username || '').toString().replace(/\D/g, '');
-                const uMemberId = u.memberId || u.member_id;
-                return uUsername === username && String(uMemberId) !== memberId;
+                const uMemberId = getMemberId(u);
+                return uUsername === username && uMemberId !== memberId;
               }
             );
 
@@ -1817,10 +1818,7 @@ class FirebaseApiService {
             ]
           }, false);
 
-          const memberUser = allMemberUsers.find(u => {
-            const userId = u.memberId || u.member_id;
-            return String(userId) === String(id);
-          });
+          const memberUser = allMemberUsers.find(u => getMemberId(u) === String(id));
 
           if (memberUser) {
             // Yeni username ve password'u hesapla (normalize edilmiş)
@@ -2096,7 +2094,7 @@ class FirebaseApiService {
         let successCount = 0;
         for (const member of allMembers) {
           try {
-            const memberId = member.id || member.memberId || member.member_id;
+            const memberId = getMemberId(member);
             if (!memberId) {
               console.warn('⚠️ Member without ID skipped:', member);
               continue;
@@ -2311,7 +2309,7 @@ class FirebaseApiService {
         let successCount = 0;
         for (const member of allMembers) {
           try {
-            const memberId = member.id || member.memberId || member.member_id;
+            const memberId = getMemberId(member);
             if (!memberId) {
               console.warn('⚠️ Member without ID skipped:', member);
               continue;
@@ -6835,7 +6833,7 @@ class FirebaseApiService {
         let successCount = 0;
         for (const member of allMembers) {
           try {
-            const memberId = member.id || member.memberId || member.member_id;
+            const memberId = getMemberId(member);
             if (!memberId) {
               console.warn('⚠️ Member without ID skipped:', member);
               continue;
@@ -6901,7 +6899,7 @@ class FirebaseApiService {
       const votes = await FirebaseService.getAll(this.COLLECTIONS.POLL_VOTES);
       const existingVote = votes.find(v =>
         String(v.pollId || v.poll_id) === String(pollId) &&
-        String(v.memberId || v.member_id) === String(memberId)
+        getMemberId(v) === String(memberId)
       );
 
       const voteData = {
@@ -7004,7 +7002,7 @@ class FirebaseApiService {
 
           for (const member of (allMembers || [])) {
             try {
-              const memberId = member.id || member.memberId || member.member_id;
+              const memberId = getMemberId(member);
               if (!memberId) continue;
               await FirebaseService.create(
                 this.COLLECTIONS.NOTIFICATIONS,
@@ -7080,7 +7078,7 @@ class FirebaseApiService {
   static async getMemberAnalytics(memberId) {
     try {
       const allAnalytics = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS);
-      const memberAnalytics = allAnalytics.filter(a => String(a.memberId || a.member_id) === String(memberId));
+      const memberAnalytics = allAnalytics.filter(a => getMemberId(a) === String(memberId));
       return { success: true, analytics: memberAnalytics };
     } catch (error) {
       console.error('Error getting member analytics:', error);
@@ -7091,7 +7089,7 @@ class FirebaseApiService {
   static async getMemberAnalyticsSummary(memberId) {
     try {
       const allAnalytics = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_DASHBOARD_ANALYTICS);
-      const memberAnalytics = allAnalytics.filter(a => String(a.memberId || a.member_id) === String(memberId));
+      const memberAnalytics = allAnalytics.filter(a => getMemberId(a) === String(memberId));
 
       const totalSessions = memberAnalytics.length;
       const totalDurationSeconds = memberAnalytics.reduce((sum, a) => sum + (a.durationSeconds || a.duration_seconds || 0), 0);
@@ -7126,7 +7124,7 @@ class FirebaseApiService {
       return {
         success: true,
         analytics: analytics.map(a => {
-          const member = members.find(m => String(m.id) === String(a.memberId || a.member_id));
+          const member = members.find(m => String(m.id) === getMemberId(a));
           return {
             ...a,
             name: member?.name || '',
@@ -7150,7 +7148,7 @@ class FirebaseApiService {
       const memberMap = new Map();
 
       analytics.forEach(a => {
-        const memberId = String(a.memberId || a.member_id);
+        const memberId = getMemberId(a);
         if (!memberMap.has(memberId)) {
           const member = members.find(m => String(m.id) === memberId);
           memberMap.set(memberId, {
@@ -7223,7 +7221,7 @@ class FirebaseApiService {
 
       let notifications = allNotifications.filter(n => {
         // Member ID eşleşmesi - sadece bu üyeye ait veya genel (memberId yok) notification'lar
-        const notificationMemberId = n.memberId || n.member_id;
+        const notificationMemberId = getMemberId(n);
         const normalizedNotificationMemberId = notificationMemberId ? String(notificationMemberId).trim() : null;
 
         // Member match: notification'un memberId'si yoksa (genel) veya eşleşiyorsa

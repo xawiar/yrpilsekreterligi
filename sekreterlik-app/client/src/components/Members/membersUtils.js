@@ -1,3 +1,5 @@
+import { getMemberId } from '../../utils/normalizeId';
+
 // Function to calculate meeting statistics for a member
 export const calculateMeetingStats = (member, meetings) => {
   // Safety checks
@@ -12,27 +14,19 @@ export const calculateMeetingStats = (member, meetings) => {
 
   // Normalize member ID for comparison (handle both string and number)
   const memberIdStr = String(member.id);
-  const memberIdNum = Number(member.id);
-  
+
   // Filter meetings where this member is actually required to attend (in attendees list)
-  const memberMeetings = meetings.filter(meeting => 
+  const memberMeetings = meetings.filter(meeting =>
     meeting && meeting.attendees && Array.isArray(meeting.attendees) &&
-    meeting.attendees.some(a => {
-      // Handle both string and number memberId values
-      const attendeeMemberId = a.memberId || a.member_id;
-      return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-    })
+    meeting.attendees.some(a => getMemberId(a) === memberIdStr)
   );
-  
+
   // Count attended and excused meetings
   let attendedMeetings = 0;
   let excusedMeetings = 0;
   memberMeetings.forEach(meeting => {
     if (meeting.attendees && Array.isArray(meeting.attendees)) {
-      const attendee = meeting.attendees.find(a => {
-        const attendeeMemberId = a.memberId || a.member_id;
-        return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-      });
+      const attendee = meeting.attendees.find(a => getMemberId(a) === memberIdStr);
       if (attendee) {
         if (attendee.attended) {
           attendedMeetings++;

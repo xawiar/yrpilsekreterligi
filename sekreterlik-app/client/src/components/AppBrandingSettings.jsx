@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
 import { updateFavicon } from '../utils/themeUtils';
+import { getMemberId } from '../utils/normalizeId';
 
 const AppBrandingSettings = () => {
   const toast = useToast();
@@ -304,7 +305,7 @@ const AppBrandingSettings = () => {
             let successCount = 0;
             for (const member of allMembers) {
               try {
-                const memberId = member.id || member.memberId || member.member_id;
+                const memberId = getMemberId(member);
                 if (!memberId) continue;
                 
                 await FirebaseService.create(
@@ -381,10 +382,11 @@ const AppBrandingSettings = () => {
 
       {/* Uygulama Adı */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-app-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Uygulama Adı
         </label>
         <input
+          id="setting-app-name"
           type="text"
           value={settings.appName}
           onChange={(e) => setSettings(prev => ({ ...prev, appName: e.target.value }))}
@@ -395,10 +397,11 @@ const AppBrandingSettings = () => {
 
       {/* Uygulama Açıklaması */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-app-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Uygulama Açıklaması
         </label>
         <textarea
+          id="setting-app-description"
           value={settings.appDescription}
           onChange={(e) => setSettings(prev => ({ ...prev, appDescription: e.target.value }))}
           rows={3}
@@ -409,10 +412,11 @@ const AppBrandingSettings = () => {
 
       {/* Header Bilgilendirme Metni */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-header-info-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Web Sayfası Üstündeki Bilgilendirme Metni
         </label>
         <textarea
+          id="setting-header-info-text"
           value={settings.headerInfoText}
           onChange={(e) => setSettings(prev => ({ ...prev, headerInfoText: e.target.value }))}
           rows={2}
@@ -423,11 +427,12 @@ const AppBrandingSettings = () => {
 
       {/* Logo */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-logo" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Logo (Ana Logo)
         </label>
         <div className="flex items-center space-x-4">
           <input
+            id="setting-logo"
             type="file"
             accept="image/*"
             onChange={(e) => handleFileChange('logoUrl', e.target.files[0])}
@@ -441,11 +446,12 @@ const AppBrandingSettings = () => {
 
       {/* Icon 192x192 */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-icon192" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Icon (192x192) - PWA ve bildirimler için
         </label>
         <div className="flex items-center space-x-4">
           <input
+            id="setting-icon192"
             type="file"
             accept="image/*"
             onChange={(e) => handleFileChange('icon192Url', e.target.files[0])}
@@ -459,11 +465,12 @@ const AppBrandingSettings = () => {
 
       {/* Icon 512x512 */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-icon512" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Icon (512x512) - PWA için
         </label>
         <div className="flex items-center space-x-4">
           <input
+            id="setting-icon512"
             type="file"
             accept="image/*"
             onChange={(e) => handleFileChange('icon512Url', e.target.files[0])}
@@ -477,11 +484,12 @@ const AppBrandingSettings = () => {
 
       {/* Badge Icon */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-badge-icon" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Badge Icon (72x72) - Bildirim rozeti için
         </label>
         <div className="flex items-center space-x-4">
           <input
+            id="setting-badge-icon"
             type="file"
             accept="image/*"
             onChange={(e) => handleFileChange('badgeUrl', e.target.files[0])}
@@ -495,11 +503,12 @@ const AppBrandingSettings = () => {
 
       {/* Notification Icon */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="setting-notification-icon" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Bildirim Icon - Push bildirimler için
         </label>
         <div className="flex items-center space-x-4">
           <input
+            id="setting-notification-icon"
             type="file"
             accept="image/*"
             onChange={(e) => handleFileChange('notificationIconUrl', e.target.files[0])}

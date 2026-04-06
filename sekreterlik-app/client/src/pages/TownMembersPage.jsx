@@ -409,14 +409,13 @@ const TownMembersPage = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {member.photo ? (
-                            <img className="h-10 w-10 rounded-full" src={normalizePhotoUrl(member.photo)} alt={member.name} loading="lazy" />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-indigo-600">
-                                {member.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
+                            <img className="h-10 w-10 rounded-full object-cover" src={normalizePhotoUrl(member.photo)} alt={member.name} loading="lazy" onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; }} />
+                          ) : null}
+                          <div className={`h-10 w-10 rounded-full bg-indigo-100 items-center justify-center ${member.photo ? 'hidden' : 'flex'}`}>
+                            <span className="text-sm font-medium text-indigo-600">
+                              {member.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{member.name}</div>

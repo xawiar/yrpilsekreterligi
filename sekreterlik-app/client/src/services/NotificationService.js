@@ -17,6 +17,7 @@ import {
 import { db } from '../config/firebase';
 import FirebaseApiService from '../utils/FirebaseApiService';
 import { queueFcmNotification } from '../utils/fcmTokenManager';
+import { getMemberId, getAuthUid } from '../utils/normalizeId';
 
 // =====================================================
 // Koleksiyon isimleri
@@ -188,8 +189,8 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
       var muSnap = await getDocs(collection(db, 'member_users'));
       muSnap.forEach(function(d) {
         var data = d.data();
-        var mid = String(data.memberId || data.member_id || d.id || '');
-        var authUid = data.authUid || data.auth_uid || '';
+        var mid = getMemberId(data) || String(d.id || '');
+        var authUid = getAuthUid(data) || '';
         if (mid && authUid) memberToAuth[mid] = authUid;
       });
     } catch (e2) { /* skip */ }

@@ -8,7 +8,7 @@ import ManagementChartView from './ManagementChartView';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
 import { calculatePerformanceScore } from '../utils/performanceScore';
 import { useToast } from '../contexts/ToastContext';
-import { compareIds } from '../utils/normalizeId';
+import { compareIds, getMemberId } from '../utils/normalizeId';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
 
@@ -414,18 +414,12 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
       event.attendees && 
       Array.isArray(event.attendees) && 
       event.attendees.some(att => {
-        const attendeeMemberId = att.memberId || att.member_id;
-        return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+        return getMemberId(att) === memberIdStr;
       })
     );
 
     const attendedEvents = memberEvents.filter(event => {
-      const attendeeMemberIdStr = String(memberId);
-      const attendeeMemberIdNum = Number(memberId);
-      const attendance = event.attendees.find(att => {
-        const attendeeMemberId = att.memberId || att.member_id;
-        return String(attendeeMemberId) === attendeeMemberIdStr || Number(attendeeMemberId) === attendeeMemberIdNum;
-      });
+      const attendance = event.attendees.find(att => getMemberId(att) === memberIdStr);
       return attendance && attendance.attended;
     });
 
@@ -456,18 +450,14 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
       meeting.attendees && 
       Array.isArray(meeting.attendees) && 
       meeting.attendees.some(att => {
-        const attendeeMemberId = att.memberId || att.member_id;
-        return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
+        return getMemberId(att) === memberIdStr;
       })
     );
 
     let excuseCount = 0;
     memberMeetings.forEach(meeting => {
       if (meeting.attendees && Array.isArray(meeting.attendees)) {
-        const attendee = meeting.attendees.find(a => {
-          const attendeeMemberId = a.memberId || a.member_id;
-          return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-        });
+        const attendee = meeting.attendees.find(a => getMemberId(a) === memberIdStr);
         if (attendee && attendee.excuse && attendee.excuse.hasExcuse) {
           excuseCount++;
         }
@@ -1149,11 +1139,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
                 .filter(meeting => {
                   if (!meeting.attendees || !Array.isArray(meeting.attendees)) return false;
                   const memberIdStr = String(member.id);
-                  const memberIdNum = Number(member.id);
-                  return meeting.attendees.some(a => {
-                    const attendeeMemberId = a.memberId || a.member_id;
-                    return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-                  });
+                  return meeting.attendees.some(a => getMemberId(a) === memberIdStr);
                 })
                 .sort((a, b) => {
                   // Sort by date descending (newest first)
@@ -1163,11 +1149,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
                 })
                 .map((meeting) => {
                 const memberIdStr = String(member.id);
-                const memberIdNum = Number(member.id);
-                const attendance = meeting.attendees.find(a => {
-                  const attendeeMemberId = a.memberId || a.member_id;
-                  return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-                });
+                const attendance = meeting.attendees.find(a => getMemberId(a) === memberIdStr);
                 return (
                   <tr key={meeting.id} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -1233,11 +1215,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
             .filter(meeting => {
               if (!meeting.attendees || !Array.isArray(meeting.attendees)) return false;
               const memberIdStr = String(member.id);
-              const memberIdNum = Number(member.id);
-              return meeting.attendees.some(a => {
-                const attendeeMemberId = a.memberId || a.member_id;
-                return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-              });
+              return meeting.attendees.some(a => getMemberId(a) === memberIdStr);
             })
             .sort((a, b) => {
               // Sort by date descending (newest first)
@@ -1247,11 +1225,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
             })
             .map((meeting) => {
               const memberIdStr = String(member.id);
-              const memberIdNum = Number(member.id);
-              const attendance = meeting.attendees.find(a => {
-                const attendeeMemberId = a.memberId || a.member_id;
-                return String(attendeeMemberId) === memberIdStr || Number(attendeeMemberId) === memberIdNum;
-              });
+              const attendance = meeting.attendees.find(a => getMemberId(a) === memberIdStr);
               return (
                 <div key={meeting.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex justify-between items-start mb-2">

@@ -292,7 +292,9 @@ const ThemeSettings = () => {
         </h3>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
+            <label htmlFor="setting-theme-color" className="sr-only">Ozel renk sec</label>
             <input
+              id="setting-theme-color"
               type="color"
               value={customColor}
               onChange={(e) => handleCustomColorChange(e.target.value)}
@@ -369,10 +371,11 @@ const ThemeSettings = () => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="setting-login-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Login Basligi
             </label>
             <input
+              id="setting-login-title"
               type="text"
               value={themeSettings.loginTitle}
               onChange={(e) => setThemeSettings(prev => ({ ...prev, loginTitle: e.target.value }))}
@@ -381,10 +384,11 @@ const ThemeSettings = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="setting-login-slogan" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Login Slogani
             </label>
             <input
+              id="setting-login-slogan"
               type="text"
               value={themeSettings.loginSlogan}
               onChange={(e) => setThemeSettings(prev => ({ ...prev, loginSlogan: e.target.value }))}

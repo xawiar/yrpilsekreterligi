@@ -94,7 +94,7 @@ class GeminiService {
   /**
    * Ana chat fonksiyonu — Gemini native API
    */
-  static async chat(userMessage, context = [], conversationHistory = []) {
+  static async chat(userMessage, context = [], conversationHistory = [], { signal } = {}) {
     try {
       this.checkRateLimit();
       const apiKey = await this.getApiKey();
@@ -133,7 +133,8 @@ class GeminiService {
       const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        ...(signal ? { signal } : {})
       });
 
       if (!response.ok) {
@@ -171,7 +172,8 @@ class GeminiService {
         const followUpResponse = await fetch(`${this.API_URL}?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(followUpBody)
+          body: JSON.stringify(followUpBody),
+          ...(signal ? { signal } : {})
         });
 
         const followUpData = await followUpResponse.json();
@@ -231,7 +233,7 @@ class GeminiService {
   /**
    * Streaming chat — kelime kelime yanıt
    */
-  static async chatStream(userMessage, context = [], conversationHistory = [], onChunk) {
+  static async chatStream(userMessage, context = [], conversationHistory = [], onChunk, { signal } = {}) {
     try {
       this.checkRateLimit();
       const apiKey = await this.getApiKey();
@@ -260,7 +262,8 @@ class GeminiService {
       const response = await fetch(`${this.STREAM_URL}?key=${apiKey}&alt=sse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        ...(signal ? { signal } : {})
       });
 
       if (!response.ok) {

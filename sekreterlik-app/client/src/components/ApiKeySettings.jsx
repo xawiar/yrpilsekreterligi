@@ -278,10 +278,11 @@ const ApiKeySettings = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yeni API Key Oluştur</h3>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="setting-api-key-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 API Key Adı
               </label>
               <input
+                id="setting-api-key-name"
                 type="text"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}

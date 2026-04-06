@@ -7,7 +7,7 @@
  * - Katman 2 (buildSiteContext): Detayli veriler, function calling ile on-demand cekilir
  */
 
-import { compareIds } from './normalizeId';
+import { compareIds, getMemberId } from './normalizeId';
 
 /**
  * TC kimlik ve telefon numaralarını maskele
@@ -1034,7 +1034,7 @@ function buildSiteContext(siteData) {
     // Üye bazında belgeler
     const memberDocuments = {};
     siteData.personalDocuments.forEach(doc => {
-      const memberId = String(doc.member_id || doc.memberId);
+      const memberId = getMemberId(doc);
       if (!memberDocuments[memberId]) {
         memberDocuments[memberId] = [];
       }
@@ -1721,11 +1721,11 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       const neighborhoodReps = siteData.neighborhoodRepresentatives || [];
       const villageReps = siteData.villageRepresentatives || [];
       const memberNeighborhoodRep = neighborhoodReps.find(rep => {
-        const repMemberId = rep.member_id || rep.memberId;
+        const repMemberId = getMemberId(rep);
         return String(repMemberId) === memberId;
       });
       const memberVillageRep = villageReps.find(rep => {
-        const repMemberId = rep.member_id || rep.memberId;
+        const repMemberId = getMemberId(rep);
         return String(repMemberId) === memberId;
       });
 
@@ -1755,11 +1755,11 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       const neighborhoodSups = siteData.neighborhoodSupervisors || [];
       const villageSups = siteData.villageSupervisors || [];
       const memberNeighborhoodSup = neighborhoodSups.find(sup => {
-        const supMemberId = sup.member_id || sup.memberId;
+        const supMemberId = getMemberId(sup);
         return String(supMemberId) === memberId;
       });
       const memberVillageSup = villageSups.find(sup => {
-        const supMemberId = sup.member_id || sup.memberId;
+        const supMemberId = getMemberId(sup);
         return String(supMemberId) === memberId;
       });
 
@@ -1788,7 +1788,7 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       // MÜŞAHİT BİLGİSİ
       const observers = siteData.observers || [];
       const memberObservers = observers.filter(obs => {
-        const obsMemberId = obs.member_id || obs.memberId || obs.observer_member_id;
+        const obsMemberId = getMemberId(obs) || obs.observer_member_id;
         return String(obsMemberId) === memberId;
       });
 
@@ -1849,12 +1849,12 @@ function buildMemberContext(members, searchTerm = '', siteData = {}) {
       );
 
       const memberDistrictDeputy = districtDeputyInspectors.find(dep => {
-        const depMemberId = dep.member_id || dep.memberId;
+        const depMemberId = getMemberId(dep);
         return String(depMemberId) === memberId;
       });
 
       const memberTownDeputy = townDeputyInspectors.find(dep => {
-        const depMemberId = dep.member_id || dep.memberId;
+        const depMemberId = getMemberId(dep);
         return String(depMemberId) === memberId;
       });
 

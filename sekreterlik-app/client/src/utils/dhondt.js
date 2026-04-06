@@ -723,6 +723,46 @@ export const calculateDHondtWithAlliances = (
  * @param {Array} parties - Parti listesi
  * @returns {Object} - Detaylı sonuç
  */
+/**
+ * İkinci tur seçim için aday belirleme
+ * Belediye başkanlığı seçimlerinde %50+1 oy alamayan adaylar için
+ * en çok oy alan 2 aday ikinci tura kalır
+ * @param {Object} candidateVotes - Aday adı ve oy sayısı çiftleri
+ * @param {number} totalValidVotes - Toplam geçerli oy
+ * @returns {Object} { needsSecondRound, winner, runoffCandidates, results }
+ */
+export const checkRunoffEligibility = (candidateVotes, totalValidVotes) => {
+  const sorted = Object.entries(candidateVotes)
+    .map(([name, votes]) => ({ name, votes: parseInt(votes) || 0 }))
+    .sort((a, b) => b.votes - a.votes);
+
+  if (sorted.length === 0) {
+    return { needsSecondRound: false, winner: null, runoffCandidates: [], results: [] };
+  }
+
+  const threshold = Math.floor(totalValidVotes / 2) + 1; // %50+1
+  const leader = sorted[0];
+
+  if (leader.votes >= threshold) {
+    return {
+      needsSecondRound: false,
+      winner: leader.name,
+      winnerVotes: leader.votes,
+      winnerPercentage: ((leader.votes / totalValidVotes) * 100).toFixed(2),
+      runoffCandidates: [],
+      results: sorted,
+    };
+  }
+
+  return {
+    needsSecondRound: true,
+    winner: null,
+    runoffCandidates: sorted.slice(0, 2).map(c => c.name),
+    runoffCandidateVotes: sorted.slice(0, 2),
+    results: sorted,
+  };
+};
+
 export const calculateDHondtWithAlliancesDetailed = (
   partyVotes,
   totalSeats,

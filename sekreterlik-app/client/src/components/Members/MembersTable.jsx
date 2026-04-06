@@ -11,6 +11,7 @@ import SortableHeader from './SortableHeader';
 import MemberInfo from './MemberInfo';
 import { calculateMemberRegistrations } from './membersUtils';
 import { normalizePhotoUrl } from '../../utils/photoUrlHelper';
+import { getMemberId } from '../../utils/normalizeId';
 
 const MembersTable = ({
   members,
@@ -40,10 +41,10 @@ const MembersTable = ({
     const memberIdStr = String(memberId);
     const memberEvents = events.filter(event =>
       event.attendees && Array.isArray(event.attendees) &&
-      event.attendees.some(att => String(att.memberId || att.member_id) === memberIdStr)
+      event.attendees.some(att => getMemberId(att) === memberIdStr)
     );
     const attended = memberEvents.filter(event => {
-      const att = event.attendees.find(a => String(a.memberId || a.member_id) === memberIdStr);
+      const att = event.attendees.find(a => getMemberId(a) === memberIdStr);
       return att && att.attended;
     });
     return { totalEvents: memberEvents.length, attendedEvents: attended.length };

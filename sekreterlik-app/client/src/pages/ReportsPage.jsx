@@ -10,6 +10,7 @@ import { calculateAllMemberScores } from '../utils/performanceScore';
 import { useAuth } from '../contexts/AuthContext';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeCard from '../components/mobile/NativeCard';
+import { getMemberId } from '../utils/normalizeId';
 
 const ReportsPage = () => {
   const toast = useToast();
@@ -543,7 +544,7 @@ const ReportsPage = () => {
         if (meeting.attendees) {
           meeting.attendees.forEach(attendee => {
             if (attendee.attended) {
-              const attendeeMemberId = attendee.memberId || attendee.member_id;
+              const attendeeMemberId = getMemberId(attendee);
               const memberIdStr = String(attendeeMemberId);
               const memberIdNum = Number(attendeeMemberId);
               
