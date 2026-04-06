@@ -158,7 +158,7 @@ export default defineConfig({
     // Production'da console.log ve console.warn kaldır (console.error Sentry için kalır)
     esbuild: {
       drop: ['debugger'],
-      pure: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+      pure: ['console.log', 'console.info', 'console.debug'],
     },
     chunkSizeWarningLimit: 2000, // Increase limit to 2MB
     rollupOptions: {

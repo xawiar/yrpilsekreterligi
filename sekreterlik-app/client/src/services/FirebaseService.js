@@ -219,7 +219,7 @@ class FirebaseService {
       // Offline hatası için özel handling - varsayılan değerler kullanılacak
       if (error.code === 'unavailable' || error.code === 'failed-precondition' || error.message?.includes('offline') || error.message?.includes('Failed to get document because the client is offline')) {
         console.warn(`[FirebaseService] Offline — returning cached or null for ${collectionName}`);
-        return { _offline: true, _error: error.message };
+        return null;
       }
       console.error(`Error getting document from ${collectionName}:`, error);
       throw error;
