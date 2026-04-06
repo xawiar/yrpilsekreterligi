@@ -657,8 +657,13 @@ const MemberDashboardPage = () => {
                     Hoş Geldiniz, {member.name}
                   </h1>
                   <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mt-1">
-                    {member.position} - {member.region}
+                    {member.position ? `${member.position} — ` : ''}{member.region}
                   </p>
+                  {member.inspectorTitle && (
+                    <p className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 mt-0.5 font-medium">
+                      {member.inspectorTitle}{member.inspectorDistrict ? ` — ${member.inspectorDistrict} İlçesi` : ''}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-end space-y-2 sm:space-y-0 sm:space-x-4">
