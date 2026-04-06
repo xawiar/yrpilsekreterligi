@@ -259,60 +259,31 @@ class FirebaseApiService {
         }
       }
 
-      // User bilgisini hazırla (varsayılan olarak admin)
+      // User bilgisini hazırla (varsayılan olarak member — admin kontrolü aşağıda)
       const userData = {
         id: user ? user.uid : (memberUser?.id || username),
         uid: user ? user.uid : null,
         username: username,
         email: user ? user.email : email,
-        type: 'admin',
-        role: 'admin',
+        type: 'member',
+        role: 'member',
         memberId: null
       };
 
-      // Admin bilgilerini kontrol et - varsa güncelle, yoksa oluştur
+      // Admin bilgilerini kontrol et
       let adminDoc;
       try {
         adminDoc = await FirebaseService.getById(this.COLLECTIONS.ADMIN, 'main');
 
-        // Admin dokümanı varsa ve username eşleşiyorsa
+        // Admin dokümanı varsa ve username veya uid eşleşiyorsa → admin yap
         if (adminDoc && (adminDoc.username === username || (user && adminDoc.uid === user.uid))) {
           userData.role = 'admin';
           userData.type = 'admin';
-        } else if (user) {
-          // Admin dokümanı yoksa veya username eşleşmiyorsa oluştur/güncelle
-          await FirebaseService.create(
-            this.COLLECTIONS.ADMIN,
-            'main',
-            {
-              username: username,
-              email: email,
-              uid: user.uid,
-              role: 'admin'
-            },
-            false // Şifreleme yapma (admin bilgileri hassas değil)
-          );
         }
+        // Eşleşmiyorsa admin doc'a dokunma — bu kullanıcı admin değil
       } catch (e) {
-        console.warn('Admin doc error, creating new one:', e);
-        // Admin dokümanı yoksa oluştur (user varsa)
-        if (user) {
-          try {
-            await FirebaseService.create(
-              this.COLLECTIONS.ADMIN,
-              'main',
-              {
-                username: username,
-                email: email,
-                uid: user.uid,
-                role: 'admin'
-              },
-              false
-            );
-          } catch (createError) {
-            console.error('Failed to create admin doc:', createError);
-          }
-        }
+        // Admin doc okunamadı — admin değil olarak devam et
+        console.warn('Admin doc check failed:', e.message);
       }
 
       // Member user ise ek bilgileri getir
