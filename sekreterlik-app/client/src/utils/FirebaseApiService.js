@@ -276,10 +276,10 @@ class FirebaseApiService {
         adminDoc = await FirebaseService.getById(this.COLLECTIONS.ADMIN, 'main');
 
         // Admin dokümanı varsa ve username eşleşiyorsa
-        if (adminDoc && (adminDoc.username === username || adminDoc.uid === user.uid)) {
+        if (adminDoc && (adminDoc.username === username || (user && adminDoc.uid === user.uid))) {
           userData.role = 'admin';
           userData.type = 'admin';
-        } else {
+        } else if (user) {
           // Admin dokümanı yoksa veya username eşleşmiyorsa oluştur/güncelle
           await FirebaseService.create(
             this.COLLECTIONS.ADMIN,
@@ -295,21 +295,23 @@ class FirebaseApiService {
         }
       } catch (e) {
         console.warn('Admin doc error, creating new one:', e);
-        // Admin dokümanı yoksa oluştur
-        try {
-          await FirebaseService.create(
-            this.COLLECTIONS.ADMIN,
-            'main',
-            {
-              username: username,
-              email: email,
-              uid: user.uid,
-              role: 'admin'
-            },
-            false
-          );
-        } catch (createError) {
-          console.error('Failed to create admin doc:', createError);
+        // Admin dokümanı yoksa oluştur (user varsa)
+        if (user) {
+          try {
+            await FirebaseService.create(
+              this.COLLECTIONS.ADMIN,
+              'main',
+              {
+                username: username,
+                email: email,
+                uid: user.uid,
+                role: 'admin'
+              },
+              false
+            );
+          } catch (createError) {
+            console.error('Failed to create admin doc:', createError);
+          }
         }
       }
 

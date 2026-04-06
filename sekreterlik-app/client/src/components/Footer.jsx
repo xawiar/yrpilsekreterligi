@@ -58,8 +58,8 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="border-t border-gray-200 dark:border-gray-700 mt-auto flex-shrink-0 py-2">
-      <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+    <footer className="border-t border-gray-200 dark:border-gray-700 mt-auto flex-shrink-0 py-2 h-auto max-h-10 overflow-hidden">
+      <p className="text-center text-xs text-gray-400 dark:text-gray-500 leading-tight">
         {footerText || (
           <>
             &copy; {new Date().getFullYear()}{' '}
