@@ -91,27 +91,54 @@ const MemberListPage = () => {
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0], 'tr'));
   }, [members]);
 
-  // Excel EXPORT
+  // Excel EXPORT — görünüme göre format değişir
   const handleExcelExport = useCallback(() => {
-    const data = filteredMembers.map(m => ({
-      'Ad Soyad': m.name || '',
-      'Bölge': m.region || '',
-      'Görev': m.position || '',
-      'Müfettişlik': m.inspectorTitle || '',
-      'Müfettiş İlçesi': m.inspectorDistrict || ''
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Üye Listesi');
 
-    const colWidths = Object.keys(data[0] || {}).map(key => ({
-      wch: Math.max(key.length, ...data.map(row => String(row[key] || '').length)) + 2
-    }));
-    ws['!cols'] = colWidths;
+    if (viewMode === 'district') {
+      // İlçe bazlı gruplanmış Excel
+      const rows = [];
+      districtGroups.forEach(([district, group]) => {
+        // İlçe başlığı
+        rows.push({ 'Ad Soyad': `── ${district} İlçesi ──`, 'Bölge': '', 'Görev': '', 'Müfettişlik': '', 'Müfettiş İlçesi': '' });
+        // Müfettişler
+        group.mufettis.forEach(m => {
+          rows.push({ 'Ad Soyad': m.name || '', 'Bölge': m.region || '', 'Görev': m.position || '', 'Müfettişlik': 'Müfettiş', 'Müfettiş İlçesi': district });
+        });
+        // Yardımcılar
+        group.yardimci.forEach(m => {
+          rows.push({ 'Ad Soyad': `   ${m.name || ''}`, 'Bölge': m.region || '', 'Görev': m.position || '', 'Müfettişlik': 'Müfettiş Yardımcısı', 'Müfettiş İlçesi': district });
+        });
+        // Boş satır ayracı
+        rows.push({ 'Ad Soyad': '', 'Bölge': '', 'Görev': '', 'Müfettişlik': '', 'Müfettiş İlçesi': '' });
+      });
 
-    XLSX.writeFile(wb, `uye_listesi_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [filteredMembers, getSupervisorName]);
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 25 }, { wch: 22 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'İlçe Bazlı Müfettişler');
+    } else {
+      // Normal tablo formatı
+      const data = filteredMembers.map(m => ({
+        'Ad Soyad': m.name || '',
+        'Bölge': m.region || '',
+        'Görev': m.position || '',
+        'Müfettişlik': m.inspectorTitle || '',
+        'Müfettiş İlçesi': m.inspectorDistrict || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const colWidths = Object.keys(data[0] || {}).map(key => ({
+        wch: Math.max(key.length, ...data.map(row => String(row[key] || '').length)) + 2
+      }));
+      ws['!cols'] = colWidths;
+      XLSX.utils.book_append_sheet(wb, ws, 'Üye Listesi');
+    }
+
+    const filename = viewMode === 'district'
+      ? `ilce_mufettisler_${new Date().toISOString().slice(0, 10)}.xlsx`
+      : `uye_listesi_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  }, [filteredMembers, viewMode, districtGroups]);
 
   // Excel IMPORT — bölge, görev, müfettişlik güncelleme
   const handleExcelImport = useCallback(async (e) => {
