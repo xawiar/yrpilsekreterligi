@@ -136,11 +136,30 @@ const MemberListPage = () => {
         const newInspectorDistrict = (row['Müfettiş İlçesi'] || '').trim();
         const newSupervisorName = (row['Bağlı Olduğu Kişi'] || '').trim();
 
-        // Bağlı kişi ID bul
+        // Bağlı kişi ID bul — önce Excel'den, yoksa aynı ilçedeki müfettişi otomatik bul
         let newSupervisorId = '';
         if (newSupervisorName) {
           const sup = members.find(m => m.name?.trim().toLowerCase() === newSupervisorName.toLowerCase());
           if (sup) newSupervisorId = String(sup.id);
+        } else if (newInspectorTitle === 'Müfettiş Yardımcısı' && newInspectorDistrict) {
+          // Aynı ilçedeki müfettişi otomatik bul
+          // Önce bu import batch'indeki müfettişlerden ara
+          const inspectorRow = rows.find(r =>
+            (r['Müfettişlik'] || '').trim() === 'Müfettiş' &&
+            (r['Müfettiş İlçesi'] || '').trim().toLowerCase() === newInspectorDistrict.toLowerCase()
+          );
+          if (inspectorRow) {
+            const inspectorMember = members.find(m => m.name?.trim().toLowerCase() === (inspectorRow['Ad Soyad'] || '').trim().toLowerCase());
+            if (inspectorMember) newSupervisorId = String(inspectorMember.id);
+          }
+          // Yoksa mevcut üyelerden ara
+          if (!newSupervisorId) {
+            const existingInspector = members.find(m =>
+              m.inspectorTitle === 'Müfettiş' &&
+              (m.inspectorDistrict || '').toLowerCase() === newInspectorDistrict.toLowerCase()
+            );
+            if (existingInspector) newSupervisorId = String(existingInspector.id);
+          }
         }
 
         // Değişiklik var mı kontrol et

@@ -55,10 +55,35 @@ const MemberForm = ({ member, regions, positions, members, onClose, onMemberSave
         [name]: numericValue
       }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFormData(prev => {
+        const updated = { ...prev, [name]: value };
+
+        // Müfettiş Yardımcısı + ilçe seçilince → aynı ilçedeki müfettişi otomatik bağla
+        if (name === 'inspectorTitle' || name === 'inspectorDistrict') {
+          const title = name === 'inspectorTitle' ? value : updated.inspectorTitle;
+          const district = name === 'inspectorDistrict' ? value : updated.inspectorDistrict;
+
+          if (title === 'Müfettiş Yardımcısı' && district && members) {
+            const inspector = members.find(m =>
+              m.inspectorTitle === 'Müfettiş' &&
+              (m.inspectorDistrict || '').toLowerCase() === district.toLowerCase() &&
+              (!member || String(m.id) !== String(member.id))
+            );
+            if (inspector) updated.supervisorId = String(inspector.id);
+          }
+          // Müfettiş seçilince yardımcılık temizle
+          if (title === 'Müfettiş') {
+            updated.supervisorId = '';
+          }
+          // Boş seçilince hepsini temizle
+          if (!title) {
+            updated.inspectorDistrict = '';
+            updated.supervisorId = '';
+          }
+        }
+
+        return updated;
+      });
     }
 
     // Clear error when user starts typing
