@@ -32,6 +32,7 @@ const PERMISSION_MAP = {
   'se\u00e7im-ekle': { requires: 'manage_elections', adminAlso: true },
   'api-keys': { adminOnly: true },
   'voter-list': { requires: 'manage_voters', adminAlso: true },
+  'member-list': { requires: 'view_member_list', adminAlso: true },
   'push-notifications': { alwaysAllow: true },
   'data-retention': { adminOnly: true },
   'data-deletion-requests': { adminOnly: true },

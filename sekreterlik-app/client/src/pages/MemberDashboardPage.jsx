@@ -84,6 +84,7 @@ const MemberDashboardPage = () => {
   const [currentView, setCurrentView] = useState(() => getViewFromPathname(location.pathname));
   const [grantedPermissions, setGrantedPermissions] = useState([]);
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
+  const [showAllSections, setShowAllSections] = useState(false);
   const { unreadCount } = useRealtimeNotifications(user?.id || user?.uid);
 
   // View-permission mapping: Her view için hangi permission gerektiğini tanımla
@@ -805,6 +806,7 @@ const MemberDashboardPage = () => {
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Yetkilendirildiğiniz işlemler ve sayfalar</p>
               </div>
               <div className="p-3 sm:p-4 md:p-6">
+                {/* Primary actions - always visible */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {grantedPermissions.includes('add_member') && (
                     <button
@@ -818,8 +820,8 @@ const MemberDashboardPage = () => {
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Üye Ekle</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni üye kaydı oluştur</p>
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Uye Ekle</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni uye kaydi olustur</p>
                         </div>
                       </div>
                     </button>
@@ -836,116 +838,8 @@ const MemberDashboardPage = () => {
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-400">Toplantı Oluştur</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Bölgelere toplantı planla</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {(grantedPermissions.includes('add_stk') || grantedPermissions.includes('manage_stk')) && (
-                    <button
-                      onClick={() => setViewWithPermission('stk-management')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg flex items-center justify-center group-hover:bg-emerald-600 dark:group-hover:bg-emerald-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">STK Ekle</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni STK kaydı oluştur</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('add_public_institution') && (
-                    <button
-                      onClick={() => setViewWithPermission('public-institution-management')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu kaydı oluştur</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('create_event') && (
-                    <button
-                      onClick={() => setViewWithPermission('stk-events')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-lg sm:rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500 dark:bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 dark:group-hover:bg-indigo-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400">Etkinlik Oluştur</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni etkinlik planla</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {(grantedPermissions.includes('access_ballot_boxes') || grantedPermissions.includes('add_ballot_box')) && (
-                    <button
-                      onClick={() => setViewWithPermission('ballot-boxes')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-lg sm:rounded-xl border border-orange-200 dark:border-orange-700 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800 dark:hover:to-orange-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500 dark:bg-orange-600 rounded-lg flex items-center justify-center group-hover:bg-orange-600 dark:group-hover:bg-orange-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-orange-700 dark:group-hover:text-orange-400">Sandıklar</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Sandık yönetimi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {(grantedPermissions.includes('access_observers') || grantedPermissions.includes('add_observer')) && (
-                    <button
-                      onClick={() => setViewWithPermission('observers')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 rounded-lg sm:rounded-xl border border-pink-200 dark:border-pink-700 hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800 dark:hover:to-pink-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-500 dark:bg-pink-600 rounded-lg flex items-center justify-center group-hover:bg-pink-600 dark:group-hover:bg-pink-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-pink-700 dark:group-hover:text-pink-400">Müşahitler</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Müşahit yönetimi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_election_preparation_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('election-preparation-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 rounded-lg sm:rounded-xl border border-red-200 dark:border-red-700 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800 dark:hover:to-red-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-500 dark:bg-red-600 rounded-lg flex items-center justify-center group-hover:bg-red-600 dark:group-hover:bg-red-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-red-700 dark:group-hover:text-red-400">Seçim Hazırlık</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Seçim hazırlık işlemleri</p>
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-400">Toplanti Olustur</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Bolgelere toplanti planla</p>
                         </div>
                       </div>
                     </button>
@@ -962,8 +856,8 @@ const MemberDashboardPage = () => {
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-cyan-700 dark:group-hover:text-cyan-400">Üyeler</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Üye listesi</p>
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-cyan-700 dark:group-hover:text-cyan-400">Uyeler</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Uye listesi</p>
                         </div>
                       </div>
                     </button>
@@ -980,8 +874,8 @@ const MemberDashboardPage = () => {
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-violet-700 dark:group-hover:text-violet-400">Toplantılar</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Toplantı listesi</p>
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-violet-700 dark:group-hover:text-violet-400">Toplantilar</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Toplanti listesi</p>
                         </div>
                       </div>
                     </button>
@@ -1004,151 +898,242 @@ const MemberDashboardPage = () => {
                       </div>
                     </button>
                   )}
-                  {grantedPermissions.includes('access_calendar_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('calendar-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-700 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-800 dark:hover:to-amber-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center group-hover:bg-amber-600 dark:group-hover:bg-amber-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-700 dark:group-hover:text-amber-400">Takvim</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Takvim görünümü</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_districts_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('districts-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-900 dark:to-lime-800 rounded-lg sm:rounded-xl border border-lime-200 dark:border-lime-700 hover:from-lime-100 hover:to-lime-200 dark:hover:from-lime-800 dark:hover:to-lime-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-lime-500 dark:bg-lime-600 rounded-lg flex items-center justify-center group-hover:bg-lime-600 dark:group-hover:bg-lime-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M15 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0h1.5M21 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0H21m-1.5 0H18" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-lime-700 dark:group-hover:text-lime-400">İlçeler</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">İlçe yönetimi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_archive_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('archive-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-500 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-500 dark:bg-gray-600 rounded-lg flex items-center justify-center group-hover:bg-gray-600 dark:group-hover:bg-gray-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-gray-700 dark:group-hover:text-gray-300">Arşiv</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Arşiv görünümü</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_management_chart_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('management-chart-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-900 dark:to-sky-800 rounded-lg sm:rounded-xl border border-sky-200 dark:border-sky-700 hover:from-sky-100 hover:to-sky-200 dark:hover:from-sky-800 dark:hover:to-sky-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-sky-500 dark:bg-sky-600 rounded-lg flex items-center justify-center group-hover:bg-sky-600 dark:group-hover:bg-sky-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-sky-700 dark:group-hover:text-sky-400">Yönetim Şeması</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Organizasyon şeması</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_representatives_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('representatives-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 rounded-lg sm:rounded-xl border border-yellow-200 dark:border-yellow-700 hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800 dark:hover:to-yellow-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-500 dark:bg-yellow-600 rounded-lg flex items-center justify-center group-hover:bg-yellow-600 dark:group-hover:bg-yellow-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-yellow-700 dark:group-hover:text-yellow-400">Temsilciler</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Temsilci listesi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_neighborhoods_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('neighborhoods-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 dark:from-fuchsia-900 dark:to-fuchsia-800 rounded-lg sm:rounded-xl border border-fuchsia-200 dark:border-fuchsia-700 hover:from-fuchsia-100 hover:to-fuchsia-200 dark:hover:from-fuchsia-800 dark:hover:to-fuchsia-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-fuchsia-500 dark:bg-fuchsia-600 rounded-lg flex items-center justify-center group-hover:bg-fuchsia-600 dark:group-hover:bg-fuchsia-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M15 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0h1.5M21 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0H21m-1.5 0H18" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-400">Mahalleler</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Mahalle yönetimi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_villages_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('villages-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg flex items-center justify-center group-hover:bg-emerald-600 dark:group-hover:bg-emerald-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M15 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0h1.5M21 11a3 3 0 11-6 0m6 0a3 3 0 10-6 0m6 0H21m-1.5 0H18" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Köyler</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Köy yönetimi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {grantedPermissions.includes('access_groups_page') && (
-                    <button
-                      onClick={() => setViewWithPermission('groups-page')}
-                      className="group p-3 sm:p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-lg sm:rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center group-hover:bg-teal-600 dark:group-hover:bg-teal-700 transition-colors duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Gruplar</h4>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Grup yönetimi</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
                 </div>
+
+                {/* Secondary actions - collapsible */}
+                {(() => {
+                  const secondaryButtons = [];
+                  if (grantedPermissions.includes('add_stk') || grantedPermissions.includes('manage_stk')) {
+                    secondaryButtons.push(
+                      <button key="stk" onClick={() => setViewWithPermission('stk-management')} className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg flex items-center justify-center group-hover:bg-emerald-600 dark:group-hover:bg-emerald-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">STK Ekle</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni STK kaydi olustur</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('add_public_institution')) {
+                    secondaryButtons.push(
+                      <button key="pub-inst" onClick={() => setViewWithPermission('public-institution-management')} className="group p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-700 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800 dark:hover:to-blue-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 dark:group-hover:bg-blue-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400">Kamu Kurumu Ekle</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni kamu kurumu kaydi olustur</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('create_event')) {
+                    secondaryButtons.push(
+                      <button key="stk-events" onClick={() => setViewWithPermission('stk-events')} className="group p-3 sm:p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 rounded-lg sm:rounded-xl border border-indigo-200 dark:border-indigo-700 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800 dark:hover:to-indigo-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500 dark:bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 dark:group-hover:bg-indigo-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400">Etkinlik Olustur</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Yeni etkinlik planla</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_ballot_boxes') || grantedPermissions.includes('add_ballot_box')) {
+                    secondaryButtons.push(
+                      <button key="ballot" onClick={() => setViewWithPermission('ballot-boxes')} className="group p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-lg sm:rounded-xl border border-orange-200 dark:border-orange-700 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800 dark:hover:to-orange-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500 dark:bg-orange-600 rounded-lg flex items-center justify-center group-hover:bg-orange-600 dark:group-hover:bg-orange-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-orange-700 dark:group-hover:text-orange-400">Sandiklar</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Sandik yonetimi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_observers') || grantedPermissions.includes('add_observer')) {
+                    secondaryButtons.push(
+                      <button key="observers" onClick={() => setViewWithPermission('observers')} className="group p-3 sm:p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 rounded-lg sm:rounded-xl border border-pink-200 dark:border-pink-700 hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800 dark:hover:to-pink-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-500 dark:bg-pink-600 rounded-lg flex items-center justify-center group-hover:bg-pink-600 dark:group-hover:bg-pink-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-pink-700 dark:group-hover:text-pink-400">Musahitler</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Musahit yonetimi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_election_preparation_page')) {
+                    secondaryButtons.push(
+                      <button key="election" onClick={() => setViewWithPermission('election-preparation-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 rounded-lg sm:rounded-xl border border-red-200 dark:border-red-700 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800 dark:hover:to-red-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-500 dark:bg-red-600 rounded-lg flex items-center justify-center group-hover:bg-red-600 dark:group-hover:bg-red-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-red-700 dark:group-hover:text-red-400">Secim Hazirlik</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Secim hazirlik islemleri</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_calendar_page')) {
+                    secondaryButtons.push(
+                      <button key="calendar" onClick={() => setViewWithPermission('calendar-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-700 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-800 dark:hover:to-amber-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center group-hover:bg-amber-600 dark:group-hover:bg-amber-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-700 dark:group-hover:text-amber-400">Takvim</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Takvim gorunumu</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_districts_page')) {
+                    secondaryButtons.push(
+                      <button key="districts" onClick={() => setViewWithPermission('districts-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-900 dark:to-lime-800 rounded-lg sm:rounded-xl border border-lime-200 dark:border-lime-700 hover:from-lime-100 hover:to-lime-200 dark:hover:from-lime-800 dark:hover:to-lime-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-lime-500 dark:bg-lime-600 rounded-lg flex items-center justify-center group-hover:bg-lime-600 dark:group-hover:bg-lime-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-lime-700 dark:group-hover:text-lime-400">Ilceler</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Ilce yonetimi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_archive_page')) {
+                    secondaryButtons.push(
+                      <button key="archive" onClick={() => setViewWithPermission('archive-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-500 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-500 dark:bg-gray-600 rounded-lg flex items-center justify-center group-hover:bg-gray-600 dark:group-hover:bg-gray-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-gray-700 dark:group-hover:text-gray-300">Arsiv</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Arsiv gorunumu</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_management_chart_page')) {
+                    secondaryButtons.push(
+                      <button key="mgmt-chart" onClick={() => setViewWithPermission('management-chart-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-900 dark:to-sky-800 rounded-lg sm:rounded-xl border border-sky-200 dark:border-sky-700 hover:from-sky-100 hover:to-sky-200 dark:hover:from-sky-800 dark:hover:to-sky-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-sky-500 dark:bg-sky-600 rounded-lg flex items-center justify-center group-hover:bg-sky-600 dark:group-hover:bg-sky-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-sky-700 dark:group-hover:text-sky-400">Yonetim Semasi</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Organizasyon semasi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_representatives_page')) {
+                    secondaryButtons.push(
+                      <button key="reps" onClick={() => setViewWithPermission('representatives-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 rounded-lg sm:rounded-xl border border-yellow-200 dark:border-yellow-700 hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800 dark:hover:to-yellow-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-500 dark:bg-yellow-600 rounded-lg flex items-center justify-center group-hover:bg-yellow-600 dark:group-hover:bg-yellow-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-yellow-700 dark:group-hover:text-yellow-400">Temsilciler</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Temsilci listesi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_neighborhoods_page')) {
+                    secondaryButtons.push(
+                      <button key="neighborhoods" onClick={() => setViewWithPermission('neighborhoods-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 dark:from-fuchsia-900 dark:to-fuchsia-800 rounded-lg sm:rounded-xl border border-fuchsia-200 dark:border-fuchsia-700 hover:from-fuchsia-100 hover:to-fuchsia-200 dark:hover:from-fuchsia-800 dark:hover:to-fuchsia-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-fuchsia-500 dark:bg-fuchsia-600 rounded-lg flex items-center justify-center group-hover:bg-fuchsia-600 dark:group-hover:bg-fuchsia-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-400">Mahalleler</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Mahalle yonetimi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_villages_page')) {
+                    secondaryButtons.push(
+                      <button key="villages" onClick={() => setViewWithPermission('villages-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-lg sm:rounded-xl border border-emerald-200 dark:border-emerald-700 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-800 dark:hover:to-emerald-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500 dark:bg-emerald-600 rounded-lg flex items-center justify-center group-hover:bg-emerald-600 dark:group-hover:bg-emerald-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Koyler</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Koy yonetimi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (grantedPermissions.includes('access_groups_page')) {
+                    secondaryButtons.push(
+                      <button key="groups" onClick={() => setViewWithPermission('groups-page')} className="group p-3 sm:p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-lg sm:rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center group-hover:bg-teal-600 dark:group-hover:bg-teal-700 transition-colors duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Gruplar</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Grup yonetimi</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  if (secondaryButtons.length === 0) return null;
+                  return (
+                    <div className="mt-3 sm:mt-4">
+                      <button
+                        onClick={() => setShowAllSections(!showAllSections)}
+                        className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <svg className={`w-4 h-4 transition-transform ${showAllSections ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                        {showAllSections ? 'Daha Az Goster' : 'Tum Yetkili Sayfalar'}
+                        <span className="ml-auto text-xs text-gray-400">{secondaryButtons.length} sayfa</span>
+                      </button>
+                      {showAllSections && (
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                          {secondaryButtons}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
