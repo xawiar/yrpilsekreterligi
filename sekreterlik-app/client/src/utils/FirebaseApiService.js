@@ -93,9 +93,9 @@ class FirebaseApiService {
       // Email formatına çevir (username@domain.com)
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
 
-
       let userCredential = null;
       let user = null;
+      let memberUser = null;
 
       try {
         // Önce Firebase Auth'da kullanıcıyı bulmaya çalış
@@ -114,7 +114,7 @@ class FirebaseApiService {
           );
 
           if (memberUsers && memberUsers.length > 0) {
-            const memberUser = memberUsers[0];
+            memberUser = memberUsers[0];
             // FirebaseService.findByField zaten decrypt ediyor (decrypt = true default)
             // Ama password field'ı SENSITIVE_FIELDS içinde olduğu için decrypt edilmiş olmalı
             // Eğer hala encrypted görünüyorsa, manuel decrypt et
@@ -210,21 +210,32 @@ class FirebaseApiService {
                     }, false);
 
                   } catch (signInError2) {
-                    // Şifre yanlış - Firebase Auth'daki şifre Firestore'daki şifreyle eşleşmiyor
-                    console.error('❌ Cannot sign in with existing email - password mismatch:', signInError2.code);
-
-                    // Firebase Auth'daki kullanıcının şifresini güncellemek için client-side'da mümkün değil
-                    // Bu durumda Firestore'daki authUid'i temizle ve kullanıcıya bilgi ver
-                    // Bir sonraki login denemesinde yeni bir Firebase Auth kullanıcısı oluşturulacak
+                    // Firestore şifresi doğru ama Auth şifresi eski
+                    // authUid temizle → yeni Auth kullanıcısı oluşturulacak
+                    console.warn('Auth password mismatch, resetting authUid for re-creation');
                     await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
                       authUid: null,
                       username: username
                     }, false);
 
-                    // Kullanıcıya daha açıklayıcı hata mesajı ver
-                    // Firebase Auth'daki eski kullanıcı hala var ama şifre eşleşmiyor
-                    // Admin tarafından Firebase Console'dan silinmesi gerekebilir
-                    throw new Error('Firebase Auth\'daki kullanıcı şifresi Firestore\'daki şifreyle eşleşmiyor. Lütfen sayfayı yenileyip tekrar deneyin. Sorun devam ederse admin ile iletişime geçin.');
+                    // Yeni Firebase Auth kullanıcısı oluştur (Firestore şifresiyle)
+                    try {
+                      userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
+                      user = userCredential.user;
+                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
+                        authUid: user.uid,
+                        username: username
+                      }, false);
+                    } catch (recreateErr) {
+                      if (recreateErr.code === 'auth/email-already-in-use') {
+                        // Email zaten kullanılıyor — eski Auth hesabını kaldıramıyoruz
+                        // Firestore şifresi doğruysa kullanıcıyı yine de giriş yaptır
+                        // authUid null bırakılacak, bir sonraki login'de düzelir
+                        console.warn('Could not recreate Auth user, proceeding with Firestore auth only');
+                      } else {
+                        throw recreateErr;
+                      }
+                    }
                   }
                 } else {
                   throw createError;
@@ -250,11 +261,12 @@ class FirebaseApiService {
 
       // User bilgisini hazırla (varsayılan olarak admin)
       const userData = {
-        id: user.uid,
+        id: user ? user.uid : (memberUser?.id || username),
+        uid: user ? user.uid : null,
         username: username,
-        email: user.email,
+        email: user ? user.email : email,
         type: 'admin',
-        role: 'admin', // AuthContext'te role kullanılıyor
+        role: 'admin',
         memberId: null
       };
 
@@ -1038,9 +1050,9 @@ class FirebaseApiService {
       // Username değiştiyse, email değişmiş olabilir
       const usernameChanged = oldUsername !== username;
 
-      // Şifre güncelleniyorsa
+      // Şifre güncelleniyorsa (encrypt ederek kaydet)
       if (password && password.trim()) {
-        updateData.password = password;
+        updateData.password = encryptData(password);
       }
 
       // Mevcut password'u al ve normalize et (karşılaştırma için)
