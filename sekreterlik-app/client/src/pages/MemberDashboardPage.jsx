@@ -13,6 +13,7 @@ import ObserversPage from './ObserversPage';
 import MemberForm from '../components/MemberForm';
 import CreateMeetingForm from '../components/CreateMeetingForm';
 import MembersPage from './MembersPage';
+import MemberListPage from './MemberListPage';
 import MeetingsPage from './MeetingsPage';
 import CalendarPage from './CalendarPage';
 import DistrictsPage from './DistrictsPage';
@@ -53,6 +54,7 @@ const viewToPathMap = {
   'neighborhoods-page': 'neighborhoods',
   'villages-page': 'villages',
   'groups-page': 'groups',
+  'member-list-page': 'member-list',
   'ballot-boxes': 'ballot-boxes',
   'observers': 'observers',
 };
@@ -97,6 +99,7 @@ const MemberDashboardPage = () => {
     'create-meeting': ['create_meeting'],
     'ballot-boxes': ['access_ballot_boxes', 'add_ballot_box'],
     'observers': ['access_observers', 'add_observer'],
+    'member-list-page': ['view_member_list'],
     'members-page': ['access_members_page'],
     'meetings-page': ['access_meetings_page'],
     'events-page': ['access_events_page'],
@@ -582,6 +585,10 @@ const MemberDashboardPage = () => {
   }
 
   // Embedded Pages via permissions
+  if (currentView === 'member-list-page') {
+    if (!hasViewPermission('member-list-page')) return null;
+    return renderEmbeddedView('Üye Listesi', null, <MemberListPage />);
+  }
   if (currentView === 'members-page') {
     if (!hasViewPermission('members-page')) return null;
     return renderEmbeddedView('Uyeler', null, <MembersPage />);
@@ -858,6 +865,24 @@ const MemberDashboardPage = () => {
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-cyan-700 dark:group-hover:text-cyan-400">Uyeler</h4>
                           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Uye listesi</p>
+                        </div>
+                      </div>
+                    </button>
+                  )}
+                  {grantedPermissions.includes('view_member_list') && (
+                    <button
+                      onClick={() => setViewWithPermission('member-list-page')}
+                      className="group p-3 sm:p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 rounded-lg sm:rounded-xl border border-teal-200 dark:border-teal-700 hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800 dark:hover:to-teal-700 transition-all duration-200 hover:shadow-md text-left w-full active:scale-[0.98]"
+                    >
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-500 dark:bg-teal-600 rounded-lg flex items-center justify-center group-hover:bg-teal-600 dark:group-hover:bg-teal-700 transition-colors duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-teal-700 dark:group-hover:text-teal-400">Üye Listesi</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Bölge, görev, müfettişlik</p>
                         </div>
                       </div>
                     </button>
