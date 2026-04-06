@@ -77,15 +77,28 @@ const MemberListPage = () => {
     }));
   }, [members]);
 
-  // Excel EXPORT — isim, bölge, görev, müfettişlik, ilçe, bağlı kişi
+  // İlçe bazlı gruplama
+  const districtGroups = useMemo(() => {
+    const groups = {};
+    members.forEach(m => {
+      if (m.inspectorDistrict) {
+        const dist = m.inspectorDistrict.trim();
+        if (!groups[dist]) groups[dist] = { mufettis: [], yardimci: [] };
+        if (m.inspectorTitle === 'Müfettiş') groups[dist].mufettis.push(m);
+        else if (m.inspectorTitle === 'Müfettiş Yardımcısı') groups[dist].yardimci.push(m);
+      }
+    });
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0], 'tr'));
+  }, [members]);
+
+  // Excel EXPORT
   const handleExcelExport = useCallback(() => {
     const data = filteredMembers.map(m => ({
       'Ad Soyad': m.name || '',
       'Bölge': m.region || '',
       'Görev': m.position || '',
       'Müfettişlik': m.inspectorTitle || '',
-      'Müfettiş İlçesi': m.inspectorDistrict || '',
-      'Bağlı Olduğu Kişi': getSupervisorName(m.supervisorId)
+      'Müfettiş İlçesi': m.inspectorDistrict || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -134,14 +147,9 @@ const MemberListPage = () => {
         const newPosition = (row['Görev'] || '').trim();
         const newInspectorTitle = (row['Müfettişlik'] || '').trim();
         const newInspectorDistrict = (row['Müfettiş İlçesi'] || '').trim();
-        const newSupervisorName = (row['Bağlı Olduğu Kişi'] || '').trim();
-
-        // Bağlı kişi ID bul — önce Excel'den, yoksa aynı ilçedeki müfettişi otomatik bul
+        // Müfettiş yardımcısı ise aynı ilçedeki müfettişi otomatik bul
         let newSupervisorId = '';
-        if (newSupervisorName) {
-          const sup = members.find(m => m.name?.trim().toLowerCase() === newSupervisorName.toLowerCase());
-          if (sup) newSupervisorId = String(sup.id);
-        } else if (newInspectorTitle === 'Müfettiş Yardımcısı' && newInspectorDistrict) {
+        if (newInspectorTitle === 'Müfettiş Yardımcısı' && newInspectorDistrict) {
           // Aynı ilçedeki müfettişi otomatik bul
           // Önce bu import batch'indeki müfettişlerden ara
           const inspectorRow = rows.find(r =>
@@ -213,8 +221,7 @@ const MemberListPage = () => {
       'Bölge': m.region || '',
       'Görev': m.position || '',
       'Müfettişlik': m.inspectorTitle || '',
-      'Müfettiş İlçesi': m.inspectorDistrict || '',
-      'Bağlı Olduğu Kişi': getSupervisorName(m.supervisorId)
+      'Müfettiş İlçesi': m.inspectorDistrict || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -266,6 +273,9 @@ const MemberListPage = () => {
             </button>
             <button onClick={() => setViewMode('hierarchy')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'hierarchy' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
               Hiyerarşi
+            </button>
+            <button onClick={() => setViewMode('district')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'district' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+              İlçe
             </button>
           </div>
 
@@ -352,6 +362,48 @@ const MemberListPage = () => {
           <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-white">Üye bulunamadı</h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Filtre kriterlerinize uygun üye bulunmamaktadır.</p>
         </div>
+      ) : viewMode === 'district' ? (
+        /* İlçe bazlı görünüm */
+        <div className="space-y-4">
+          {districtGroups.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Henüz ilçe ataması yapılmamış.</p>
+            </div>
+          ) : (
+            districtGroups.map(([district, group]) => (
+              <div key={district} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+                <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-white font-bold text-sm">{district} İlçesi</h2>
+                    <span className="text-primary-100 text-xs">{group.mufettis.length} müfettiş, {group.yardimci.length} yardımcı</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-1">
+                  {group.mufettis.map(m => (
+                    <div key={m.id} className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white flex-1">{m.name}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">Müfettiş</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{m.region}</span>
+                    </div>
+                  ))}
+                  {group.yardimci.map(m => (
+                    <div key={m.id} className="flex items-center gap-3 py-2 pl-6 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-orange-600 dark:text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                      </div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{m.name}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">Yardımcı</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{m.region}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       ) : viewMode === 'table' ? (
         <>
           {/* Desktop table */}
@@ -365,7 +417,6 @@ const MemberListPage = () => {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Görev</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Müfettişlik</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Müfettiş İlçesi</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bağlı Olduğu</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -382,7 +433,6 @@ const MemberListPage = () => {
                         ) : <span className="text-sm text-gray-400">-</span>}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{m.inspectorDistrict || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{getSupervisorName(m.supervisorId) || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -405,8 +455,8 @@ const MemberListPage = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div><span className="text-gray-400">Bölge:</span> <span className="text-gray-700 dark:text-gray-300">{m.region || '-'}</span></div>
-                  {getSupervisorName(m.supervisorId) && (
-                    <div><span className="text-gray-400">Bağlı:</span> <span className="text-gray-700 dark:text-gray-300">{getSupervisorName(m.supervisorId)}</span></div>
+                  {m.inspectorDistrict && (
+                    <div><span className="text-gray-400">İlçe:</span> <span className="text-gray-700 dark:text-gray-300">{m.inspectorDistrict}</span></div>
                   )}
                 </div>
               </div>
