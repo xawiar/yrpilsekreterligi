@@ -17,6 +17,15 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
   const [photoPreview, setPhotoPreview] = useState(null); // Photo preview URL
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
+  // Cleanup blob URL to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (photoPreview && photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
   useEffect(() => {
     if (member) {
       setFormData({
@@ -62,6 +71,10 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
     if (file.size > 5 * 1024 * 1024) {
       setError('Dosya boyutu 5MB\'dan kucuk olmalidir');
       return;
+    }
+    // Revoke old blob URL before creating new one
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview);
     }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
@@ -300,10 +313,11 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="member-tc" className="block text-sm font-medium text-gray-700 mb-1">
               TC Kimlik No
             </label>
             <input
+              id="member-tc"
               type="text"
               name="tc"
               value={formData.tc}
@@ -316,10 +330,11 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="member-name" className="block text-sm font-medium text-gray-700 mb-1">
               İsim Soyisim
             </label>
             <input
+              id="member-name"
               type="text"
               name="name"
               value={formData.name}
@@ -330,10 +345,11 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="member-phone" className="block text-sm font-medium text-gray-700 mb-1">
               Telefon
             </label>
             <input
+              id="member-phone"
               type="text"
               name="phone"
               value={formData.phone}
@@ -346,10 +362,11 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="member-position" className="block text-sm font-medium text-gray-700 mb-1">
               Görev
             </label>
             <select
+              id="member-position"
               name="position"
               value={formData.position}
               onChange={handleChange}
@@ -365,10 +382,11 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="member-region" className="block text-sm font-medium text-gray-700 mb-1">
               Bölge
             </label>
             <select
+              id="member-region"
               name="region"
               value={formData.region}
               onChange={handleChange}
@@ -386,7 +404,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
 
         {/* Fotograf Yukleme */}
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="member-photo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Fotograf
           </label>
           <div className="flex items-center gap-4">
@@ -395,12 +413,14 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
                 src={photoPreview}
                 alt="Onizleme"
                 className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                loading="lazy"
               />
             ) : member?.photo ? (
               <img
                 src={member.photo}
                 alt={member.name}
                 className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                loading="lazy"
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             ) : (
@@ -412,6 +432,7 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
             )}
             <div className="flex-1">
               <input
+                id="member-photo"
                 type="file"
                 accept="image/*"
                 capture="environment"

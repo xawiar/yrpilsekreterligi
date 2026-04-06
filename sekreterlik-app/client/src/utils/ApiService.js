@@ -13,14 +13,6 @@ const USE_FIREBASE =
 
 // Debug log - ZORUNLU (production debug için)
 if (typeof window !== 'undefined') {
-  console.log('[ApiService] Firebase check:', {
-    VITE_USE_FIREBASE: VITE_USE_FIREBASE_ENV,
-    VITE_USE_FIREBASE_TYPE: typeof VITE_USE_FIREBASE_ENV,
-    USE_FIREBASE,
-    MODE: import.meta.env.MODE,
-    HOSTNAME: window.location.hostname,
-    WILL_USE_FIREBASE: USE_FIREBASE
-  });
 
   // Uyarı: Eğer Firebase kullanılması gerekiyorsa ama kullanılmıyorsa
   if (VITE_USE_FIREBASE_ENV && !USE_FIREBASE) {
@@ -1029,14 +1021,11 @@ class ApiService {
       HOSTNAME: typeof window !== 'undefined' ? window.location.hostname : 'server'
     };
 
-    console.log('[ApiService.deleteArchivedMember] Called with:', firebaseCheck);
 
     // Firebase kullanılıyorsa KESİNLİKLE FirebaseApiService'i kullan
     if (USE_FIREBASE) {
-      console.log('[ApiService.deleteArchivedMember] ✅ Using FirebaseApiService');
       try {
         const result = await FirebaseApiService.deleteArchivedMember(id);
-        console.log('[ApiService.deleteArchivedMember] ✅ Firebase success:', result);
         return result;
       } catch (error) {
         console.error('[ApiService.deleteArchivedMember] ❌ Firebase error:', error);
@@ -2076,13 +2065,10 @@ class ApiService {
 
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {
-    console.log('[ApiService.getElectionResults] Called:', { electionId, ballotBoxId, USE_FIREBASE });
 
     if (USE_FIREBASE) {
-      console.log('[ApiService.getElectionResults] Using FirebaseApiService');
       try {
         const result = await FirebaseApiService.getElectionResults(electionId, ballotBoxId);
-        console.log('[ApiService.getElectionResults] FirebaseApiService result:', result?.length || 0, 'results');
         return result;
       } catch (error) {
         console.error('[ApiService.getElectionResults] FirebaseApiService error:', error);
@@ -2090,14 +2076,12 @@ class ApiService {
       }
     }
 
-    console.log('[ApiService.getElectionResults] Using backend API');
     const params = new URLSearchParams();
     if (electionId) params.append('election_id', electionId);
     if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
 
     const response = await fetch(`${API_BASE_URL}/election-results?${params}`, { headers: this.getAuthHeaders() });
     const result = await response.json();
-    console.log('[ApiService.getElectionResults] Backend API result:', result?.length || 0, 'results');
     return result;
   }
 
@@ -2783,7 +2767,6 @@ class ApiService {
     if (USE_FIREBASE) {
       // Önce şifrelenmiş password'ları düzelt
       const fixResult = await FirebaseApiService.fixEncryptedPasswords();
-      console.log('🔓 Encrypted passwords fix result:', fixResult);
 
       // Sonra normal güncellemeyi yap
       return FirebaseApiService.updateAllCredentials();

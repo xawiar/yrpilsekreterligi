@@ -42,6 +42,14 @@ const useRealtimeNotifications = (memberId, enabled = true) => {
   const prevUnreadCount = useRef(0);
   const prevNotifIds = useRef(new Set());
 
+  // Reset refs on unmount to avoid stale state on remount
+  useEffect(() => {
+    return () => {
+      isFirstLoad.current = true;
+      prevNotifIds.current = new Set();
+    };
+  }, []);
+
   useEffect(() => {
     if (!memberId || !enabled) {
       setNotifications([]);

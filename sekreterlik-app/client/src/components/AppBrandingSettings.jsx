@@ -151,10 +151,8 @@ const AppBrandingSettings = () => {
           
           if (existing && existing.id) {
             await FirebaseService.update('app_settings', existing.id, settingsData, false);
-            console.log('✅ Branding settings updated in Firebase');
           } else {
             await FirebaseService.create('app_settings', null, settingsData, false);
-            console.log('✅ Branding settings created in Firebase');
           }
         } catch (firebaseError) {
           console.error('Error saving to Firebase:', firebaseError);
@@ -254,7 +252,6 @@ const AppBrandingSettings = () => {
       }
       metaDescription.content = settings.appDescription || 'Parti sekreterlik yönetim sistemi';
       
-      console.log('✅ Manifest updated');
     } catch (error) {
       console.error('Error updating manifest:', error);
     }
@@ -266,7 +263,6 @@ const AppBrandingSettings = () => {
         const registration = await navigator.serviceWorker.ready;
         // Service Worker'ı güncellemek için unregister edip yeniden register et
         await registration.update();
-        console.log('✅ Service Worker update triggered');
       }
     } catch (error) {
       console.error('Error triggering service worker update:', error);
@@ -326,7 +322,6 @@ const AppBrandingSettings = () => {
               }
             }
             
-            console.log(`✅ Update notification created for ${successCount}/${allMembers.length} members`);
           }
         } catch (notificationError) {
           console.warn('Error creating update notifications:', notificationError);

@@ -18,11 +18,21 @@ const ConfirmDialog = ({
   const titleId = useRef(`confirm-title-${Date.now()}`).current;
   const descId = useRef(`confirm-desc-${Date.now()}`).current;
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     if (confirming) return;
     setConfirming(true);
-    onConfirm();
-  }, [onConfirm, confirming]);
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('İşlem zaman aşımına uğradı')), 30000)
+      );
+      await Promise.race([onConfirm(), timeoutPromise]);
+    } catch (err) {
+      console.error('Confirm action failed:', err.message);
+    } finally {
+      setConfirming(false);
+      onCancel();
+    }
+  }, [onConfirm, onCancel, confirming]);
 
   const handleCancel = useCallback(() => {
     onCancel();

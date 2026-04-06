@@ -12,7 +12,7 @@ import { compareIds } from '../utils/normalizeId';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
 
-const MemberDetails = ({ member, meetings, events, memberRegistrations, calculateMeetingStats, members = [] }) => {
+const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations = [], calculateMeetingStats, members = [] }) => {
   const { user } = useAuth();
   const toast = useToast();
   const { confirm, confirmDialogProps } = useConfirm();
@@ -702,7 +702,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `${member.name.replace(/\s+/g, '_')}_detaylar.csv`);
+    link.setAttribute('download', `${(member?.name || 'uye').replace(/\s+/g, '_')}_detaylar.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -755,7 +755,7 @@ const MemberDetails = ({ member, meetings, events, memberRegistrations, calculat
                 ) : (
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-gray-200">
                     <span className="text-lg sm:text-2xl font-bold text-indigo-800">
-                      {member.name.charAt(0)}
+                      {(member?.name || '?').charAt(0)}
                     </span>
                   </div>
                 )}

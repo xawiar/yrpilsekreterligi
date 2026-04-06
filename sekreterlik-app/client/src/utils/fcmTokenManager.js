@@ -5,13 +5,12 @@
  */
 
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
-import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { db, VAPID_KEY } from '../config/firebase';
 import app from '../config/firebase';
 
-// FCM VAPID Key — Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-// Bu key Firebase Admin SDK ile eslesmeli
-const FCM_VAPID_KEY = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
+// FCM VAPID Key — imported from config/firebase.js (single source of truth)
+const FCM_VAPID_KEY = VAPID_KEY;
 
 /**
  * FCM messaging service worker'ini kaydet
@@ -31,7 +30,6 @@ async function registerFcmServiceWorker() {
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
       scope: '/firebase-cloud-messaging-push-scope'
     });
-    console.log('✅ FCM Service Worker registered');
     return registration;
   } catch (error) {
     console.warn('⚠️ FCM SW registration failed:', error);
@@ -77,7 +75,6 @@ export async function registerFcmToken(userId) {
       return null;
     }
 
-    console.log('✅ FCM token alindi');
 
     // Firestore'a kaydet: fcm_tokens/{userId}
     if (userId) {
@@ -87,10 +84,9 @@ export async function registerFcmToken(userId) {
         userId: String(userId),
         platform: navigator.platform || 'unknown',
         userAgent: navigator.userAgent.substring(0, 200),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       }, { merge: true });
-      console.log('✅ FCM token Firestore\'a kaydedildi');
     }
 
     // localStorage'a da kaydet (hizli erisim icin)
@@ -114,7 +110,6 @@ export async function removeFcmToken(userId) {
       await deleteDoc(tokenRef);
     }
     localStorage.removeItem('fcmToken');
-    console.log('✅ FCM token silindi');
   } catch (error) {
     console.warn('FCM token removal error:', error);
   }
@@ -130,7 +125,6 @@ export function listenToFcmMessages(callback) {
   try {
     const messaging = getMessaging(app);
     return onMessage(messaging, (payload) => {
-      console.log('📬 FCM foreground message:', payload);
 
       // Foreground'da browser notification goster
       if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
@@ -170,7 +164,7 @@ export function listenToFcmMessages(callback) {
  */
 export async function queueFcmNotification({ userIds, title, body, type, url }) {
   try {
-    const { collection, addDoc } = await import('firebase/firestore');
+    const { collection, addDoc, serverTimestamp: serverTS } = await import('firebase/firestore');
 
     // Firestore'a bildirim kuyruklama dokumani yaz
     // Cloud Functions bu koleksiyonu dinleyerek FCM gonderimi yapar
@@ -182,10 +176,9 @@ export async function queueFcmNotification({ userIds, title, body, type, url }) 
       type: type || 'general',
       url: url || '/notifications',
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: serverTS()
     });
 
-    console.log('✅ FCM notification queued for', userIds?.length || 0, 'users');
     return true;
   } catch (error) {
     console.warn('FCM notification queue error:', error);

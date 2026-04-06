@@ -10,7 +10,8 @@
     ]
   },
   "firestore": {
-    "rules": "sekreterlik-app/firestore.rules"
+    "rules": "sekreterlik-app/firestore.rules",
+    "database": "yrpilsekreterligi"
   },
   "storage": {
     "rules": "sekreterlik-app/storage.rules"

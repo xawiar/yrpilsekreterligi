@@ -48,7 +48,6 @@ if (typeof window !== 'undefined') {
     isMessagingSupported().then((supported) => {
       if (supported) {
         messaging = getMessaging(app);
-        console.log('✅ Firebase Messaging initialized');
       } else {
         console.warn('⚠️ Firebase Messaging is not supported in this browser');
       }
@@ -56,7 +55,6 @@ if (typeof window !== 'undefined') {
       console.warn('⚠️ Firebase Messaging init check failed:', err);
     });
 
-    console.log('✅ Firebase initialized with database:', FIRESTORE_DATABASE_NAME);
 
     // QUIC protokol hatalarını azaltmak için network bağlantısını optimize et
     // enableNetwork ile bağlantıyı aktif tut
@@ -70,7 +68,6 @@ if (typeof window !== 'undefined') {
     // Belirtilen database adı ile Firestore'u başlat
     db = getFirestore(app, FIRESTORE_DATABASE_NAME);
     storage = getStorage(app);
-    console.log('✅ Firebase initialized (fallback) with database:', FIRESTORE_DATABASE_NAME);
     
     // Network bağlantısını aktif tut
     enableNetwork(db).catch(err => {
@@ -89,6 +86,10 @@ if (typeof window !== 'undefined') {
 export const getFirebaseMessaging = () => messaging;
 
 export { analytics, auth, db, storage, messaging };
+
+// VAPID public key — single source of truth for push notification subscriptions
+// firebase-messaging-sw.js cannot import ES modules, so it must keep its own copy
+export const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
 
 export default app;
 

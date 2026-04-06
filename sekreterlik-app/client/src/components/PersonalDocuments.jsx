@@ -80,7 +80,6 @@ const PersonalDocuments = ({ memberId }) => {
         setError(''); // Hata mesajını temizle
         
         // Başarı mesajı (opsiyonel - kullanıcı belgeler listesinde görecek)
-        console.log('Belge başarıyla yüklendi:', result.message);
       } else {
         throw new Error('Belge yüklenirken beklenmeyen bir hata oluştu');
       }

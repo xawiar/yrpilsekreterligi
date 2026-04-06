@@ -9,15 +9,19 @@ const {onDocumentCreated, onDocumentUpdated, onDocumentDeleted} =
 const {onRequest} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 const admin = require("firebase-admin");
+const {getFirestore} = require("firebase-admin/firestore");
 const CryptoJS = require("crypto-js");
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ||
-  "ilsekreterlik-app-encryption-key-2024-secret-very-long-key-" +
-  "for-security-minimum-32-characters";
+const db = getFirestore("yrpilsekreterligi");
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY) {
+  logger.warn("ENCRYPTION_KEY not set — password decryption disabled");
+}
 
 /**
  * @param {string} encryptedPassword
@@ -33,13 +37,23 @@ function decryptPassword(encryptedPassword) {
         CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_KEY);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
       if (decrypted && decrypted.trim() !== "") {
-        return decrypted.replace(/\D/g, "");
+        // Passwords are phone numbers (digits only) in this system
+        const normalized = decrypted.replace(/\D/g, "");
+        if (!normalized || normalized.length < 6) {
+          return null; // Invalid phone-format password
+        }
+        return normalized;
       }
     } catch (error) {
       logger.error("Password decryption error:", error);
     }
   }
-  return encryptedPassword.replace(/\D/g, "");
+  // Passwords are phone numbers (digits only) in this system
+  const normalized = encryptedPassword.replace(/\D/g, "");
+  if (!normalized || normalized.length < 6) {
+    return null; // Invalid phone-format password
+  }
+  return normalized;
 }
 
 /**
@@ -61,7 +75,15 @@ function formatEmail(username) {
  * Client NotificationService'ten cagirilir
  */
 exports.sendPush = onRequest(
-    {region: "europe-west1", cors: true},
+    {
+      region: "europe-west1",
+      cors: [
+        "https://spilsekreterligi.web.app",
+        "https://spilsekreterligi.firebaseapp.com",
+        /\.web\.app$/,
+        /localhost/,
+      ],
+    },
     async (req, res) => {
       if (req.method !== "POST") {
         res.status(405).json({error: "Method not allowed"});
@@ -80,11 +102,13 @@ exports.sendPush = onRequest(
         // web-push lazy require
         const webpush = require("web-push");
 
-        const vapidPublic = process.env.VAPID_PUBLIC_KEY ||
-          "BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mt" +
-          "WOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE";
-        const vapidPrivate = process.env.VAPID_PRIVATE_KEY ||
-          "zJmu8Hc1RCCe91ATwlth4qZ_rjSAr1QK1F3zzUR3hd0";
+        const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+        const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+
+        if (!vapidPublic || !vapidPrivate) {
+          res.status(500).json({error: "VAPID keys not configured"});
+          return;
+        }
 
         webpush.setVapidDetails(
             "mailto:admin@ilsekreterlik.local",
@@ -134,6 +158,7 @@ exports.sendPush = onRequest(
 exports.sendFcmNotification = onDocumentCreated(
     {
       document: "fcm_notification_queue/{docId}",
+      database: "yrpilsekreterligi",
       region: "europe-west1",
     },
     async (event) => {
@@ -156,7 +181,7 @@ exports.sendFcmNotification = onDocumentCreated(
         const subscriptions = [];
         for (const userId of userIds) {
           try {
-            const tokenDoc = await admin.firestore()
+            const tokenDoc = await db
                 .doc("push_tokens/" + userId).get();
             if (tokenDoc.exists && tokenDoc.data().subscription) {
               subscriptions.push(tokenDoc.data().subscription);
@@ -176,11 +201,17 @@ exports.sendFcmNotification = onDocumentCreated(
         // web-push ile gonder
         const webpush = require("web-push");
 
-        const vapidPublic = process.env.VAPID_PUBLIC_KEY ||
-          "BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mt" +
-          "WOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE";
-        const vapidPrivate = process.env.VAPID_PRIVATE_KEY ||
-          "zJmu8Hc1RCCe91ATwlth4qZ_rjSAr1QK1F3zzUR3hd0";
+        const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+        const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+
+        if (!vapidPublic || !vapidPrivate) {
+          logger.error("VAPID keys not configured in env");
+          await event.data.ref.update({
+            status: "error",
+            error: "VAPID keys not configured",
+          });
+          return null;
+        }
 
         webpush.setVapidDetails(
             "mailto:admin@ilsekreterlik.local",
@@ -239,6 +270,7 @@ exports.sendFcmNotification = onDocumentCreated(
 exports.onMemberUserCreate = onDocumentCreated(
     {
       document: "member_users/{userId}",
+      database: "yrpilsekreterligi",
       region: "europe-west1",
     },
     async (event) => {
@@ -296,6 +328,7 @@ exports.onMemberUserCreate = onDocumentCreated(
 exports.onMemberUserUpdate = onDocumentUpdated(
     {
       document: "member_users/{userId}",
+      database: "yrpilsekreterligi",
       region: "europe-west1",
     },
     async (event) => {
@@ -361,6 +394,7 @@ exports.onMemberUserUpdate = onDocumentUpdated(
 exports.onMemberUserDelete = onDocumentDeleted(
     {
       document: "member_users/{userId}",
+      database: "yrpilsekreterligi",
       region: "europe-west1",
     },
     async (event) => {

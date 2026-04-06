@@ -1,12 +1,11 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_ENCRYPTION_KEY;
-
-let jwtSecretMissing = false;
+const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  jwtSecretMissing = true;
-  console.error('🔴 KRİTİK: JWT_SECRET ve VITE_ENCRYPTION_KEY ortam değişkenleri tanımlı değil! Token oluşturma devre dışı.');
+  console.error('CRITICAL: JWT_SECRET environment variable is not set');
 }
+
+let jwtSecretMissing = !JWT_SECRET;
 
 /**
  * JWT token doğrulama middleware'i

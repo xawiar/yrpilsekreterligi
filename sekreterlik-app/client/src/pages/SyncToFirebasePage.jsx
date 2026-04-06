@@ -165,7 +165,6 @@ const SyncToFirebasePage = () => {
     setUpdateProgress({ current: 0, total: 0 });
 
     try {
-      console.log('📥 Masaüstü database\'den üye verileri alınıyor...');
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       const response = await fetch(`${API_BASE_URL}/sync/desktop-members`);
       
@@ -179,7 +178,6 @@ const SyncToFirebasePage = () => {
         throw new Error(desktopData.message || 'Veriler alınamadı');
       }
 
-      console.log('✅ Masaüstü database\'den veriler alındı:', desktopData.count, 'üye');
 
       const desktopMembers = desktopData.data || [];
       setUpdateProgress({ current: 0, total: desktopMembers.length });
@@ -209,7 +207,6 @@ const SyncToFirebasePage = () => {
           }, false); // encrypt = false (artık şifreleme yapılmıyor)
 
           updated++;
-          console.log(`✅ Üye güncellendi: ${desktopMember.name} (ID: ${desktopMember.id}, TC: ${desktopMember.tc})`);
         } catch (error) {
           errors++;
           console.error(`❌ Üye güncelleme hatası (ID: ${desktopMember.id}):`, error);
@@ -238,7 +235,6 @@ const SyncToFirebasePage = () => {
 
     try {
       // SQLite'dan tüm verileri al
-      console.log('📥 SQLite verileri alınıyor...');
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       const response = await fetch(`${API_BASE_URL}/sync/all`);
       
@@ -252,7 +248,6 @@ const SyncToFirebasePage = () => {
         throw new Error(syncData.message || 'Veriler alınamadı');
       }
 
-      console.log('✅ SQLite verileri alındı:', syncData.summary);
 
       const syncResults = [];
 

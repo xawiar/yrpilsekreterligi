@@ -116,6 +116,11 @@ input, textarea, select {
   font-size: 16px !important;
 }
 
+/* NOTE: Dark mode text colors should maintain WCAG AA contrast ratio (4.5:1)
+   Verify with: https://webaim.org/resources/contrastchecker/
+   Current pairs to verify:
+   - text-gray-400 on bg-gray-800/900
+   - text-gray-300 on bg-gray-700/800 */
 @layer base {
   body {
     @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200;
@@ -199,6 +204,12 @@ input, textarea, select {
   .mobile-full {
     width: 100%;
   }
+}
+
+/* Keyboard focus indicator */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-500, #3b82f6);
+  outline-offset: 2px;
 }
 
 /* Global responsive fixes */

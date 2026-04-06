@@ -273,7 +273,7 @@ const DashboardPage = () => {
       <div className={`grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mt-6`}>
         {/* Upcoming Events - Mobilde tam genişlik, desktop'ta yarım */}
         <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6`}>
-          <h3 className={`text-lg mb-4 font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Etkinlikler</h3>
+          <h2 className={`text-lg mb-4 font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Etkinlikler</h2>
           {upcomingEvents.length > 0 ? (
             <div className="space-y-3">
               {upcomingEvents.map((event, index) => (
@@ -310,7 +310,7 @@ const DashboardPage = () => {
 
         {/* Upcoming Meetings - Mobilde tam genişlik, desktop'ta yarım */}
         <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6`}>
-          <h3 className={`text-lg mb-4 font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Toplantılar</h3>
+          <h2 className={`text-lg mb-4 font-semibold text-gray-900 dark:text-gray-100`}>Yaklaşan Toplantılar</h2>
           {upcomingMeetings.length > 0 ? (
             <div className="space-y-3">
               {upcomingMeetings.map((meeting, index) => (
@@ -350,9 +350,9 @@ const DashboardPage = () => {
 
       {/* Üye Performans Özeti */}
       <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Performans Özeti
-        </h3>
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {/* Ortalama Katılım */}
           <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -391,9 +391,9 @@ const DashboardPage = () => {
 
       {/* Son 6 Ay Katilim Trendi */}
       <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Son 6 Ay Katilim Trendi
-        </h3>
+        </h2>
         {attendanceTrendData.some(d => d.toplanti > 0) ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={attendanceTrendData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>

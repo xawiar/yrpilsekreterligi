@@ -396,8 +396,9 @@ function AuthenticatedContent() {
                         <button
                           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                           className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          aria-label="Menüyü aç"
                         >
-                          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                           </svg>
                         </button>
@@ -522,7 +523,7 @@ function AuthenticatedContent() {
             className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
             aria-label="AI Chatbot'u Aç"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </button>
@@ -577,8 +578,7 @@ function App() {
             <Suspense fallback={null}>
               <CookieConsent />
             </Suspense>
-            {/* PerformanceMonitor temporarily disabled - causes localhost:5000 errors */}
-            {/* <PerformanceMonitor /> */}
+
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

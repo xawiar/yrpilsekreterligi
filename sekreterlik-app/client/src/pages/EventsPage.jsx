@@ -447,14 +447,20 @@ const EventsPage = () => {
       />
 
       {/* Events Table */}
-      <EventsTable
-        events={paginatedEvents}
-        onShowEvent={handleShowEvent}
-        onEditEvent={handleEditEvent}
-        onUpdateAttendance={handleUpdateAttendance}
-        onArchiveEvent={handleArchiveEvent}
-        calculateAttendanceStats={calculateAttendanceStats}
-      />
+      {filteredEvents.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <p className="text-lg">Henüz etkinlik yok</p>
+        </div>
+      ) : (
+        <EventsTable
+          events={paginatedEvents}
+          onShowEvent={handleShowEvent}
+          onEditEvent={handleEditEvent}
+          onUpdateAttendance={handleUpdateAttendance}
+          onArchiveEvent={handleArchiveEvent}
+          calculateAttendanceStats={calculateAttendanceStats}
+        />
+      )}
 
       {/* Pagination */}
       <Pagination

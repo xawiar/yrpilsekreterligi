@@ -100,15 +100,13 @@ router.get('/elections/:id', validateElectionId, electionCache, ElectionControll
 // GET /api/public/election-results/results - Get election results (public)
 // Query params: election_id, ballot_box_id
 // Cached for 30 seconds (results update frequently during election day)
-// Security: Only approved or manually-entered (no approval_status) results are exposed publicly
+// Security: Only approved results are exposed publicly
 router.get('/results', validateQueryParams, electionCache, (req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = function(data) {
     if (Array.isArray(data)) {
-      // Filter out pending and rejected results; approved and null (manual entry) are shown
-      data = data.filter(result =>
-        result.approval_status === 'approved' || result.approval_status == null
-      );
+      // Security: Only approved results are exposed publicly
+      data = data.filter(result => result.approval_status === 'approved');
     }
     return originalJson(data);
   };

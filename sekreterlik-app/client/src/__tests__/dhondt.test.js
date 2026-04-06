@@ -56,6 +56,40 @@ describe('calculateDHondt', () => {
     const result = calculateDHondt({ 'A': 100, 'B': 0 }, 3);
     expect(result['A']).toBe(3);
   });
+
+  it('should handle threshold filtering', () => {
+    const votes = { 'A': 1000, 'B': 500, 'C': 10 };
+    const result = calculateDHondt(votes, 5, 7); // 7% threshold
+    // C has 10/1510 = 0.66% < 7%, should be filtered out
+    expect(result['C'] || 0).toBe(0);
+  });
+
+  it('should handle tie-breaking without crash', () => {
+    const votes = { 'A': 100, 'B': 100, 'C': 100 };
+    const result = calculateDHondt(votes, 3);
+    const total = Object.values(result).reduce((s, v) => s + v, 0);
+    expect(total).toBe(3);
+  });
+
+  it('should handle single party with many seats', () => {
+    const votes = { 'A': 1000 };
+    const result = calculateDHondt(votes, 5);
+    expect(result['A']).toBe(5);
+  });
+
+  it('should handle zero votes for all parties', () => {
+    const votes = { 'A': 0, 'B': 0 };
+    const result = calculateDHondt(votes, 3);
+    const total = Object.values(result).reduce((s, v) => s + v, 0);
+    expect(total).toBeLessThanOrEqual(3);
+  });
+
+  it('should handle large vote numbers', () => {
+    const votes = { 'A': 150000, 'B': 120000, 'C': 80000 };
+    const result = calculateDHondt(votes, 10);
+    const total = Object.values(result).reduce((s, v) => s + v, 0);
+    expect(total).toBe(10);
+  });
 });
 
 describe('calculateDHondtDetailed', () => {

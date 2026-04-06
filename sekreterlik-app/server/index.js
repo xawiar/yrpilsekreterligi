@@ -198,6 +198,23 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
 }));
 
+// Basic CSRF protection — verify Origin header matches allowed origins
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const origin = req.get('Origin') || req.get('Referer') || '';
+    const csrfAllowedOrigins = [
+      'https://spilsekreterligi.web.app',
+      'https://spilsekreterligi.firebaseapp.com',
+      'http://localhost',
+    ];
+    const isAllowed = !origin || csrfAllowedOrigins.some(o => origin.startsWith(o));
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'CSRF check failed' });
+    }
+  }
+  next();
+});
+
 // Initialize database models and MongoDB
 const MemberDashboardAnalytics = require('./models/MemberDashboardAnalytics');
 const Notification = require('./models/Notification');
@@ -288,6 +305,10 @@ app.use(helmet({
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     },
   },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+  },
   crossOriginEmbedderPolicy: false, // Firebase icin gerekli
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Firebase Storage icin
   crossOriginOpenerPolicy: false, // CORS icin gerekli
@@ -365,7 +386,9 @@ console.log('Middleware configured');
 console.log('Registering API routes');
 
 app.use('/api/auth', (req, res, next) => {
-  if (req.path === '/login') return loginLimiter(req, res, next);
+  if (req.path === '/login' || req.path === '/login-coordinator' || req.path === '/login-chief-observer') {
+    return loginLimiter(req, res, next);
+  }
   return next();
 }, (req, res, next) => {
   // Audit log for login attempts

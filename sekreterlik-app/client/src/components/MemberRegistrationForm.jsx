@@ -67,21 +67,17 @@ const MemberRegistrationForm = ({ member, initialData, onClose, onRegistrationSa
         date: formData.date
       };
       
-      console.log('Sending registration data:', registrationData);
       
       let response;
       // If we're editing an existing registration, update it; otherwise create new
       if (initialData && initialData.id) {
         // Update existing registration
-        console.log('Updating existing registration with ID:', initialData.id, '(type:', typeof initialData.id, ')');
         response = await ApiService.updateMemberRegistration(initialData.id, registrationData);
       } else {
         // Create new registration
-        console.log('Creating new registration');
         response = await ApiService.createMemberRegistration(registrationData);
       }
       
-      console.log('Registration saved successfully', response);
       
       // Clear any previous errors
       setError('');

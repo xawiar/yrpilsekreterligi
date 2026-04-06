@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { VAPID_KEY } from '../config/firebase';
 
 // Firebase kullanımı kontrolü
 const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' || 
@@ -191,29 +192,21 @@ export const AuthProvider = ({ children }) => {
         // Login sonrasi otomatik push subscription (maliisler pattern)
         setTimeout(async () => {
           try {
-            console.log('[PUSH DEBUG] Step 1: Checking Notification API...');
             if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
-              console.log('[PUSH DEBUG] Step 2: Requesting permission...');
               const perm = await Notification.requestPermission();
-              console.log('[PUSH DEBUG] Step 3: Permission result:', perm);
               if (perm === 'granted' && 'serviceWorker' in navigator) {
-                console.log('[PUSH DEBUG] Step 4: Getting SW registration...');
                 const reg = await navigator.serviceWorker.ready;
-                console.log('[PUSH DEBUG] Step 5: SW ready, subscribing...');
-                const vapidKey = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
+                const vapidKey = VAPID_KEY;
                 const padding = '='.repeat((4 - (vapidKey.length % 4)) % 4);
                 const b64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/');
                 const raw = window.atob(b64);
                 const arr = new Uint8Array(raw.length);
                 for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
                 const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr.buffer });
-                console.log('[PUSH DEBUG] Step 6: Subscription created:', sub ? 'YES' : 'NO');
                 const userId = response.user.id || response.user.uid || '';
-                console.log('[PUSH DEBUG] Step 7: userId:', userId);
                 if (userId) {
                   const { doc, setDoc } = await import('firebase/firestore');
                   const { db } = await import('../config/firebase');
-                  console.log('[PUSH DEBUG] Step 8: db exists:', !!db);
                   if (db) {
                     await setDoc(doc(db, 'push_tokens', userId), {
                       subscription: JSON.stringify(sub),
@@ -221,14 +214,11 @@ export const AuthProvider = ({ children }) => {
                       updatedAt: new Date().toISOString(),
                       isActive: true
                     });
-                    console.log('[PUSH DEBUG] Step 9: Token SAVED to Firestore!');
                   }
                 }
               } else {
-                console.log('[PUSH DEBUG] Permission denied or no SW');
               }
             } else {
-              console.log('[PUSH DEBUG] Notification API not available or denied');
             }
           } catch (pushErr) {
             console.error('[PUSH DEBUG] Push subscription error:', pushErr);

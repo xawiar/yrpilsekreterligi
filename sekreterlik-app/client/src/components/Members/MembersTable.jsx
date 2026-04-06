@@ -183,6 +183,7 @@ const MembersTable = ({
                     type="checkbox"
                     checked={members.length > 0 && selectedMemberIds.size === members.length}
                     onChange={onToggleSelectAll}
+                    aria-label="Tum uyeleri sec"
                     className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                   />
                 </th>
@@ -284,6 +285,7 @@ const MembersTable = ({
                           type="checkbox"
                           checked={selectedMemberIds.has(member.id)}
                           onChange={() => onToggleSelect(member.id)}
+                          aria-label={`${member.name} uyesini sec`}
                           className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                         />
                       </td>

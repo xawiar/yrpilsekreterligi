@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ApiService from '../utils/ApiService';
 import { registerFcmToken } from '../utils/fcmTokenManager';
+import { VAPID_KEY } from '../config/firebase';
 
 /**
  * userId'yi hook parametresinden veya localStorage'dan cozumler.
@@ -52,7 +53,6 @@ export const usePushNotifications = (userId = null) => {
         if (existingSubscription) {
           setSubscription(existingSubscription);
           setIsSubscribed(true);
-          console.log('✅ Found existing push subscription');
         }
       }
     } catch (error) {
@@ -62,9 +62,8 @@ export const usePushNotifications = (userId = null) => {
 
   // Get VAPID key function
   const getVapidKey = async () => {
-    const key = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
-    setVapidKey(key);
-    return key;
+    setVapidKey(VAPID_KEY);
+    return VAPID_KEY;
   };
 
   // Subscribe to push notifications
@@ -93,11 +92,9 @@ export const usePushNotifications = (userId = null) => {
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });
-      console.log('Service Worker registered:', registration);
 
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;
-      console.log('Service Worker ready');
 
       // Get existing subscription
       let existingSubscription = await registration.pushManager.getSubscription();
@@ -106,7 +103,6 @@ export const usePushNotifications = (userId = null) => {
         setSubscription(existingSubscription);
         setIsSubscribed(true);
         setIsLoading(false);
-        console.log('✅ Already subscribed to push notifications');
 
         // Still send to server to ensure it's registered
         const resolvedId = resolveUserId(userIdRef.current);
@@ -130,12 +126,10 @@ export const usePushNotifications = (userId = null) => {
       }
 
       // Create new subscription
-      console.log('Creating new push subscription...');
       const newSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(currentVapidKey)
       });
-      console.log('Push subscription created:', newSubscription);
 
       // Send subscription to server
       const resolvedId = resolveUserId(userIdRef.current);
@@ -173,7 +167,6 @@ export const usePushNotifications = (userId = null) => {
       setError(null);
 
       if (true) {
-        console.log('Successfully subscribed to push notifications');
 
         // FCM token'i de kaydet (arka plan push icin)
         try {
@@ -235,7 +228,6 @@ export const usePushNotifications = (userId = null) => {
 
       setSubscription(null);
       setIsSubscribed(false);
-      console.log('Successfully unsubscribed from push notifications');
       return true;
     } catch (error) {
       console.error('Error unsubscribing from push notifications:', error);
@@ -255,7 +247,6 @@ export const usePushNotifications = (userId = null) => {
       const resolvedId = resolveUserId(userIdRef.current);
       const response = await ApiService.sendTestNotification(resolvedId);
       if (response.success) {
-        console.log('Test notification sent successfully:', response.message);
         return true;
       } else {
         throw new Error(response.message || 'Test notification failed');

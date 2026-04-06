@@ -22,15 +22,13 @@ class Admin {
         if (err) {
           reject(err);
         } else {
-          // Check if admin exists, if not create default admin
+          // Check if admin exists
           Admin.getAdmin().then(() => {
             resolve();
           }).catch(() => {
-            // Admin doesn't exist, create default
-            const hashedPassword = bcrypt.hashSync('1491aaa1491', 10);
-            Admin.createAdmin('admin', hashedPassword).then(() => {
-              resolve();
-            }).catch(reject);
+            // Admin doesn't exist — must be created via /create-admin route
+            console.warn('No admin account found. Use /create-admin to set up.');
+            resolve();
           });
         }
       });
@@ -108,24 +106,10 @@ class Admin {
               resolve(true);
               return;
             }
-            // Backward compatible: check plaintext match and migrate
-            if (password === admin.password) {
-              const hashed = await bcrypt.hash(password, 10);
-              db.run('UPDATE admin SET password = ? WHERE id = ?', [hashed, admin.id]);
-              resolve(true);
-              return;
-            }
             resolve(false);
           } catch (compareErr) {
-            // If bcrypt.compare throws (e.g. plaintext stored), fall back to direct comparison
-            if (password === admin.password) {
-              bcrypt.hash(password, 10).then(hashed => {
-                db.run('UPDATE admin SET password = ? WHERE id = ?', [hashed, admin.id]);
-              });
-              resolve(true);
-            } else {
-              resolve(false);
-            }
+            console.error('Password verification error:', compareErr.message);
+            resolve(false);
           }
         }
       );

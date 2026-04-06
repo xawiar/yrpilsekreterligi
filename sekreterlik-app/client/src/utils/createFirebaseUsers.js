@@ -11,25 +11,19 @@ import { decryptData } from './crypto';
 export async function createAdminUser() {
   try {
     const adminUsername = 'admin';
-    const adminPassword = '1491aaa1491';
+    const adminPassword = prompt('Admin şifresi girin:') || '';
     const adminEmail = `${adminUsername}@ilsekreterlik.local`;
 
-    console.log('🔐 Admin kullanıcısı oluşturuluyor...');
-    console.log('Email:', adminEmail);
-    console.log('Password:', adminPassword);
 
     let userCredential;
 
     try {
       // Firebase Auth'da kullanıcı oluştur
       userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
-      console.log('✅ Firebase Authentication kullanıcısı oluşturuldu:', userCredential.user.uid);
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
         // Kullanıcı zaten varsa giriş yap
-        console.log('ℹ️ Kullanıcı zaten mevcut, giriş yapılıyor...');
         userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-        console.log('✅ Giriş yapıldı:', userCredential.user.uid);
       } else {
         throw error;
       }
@@ -47,12 +41,10 @@ export async function createAdminUser() {
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
-    console.log('✅ Admin bilgileri Firestore\'a kaydedildi!');
 
     // Bağlantıyı test et
     const testDoc = await getDoc(adminDocRef);
     if (testDoc.exists()) {
-      console.log('✅ Admin dokümanı başarıyla okundu:', testDoc.data());
       return {
         success: true,
         username: adminUsername,
@@ -78,7 +70,6 @@ export async function createAdminUser() {
  */
 export async function syncMemberUsersToFirebaseAuth() {
   try {
-    console.log('🔄 Üye kullanıcıları Firebase Auth\'a aktarılıyor...');
 
     // Mevcut admin kullanıcısını koru
     const currentUser = auth.currentUser;
@@ -87,7 +78,7 @@ export async function syncMemberUsersToFirebaseAuth() {
 
     // Admin bilgilerini al
     let adminEmail = 'admin@ilsekreterlik.local';
-    let adminPassword = '1491aaa1491';
+    let adminPassword = '';
     try {
       const adminDoc = await FirebaseService.getById('admin', 'main');
       if (adminDoc && adminDoc.email) {
@@ -101,7 +92,6 @@ export async function syncMemberUsersToFirebaseAuth() {
     const memberUsers = await FirebaseService.getAll('member_users');
     const activeUsers = memberUsers.filter(user => user.isActive !== false);
 
-    console.log(`📊 ${activeUsers.length} aktif üye kullanıcısı bulundu`);
 
     let successCount = 0;
     let errorCount = 0;
@@ -109,7 +99,6 @@ export async function syncMemberUsersToFirebaseAuth() {
 
     for (let i = 0; i < activeUsers.length; i++) {
       const user = activeUsers[i];
-      console.log(`[${i + 1}/${activeUsers.length}] İşleniyor: ${user.username}`);
 
       try {
         // Şifreyi decrypt et
@@ -129,7 +118,6 @@ export async function syncMemberUsersToFirebaseAuth() {
 
         // Eğer zaten authUid varsa, kullanıcı zaten Firebase Auth'da var
         if (user.authUid) {
-          console.log(`ℹ️ User ${user.username} already has authUid: ${user.authUid}`);
           successCount++;
           continue;
         }
@@ -137,7 +125,6 @@ export async function syncMemberUsersToFirebaseAuth() {
         // Firebase Auth'da kullanıcı oluştur
         try {
           const authUser = await createUserWithEmailAndPassword(auth, email, password);
-          console.log(`✅ Firebase Auth user created: ${user.username} -> ${authUser.user.uid}`);
 
           // Firestore'da authUid'yi güncelle
           await FirebaseService.update('member_users', user.id, {
@@ -150,7 +137,6 @@ export async function syncMemberUsersToFirebaseAuth() {
           if (currentUserUid && currentUserUid !== authUser.user.uid && currentUserEmail === adminEmail) {
             try {
               await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-              console.log('✅ Admin user re-authenticated');
             } catch (signInError) {
               console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
             }
@@ -176,15 +162,11 @@ export async function syncMemberUsersToFirebaseAuth() {
     if (currentUserEmail === adminEmail) {
       try {
         await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-        console.log('✅ Admin user re-authenticated after all users created');
       } catch (signInError) {
         console.warn(`⚠️ Admin user re-authentication failed: ${signInError.message}`);
       }
     }
 
-    console.log(`\n✅ Firebase Auth'a aktarım tamamlandı!`);
-    console.log(`   • Başarılı: ${successCount} kullanıcı`);
-    console.log(`   • Hata: ${errorCount} kullanıcı`);
 
     return {
       success: true,

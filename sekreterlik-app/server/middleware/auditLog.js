@@ -60,10 +60,22 @@ function sanitizeBody(body) {
   if (!body || typeof body !== 'object') return body;
   const sanitized = { ...body };
   // Sifre ve token bilgilerini maskeleme
-  const sensitiveFields = ['password', 'token', 'secret', 'api_key', 'apiKey'];
+  const sensitiveFields = [
+    'password', 'token', 'secret', 'api_key', 'apiKey',
+    'tc', 'tcNo', 'tc_number', 'tc_kimlik',
+    'phone', 'telefon', 'cep_telefon', 'phone_number',
+    'address', 'adres', 'email', 'e_posta',
+    'subscription', 'vapidKey', 'encryption_key'
+  ];
   for (const field of sensitiveFields) {
     if (sanitized[field]) {
       sanitized[field] = '***MASKED***';
+    }
+  }
+  // Nested objelerde de temizle
+  for (const key of Object.keys(sanitized)) {
+    if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
+      sanitized[key] = sanitizeBody(sanitized[key]);
     }
   }
   return sanitized;

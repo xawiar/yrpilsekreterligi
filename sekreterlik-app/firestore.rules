@@ -19,6 +19,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Push tokens — authenticated users can save their own token
+    match /push_tokens/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid != null;
+    }
+
+    // FCM tokens
+    match /fcm_tokens/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // FCM notification queue — system write
+    match /fcm_notification_queue/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+
     // Members - admin write, authenticated read
     match /members/{memberId} {
       allow read: if isAuthenticated();
@@ -47,7 +65,9 @@ service cloud.firestore {
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
     }
 
-    // Districts - public read for application form dropdown, admin write
+    // Districts - public read required: PublicApplicationPage.jsx fetches districts
+    // from Firestore without auth for the membership application form dropdown.
+    // Do NOT change to isAuthenticated() — it would break the public application form.
     match /districts/{districtId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -59,17 +79,17 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Master notifications - admin read/write, public create for system events
+    // Master notifications - admin read/write, authenticated create for system events
     match /master_notifications/{notifId} {
-      allow create: if true;
+      allow create: if isAuthenticated();
       allow read, update, delete: if isAdmin();
     }
 
-    // Notifications - owner read, admin write, public create for system notifications
+    // Notifications - owner read, admin write, authenticated create for system notifications
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() &&
         (resource.data.memberId == request.auth.uid || resource.data.memberId == null);
-      allow create: if true;
+      allow create: if isAuthenticated();
       allow update: if isAuthenticated() &&
         (resource.data.memberId == request.auth.uid || resource.data.memberId == null);
       allow delete: if isAdmin() ||

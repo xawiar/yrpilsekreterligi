@@ -11,7 +11,7 @@
  * @param {number} totalSeats - Toplam milletvekili sayısı
  * @returns {Object} - Parti isimleri ve kazandıkları milletvekili sayıları: { 'Parti Adı': mvSayısı }
  */
-export const calculateDHondt = (partyVotes, totalSeats) => {
+export const calculateDHondt = (partyVotes, totalSeats, thresholdPercent = 0) => {
   if (!partyVotes || typeof partyVotes !== 'object') {
     return {};
   }
@@ -64,12 +64,18 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
   }
 
   // Parti oylarını sayıya çevir ve sıfır olmayanları filtrele
-  const votes = Object.entries(partyVotesFiltered)
+  let votes = Object.entries(partyVotesFiltered)
     .map(([party, votes]) => ({
       party,
       votes: parseInt(votes) || 0
     }))
     .filter(p => p.votes > 0);
+
+  // Baraj (threshold) kontrolü: belirtilen yüzdenin altında kalan partileri ele
+  if (thresholdPercent > 0) {
+    const totalVotes = votes.reduce((s, v) => s + v.votes, 0);
+    votes = votes.filter(v => (v.votes / totalVotes * 100) >= thresholdPercent);
+  }
 
   if (votes.length === 0) {
     return { ...independentResults };
@@ -89,8 +95,11 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
 
   // Bölümleri büyükten küçüğe sırala
   // Eşit quotient durumunda:
-  // 1. Daha yüksek oyu olan parti önce (mevcut)
-  // 2. Oylar da eşitse, alphabetical sıralama (tie-breaker)
+  // 1. Daha yüksek oyu olan parti önce
+  // 2. Oylar da eşitse: rastgele sıralama (kura çekme)
+  //    Türk seçim hukuku gereği eşitlik durumunda "kura çekme" yapılır.
+  //    Deterministik olmayan sıralama ile bu simüle edilir.
+  const tieBreaks = [];
   quotients.sort((a, b) => {
     const diff = b.quotient - a.quotient;
     if (Math.abs(diff) < 1e-9) {
@@ -100,8 +109,9 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
       if (aVotes !== bVotes) {
         return bVotes - aVotes;
       }
-      // Oylar da eşitse: alphabetical sıralama (deterministik)
-      return a.party.localeCompare(b.party);
+      // Oylar da eşitse: kura çekme (rastgele) — Türk seçim hukuku gereği
+      tieBreaks.push({ parties: [a.party, b.party], quotient: a.quotient });
+      return Math.random() - 0.5;
     }
     return diff;
   });
@@ -120,7 +130,17 @@ export const calculateDHondt = (partyVotes, totalSeats) => {
   });
 
   // Bağımsız sonuçları birleştir
-  return { ...seatDistribution, ...independentResults };
+  const result = { ...seatDistribution, ...independentResults };
+
+  // Eşitlik (kura) bilgisini non-enumerable olarak ekle
+  // Böylece Object.entries() ile parti iterasyonunu bozmaz ama result.tieBreaks ile erişilebilir
+  Object.defineProperty(result, 'tieBreaks', {
+    value: tieBreaks,
+    enumerable: false,
+    configurable: true
+  });
+
+  return result;
 };
 
 /**

@@ -333,7 +333,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   storedPassword = decryptData(storedPassword);
                 }
               } catch (e) {
-                console.error('[DEBUG] Decrypt error:', e);
+                // Decrypt failed, use raw value
               }
               
               const password = storedPassword || userData.tc || username;
@@ -343,7 +343,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               await signInWithEmailAndPassword(auth, email, password);
             }
           } catch (reauthError) {
-            console.error('[DEBUG] Re-authentication error:', reauthError);
+            console.error('Re-authentication error:', reauthError.message);
             setMessage('Firebase kimlik doğrulama hatası. Lütfen tekrar giriş yapın.');
             setMessageType('error');
             setUploadingPhotos(prev => ({ ...prev, [type]: false }));
@@ -2104,10 +2104,11 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       </div>
                     ) : formData.signed_protocol_photo ? (
                       <div className="relative w-full h-full">
-                        <img 
-                          src={formData.signed_protocol_photo} 
-                          alt="İmzalı Tutanak" 
+                        <img
+                          src={formData.signed_protocol_photo}
+                          alt="İmzalı Tutanak"
                           className="w-full h-full object-cover rounded"
+                          loading="lazy"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                           <span className="text-white text-xs font-medium">Yeniden Yükle</span>
@@ -2176,10 +2177,11 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                       </div>
                     ) : formData.objection_protocol_photo ? (
                       <div className="relative w-full h-full">
-                        <img 
-                          src={formData.objection_protocol_photo} 
-                          alt="İtiraz Tutanağı" 
+                        <img
+                          src={formData.objection_protocol_photo}
+                          alt="İtiraz Tutanağı"
                           className="w-full h-full object-cover rounded"
+                          loading="lazy"
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                           <span className="text-white text-xs font-medium">Yeniden Yükle</span>

@@ -208,7 +208,6 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
   const fetchData = async () => {
     try {
       if (import.meta.env.DEV) {
-      console.log('🔄 ElectionResultsPage: fetchData başladı, electionId:', electionId, 'readOnly:', readOnly);
       }
       setLoading(true);
       

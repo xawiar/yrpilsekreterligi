@@ -311,8 +311,8 @@ class ElectionResultController {
         today.setHours(0, 0, 0, 0);
         electionDate.setHours(0, 0, 0, 0);
         
-        // Allow entry 1 day before election (for preparation) and up to 7 days after
-        const daysBefore = 1;
+        // Allow entry only on election day and up to 7 days after
+        const daysBefore = 0;
         const daysAfter = 7;
         const minDate = new Date(electionDate);
         minDate.setDate(minDate.getDate() - daysBefore);
@@ -492,8 +492,8 @@ class ElectionResultController {
         today.setHours(0, 0, 0, 0);
         electionDate.setHours(0, 0, 0, 0);
         
-        // Allow entry 1 day before election (for preparation) and up to 7 days after
-        const daysBefore = 1;
+        // Allow entry only on election day and up to 7 days after
+        const daysBefore = 0;
         const daysAfter = 7;
         const minDate = new Date(electionDate);
         minDate.setDate(minDate.getDate() - daysBefore);

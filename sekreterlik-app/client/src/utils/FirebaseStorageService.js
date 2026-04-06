@@ -22,7 +22,6 @@ class FirebaseStorageService {
    */
   static async uploadFile(file, path, metadata = {}, onProgress = null, useQueue = false) {
     try {
-      console.log('📤 Uploading file to Firebase Storage:', { path, size: file.size, type: file.type, useQueue });
       
       // Büyük dosyalar veya eşzamanlı upload riski varsa queue kullan
       if (useQueue || file.size > 1024 * 1024) { // 1MB'dan büyükse queue kullan
@@ -44,7 +43,6 @@ class FirebaseStorageService {
       // Download URL'i al
       const downloadURL = await getDownloadURL(snapshot.ref);
       
-      console.log('✅ File uploaded successfully:', { path, downloadURL });
       
       return downloadURL;
     } catch (error) {
@@ -57,7 +55,6 @@ class FirebaseStorageService {
       );
       
       if (isRetryable && !useQueue) {
-        console.log('⚠️ Retryable error detected, retrying with queue...');
         return await uploadQueue.add(file, path, metadata, onProgress, 5);
       }
       
@@ -71,19 +68,16 @@ class FirebaseStorageService {
    */
   static async deleteFile(path) {
     try {
-      console.log('🗑️ Deleting file from Firebase Storage:', path);
       
       const storageRef = ref(storage, path);
       await deleteObject(storageRef);
       
-      console.log('✅ File deleted successfully:', path);
     } catch (error) {
       // Dosya bulunamazsa hata verme (zaten silinmiş olabilir)
       if (error.code !== 'storage/object-not-found') {
         console.error('❌ Firebase Storage delete error:', error);
         throw new Error(`Dosya silinirken hata oluştu: ${error.message}`);
       } else {
-        console.log('ℹ️ File not found (may already be deleted):', path);
       }
     }
   }

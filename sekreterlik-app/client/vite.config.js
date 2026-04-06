@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import removeConsole from 'vite-plugin-remove-console'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
@@ -10,13 +9,23 @@ export default defineConfig({
   
   plugins: [
     react(),
-    // Production'da console.log'ları kaldır (performans için)
-    // removeConsole devre disi — plugin build hatasi veriyor
-    // removeConsole({
-    //   includes: ['log', 'warn', 'info', 'debug'],
-    //   exclude: ['error']
-    // }),
+    // Production'da console.log/warn/info esbuild tarafından kaldırılır (aşağıda esbuild.drop)
     // PWA Plugin - Tam aktif
+    //
+    // MULTI-SW ARCHITECTURE:
+    // This project uses THREE service workers that coexist without conflict:
+    //   1. vite-plugin-pwa (generateSW) -- handles precaching of build assets and
+    //      runtime caching (fonts, images, API). Registered automatically by the plugin.
+    //   2. public/sw.js -- legacy manual SW for offline navigation fallback and
+    //      push notification display. Registered by the app at runtime.
+    //   3. public/firebase-messaging-sw.js -- dedicated FCM background message handler.
+    //      Registered at /firebase-messaging-sw.js scope by fcmTokenManager.js.
+    //
+    // To prevent conflicts:
+    //   - firebase-messaging-sw.js is excluded from precaching via globIgnores
+    //   - sw.js is also excluded from precaching (it registers itself separately)
+    //   - navigateFallbackDenylist prevents the workbox SW from intercepting the
+    //     firebase-messaging-sw.js registration request
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
@@ -73,6 +82,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Exclude manual service workers from precaching — they register themselves
+        globIgnores: ['**/firebase-messaging-sw.js', '**/sw.js'],
+        // Prevent workbox from intercepting SW registration requests
+        navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/, /^\/sw\.js$/],
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB - large bundle support
@@ -142,6 +155,11 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: false, // Production'da sourcemap kapalı
     minify: 'esbuild', // Hızlı minification
+    // Production'da console.log ve console.warn kaldır (console.error Sentry için kalır)
+    esbuild: {
+      drop: ['debugger'],
+      pure: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+    },
     chunkSizeWarningLimit: 2000, // Increase limit to 2MB
     rollupOptions: {
       output: {

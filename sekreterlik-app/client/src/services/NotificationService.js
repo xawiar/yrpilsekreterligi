@@ -12,6 +12,7 @@ import {
   limit,
   onSnapshot,
   writeBatch,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import FirebaseApiService from '../utils/FirebaseApiService';
@@ -48,6 +49,13 @@ export const NOTIFICATION_TYPE_LABELS = {
   [NOTIFICATION_TYPES.EVENT_INVITE]: 'Etkinlik Daveti',
   [NOTIFICATION_TYPES.POLL_INVITE]: 'Anket Daveti',
   [NOTIFICATION_TYPES.ELECTION_UPDATE]: 'Secim Guncellemesi',
+  [NOTIFICATION_TYPES.MEETING]: 'Toplantı',
+  [NOTIFICATION_TYPES.MEETING_REMINDER]: 'Toplantı Hatırlatması',
+  [NOTIFICATION_TYPES.EVENT]: 'Etkinlik',
+  [NOTIFICATION_TYPES.EVENT_REMINDER]: 'Etkinlik Hatırlatması',
+  [NOTIFICATION_TYPES.POLL]: 'Anket',
+  [NOTIFICATION_TYPES.POLL_VOTE]: 'Anket Oyu',
+  [NOTIFICATION_TYPES.MESSAGE]: 'Mesaj',
 };
 
 // Hedef tipleri
@@ -87,9 +95,23 @@ async function resolveTargetUsers(target) {
 async function getAllMemberIds() {
   try {
     const members = await FirebaseApiService.getMembers(false);
-    return (members || [])
+    const memberIds = (members || [])
       .map((m) => String(m.id || m.memberId || '').trim())
       .filter(Boolean);
+
+    // Also include users who have push tokens but aren't in members
+    // (e.g., admin users)
+    try {
+      const tokenSnap = await getDocs(collection(db, 'push_tokens'));
+      tokenSnap.forEach((d) => {
+        const tokenUserId = String(d.id);
+        if (!memberIds.includes(tokenUserId)) {
+          memberIds.push(tokenUserId);
+        }
+      });
+    } catch (e) { /* skip */ }
+
+    return memberIds;
   } catch (error) {
     console.error('[NotificationService] getAllMemberIds error:', error);
     return [];
@@ -123,11 +145,26 @@ async function getMemberIdsByRole(positionName) {
 }
 
 // =====================================================
+// Retry helper for fetch calls
+// =====================================================
+async function fetchWithRetry(url, options, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      if (i < retries) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    } catch (err) {
+      if (i >= retries) throw err;
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+
+// =====================================================
 // Push Notification Gonder
 // =====================================================
 async function sendPushNotifications(userIds, { title, body, type, url }) {
   try {
-    console.error('[PUSH-SEND] Starting push for', userIds.length, 'users:', userIds);
     var subscriptions = [];
 
     // Tum push_tokens'lari bir kez oku (ID eslestirme sorunu cozumu)
@@ -141,9 +178,8 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
           if (data.userId) allTokens[String(data.userId)] = data.subscription;
         }
       });
-      console.error('[PUSH-SEND] All tokens loaded:', Object.keys(allTokens).length);
     } catch (e) {
-      console.error('[PUSH-SEND] Token load error:', e.message);
+      console.warn('[Push] Token load error:', e.message);
     }
 
     // memberId → authUid mapping tablosu olustur
@@ -164,25 +200,20 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
       // 1. Direkt ID ile ara
       if (allTokens[uid]) {
         subscriptions.push(allTokens[uid]);
-        console.error('[PUSH-SEND] Token found direct:', uid);
       }
       // 2. member_users mapping ile ara
       else if (memberToAuth[uid] && allTokens[memberToAuth[uid]]) {
         subscriptions.push(allTokens[memberToAuth[uid]]);
-        console.error('[PUSH-SEND] Token found via mapping:', uid, '->', memberToAuth[uid]);
-      } else {
-        console.error('[PUSH-SEND] No token for:', uid, 'mapping:', memberToAuth[uid] || 'none');
       }
     }
 
-    console.error('[PUSH-SEND] Total subscriptions found:', subscriptions.length);
     if (subscriptions.length === 0) return;
 
     // Cloud Function HTTP endpoint'ine POST (maliisler: /api/send-push)
     var PUSH_URL = 'https://sendpush-bsrvxijkia-ew.a.run.app';
 
     try {
-      var response = await fetch(PUSH_URL, {
+      var response = await fetchWithRetry(PUSH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,13 +224,12 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
         }),
       });
 
-      if (response.ok) {
+      if (response && response.ok) {
         var result = await response.json();
-        console.log('[Push] Sent:', result.sent, 'failed:', result.failed);
         return;
       }
     } catch (pushErr) {
-      console.warn('[Push] Cloud Function push failed:', pushErr.message);
+      console.warn('[Push] Cloud Function push failed after retries:', pushErr.message);
     }
 
     // Fallback: Service Worker ile dogrudan bildirim goster
@@ -243,7 +273,9 @@ class NotificationService {
     try {
       // Master bildirim yaz
       const masterRef = doc(collection(db, MASTER_NOTIFICATIONS));
-      const now = new Date().toISOString();
+      // TIMESTAMP CONVENTION: Use serverTimestamp() for all Firestore writes.
+      // This ensures consistent ordering regardless of client clock skew.
+      // Field naming convention: camelCase (createdAt, updatedAt, readAt).
 
       const masterData = {
         title,
@@ -252,7 +284,7 @@ class NotificationService {
         target: target || { type: TARGET_TYPES.ALL },
         url: url || null,
         scheduledAt: scheduledAt || null,
-        createdAt: now,
+        createdAt: serverTimestamp(),
         status: scheduledAt ? 'scheduled' : 'sent',
         ...(data ? { data } : {}),
       };
@@ -266,7 +298,6 @@ class NotificationService {
 
       // Fan-out: hedef kullanicilara dagit — writeBatch ile toplu yazma
       const targetUsers = await resolveTargetUsers(target);
-      console.log('[NotificationService] Fan-out to', targetUsers.length, 'users');
 
       // Firestore writeBatch max 500 islem destekler, chunk'layalim
       const BATCH_SIZE = 450;
@@ -285,7 +316,7 @@ class NotificationService {
             type: type || NOTIFICATION_TYPES.ANNOUNCEMENT,
             url: url || null,
             isRead: false,
-            createdAt: now,
+            createdAt: serverTimestamp(),
             ...(data ? data : {}),
           });
         }
@@ -336,7 +367,7 @@ class NotificationService {
       const ref = doc(db, USER_NOTIFICATIONS, userId, 'items', notificationId);
       await updateDoc(ref, {
         isRead: true,
-        readAt: new Date().toISOString(),
+        readAt: serverTimestamp(),
       });
       return { success: true };
     } catch (error) {
@@ -357,9 +388,8 @@ class NotificationService {
       if (snapshot.empty) return { success: true };
 
       const batch = writeBatch(db);
-      const now = new Date().toISOString();
       snapshot.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { isRead: true, readAt: now });
+        batch.update(docSnap.ref, { isRead: true, readAt: serverTimestamp() });
       });
       await batch.commit();
 

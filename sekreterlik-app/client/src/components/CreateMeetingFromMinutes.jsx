@@ -206,7 +206,6 @@ const CreateMeetingFromMinutes = ({ onClose, onMeetingCreated }) => {
       };
       
       const response = await ApiService.createMeeting(meetingData);
-      console.log('Meeting created from minutes:', response);
       
       toast.success('Toplantı başarıyla oluşturuldu!');
       

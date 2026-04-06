@@ -8,137 +8,21 @@ import { loadBrandingSettings, loadThemeSettings } from './utils/brandingLoader'
 // Uygulama basladiginda branding ve tema ayarlarini yukle
 loadBrandingSettings().then(settings => {
   if (settings) {
-    console.log('✅ Branding settings loaded');
   }
 });
 
 loadThemeSettings().then(theme => {
   if (theme) {
-    console.log('✅ Theme settings loaded');
   }
 });
 
 // FCM foreground mesaj dinleyicisini baslat
 import('./utils/fcmTokenManager').then(({ listenToFcmMessages }) => {
   listenToFcmMessages((payload) => {
-    console.log('FCM message in foreground:', payload?.notification?.title);
   });
 }).catch(() => {});
 
-// Push token kaydet — login olunca calisir
-// localStorage'da user olana kadar bekle (max 30sn)
-function tryPushSetup(attempt) {
-  if (attempt > 15) return; // 30sn sonra vazgec
-  const savedUser = localStorage.getItem('user');
-  if (!savedUser) {
-    setTimeout(function() { tryPushSetup(attempt + 1); }, 2000);
-    return;
-  }
-  setupPush(savedUser);
-}
-setTimeout(function() { tryPushSetup(0); }, 2000);
-
-async function setupPush(savedUser) {
-  try {
-    console.error('[PUSH] User found, starting push setup...');
-    const user = JSON.parse(savedUser);
-    console.error('[PUSH] User object keys:', Object.keys(user));
-    console.error('[PUSH] User object:', JSON.stringify(user).slice(0, 500));
-    const userId = user.id || user.uid || '';
-    if (!userId) { console.error('[PUSH] No userId'); return; }
-    // Tum olasi ID'leri topla
-    const allIds = new Set();
-    // Her olasi alani ekle
-    Object.values(user).forEach(function(v) {
-      if (v && (typeof v === 'string' || typeof v === 'number')) {
-        allIds.add(String(v));
-      }
-    });
-    // Ozellikle bunlari ekle
-    if (user.uid) allIds.add(user.uid);
-    if (user.id) allIds.add(String(user.id));
-    if (user.memberId) allIds.add(String(user.memberId));
-    if (user.member_id) allIds.add(String(user.member_id));
-    if (user.username) allIds.add(String(user.username));
-    console.error('[PUSH] All IDs to save:', Array.from(allIds));
-
-    // Bildirim izni iste
-    if (typeof Notification === 'undefined') { console.error('[PUSH] No Notification API'); return; }
-    if (Notification.permission === 'denied') { console.error('[PUSH] Permission denied'); return; }
-
-    let perm = Notification.permission;
-    console.error('[PUSH] Current permission:', perm);
-    if (perm !== 'granted') {
-      perm = await Notification.requestPermission();
-      console.error('[PUSH] After request:', perm);
-    }
-    if (perm !== 'granted') { console.error('[PUSH] Still not granted'); return; }
-
-    // Service worker hazir mi
-    if (!('serviceWorker' in navigator)) { console.error('[PUSH] No SW'); return; }
-    console.error('[PUSH] Waiting for SW ready...');
-    const reg = await navigator.serviceWorker.ready;
-    console.error('[PUSH] SW ready');
-
-    // VAPID key
-    const vapidKey = 'BJjc4yxeV5_GZkrrk70VPsvGoFJ6x3aSwRoxD5mtWOlNxJhkq99DcB56cJmzX7O-VRTlXpPJAZLEan7b_VpDtEE';
-    const padding = '='.repeat((4 - (vapidKey.length % 4)) % 4);
-    const b64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = window.atob(b64);
-    const keyArr = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) keyArr[i] = raw.charCodeAt(i);
-
-    // Subscribe
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: keyArr.buffer
-    });
-
-    // Firestore'a kaydet
-    const { doc, setDoc } = await import('firebase/firestore');
-    const { db } = await import('./config/firebase');
-    if (db) {
-      const subJson = JSON.stringify(sub);
-      // Tum olasi ID'ler ile token kaydet
-      for (const id of allIds) {
-        try {
-          await setDoc(doc(db, 'push_tokens', id), {
-            subscription: subJson,
-            userId: id,
-            updatedAt: new Date().toISOString(),
-            isActive: true
-          });
-        } catch (_e) { /* skip */ }
-      }
-      // member_users'dan da eslestirme yap
-      try {
-        const { collection: col, getDocs: gd } = await import('firebase/firestore');
-        const muSnap = await gd(col(db, 'member_users'));
-        muSnap.forEach((d) => {
-          const data = d.data();
-          const authUid = data.authUid || data.auth_uid;
-          if (authUid && allIds.has(authUid)) {
-            const mid = data.memberId || data.member_id || d.id;
-            if (mid && !allIds.has(String(mid))) {
-              setDoc(doc(db, 'push_tokens', String(mid)), {
-                subscription: subJson,
-                userId: String(mid),
-                updatedAt: new Date().toISOString(),
-                isActive: true
-              });
-              allIds.add(String(mid));
-            }
-          }
-        });
-      } catch (_e) { /* skip */ }
-      console.error('[PUSH] TOKEN SAVED for IDs:', Array.from(allIds));
-    } else {
-      console.error('[PUSH] No db!');
-    }
-  } catch (err) {
-    console.error('[PUSH] FATAL ERROR:', err.message, err);
-  }
-}
+// Push setup moved to AuthContext.jsx login flow
 
 // Firebase kullanımı kontrolü
 const USE_FIREBASE = 

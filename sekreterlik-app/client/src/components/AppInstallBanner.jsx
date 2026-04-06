@@ -22,7 +22,6 @@ const AppInstallBanner = () => {
     try {
       const success = await installApp();
       if (success) {
-        console.log('App installed successfully');
       }
     } catch (error) {
       console.error('Installation failed:', error);

@@ -7,6 +7,7 @@ import FirebaseService from '../services/FirebaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { analyzeSentiment, getResponseTone } from '../utils/sentimentAnalysis';
 import { predictMeetingAttendance, detectAnomalies, generateRecommendations, analyzeTrend } from '../utils/advancedAnalysis';
+import { BREAKPOINTS } from '../utils/constants';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Chatbot = ({ isOpen, onClose }) => {
@@ -19,7 +20,7 @@ const Chatbot = ({ isOpen, onClose }) => {
   const [aiProvider] = useState('gemini');
   const [showLimitInfo, setShowLimitInfo] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < BREAKPOINTS.MOBILE);
   const messagesEndRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ const Chatbot = ({ isOpen, onClose }) => {
 
   // Mobil ekran tespiti
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < BREAKPOINTS.MOBILE);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -39,13 +40,14 @@ const Chatbot = ({ isOpen, onClose }) => {
 
   // Load site data on mount (lazy load - only when chatbot is opened)
   useEffect(() => {
+    let cancelled = false;
     if (isOpen && !siteData) {
       // Load data asynchronously without blocking UI
       Promise.all([
         loadSiteData(),
         loadBylaws()
       ]).catch(error => {
-        console.error('Error loading chatbot data:', error);
+        if (!cancelled) console.error('Error loading chatbot data:', error);
       });
 
       // Welcome message with context awareness
@@ -56,6 +58,7 @@ const Chatbot = ({ isOpen, onClose }) => {
         content: welcomeMessage
       }]);
     }
+    return () => { cancelled = true; };
   }, [isOpen, siteData]);
 
   // Proactive suggestions and alerts
@@ -266,17 +269,6 @@ const Chatbot = ({ isOpen, onClose }) => {
           }
 
           // Debug: Seçim verilerini kontrol et
-          console.log('🔍 [CHATBOT DEBUG] Seçim verileri yüklendi:', {
-            electionsCount: elections?.length || 0,
-            electionResultsCount: electionResults?.length || 0,
-            elections: elections?.slice(0, 3).map(e => ({ id: e.id, name: e.name, type: e.type })),
-            sampleResults: electionResults?.slice(0, 2).map(r => ({
-              electionId: r.election_id || r.electionId,
-              ballotNumber: r.ballot_number || r.ballotNumber,
-              hasSignedProtocol: !!(r.signed_protocol_photo || r.signedProtocolPhoto),
-              hasObjectionProtocol: !!(r.objection_protocol_photo || r.objectionProtocolPhoto)
-            }))
-          });
 
           // Update with ALL additional data
           setSiteData(prev => ({
@@ -338,21 +330,13 @@ const Chatbot = ({ isOpen, onClose }) => {
           if (bylawsSnap.exists()) {
             const bylawsData = bylawsSnap.data();
 
-            console.log('📋 Bylaws data loaded:', {
-              hasText: !!bylawsData.text,
-              textLength: bylawsData.text?.length || 0,
-              hasUrl: !!bylawsData.url,
-              url: bylawsData.url
-            });
 
             // Önce text varsa onu kullan (text varsa URL'yi ignore et)
             if (bylawsData.text && bylawsData.text.trim()) {
-              console.log('✅ Using bylaws text (length:', bylawsData.text.length, ')');
               setBylawsText(bylawsData.text.trim());
             }
             // Eğer text yoksa ama URL varsa, URL'den içeriği çek
             else if (bylawsData.url) {
-              console.log('⚠️ No text found, trying to fetch from URL:', bylawsData.url);
               try {
                 // Backend API'den URL'den içeriği çek
                 const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
@@ -365,7 +349,6 @@ const Chatbot = ({ isOpen, onClose }) => {
                   API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
                 }
 
-                console.log('Loading bylaws from URL:', bylawsData.url, 'API:', API_BASE_URL);
 
                 const response = await fetch(`${API_BASE_URL}/bylaws/fetch?url=${encodeURIComponent(bylawsData.url)}`, {
                   method: 'GET',
@@ -374,11 +357,9 @@ const Chatbot = ({ isOpen, onClose }) => {
                   }
                 });
 
-                console.log('Bylaws load response status:', response.status);
 
                 if (response.ok) {
                   const data = await response.json();
-                  console.log('Bylaws load success:', data.success, 'Text length:', data.text?.length);
 
                   if (data.success && data.text) {
                     setBylawsText(data.text);
@@ -486,11 +467,9 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Kullanıcı mesajı ile veritabanında dinamik arama yap
       if (userMessage.length >= 2) {
         try {
-          console.log('🔍 [CHATBOT] Seçmen araması yapılıyor:', userMessage);
           const voterResults = await ApiService.searchVoters(userMessage);
 
           if (voterResults && voterResults.length > 0) {
-            console.log('✅ [CHATBOT] Seçmen bulundu:', voterResults.length);
             context.push(`\n=== 📂 YÜKLENEN DOSYALARDAN BULUNAN KAYITLAR (RAG) ===`);
             context.push(`Kullanıcının sorusuyla ("${userMessage}") eşleşen ${voterResults.length} kişi dosyalarınızda bulundu:`);
 
@@ -533,10 +512,6 @@ const Chatbot = ({ isOpen, onClose }) => {
           line.includes('SEÇİM') || line.includes('seçim') || line.includes('Seçim')
         );
         if (electionContextLines.length > 0) {
-          console.log('✅ [CHATBOT DEBUG] Seçim verileri context\'e eklendi:', {
-            electionContextLinesCount: electionContextLines.length,
-            sampleLines: electionContextLines.slice(0, 5)
-          });
         } else {
           console.warn('⚠️ [CHATBOT DEBUG] Seçim verileri context\'e eklenmemiş!', {
             hasElections: !!(siteData.elections && siteData.elections.length > 0),
@@ -563,15 +538,9 @@ const Chatbot = ({ isOpen, onClose }) => {
           ? bylawsText.substring(0, MAX_BYLAWS_LENGTH) + '\n\n[Tüzük metni kısaltıldı - token limiti nedeniyle]'
           : bylawsText;
 
-        console.log('📋 Adding bylaws to context:', {
-          textLength: bylawsText.length,
-          startsWithLink: bylawsText.startsWith('TÜZÜK_LINK:'),
-          preview: bylawsText.substring(0, 100)
-        });
 
         // Eğer URL ise (TÜZÜK_LINK: ile başlıyorsa), tekrar çekmeyi dene
         if (bylawsText.startsWith('TÜZÜK_LINK:')) {
-          console.log('⚠️ Bylaws text is a link, trying to fetch...');
           const url = bylawsText.replace('TÜZÜK_LINK:', '');
           try {
             // Backend API'den URL'den içeriği çek
@@ -586,7 +555,6 @@ const Chatbot = ({ isOpen, onClose }) => {
               API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
             }
 
-            console.log('Fetching bylaws from URL:', url, 'API:', API_BASE_URL);
 
             const response = await fetch(`${API_BASE_URL}/bylaws/fetch?url=${encodeURIComponent(url)}`, {
               method: 'GET',
@@ -595,11 +563,9 @@ const Chatbot = ({ isOpen, onClose }) => {
               }
             });
 
-            console.log('Bylaws fetch response status:', response.status);
 
             if (response.ok) {
               const data = await response.json();
-              console.log('Bylaws fetch success:', data.success, 'Text length:', data.text?.length);
 
               if (data.success && data.text) {
                 // Tüzük metnini context'e ekle (ilk 50000 karakter - tüzük çok önemli)
@@ -622,7 +588,6 @@ const Chatbot = ({ isOpen, onClose }) => {
           }
         } else {
           // Normal metin ise, tüm metni kullan (tüzük metni önemli, mümkün olduğunca fazla karakter kullan)
-          console.log('✅ Using bylaws text directly (length:', bylawsText.length, ')');
           // Tüzük metni çok uzun olabilir, ama mümkün olduğunca fazla karakter kullan (max 50000 karakter)
           const maxLength = 50000;
           const textToAdd = bylawsText.length > maxLength
@@ -1482,8 +1447,9 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               onClick={() => setShowLimitInfo(!showLimitInfo)}
               className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
               title="API Limit Durumu"
+              aria-label="API limit durumu"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </button>
@@ -1491,16 +1457,18 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               onClick={clearChat}
               className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
               title="Sohbeti Temizle"
+              aria-label="Sohbeti temizle"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
             <button
               onClick={onClose}
               className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+              aria-label="Kapat"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -1555,7 +1523,7 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
                   }`}
               >
                 {message.imageUrl && (
-                  <img src={message.imageUrl} alt="Gönderilen görsel" className="max-w-full rounded-lg mb-2 max-h-48 object-contain" />
+                  <img src={message.imageUrl} alt="Gönderilen görsel" className="max-w-full rounded-lg mb-2 max-h-48 object-contain" loading="lazy" />
                 )}
                 <p className="text-sm whitespace-pre-wrap">{message.content}{message.isStreaming && <span className="inline-block w-1.5 h-4 ml-0.5 bg-current align-middle animate-pulse" />}</p>
 
@@ -1801,14 +1769,15 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               type="submit"
               disabled={loading || !input.trim()}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Gonder"
             >
               {loading ? (
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               )}

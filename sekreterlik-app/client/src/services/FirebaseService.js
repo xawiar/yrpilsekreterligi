@@ -29,14 +29,12 @@ class FirebaseService {
   static async checkAuth() {
     return new Promise((resolve) => {
       if (auth.currentUser) {
-        console.log('✅ User is authenticated:', auth.currentUser.uid);
         resolve(true);
       } else {
         // onAuthStateChanged ile kısa bir süre bekle
         const unsubscribe = auth.onAuthStateChanged((user) => {
           unsubscribe();
           if (user) {
-            console.log('✅ User authenticated:', user.uid);
             resolve(true);
           } else {
             console.warn('⚠️ User is NOT authenticated');
@@ -70,7 +68,6 @@ class FirebaseService {
         throw new Error('Kullanıcı giriş yapmamış. Lütfen önce giriş yapın.');
       }
       
-      console.log('🔐 Current user:', auth.currentUser?.uid || 'No user');
       
       // Collection referansı oluştur (collection yoksa otomatik oluşturulur)
       const collectionRef = collection(db, collectionName);
@@ -102,7 +99,6 @@ class FirebaseService {
       while (retries > 0) {
         try {
           await setDoc(docRef, finalData);
-          console.log(`✅ Document created in collection "${collectionName}" with ID: ${autoId}`);
           break; // Başarılı, döngüden çık
         } catch (error) {
           lastError = error;
@@ -168,7 +164,6 @@ class FirebaseService {
       };
       
       await updateDoc(docRef, finalData);
-      console.log(`✅ Document updated in collection "${collectionName}" with ID: ${docId}`);
     } catch (error) {
       console.error(`❌ Error updating document in collection "${collectionName}":`, error);
       throw error;
@@ -222,9 +217,9 @@ class FirebaseService {
         : data;
     } catch (error) {
       // Offline hatası için özel handling - varsayılan değerler kullanılacak
-      if (error.code === 'unavailable' || error.message?.includes('offline') || error.message?.includes('Failed to get document because the client is offline')) {
-        console.warn(`Client is offline, cannot get document from ${collectionName}. Using defaults.`);
-        return null; // null döndür ki varsayılan değerler kullanılsın
+      if (error.code === 'unavailable' || error.code === 'failed-precondition' || error.message?.includes('offline') || error.message?.includes('Failed to get document because the client is offline')) {
+        console.warn(`[FirebaseService] Offline — returning cached or null for ${collectionName}`);
+        return { _offline: true, _error: error.message };
       }
       console.error(`Error getting document from ${collectionName}:`, error);
       throw error;
@@ -379,20 +374,6 @@ class FirebaseService {
   static async delete(collectionName, docId) {
     try {
       // CRITICAL: Log raw parameters BEFORE any conversion
-      console.debug('[FIREBASE DELETE] RAW PARAMS:', {
-        collectionName: collectionName,
-        collectionNameType: typeof collectionName,
-        collectionNameValue: collectionName,
-        collectionNameIsNull: collectionName === null,
-        collectionNameIsUndefined: collectionName === undefined,
-        docId: docId,
-        docIdType: typeof docId,
-        docIdValue: docId,
-        docIdIsNull: docId === null,
-        docIdIsUndefined: docId === undefined,
-        docIdIsArray: Array.isArray(docId),
-        docIdIsObject: typeof docId === 'object' && docId !== null
-      });
       
       // Collection name'i string'e çevir
       const stringCollectionName = String(collectionName || '').trim();
@@ -443,14 +424,6 @@ class FirebaseService {
         throw new Error(`Firebase db instance geçersiz! Type: ${typeof db}`);
       }
       
-      // Use console.debug for debug logs (not errors)
-      console.debug(`[FIREBASE DELETE] Final params:`, {
-        collection: stringCollectionName,
-        collectionType: typeof stringCollectionName,
-        id: stringId,
-        idType: typeof stringId,
-        dbValid: !!db && typeof db === 'object'
-      });
       
       // CRITICAL FIX: Firebase'in doc() fonksiyonunu 3 parametre ile çağır
       // doc(db, collectionPath, documentPath) - TÜM parametreler string olmalı
@@ -484,19 +457,6 @@ class FirebaseService {
         throw new Error(`Final params empty: collection length=${finalCollectionName.length}, id length=${finalDocId.length}`);
       }
       
-      // Use console.debug for debug logs (not errors)
-      console.debug(`[FIREBASE DELETE] Calling doc() with (VALIDATED):`, {
-        dbType: typeof db,
-        dbValid: !!db && typeof db === 'object',
-        collection: finalCollectionName,
-        collectionType: typeof finalCollectionName,
-        collectionLength: finalCollectionName.length,
-        id: finalDocId,
-        idType: typeof finalDocId,
-        idLength: finalDocId.length,
-        collectionIsString: typeof finalCollectionName === 'string',
-        idIsString: typeof finalDocId === 'string'
-      });
       
       // ALTERNATIVE METHOD: Use collection() then doc() pattern
       // This is the recommended Firebase pattern and avoids path parsing issues
@@ -554,12 +514,6 @@ class FirebaseService {
           throw new Error('DocumentReference oluşturulamadı - docRef null/undefined');
         }
         
-        console.debug('[FIREBASE DELETE] docRef created successfully:', {
-          docRefType: typeof docRef,
-          docRefId: docRef?.id,
-          docRefPath: docRef?.path,
-          collectionRefPath: collectionRef?.path
-        });
       } catch (docError) {
         console.error('❌ Firebase doc() CALL FAILED:', docError);
         console.error('❌ doc() error details:', {
@@ -583,16 +537,8 @@ class FirebaseService {
       
       // Dokümanı sil
       try {
-        console.debug('[FIREBASE DELETE] Calling deleteDoc() with:', {
-          docRefType: typeof docRef,
-          docRefId: docRef?.id,
-          docRefPath: docRef?.path,
-          collection: finalCollectionName,
-          id: finalDocId
-        });
         
       await deleteDoc(docRef);
-        console.log(`✅ Document deleted from collection "${finalCollectionName}" with ID: ${finalDocId}`);
       } catch (deleteError) {
         console.error('❌ deleteDoc() CALL FAILED:', deleteError);
         console.error('❌ deleteDoc() error details:', {

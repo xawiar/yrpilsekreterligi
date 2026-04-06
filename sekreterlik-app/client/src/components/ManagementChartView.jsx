@@ -176,6 +176,7 @@ const ManagementChartView = ({ members }) => {
                           src={normalizePhotoUrl(member.photo)}
                           alt={formatMemberName(member.name)}
                           className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-2 sm:mb-4"
+                          loading="lazy"
                           onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
@@ -205,11 +206,11 @@ const ManagementChartView = ({ members }) => {
                 <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">İlçe Başkanı</h2>
                 <p className="text-indigo-100 text-xs sm:text-sm">Kurumun en üst yöneticisi</p>
               </div>
-              
+
               <div className="flex justify-center">
                 {ilceBaskani.map(member => (
-                  <div 
-                    key={member.id} 
+                  <div
+                    key={member.id}
                     className="bg-white dark:bg-gray-800/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 lg:p-6 border border-white/20 max-w-sm w-full"
                   >
                     <div className="text-center">
@@ -218,6 +219,7 @@ const ManagementChartView = ({ members }) => {
                           src={normalizePhotoUrl(member.photo)}
                           alt={formatMemberName(member.name)}
                           className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-white/30 mx-auto mb-2 sm:mb-4"
+                          loading="lazy"
                           onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
@@ -311,6 +313,7 @@ const ManagementChartView = ({ members }) => {
                               src={normalizePhotoUrl(member.photo)}
                               alt={formatMemberName(member.name)}
                               className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-green-200"
+                              loading="lazy"
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';

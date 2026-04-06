@@ -881,6 +881,7 @@ const CoordinatorDashboardPage = () => {
               src={modalPhoto}
               alt={modalTitle}
               className="w-full h-auto rounded-lg"
+              loading="lazy"
               onError={(e) => {
                 e.target.style.display = 'none';
                 const fallback = e.target.nextSibling;

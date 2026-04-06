@@ -27,7 +27,7 @@ export function encryptData(data) {
     return encrypted;
   } catch (error) {
     console.error('Encryption error:', error);
-    return data; // Hata durumunda orijinal veriyi döndür
+    throw new Error('Encryption failed — data not saved');
   }
 }
 

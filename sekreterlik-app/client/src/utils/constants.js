@@ -1,0 +1,10 @@
+export const BREAKPOINTS = {
+  MOBILE: 768,
+  TABLET: 1024,
+  DESKTOP: 1280,
+};
+
+export const PAGINATION = {
+  DEFAULT_PAGE_SIZE: 25,
+  MAX_PAGE_SIZE: 100,
+};

@@ -37,16 +37,15 @@ const RepresentativesPage = () => {
         ApiService.getVillageRepresentatives()
       ]);
       
-      // Decrypt TC and phone fields
-      const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'ilsekreterlik-app-encryption-key-2024-secret-very-long-key-for-security';
-      
+      // Decrypt TC and phone fields using centralized crypto utility
+      const { decryptData } = await import('../utils/crypto');
+
       const forceDecrypt = (encryptedValue) => {
         if (!encryptedValue || typeof encryptedValue !== 'string') return encryptedValue;
         if (!encryptedValue.startsWith('U2FsdGVkX1')) return encryptedValue; // Not encrypted
-        
+
         try {
-          const bytes = CryptoJS.AES.decrypt(encryptedValue, ENCRYPTION_KEY);
-          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+          const decrypted = decryptData(encryptedValue);
           if (decrypted && decrypted.trim() !== '') {
             return decrypted;
           }

@@ -10,7 +10,7 @@ import {
   EmailAuthProvider
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
-import { decryptData } from '../utils/crypto';
+import { decryptData, encryptData } from '../utils/crypto';
 
 /**
  * Firebase tabanlı API Service
@@ -92,7 +92,6 @@ class FirebaseApiService {
       // Email formatına çevir (username@domain.com)
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
 
-      console.log('Firebase login attempt:', { username, email });
 
       let userCredential = null;
       let user = null;
@@ -101,10 +100,8 @@ class FirebaseApiService {
         // Önce Firebase Auth'da kullanıcıyı bulmaya çalış
         userCredential = await signInWithEmailAndPassword(auth, email, password);
         user = userCredential.user;
-        console.log('Firebase login successful:', user.uid);
       } catch (authError) {
         // Firebase Auth'da kullanıcı bulunamadı veya şifre hatalı
-        console.log('Firebase Auth login failed, checking Firestore:', authError.code);
 
         // Eğer kullanıcı bulunamadıysa, Firestore'dan kontrol et
         if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
@@ -122,25 +119,10 @@ class FirebaseApiService {
             // Eğer hala encrypted görünüyorsa, manuel decrypt et
             let decryptedPassword = memberUser.password;
 
-            console.log('🔍 Login - Member user found:', {
-              username: memberUser.username,
-              passwordFromDB: memberUser.password,
-              passwordType: typeof memberUser.password,
-              passwordLength: memberUser.password?.length,
-              passwordInput: password,
-              passwordInputType: typeof password,
-              passwordInputLength: password?.length
-            });
 
             // Eğer password şifrelenmiş görünüyorsa (U2FsdGVkX1 ile başlıyorsa), decrypt et
             if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
-              console.log('🔓 Decrypting password...');
               decryptedPassword = decryptData(decryptedPassword);
-              console.log('🔓 Decrypted password:', {
-                decrypted: decryptedPassword,
-                decryptedLength: decryptedPassword?.length,
-                matchesInput: decryptedPassword === password
-              });
             }
 
             // Password'ları normalize et (sadece rakamlar) - karşılaştırma için
@@ -148,16 +130,6 @@ class FirebaseApiService {
             const normalizedDecryptedPassword = (decryptedPassword || '').toString().replace(/\D/g, '');
             const normalizedMemberUserPassword = (memberUser.password || '').toString().replace(/\D/g, '');
 
-            console.log('🔍 Password comparison (normalized):', {
-              normalizedInputPassword,
-              normalizedDecryptedPassword,
-              normalizedMemberUserPassword,
-              decryptedPassword,
-              memberUserPassword: memberUser.password,
-              inputPassword: password,
-              matchesDecrypted: normalizedDecryptedPassword === normalizedInputPassword,
-              matchesOriginal: normalizedMemberUserPassword === normalizedInputPassword
-            });
 
             // Şifre doğru mu kontrol et (normalize edilmiş password ile karşılaştır)
             if (normalizedDecryptedPassword === normalizedInputPassword || normalizedMemberUserPassword === normalizedInputPassword) {
@@ -166,12 +138,6 @@ class FirebaseApiService {
               // Firestore'da password normalize edilmiş olarak saklanıyor (sadece rakamlar)
               const firestorePassword = normalizedMemberUserPassword || normalizedDecryptedPassword || (decryptedPassword || memberUser.password);
 
-              console.log('Password correct, syncing with Firebase Auth for member:', memberUser.id);
-              console.log('🔑 Using Firestore password for Firebase Auth:', {
-                firestorePassword,
-                inputPassword: password,
-                passwordsMatch: firestorePassword === password
-              });
 
               // Eğer authUid varsa ama email/username değişmişse, yeni email ile giriş yapmayı dene
               // Eğer authUid yoksa, yeni kullanıcı oluştur
@@ -184,7 +150,6 @@ class FirebaseApiService {
                     const oldEmail = memberUser.username.includes('@') ? memberUser.username : `${memberUser.username}@ilsekreterlik.local`;
                     userCredential = await signInWithEmailAndPassword(auth, oldEmail, firestorePassword);
                     user = userCredential.user;
-                    console.log('✅ Firebase Auth login successful with existing user:', user.uid);
 
                     // Firestore'daki kullanıcıyı güncelle (username ve authUid senkronizasyonu)
                     await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
@@ -192,14 +157,11 @@ class FirebaseApiService {
                       username: username // Username'i güncelle (eğer değiştiyse)
                     }, false);
 
-                    console.log('✅ Firestore synced with Firebase Auth');
                   } catch (oldEmailError) {
                     // Eski email ile giriş yapılamadı, yeni email ile dene
-                    console.log('⚠️ Old email login failed, trying with new email:', email);
                     try {
                       userCredential = await signInWithEmailAndPassword(auth, email, firestorePassword);
                       user = userCredential.user;
-                      console.log('✅ Firebase Auth login successful with new email:', user.uid);
 
                       // Firestore'daki kullanıcıyı güncelle
                       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
@@ -207,10 +169,8 @@ class FirebaseApiService {
                         username: username
                       }, false);
 
-                      console.log('✅ Firestore synced with Firebase Auth (new email)');
                     } catch (newEmailError) {
                       // Yeni email ile de giriş yapılamadı, yeni kullanıcı oluştur (Firestore'daki şifre ile)
-                      console.log('⚠️ New email login failed, creating new user with Firestore password:', newEmailError.code);
                       userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
                       user = userCredential.user;
 
@@ -220,12 +180,10 @@ class FirebaseApiService {
                         username: username
                       }, false);
 
-                      console.log('✅ Firebase Auth user created for member with Firestore password (phone):', user.uid);
                     }
                   }
                 } else {
                   // AuthUid yok, yeni kullanıcı oluştur (Firestore'daki şifre ile - telefon numarası)
-                  console.log('Creating new Firebase Auth user for member with Firestore password (phone):', memberUser.id);
                   userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
                   user = userCredential.user;
 
@@ -235,12 +193,10 @@ class FirebaseApiService {
                     username: username
                   }, false);
 
-                  console.log('✅ Firebase Auth user created for member with Firestore password (phone):', user.uid);
                 }
               } catch (createError) {
                 // Email zaten kullanılıyorsa (başka bir kullanıcı tarafından veya aynı kullanıcı farklı şifre ile)
                 if (createError.code === 'auth/email-already-in-use') {
-                  console.log('⚠️ Email already in use, trying to sign in with Firestore password:', email);
                   try {
                     // Firestore'daki şifre ile giriş yapmayı dene
                     userCredential = await signInWithEmailAndPassword(auth, email, firestorePassword);
@@ -252,7 +208,6 @@ class FirebaseApiService {
                       username: username
                     }, false);
 
-                    console.log('✅ Firebase Auth sign in successful for member:', user.uid);
                   } catch (signInError2) {
                     // Şifre yanlış - Firebase Auth'daki şifre Firestore'daki şifreyle eşleşmiyor
                     console.error('❌ Cannot sign in with existing email - password mismatch:', signInError2.code);
@@ -260,7 +215,6 @@ class FirebaseApiService {
                     // Firebase Auth'daki kullanıcının şifresini güncellemek için client-side'da mümkün değil
                     // Bu durumda Firestore'daki authUid'i temizle ve kullanıcıya bilgi ver
                     // Bir sonraki login denemesinde yeni bir Firebase Auth kullanıcısı oluşturulacak
-                    console.log('⚠️ Clearing authUid from Firestore - password mismatch with Firebase Auth');
                     await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
                       authUid: null,
                       username: username
@@ -278,9 +232,6 @@ class FirebaseApiService {
             } else {
               // Şifre hatalı
               console.error('❌ Password mismatch!', {
-                decryptedPassword,
-                memberUserPassword: memberUser.password,
-                inputPassword: password,
                 username: memberUser.username,
                 memberId: memberUser.memberId
               });
@@ -310,16 +261,13 @@ class FirebaseApiService {
       let adminDoc;
       try {
         adminDoc = await FirebaseService.getById(this.COLLECTIONS.ADMIN, 'main');
-        console.log('Admin doc found:', adminDoc);
 
         // Admin dokümanı varsa ve username eşleşiyorsa
         if (adminDoc && (adminDoc.username === username || adminDoc.uid === user.uid)) {
           userData.role = 'admin';
           userData.type = 'admin';
-          console.log('Admin user confirmed from Firestore');
         } else {
           // Admin dokümanı yoksa veya username eşleşmiyorsa oluştur/güncelle
-          console.log('Creating/updating admin doc in Firestore');
           await FirebaseService.create(
             this.COLLECTIONS.ADMIN,
             'main',
@@ -331,7 +279,6 @@ class FirebaseApiService {
             },
             false // Şifreleme yapma (admin bilgileri hassas değil)
           );
-          console.log('Admin doc created/updated in Firestore');
         }
       } catch (e) {
         console.warn('Admin doc error, creating new one:', e);
@@ -348,7 +295,6 @@ class FirebaseApiService {
             },
             false
           );
-          console.log('Admin doc created successfully');
         } catch (createError) {
           console.error('Failed to create admin doc:', createError);
         }
@@ -387,7 +333,6 @@ class FirebaseApiService {
 
               if (memberByTc) {
                 memberId = memberByTc.id;
-                console.log(`✅ Member found by TC: ${memberUser[0].username} -> ${memberId}`);
               }
             } catch (e) {
               console.warn('Member lookup by TC failed:', e);
@@ -401,7 +346,6 @@ class FirebaseApiService {
               const memberById = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, memberUser[0].id, false);
               if (memberById) {
                 memberId = memberUser[0].id;
-                console.log(`✅ Member found by id: ${memberUser[0].id}`);
               }
             } catch (e) {
               console.warn('Member not found by id:', memberUser[0].id);
@@ -422,7 +366,6 @@ class FirebaseApiService {
         console.warn('Member user check failed:', e);
       }
 
-      console.log('User data prepared:', userData);
 
       return {
         success: true,
@@ -467,8 +410,6 @@ class FirebaseApiService {
         phoneStr = phoneStr.padStart(6, '0');
       }
 
-      console.log('[DEBUG] Coordinator login attempt:', { tc: tcStr, phone: phoneStr, originalPhone: phone });
-
       // Tüm kullanıcıları al ve userType='coordinator' olanları filtrele
       const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
 
@@ -477,16 +418,12 @@ class FirebaseApiService {
         u.userType === 'coordinator' && (u.coordinatorId || u.coordinator_id)
       );
 
-      console.log('[DEBUG] Coordinator users found:', coordinatorUsers.length);
-
       if (!coordinatorUsers || coordinatorUsers.length === 0) {
         throw new Error('Sorumlu kullanıcısı bulunamadı.');
       }
 
       // Coordinator bilgilerini al
       const coordinators = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_COORDINATORS);
-
-      console.log('[DEBUG] Coordinators found:', coordinators.length);
 
       // TC ve telefon ile eşleşen coordinator'ı bul
       let matchedCoordinator = null;
@@ -504,35 +441,16 @@ class FirebaseApiService {
           }
           const coordinatorTcNormalized = String(coordinator.tc || '').trim();
 
-          console.log('[DEBUG] Comparing:', {
-            inputTc: tcStr,
-            inputPhone: phoneStr,
-            coordinatorTc: coordinatorTcNormalized,
-            coordinatorPhone: coordinatorPhoneNormalized,
-            coordinatorPhoneOriginal: coordinator.phone,
-            coordinatorName: coordinator.name,
-            tcMatch: coordinatorTcNormalized === tcStr,
-            phoneMatch: coordinatorPhoneNormalized === phoneStr
-          });
-
           // TC ve normalize edilmiş telefon numarası ile karşılaştır
           if (coordinatorTcNormalized === tcStr && coordinatorPhoneNormalized === phoneStr) {
             matchedCoordinator = coordinator;
             matchedUser = coordinatorUser;
-            console.log('[DEBUG] Match found!', { coordinatorName: coordinator.name });
             break;
           }
         }
       }
 
       if (!matchedCoordinator || !matchedUser) {
-        console.error('[DEBUG] No match found. Available coordinators:', coordinators.map(c => ({
-          id: c.id,
-          name: c.name,
-          tc: c.tc,
-          phone: c.phone,
-          phoneNormalized: String(c.phone || '').replace(/\D/g, '')
-        })));
         throw new Error('Geçersiz TC kimlik numarası veya telefon numarası');
       }
 
@@ -820,12 +738,6 @@ class FirebaseApiService {
         // Decrypt başarısız, direkt kullan
       }
 
-      console.log('[DEBUG] Şifre kontrolü:', {
-        storedPassword: storedPassword.substring(0, 3) + '***',
-        password: password.substring(0, 3) + '***',
-        match: storedPassword === password
-      });
-
       // Şifre eşleşmiyorsa hata
       if (storedPassword !== password) {
         throw new Error('Geçersiz TC kimlik numarası');
@@ -840,9 +752,7 @@ class FirebaseApiService {
       try {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
         user = userCredential.user;
-        console.log('Firebase Auth login successful for chief observer:', user.uid);
       } catch (authError) {
-        console.log('Firebase Auth login failed for chief observer, checking Firestore:', authError.code);
 
         // Auth'da kullanıcı yoksa oluştur
         if (authError.code === 'auth/user-not-found') {
@@ -856,7 +766,6 @@ class FirebaseApiService {
               { authUid: user.uid },
               false
             );
-            console.log('Firebase Auth user created for chief observer:', user.uid);
           } catch (createError) {
             console.error('Failed to create Firebase Auth user:', createError);
             throw new Error('Giriş yapılamadı');
@@ -1033,12 +942,9 @@ class FirebaseApiService {
 
   static async createMemberUser(memberId, username, password, extraData = {}) {
     try {
-      console.error('[DEBUG] 🔵 createMemberUser çağrıldı:', { memberId, username, password: '***', extraData });
       // Mevcut kullanıcıyı koru - sadece yeni kullanıcı oluştur
       const currentUser = auth.currentUser;
       const currentUserUid = currentUser ? currentUser.uid : null;
-      console.error('[DEBUG] 🔵 Mevcut kullanıcı:', { uid: currentUserUid });
-
       // memberId, coordinator_id veya observer_id'ye göre kontrol et
       const searchField = extraData.coordinator_id ? 'coordinatorId' : (extraData.observer_id ? 'observerId' : 'memberId');
       const searchValue = extraData.coordinator_id || extraData.observer_id || memberId;
@@ -1063,10 +969,7 @@ class FirebaseApiService {
           existingUsers = usersByUsername;
         }
       }
-      console.error('[DEBUG] 🔵 Mevcut kullanıcılar:', existingUsers);
-
       if (existingUsers && existingUsers.length > 0) {
-        console.error('[DEBUG] ℹ️ User already exists:', existingUsers[0]);
         return { success: true, id: existingUsers[0].id, message: 'Kullanıcı zaten mevcut' };
       }
 
@@ -1075,33 +978,9 @@ class FirebaseApiService {
         throw new Error('Username is required and must be a string');
       }
       const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
-      console.error('[DEBUG] 🔵 Firebase Auth email:', email);
-
-      // Email zaten kullanılıyorsa hata fırlatma, sadece Firestore'a kaydet
+      // Firebase Auth kullanıcısı Cloud Function (onMemberUserCreate) tarafından oluşturulur
+      // Client-side createUserWithEmailAndPassword kullanmıyoruz — admin session'ını bozar
       let authUser = null;
-      try {
-        console.error('[DEBUG] 🔵 Firebase Auth kullanıcısı oluşturuluyor...');
-        authUser = await createUserWithEmailAndPassword(auth, email, password);
-        console.error('[DEBUG] ✅ Firebase Auth user created:', authUser.user.uid);
-
-        // Yeni kullanıcı oluşturulduktan sonra, mevcut kullanıcıyı geri yükle (eğer varsa)
-        // createUserWithEmailAndPassword yeni kullanıcıyı otomatik olarak sign-in eder
-        // Bu yüzden admin kullanıcısını tekrar sign-in etmemiz gerekiyor
-        if (currentUserUid && currentUserUid !== authUser.user.uid) {
-          // Mevcut kullanıcı farklıysa, admin kullanıcısını geri yükle
-          // Bu durumda admin kullanıcısını tekrar sign-in etmemiz gerekiyor
-          // Ama bu karmaşık olabilir, bu yüzden sadece Firestore'a kaydetmeyi tercih ediyoruz
-          console.warn('⚠️ New user created, but current user is different. Admin user will need to re-login.');
-        }
-      } catch (authError) {
-        // Email zaten kullanılıyorsa, sadece Firestore'a kaydet
-        if (authError.code === 'auth/email-already-in-use') {
-          console.warn('⚠️ Email already in use, creating Firestore record only:', email);
-        } else {
-          // Diğer hataları log'la ama fırlatma - kritik değil
-          console.warn('⚠️ Firebase Auth user creation failed (non-critical):', authError);
-        }
-      }
 
       // Firestore'a kaydet
       const userData = {
@@ -1109,30 +988,29 @@ class FirebaseApiService {
         coordinatorId: extraData.coordinator_id || null,
         observerId: extraData.observer_id || null,
         username,
-        password: password, // Artık şifreleme yapılmıyor
+        password: encryptData(password),
         userType: extraData.userType || 'member',
         isActive: true,
         authUid: authUser?.user?.uid || null // Auth UID varsa kaydet
       };
-      console.error('[DEBUG] 🔵 Firestore\'a kaydediliyor:', { ...userData, password: '***' });
-
+      // TODO: Race condition mitigation — use a deterministic document ID derived from
+      // the member/coordinator/observer ID so that two concurrent createMemberUser calls
+      // for the same entity collide on the same Firestore document rather than creating
+      // duplicates.  FirebaseService.create uses setDoc which will overwrite, but because
+      // the data is identical (same member, same credentials) the overwrite is harmless.
+      // A truly atomic guard would require Firestore Transactions or Security Rules with
+      // `exists()` checks, but this deterministic ID eliminates the practical duplicate risk.
+      const deterministicId = searchValue ? `member_${searchValue}` : null;
       const docId = await FirebaseService.create(
         this.COLLECTIONS.MEMBER_USERS,
-        null,
+        deterministicId,
         userData,
         false // encrypt = false (artık şifreleme yapılmıyor)
       );
 
-      console.error('[DEBUG] ✅ Firestore\'a kaydedildi, docId:', docId);
-
       return { success: true, id: docId, message: 'Kullanıcı oluşturuldu' };
     } catch (error) {
-      console.error('[DEBUG] ❌ Create member user error:', error);
-      console.error('[DEBUG] ❌ Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
+      console.error('Create member user error:', error.message);
       return { success: false, message: error.message || 'Kullanıcı oluşturulurken hata oluştu' };
     }
   }
@@ -1145,14 +1023,6 @@ class FirebaseApiService {
         return { success: false, message: 'Kullanıcı bulunamadı' };
       }
 
-      console.log('🔍 updateMemberUser called:', {
-        id,
-        username,
-        passwordLength: password?.length,
-        memberUserAuthUid: memberUser.authUid,
-        memberUserUsername: memberUser.username,
-        extraData
-      });
 
       const updateData = {
         username,
@@ -1182,28 +1052,15 @@ class FirebaseApiService {
       const normalizedNewPassword = password ? password.toString().replace(/\D/g, '') : normalizedOldPassword;
       const passwordChanged = normalizedOldPassword !== normalizedNewPassword;
 
-      console.log('🔍 Password comparison:', {
-        oldPasswordRaw: oldPassword.toString().substring(0, 5) + '***',
-        oldPasswordNormalized: normalizedOldPassword.substring(0, 3) + '***',
-        newPasswordRaw: password ? password.toString().substring(0, 5) + '***' : 'null',
-        newPasswordNormalized: normalizedNewPassword.substring(0, 3) + '***',
-        wasEncrypted,
-        passwordChanged,
-        hasAuthUid: !!memberUser.authUid,
-        oldPasswordLength: normalizedOldPassword.length,
-        newPasswordLength: normalizedNewPassword.length
-      });
 
       // Eğer authUid yoksa ama Firebase Auth'da kullanıcı olabilir, email ile bulmayı dene
       let authUid = memberUser.authUid;
       if (!authUid && username) {
-        console.log('🔍 No authUid found in Firestore, trying to find user in Firebase Auth by email:', email);
         try {
           // Server-side endpoint ile Firebase Auth'da kullanıcıyı email ile bul
           const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
             (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
 
-          console.log('📡 Sending find request to:', `${API_BASE_URL}/auth/find-firebase-auth-user`);
 
           const findResponse = await fetch(`${API_BASE_URL}/auth/find-firebase-auth-user`, {
             method: 'POST',
@@ -1213,12 +1070,10 @@ class FirebaseApiService {
             body: JSON.stringify({ email })
           });
 
-          console.log('📥 Find response status:', findResponse.status, findResponse.statusText);
 
           if (findResponse.ok) {
             try {
               const findResponseText = await findResponse.text();
-              console.log('📥 Find response text:', findResponseText);
 
               let findData;
               if (findResponseText) {
@@ -1232,15 +1087,12 @@ class FirebaseApiService {
                 findData = { success: false, message: 'Empty response' };
               }
 
-              console.log('📥 Find response data:', findData);
 
               if (findData.success && findData.authUid) {
                 authUid = findData.authUid;
-                console.log('✅ Found Firebase Auth user by email, authUid:', authUid);
                 // Firestore'daki authUid'yi güncelle
                 updateData.authUid = authUid;
               } else {
-                console.log('ℹ️ User not found in Firebase Auth by email:', email, findData);
                 // Kullanıcı bulunamadı ama şifre güncellemesi yapılabilir (email ile)
                 // Email ile password update endpoint'ine gönderilebilir
               }
@@ -1259,19 +1111,9 @@ class FirebaseApiService {
       // Eğer Firebase Auth'da kullanıcı varsa (authUid varsa) VEYA email ile bulunabilirse
       if (authUid || (username && password)) {
         try {
-          console.log('🔄 Updating member user in Firestore and Firebase Auth:', {
-            id,
-            oldUsername,
-            newUsername: username,
-            usernameChanged,
-            passwordChanged,
-            authUid: authUid || 'will be found by email',
-            hasAuthUid: !!authUid
-          });
 
           // Eğer username değiştiyse, authUid'i temizle ki login sırasında yeni email ile oluşturulsun
           if (usernameChanged) {
-            console.log('⚠️ Username changed, clearing authUid to force re-creation on next login');
             updateData.authUid = null; // Login sırasında yeni email ile oluşturulacak
           }
 
@@ -1281,14 +1123,6 @@ class FirebaseApiService {
           // Ayrıca authUid yoksa bile email ile güncelleme yapılabilir
           const shouldUpdatePassword = (passwordChanged || (password && password.trim())) && normalizedNewPassword;
 
-          console.log('🔍 Password update check:', {
-            shouldUpdatePassword,
-            passwordChanged,
-            passwordProvided: !!(password && password.trim()),
-            normalizedNewPassword: normalizedNewPassword ? normalizedNewPassword.substring(0, 3) + '***' : 'null',
-            hasAuthUid: !!authUid,
-            email: email
-          });
 
           if (shouldUpdatePassword) {
             // Eğer authUid yoksa ve email ile de bulunamadıysa, hata göster
@@ -1298,20 +1132,11 @@ class FirebaseApiService {
               console.warn('⚠️ Firebase Auth password will not be updated, but Firestore will be updated');
               // Devam et - Firestore güncellemesi yapılacak
             } else {
-              console.log('🔄 Updating Firebase Auth password for user:', {
-                authUid: authUid,
-                oldPassword: normalizedOldPassword.substring(0, 3) + '***',
-                newPassword: normalizedNewPassword.substring(0, 3) + '***',
-                newPasswordLength: normalizedNewPassword.length,
-                passwordChanged,
-                passwordProvided: !!(password && password.trim())
-              });
               try {
                 // API_BASE_URL'i kontrol et - production'da doğru URL kullanılmalı
                 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
                   (import.meta.env.PROD ? 'https://yrpilsekreterligi.onrender.com/api' : 'http://localhost:5000/api');
 
-                console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-password`);
 
                 const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-password`, {
                   method: 'POST',
@@ -1325,12 +1150,10 @@ class FirebaseApiService {
                   })
                 });
 
-                console.log('📥 Response status:', response.status, response.statusText);
 
                 if (response.ok) {
                   try {
                     const responseText = await response.text();
-                    console.log('📥 Response text:', responseText);
 
                     let responseData;
                     if (responseText) {
@@ -1344,7 +1167,6 @@ class FirebaseApiService {
                       responseData = { success: true, message: 'Password updated (empty response)' };
                     }
 
-                    console.log('✅ Firebase Auth password updated successfully:', responseData);
                   } catch (responseError) {
                     console.error('❌ Error parsing response:', responseError);
                     // Hata olsa bile devam et (Firestore güncellemesi başarılı)
@@ -1381,10 +1203,6 @@ class FirebaseApiService {
               }
             }
           } else {
-            console.log('ℹ️ Password not changed, skipping Firebase Auth update:', {
-              passwordChanged,
-              normalizedNewPassword: normalizedNewPassword ? normalizedNewPassword.substring(0, 3) + '***' : 'null'
-            });
           }
         } catch (authError) {
           console.warn('⚠️ Firebase Auth update preparation failed (non-critical):', authError);
@@ -1392,7 +1210,6 @@ class FirebaseApiService {
         }
       } else {
         // Auth UID yoksa, kullanıcı ilk login olduğunda oluşturulacak
-        console.log('ℹ️ No authUid found, user will be created in Firebase Auth on first login');
       }
 
       // Password'u normalize edilmiş haliyle kaydet
@@ -1403,7 +1220,6 @@ class FirebaseApiService {
       // Firestore'u güncelle (encrypt = false - password şifrelenmemeli)
       await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, id, updateData, false);
 
-      console.log('✅ Member user updated successfully in Firestore:', id);
       return { success: true, message: 'Kullanıcı güncellendi' };
     } catch (error) {
       console.error('Update member user error:', error);
@@ -1427,12 +1243,10 @@ class FirebaseApiService {
   // Fix all encrypted passwords in member_users collection
   static async fixEncryptedPasswords() {
     try {
-      console.log('🔓 Starting encrypted password fix...');
 
       // Tüm member_users kayıtlarını al (decrypt = false çünkü şifrelenmiş olanları tespit etmek istiyoruz)
       const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS, {}, false);
 
-      console.log(`📊 Found ${allMemberUsers.length} member users to check`);
 
       let fixedCount = 0;
       let errorCount = 0;
@@ -1445,7 +1259,6 @@ class FirebaseApiService {
           const isEncrypted = typeof password === 'string' && password.startsWith('U2FsdGVkX1');
 
           if (isEncrypted) {
-            console.log(`🔓 Decrypting password for user ID ${user.id} (username: ${user.username})`);
 
             // Decrypt et
             const { decryptData } = await import('../utils/crypto');
@@ -1479,7 +1292,6 @@ class FirebaseApiService {
             );
 
             fixedCount++;
-            console.log(`✅ Fixed password for user ID ${user.id} (username: ${user.username})`);
           }
         } catch (userError) {
           console.error(`❌ Error fixing password for user ID ${user.id}:`, userError);
@@ -1488,9 +1300,6 @@ class FirebaseApiService {
         }
       }
 
-      console.log(`✅ Encrypted password fix completed!`);
-      console.log(`   - Fixed: ${fixedCount}`);
-      console.log(`   - Errors: ${errorCount}`);
 
       return {
         success: true,
@@ -1520,14 +1329,12 @@ class FirebaseApiService {
         townPresidents: { updated: 0, errors: [] }
       };
 
-      console.log('🔄 Starting Firebase credentials update...');
 
       // Get all active (non-archived) members
       const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
         where: [{ field: 'archived', operator: '==', value: false }]
       }, true); // decrypt = true (TC ve telefon decrypt edilmeli)
 
-      console.log(`📊 Found ${allMembers.length} active members`);
 
       // Get all existing member users
       // decrypt = false çünkü password zaten normalize edilmiş (şifrelenmemiş) olarak saklanıyor
@@ -1584,7 +1391,6 @@ class FirebaseApiService {
               try {
                 const { decryptData } = await import('../utils/crypto');
                 existingPassword = decryptData(existingPassword) || existingPassword;
-                console.log(`🔓 Decrypted password for member ID ${memberId}`);
               } catch (decryptError) {
                 console.warn(`⚠️ Could not decrypt password for member ID ${memberId}:`, decryptError);
               }
@@ -1602,7 +1408,6 @@ class FirebaseApiService {
             const needsUpdate = isPasswordEncrypted || usernameChanged || passwordChanged;
 
             if (needsUpdate) {
-              console.log(`🔄 Updating member user for member ID ${memberId}${isPasswordEncrypted ? ' (encrypted password detected)' : ''}${usernameChanged ? ' (username changed)' : ''}${passwordChanged ? ' (password changed)' : ''}`);
 
               await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, existingUser.id, {
                 username,
@@ -1631,7 +1436,6 @@ class FirebaseApiService {
 
                   if (response.ok) {
                     results.memberUsers.firebaseAuthUpdated++;
-                    console.log(`✅ Firebase Auth password updated for member ID ${memberId} (authUid: ${existingUser.authUid})`);
                   } else {
                     const errorData = await response.json();
                     results.memberUsers.firebaseAuthErrors.push(`Member ID ${memberId}: ${errorData.message || 'Firebase Auth update failed'}`);
@@ -1669,7 +1473,6 @@ class FirebaseApiService {
               );
 
               results.memberUsers.updated++;
-              console.log(`✅ Created member user for member ID ${memberId} (username: ${username})`);
             } else {
               results.memberUsers.errors.push(`Member ID ${memberId}: Username ${username} already taken by another user`);
             }
@@ -1683,12 +1486,7 @@ class FirebaseApiService {
       // TODO: District presidents ve town presidents için de benzer güncelleme yapılabilir
       // Şimdilik sadece member users güncelleniyor
 
-      console.log(`✅ Firebase credentials update completed!`);
-      console.log(`   - Member users: ${results.memberUsers.updated} updated/created`);
-      console.log(`   - Firebase Auth passwords: ${results.memberUsers.firebaseAuthUpdated} updated`);
-      console.log(`   - Errors: ${results.memberUsers.errors.length}`);
       if (results.memberUsers.firebaseAuthErrors.length > 0) {
-        console.log(`   - Firebase Auth errors: ${results.memberUsers.firebaseAuthErrors.length}`);
       }
 
       return {
@@ -1764,20 +1562,12 @@ class FirebaseApiService {
 
   static async createMember(memberData) {
     try {
-      console.log('🔥 Firebase createMember called with data:', memberData);
-      console.log('📞 Member data details:', {
-        tc: memberData.tc,
-        phone: memberData.phone,
-        tcType: typeof memberData.tc,
-        phoneType: typeof memberData.phone
-      });
 
       // Firebase Authentication kontrolü
       const currentUser = auth.currentUser;
       if (!currentUser) {
         throw new Error('Kullanıcı giriş yapmamış. Lütfen önce giriş yapın.');
       }
-      console.log('🔐 Authenticated user:', currentUser.uid, currentUser.email);
 
       // TC kontrolü - aynı TC ile kayıt var mı?
       // TC şifrelenmiş olarak saklanacağı için, şifrelemeden önce kontrol ediyoruz
@@ -1811,7 +1601,6 @@ class FirebaseApiService {
         memberData
       );
 
-      console.log('✅ Member created successfully with ID:', docId);
 
       // Kısa bir bekleme sonrası oluşturulan üyeyi döndür
       // (serverTimestamp henüz yazılmış olmayabilir)
@@ -1848,7 +1637,6 @@ class FirebaseApiService {
           if (password && typeof password === 'string' && password.startsWith('U2FsdGVkX1')) {
             try {
               password = decryptData(password);
-              console.log('🔓 Decrypted phone number for password');
             } catch (decryptError) {
               console.warn('⚠️ Could not decrypt phone, using as-is:', decryptError);
             }
@@ -1858,7 +1646,6 @@ class FirebaseApiService {
           if (username && typeof username === 'string' && username.startsWith('U2FsdGVkX1')) {
             try {
               username = decryptData(username);
-              console.log('🔓 Decrypted TC number for username');
             } catch (decryptError) {
               console.warn('⚠️ Could not decrypt TC, using as-is:', decryptError);
             }
@@ -1867,10 +1654,6 @@ class FirebaseApiService {
           // ÖNEMLİ: Şifre TC ile aynıysa veya boşsa, hata ver
           if (!password || password.trim() === '' || password === username || password === memberData.tc) {
             console.error('❌ ŞİFRE HATASI!', {
-              password,
-              username,
-              memberDataTc: memberData.tc,
-              memberDataPhone: memberData.phone,
               passwordIsEmpty: !password || password.trim() === '',
               passwordIsTc: password === username || password === memberData.tc,
               passwordIsPhone: password === memberData.phone
@@ -1878,24 +1661,10 @@ class FirebaseApiService {
             throw new Error('Şifre telefon numarası olmalı ve TC ile aynı olamaz!');
           }
 
-          console.log('📋 Final username and password values:', {
-            username,
-            password,
-            usernameLength: username?.length,
-            passwordLength: password?.length,
-            usernameIsTc: username === memberData.tc,
-            passwordIsPhone: password === memberData.phone,
-            passwordIsTc: password === memberData.tc,
-            passwordIsNotTc: password !== memberData.tc && password !== username
-          });
 
           // TC ve telefon zorunlu alanlar olduğu için her zaman olmalı
           if (!username || !password) {
             console.error('❌ TC veya telefon numarası eksik!', {
-              tc: memberData.tc,
-              phone: memberData.phone,
-              username,
-              password,
               tcEmpty: !username,
               phoneEmpty: !password
             });
@@ -1907,24 +1676,10 @@ class FirebaseApiService {
               password: password
             };
 
-            console.log('🔄 Creating automatic user for member (Firestore only):', {
-              docId,
-              username: username,
-              password: password,
-              memberDataTc: memberData.tc,
-              memberDataPhone: memberData.phone,
-              usernameIsTc: username === memberData.tc,
-              passwordIsPhone: password === memberData.phone,
-              passwordIsTc: password === memberData.tc
-            });
 
             // Eğer şifre TC ile aynıysa, bu bir hata! (Yukarıda kontrol edildi ama tekrar kontrol)
             if (password === memberData.tc || password === username) {
               console.error('❌ KRİTİK HATA: Şifre TC ile aynı! Bu yanlış!', {
-                password,
-                username,
-                tc: memberData.tc,
-                phone: memberData.phone,
                 passwordIsTc: password === memberData.tc,
                 passwordIsUsername: password === username
               });
@@ -1933,23 +1688,11 @@ class FirebaseApiService {
 
             // Son kontrol: Şifre telefon numarası olmalı
             if (password !== memberData.phone) {
-              console.warn('⚠️ Şifre telefon numarası ile eşleşmiyor!', {
-                password,
-                memberDataPhone: memberData.phone,
-                passwordsMatch: password === memberData.phone
-              });
+              console.warn('⚠️ Şifre telefon numarası ile eşleşmiyor!');
               // Şifreyi telefon numarası olarak ayarla
               password = String(memberData.phone || '').trim();
-              console.log('🔧 Şifre telefon numarası olarak düzeltildi:', password);
             }
 
-            console.log('✅ Final check before saving to Firestore:', {
-              username,
-              password,
-              usernameIsTc: username === memberData.tc,
-              passwordIsPhone: password === memberData.phone,
-              passwordIsNotTc: password !== memberData.tc && password !== username
-            });
 
             // Sadece Firestore'a kaydet, Firebase Auth'a kaydetme
             // (Firebase Auth'a kaydetme mevcut kullanıcıyı logout eder)
@@ -1967,13 +1710,6 @@ class FirebaseApiService {
               }
             );
 
-            console.log('✅ Automatic user created successfully (Firestore only):', userDocId);
-            console.log('📝 User credentials saved:', {
-              username,
-              password,
-              passwordIsPhone: password === memberData.phone,
-              passwordIsNotTc: password !== memberData.tc
-            });
           }
         } else {
           // Mevcut kullanıcı varsa, bilgilerini al
@@ -1989,7 +1725,6 @@ class FirebaseApiService {
             password: decryptedPassword || existingUser.password
           };
 
-          console.log('ℹ️ User already exists for member:', docId);
         }
       } catch (userError) {
         // Kullanıcı oluşturma hatası kritik değil, üye zaten oluşturuldu
@@ -2006,10 +1741,6 @@ class FirebaseApiService {
 
       // Kullanıcı bilgilerini ekle (eğer oluşturulduysa)
       if (userCredentials) {
-        console.log('📋 User credentials to return:', {
-          username: userCredentials.username,
-          password: userCredentials.password
-        });
         returnData.userCredentials = userCredentials;
       }
 
@@ -2034,7 +1765,6 @@ class FirebaseApiService {
 
   static async setMemberStars(id, stars) {
     try {
-      console.log('🔥 Firebase setMemberStars called:', { id, stars });
 
       // Validate stars (1-5 or null)
       if (stars !== null && (stars < 1 || stars > 5 || !Number.isInteger(stars))) {
@@ -2053,7 +1783,6 @@ class FirebaseApiService {
 
       // Get updated member
       const updatedMember = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, id);
-      console.log('✅ Member stars updated successfully');
 
       return updatedMember;
     } catch (error) {
@@ -2110,23 +1839,9 @@ class FirebaseApiService {
               ...(tcChanged ? { authUid: null } : {})
             }, false); // encrypt = false
 
-            console.log(`✅ Member user updated automatically for member ID ${id} (TC or phone changed)`);
-            console.log(`   Username: ${newUsername}, Password: ${newPassword.substring(0, 3)}***`);
 
             // Firebase Auth'u güncelle (TC veya telefon değiştiyse)
             if (memberUser.authUid && (tcChanged || phoneChanged)) {
-              console.log(`🔄 Updating Firebase Auth user for member ID ${id}:`, {
-                authUid: memberUser.authUid,
-                tcChanged,
-                phoneChanged,
-                oldTc: oldTc.substring(0, 3) + '***',
-                newTc: newTc.substring(0, 3) + '***',
-                oldPhone: oldPhone.substring(0, 3) + '***',
-                newPhone: newPhone.substring(0, 3) + '***',
-                newEmail: newTc + '@member.local',
-                newPassword: newPassword.substring(0, 3) + '***',
-                newPasswordLength: newPassword.length
-              });
               try {
                 // Server-side endpoint'e istek gönder (Firebase Admin SDK ile güncelleme için)
                 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
@@ -2136,7 +1851,6 @@ class FirebaseApiService {
                 const oldEmail = oldTc + '@ilsekreterlik.local';
                 const newEmail = newTc + '@ilsekreterlik.local';
 
-                console.log('📡 Sending request to:', `${API_BASE_URL}/auth/update-firebase-auth-user`);
 
                 const response = await fetch(`${API_BASE_URL}/auth/update-firebase-auth-user`, {
                   method: 'POST',
@@ -2151,11 +1865,9 @@ class FirebaseApiService {
                   })
                 });
 
-                console.log('📥 Response status:', response.status, response.statusText);
 
                 if (response.ok) {
                   const responseData = await response.json();
-                  console.log(`✅ Firebase Auth user updated for member ID ${id} (authUid: ${memberUser.authUid}):`, responseData);
                 } else {
                   const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
                   console.error(`❌ Firebase Auth user update failed for member ID ${id}:`, {
@@ -2174,9 +1886,7 @@ class FirebaseApiService {
                 // Hata olsa bile devam et (Firestore güncellemesi başarılı)
               }
             } else if (tcChanged && !memberUser.authUid) {
-              console.log(`   ⚠️ TC changed but no authUid - authUid cleared, user will need to login again with new username`);
             } else if (!tcChanged && !phoneChanged) {
-              console.log(`   ℹ️ TC and phone not changed, skipping Firebase Auth update for member ID ${id}`);
             }
           } else {
             // Member user yoksa oluştur
@@ -2193,7 +1903,6 @@ class FirebaseApiService {
                 },
                 false // encrypt = false
               );
-              console.log(`✅ Member user created automatically for member ID ${id}`);
             }
           }
         } catch (userError) {
@@ -2211,7 +1920,6 @@ class FirebaseApiService {
 
   static async uploadMemberPhoto(memberId, file) {
     try {
-      console.log('📤 Uploading member photo to Firebase Storage:', { memberId, fileName: file.name, size: file.size });
 
       // Firebase Storage'a yükle
       const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
@@ -2222,7 +1930,6 @@ class FirebaseApiService {
         photo: photoUrl
       }, true); // Encrypt if needed
 
-      console.log('✅ Member photo uploaded successfully:', { memberId, photoUrl });
 
       return {
         success: true,
@@ -2396,7 +2103,6 @@ class FirebaseApiService {
             }
 
             const normalizedMemberId = String(memberId).trim();
-            console.log(`📝 Creating notification for member: ${normalizedMemberId}`);
 
             const notificationId = await FirebaseService.create(
               this.COLLECTIONS.NOTIFICATIONS,
@@ -2408,14 +2114,12 @@ class FirebaseApiService {
               false
             );
 
-            console.log(`✅ Notification created for member ${normalizedMemberId}, notificationId: ${notificationId}`);
             successCount++;
           } catch (memberError) {
             console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
           }
         }
 
-        console.log(`✅ In-app notification created for ${successCount}/${allMembers.length} members`);
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası toplantı oluşturmayı engellemez
@@ -2614,7 +2318,6 @@ class FirebaseApiService {
             }
 
             const normalizedMemberId = String(memberId).trim();
-            console.log(`📝 Creating notification for member: ${normalizedMemberId}`);
 
             const notificationId = await FirebaseService.create(
               this.COLLECTIONS.NOTIFICATIONS,
@@ -2626,14 +2329,12 @@ class FirebaseApiService {
               false
             );
 
-            console.log(`✅ Notification created for member ${normalizedMemberId}, notificationId: ${notificationId}`);
             successCount++;
           } catch (memberError) {
             console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
           }
         }
 
-        console.log(`✅ In-app notification created for ${successCount}/${allMembers.length} members`);
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası etkinlik oluşturmayı engellemez
@@ -2647,7 +2348,6 @@ class FirebaseApiService {
             finalEventData.selectedLocationTypes,
             finalEventData.selectedLocations
           );
-          console.log('Visit counts updated for Firebase event:', docId);
         } catch (visitError) {
           console.error('Error updating visit counts for Firebase event:', visitError);
           // Don't fail event creation if visit count update fails
@@ -2730,7 +2430,6 @@ class FirebaseApiService {
 
       const INVALID_ATTENDEE_IDS = ['1762645941232_qxutglj9a', null, 'null', undefined];
 
-      console.log('🔍 Fetching all events to clean up invalid attendees...');
       const eventsRef = collection(db, this.COLLECTIONS.EVENTS);
       const eventsSnapshot = await getDocs(eventsRef);
 
@@ -2769,7 +2468,6 @@ class FirebaseApiService {
           const removedCount = originalAttendees.length - validAttendees.length;
           totalRemoved += removedCount;
 
-          console.log(`🔧 Event ${eventId}: Removing ${removedCount} invalid attendees`);
 
           const eventRef = doc(db, this.COLLECTIONS.EVENTS, eventId);
           updatePromises.push(
@@ -2777,7 +2475,6 @@ class FirebaseApiService {
               attendees: validAttendees
             }).then(() => {
               updatedEvents++;
-              console.log(`✅ Updated event ${eventId}`);
             }).catch(error => {
               console.error(`❌ Error updating event ${eventId}:`, error);
             })
@@ -2788,10 +2485,6 @@ class FirebaseApiService {
       // Wait for all updates to complete
       await Promise.all(updatePromises);
 
-      console.log(`\n✅ Cleanup completed!`);
-      console.log(`📊 Total events checked: ${totalEvents}`);
-      console.log(`🔧 Events updated: ${updatedEvents}`);
-      console.log(`🗑️  Total invalid attendees removed: ${totalRemoved}`);
 
       return {
         success: true,
@@ -2963,7 +2656,6 @@ class FirebaseApiService {
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               isActive: false
             }, false); // encrypt = false
-            console.log('✅ Member user deactivated:', memberUser.id);
           }
         }
       } catch (userError) {
@@ -3002,7 +2694,6 @@ class FirebaseApiService {
             await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
               isActive: true
             }, false); // encrypt = false
-            console.log('✅ Member user activated:', memberUser.id);
           }
         }
       } catch (userError) {
@@ -3272,23 +2963,18 @@ class FirebaseApiService {
   // Delete archived member permanently
   static async deleteArchivedMember(id) {
     try {
-      console.log('FirebaseApiService.deleteArchivedMember called with id:', id);
 
       // ID formatını normalize et (eğer string ise)
       const memberId = String(id).trim();
-      console.log('Normalized member ID:', memberId);
 
       const member = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, memberId);
-      console.log('Member found:', member ? 'yes' : 'no', member ? { id: member.id, name: member.name, archived: member.archived } : null);
 
       if (!member) {
         // Belki ID formatı farklı - tüm üyeleri kontrol et
-        console.log('Member not found by ID, trying to find by scanning all members...');
         const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
         const foundMember = allMembers.find(m => String(m.id) === memberId || String(m.id) === String(id));
 
         if (foundMember) {
-          console.log('Member found by scanning:', foundMember.id);
           const isArchived = foundMember.archived === true || foundMember.archived === 'true' || foundMember.archived === 1 || foundMember.archived === '1';
           if (isArchived) {
             await FirebaseService.delete(this.COLLECTIONS.MEMBERS, foundMember.id);
@@ -3321,14 +3007,12 @@ class FirebaseApiService {
 
       // Arşivlenmiş olup olmadığını kontrol et (truthy check - boolean, string "true", 1 gibi değerleri kabul et)
       const isArchived = member.archived === true || member.archived === 'true' || member.archived === 1 || member.archived === '1';
-      console.log('Member archived status:', { archived: member.archived, isArchived });
 
       if (!isArchived) {
         throw new Error('Bu üye arşivlenmemiş');
       }
 
       // Üyeyi kalıcı olarak sil
-      console.log('Deleting member with ID:', member.id || memberId);
       await FirebaseService.delete(this.COLLECTIONS.MEMBERS, member.id || memberId);
 
       // Eğer member_user varsa onu da sil (Firestore ve Firebase Auth'dan)
@@ -3341,12 +3025,6 @@ class FirebaseApiService {
 
         if (memberUsers && memberUsers.length > 0) {
           for (const memberUser of memberUsers) {
-            console.log('🗑️ Deleting member user:', {
-              id: memberUser.id,
-              username: memberUser.username,
-              authUid: memberUser.authUid,
-              userType: memberUser.userType
-            });
 
             // Firebase Auth'dan da sil (eğer authUid varsa) - Backend üzerinden
             if (memberUser.authUid) {
@@ -3361,7 +3039,6 @@ class FirebaseApiService {
                 });
 
                 if (response.ok) {
-                  console.log('✅ Firebase Auth user deleted via backend:', memberUser.authUid);
                 } else {
                   const errorData = await response.json().catch(() => ({}));
                   console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
@@ -3375,10 +3052,8 @@ class FirebaseApiService {
 
             // Firestore'dan member_user'ı sil (dashboard sayfası da kaldırılır)
             await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, memberUser.id);
-            console.log('✅ Member user deleted from Firestore (dashboard removed):', memberUser.id);
           }
         } else {
-          console.log('ℹ️ No member user found for member ID:', id);
         }
       } catch (userError) {
         console.error('❌ Error deleting member user:', userError);
@@ -5254,13 +4929,11 @@ class FirebaseApiService {
             if (!existingUsers || existingUsers.length === 0) {
               // Kullanıcı yoksa oluştur
               await this.createMemberUser(member.id, username, password);
-              console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Member ID: ${member.id}, Username: ${username}`);
             } else {
               const existingUser = existingUsers[0];
               if (existingUser.username !== username) {
                 // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
                 await this.updateMemberUser(existingUser.id, username, password);
-                console.log(`✅ Başmüşahit kullanıcı adı güncellendi: ${existingUser.username} -> ${username}`);
               }
             }
           } else {
@@ -5348,7 +5021,6 @@ class FirebaseApiService {
                 });
 
                 if (response.ok) {
-                  console.log('✅ Firebase Auth user deleted via backend for observer:', memberUser.authUid);
                 } else {
                   const errorData = await response.json().catch(() => ({}));
                   console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
@@ -5360,7 +5032,6 @@ class FirebaseApiService {
 
             // Firestore'dan member_user'ı sil
             await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, memberUser.id);
-            console.log('✅ Member user deleted from Firestore for observer:', memberUser.id);
           } catch (userError) {
             console.error('❌ Error deleting member user for observer:', userError);
             // Devam et, diğer kullanıcıları da silmeyi dene
@@ -5625,10 +5296,8 @@ class FirebaseApiService {
 
                   // Üye kullanıcısı oluştur
                   await this.createMemberUser(cleanedData.chairman_member_id, tc, phone.replace(/\D/g, ''));
-                  console.log('✅ Created member user for chairman member ID:', cleanedData.chairman_member_id);
                 }
               } else {
-                console.log('ℹ️ Chairman is a member and already has a user account, skipping town president user creation');
               }
             } else {
               // Başkan üye değilse, belde başkanı kullanıcısı oluştur
@@ -5665,13 +5334,11 @@ class FirebaseApiService {
                       const currentUserUid = currentUser ? currentUser.uid : null;
 
                       const authUser = await createUserWithEmailAndPassword(auth, email, password);
-                      console.log('✅ Firebase Auth user created for existing town president:', authUser.user.uid);
 
                       // Admin kullanıcısını geri yükle
                       if (currentUserUid && currentUserUid !== authUser.user.uid) {
                         try {
                           await signInWithEmailAndPassword(auth, currentUser.email, currentUser.password || 'admin123');
-                          console.log('✅ Admin user restored');
                         } catch (restoreError) {
                           console.warn('⚠️ Could not restore admin user:', restoreError);
                         }
@@ -5713,14 +5380,8 @@ class FirebaseApiService {
                     // Firebase Auth'daki şifre güncellemesi için backend/Cloud Functions gerekir
                     // Şimdilik Firestore'daki password güncelleniyor, login sırasında kontrol edilecek
                     if (phoneChanged) {
-                      console.log('✅ Town president phone changed, password updated in Firestore:', {
-                        oldPhone: oldPhone?.replace(/\D/g, ''),
-                        newPhone: newPhone,
-                        username
-                      });
                     }
                   }
-                  console.log('✅ Updated town president user for town ID:', townId);
                 }
               } else {
                 // Yeni belde başkanı kullanıcısı oluştur
@@ -5735,13 +5396,11 @@ class FirebaseApiService {
 
                   // Firebase Auth'da kullanıcı oluştur
                   authUser = await createUserWithEmailAndPassword(auth, email, password);
-                  console.log('✅ Firebase Auth user created for town president:', authUser.user.uid);
 
                   // Admin kullanıcısını geri yükle (eğer varsa)
                   if (currentUserUid && currentUserUid !== authUser.user.uid) {
                     try {
                       await signInWithEmailAndPassword(auth, currentUser.email, currentUser.password || 'admin123');
-                      console.log('✅ Admin user restored after town president user creation');
                     } catch (restoreError) {
                       console.warn('⚠️ Could not restore admin user, will need to re-login:', restoreError);
                     }
@@ -5773,7 +5432,6 @@ class FirebaseApiService {
                   },
                   false // encrypt = false - password şifrelenmemeli
                 );
-                console.log('✅ Created town president user for town ID:', townId, 'Username:', username, 'Password:', password);
               }
             }
           }
@@ -5921,9 +5579,6 @@ class FirebaseApiService {
       // Bu yüzden şimdilik Firestore'dan authUid'i kaldırıyoruz
       // Login sırasında kontrol edilip, eğer Firestore'da yoksa Firebase Auth'daki kullanıcı da geçersiz sayılır
 
-      console.log('⚠️ Firebase Auth user deletion requires user ID token');
-      console.log('⚠️ User authUid will be removed from Firestore, Firebase Auth user will be invalid on next login');
-      console.log('⚠️ For complete deletion, use Firebase Admin SDK on backend/Cloud Functions');
 
       // Firestore'dan authUid zaten kaldırılacak (member_user silindiğinde)
       // Bu yüzden burada bir şey yapmaya gerek yok
@@ -5976,7 +5631,6 @@ class FirebaseApiService {
           clearTimeout(timeoutId);
 
           if (response.ok) {
-            console.log('✅ Firebase Auth user deleted via backend:', memberUser.authUid);
             authDeleted = true;
           } else {
             const errorData = await response.json().catch(() => ({}));
@@ -6002,7 +5656,6 @@ class FirebaseApiService {
       // Firestore'dan sil (her durumda)
       await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, id);
 
-      console.log('✅ Member user deleted from Firestore:', id);
 
       // Sonuç mesajı
       if (authDeleted) {
@@ -6224,7 +5877,6 @@ class FirebaseApiService {
       // Otomatik SMS ayarlarını kontrol et
       const autoSettings = await FirebaseService.getById('sms_auto_settings', 'main');
       if (!autoSettings) {
-        console.log('Auto SMS settings not found, skipping SMS');
         return { success: false, message: 'Otomatik SMS ayarları bulunamadı' };
       }
 
@@ -6233,7 +5885,6 @@ class FirebaseApiService {
         : autoSettings.autoSmsForEvents;
 
       if (!isEnabled) {
-        console.log(`Auto SMS for ${type} is disabled`);
         return { success: false, message: `Otomatik SMS ${type === 'meeting' ? 'toplantılar' : 'etkinlikler'} için devre dışı` };
       }
 
@@ -6248,7 +5899,6 @@ class FirebaseApiService {
       );
 
       if (filteredMembers.length === 0) {
-        console.log('No members found for selected regions');
         return { success: false, message: 'Seçili bölgelerde üye bulunamadı' };
       }
 
@@ -6282,7 +5932,6 @@ class FirebaseApiService {
         .filter(phone => phone !== null);
 
       if (phones.length === 0) {
-        console.log('No valid phone numbers found');
         return { success: false, message: 'Geçerli telefon numarası bulunamadı' };
       }
 
@@ -6730,7 +6379,6 @@ class FirebaseApiService {
       // Otomatik SMS ayarlarını kontrol et
       const autoSettings = await FirebaseService.getById('sms_auto_settings', 'main');
       if (!autoSettings || !autoSettings.autoSmsForCustom) {
-        console.log('Auto SMS for custom messages is disabled');
         return { success: false, message: 'Özel mesajlar için otomatik SMS devre dışı' };
       }
 
@@ -6741,14 +6389,12 @@ class FirebaseApiService {
       // Alıcı üyeyi al
       const receiver = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, receiverId);
       if (!receiver) {
-        console.log('Receiver member not found');
         return { success: false, message: 'Alıcı üye bulunamadı' };
       }
 
       // Telefon numarasını formatla
       const phone = smsService.formatPhoneNumber(receiver.phone);
       if (!phone) {
-        console.log('No valid phone number for receiver');
         return { success: false, message: 'Alıcının geçerli telefon numarası yok' };
       }
 
@@ -6780,7 +6426,6 @@ class FirebaseApiService {
       // Otomatik SMS ayarlarını kontrol et
       const autoSettings = await FirebaseService.getById('sms_auto_settings', 'main');
       if (!autoSettings || !autoSettings.autoSmsForCustom) {
-        console.log('Auto SMS for custom messages is disabled');
         return { success: false, message: 'Özel mesajlar için otomatik SMS devre dışı' };
       }
 
@@ -6794,7 +6439,6 @@ class FirebaseApiService {
       const allMembers = await this.getMembers();
 
       if (allMembers.length === 0) {
-        console.log('No members found for group message');
         return { success: false, message: 'Grup üyesi bulunamadı' };
       }
 
@@ -7198,7 +6842,6 @@ class FirebaseApiService {
             }
 
             const normalizedMemberId = String(memberId).trim();
-            console.log(`📝 Creating notification for member: ${normalizedMemberId}`);
 
             const notificationId = await FirebaseService.create(
               this.COLLECTIONS.NOTIFICATIONS,
@@ -7210,14 +6853,12 @@ class FirebaseApiService {
               false
             );
 
-            console.log(`✅ Notification created for member ${normalizedMemberId}, notificationId: ${notificationId}`);
             successCount++;
           } catch (memberError) {
             console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
           }
         }
 
-        console.log(`✅ In-app notification created for ${successCount}/${allMembers.length} members`);
       } catch (notificationError) {
         console.error('Error creating in-app notification (non-blocking):', notificationError);
         // Notification hatası anket oluşturmayı engellemez
@@ -7573,13 +7214,10 @@ class FirebaseApiService {
 
       // memberId'yi normalize et
       const normalizedMemberId = String(memberId).trim();
-      console.log('🔍 getNotifications called with memberId:', normalizedMemberId);
 
       const allNotifications = await FirebaseService.getAll(this.COLLECTIONS.NOTIFICATIONS, {}, false);
-      console.log(`📬 Total notifications in database: ${allNotifications?.length || 0}`);
 
       if (!allNotifications || allNotifications.length === 0) {
-        console.log('⚠️ No notifications found in database');
         return { success: true, notifications: [] };
       }
 
@@ -7600,13 +7238,11 @@ class FirebaseApiService {
         const shouldInclude = memberMatch && !expired && unreadMatch;
 
         if (!shouldInclude && normalizedNotificationMemberId) {
-          console.log(`❌ Notification filtered out: memberId=${normalizedNotificationMemberId} (expected ${normalizedMemberId}), expired=${expired}, unreadMatch=${unreadMatch}`);
         }
 
         return shouldInclude;
       });
 
-      console.log(`✅ Filtered notifications for member ${normalizedMemberId}: ${notifications.length}`);
 
       notifications.sort((a, b) => {
         const dateA = new Date(a.createdAt || a.created_at || 0);
@@ -8083,11 +7719,9 @@ class FirebaseApiService {
 
   static async recalculateAllVisitCounts() {
     try {
-      console.log('Starting Firebase visit counts recalculation...');
 
       // Get all active events using ApiService.getEvents (same as EventsPage)
       const events = await this.getEvents(false);
-      console.log(`Found ${events.length} active events to process`);
 
       // Reset all visit counts to 0
       const locationTypes = ['district', 'town', 'neighborhood', 'village', 'stk', 'public_institution', 'mosque'];
@@ -8108,7 +7742,6 @@ class FirebaseApiService {
                 false // encrypt = false
               );
             }
-            console.log(`Reset ${locationType} visits (${allVisits?.length || 0} records)`);
           } catch (error) {
             console.error(`Error resetting ${locationType} visits:`, error);
           }
@@ -8122,7 +7755,6 @@ class FirebaseApiService {
       for (const event of events) {
         try {
           if (!event.selectedLocationTypes || !event.selectedLocations) {
-            console.log(`Skipping event ${event.id}: missing location data`);
             continue;
           }
 
@@ -8138,7 +7770,6 @@ class FirebaseApiService {
               continue;
             }
           } else {
-            console.log(`Skipping event ${event.id}: invalid selectedLocationTypes type`);
             continue;
           }
 
@@ -8154,19 +7785,13 @@ class FirebaseApiService {
               continue;
             }
           } else {
-            console.log(`Skipping event ${event.id}: invalid selectedLocations type`);
             continue;
           }
 
           if (!Array.isArray(selectedLocationTypes) || !selectedLocations || typeof selectedLocations !== 'object') {
-            console.log(`Skipping event ${event.id}: invalid parsed data`);
             continue;
           }
 
-          console.log(`Processing event ID ${event.id}:`, {
-            selectedLocationTypes,
-            selectedLocations
-          });
 
           for (const locationType of selectedLocationTypes) {
             const locationIds = selectedLocations[locationType];
@@ -8174,7 +7799,6 @@ class FirebaseApiService {
               for (const locationId of locationIds) {
                 // Normalize locationId - keep as string for Firebase
                 const normalizedId = String(locationId);
-                console.log(`Incrementing visit for ${locationType} ID ${normalizedId}`);
                 await this.incrementVisit(locationType, normalizedId);
                 totalIncrements++;
               }
@@ -8190,7 +7814,6 @@ class FirebaseApiService {
         }
       }
 
-      console.log(`Firebase visit counts recalculation completed. Processed ${totalProcessed} events, ${totalIncrements} visit increments.`);
       return { success: true, eventsProcessed: totalProcessed, totalEvents: events.length, totalIncrements };
     } catch (error) {
       console.error('Error recalculating Firebase visit counts:', error);

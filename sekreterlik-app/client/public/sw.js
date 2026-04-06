@@ -200,6 +200,12 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.navigate(targetUrl);
+          // Post message to main app so it can mark notification as read
+          client.postMessage({
+            type: 'NOTIFICATION_CLICKED',
+            notificationId: data.notificationId || data.id,
+            url: data.url
+          });
           return client.focus();
         }
       }

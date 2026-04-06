@@ -111,10 +111,25 @@ export const TOOL_DECLARATIONS = [
   }
 ];
 
+// Tool başına erişim kontrolü — hangi roller hangi tool'ları kullanabilir
+const TOOL_PERMISSIONS = {
+  hesaplaDHondt: ['admin', 'member', 'coordinator', 'chief_observer'],
+  araUye: ['admin'],
+  getirSecimSonuclari: ['admin', 'coordinator', 'chief_observer'],
+  karsilastirSecimler: ['admin', 'coordinator'],
+  analizEtBolge: ['admin'],
+  olusturRapor: ['admin'],
+};
+
 /**
  * Tool çağrılarını işle — her tool adı bir handler fonksiyonuna eşlenir
  */
-export async function executeToolCall(toolName, args, siteData) {
+export async function executeToolCall(toolName, args, siteData, userRole) {
+  // Erişim kontrolü
+  const allowedRoles = TOOL_PERMISSIONS[toolName];
+  if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
+    return JSON.stringify({ error: 'Bu işlem için yetkiniz yok', tool: toolName });
+  }
   switch (toolName) {
     case 'hesaplaDHondt': {
       const { calculateDHondtDetailed } = await import('./dhondt');

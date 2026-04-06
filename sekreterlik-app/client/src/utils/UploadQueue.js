@@ -174,7 +174,6 @@ class UploadQueue {
           // Upload başarılı
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('✅ Upload successful:', { path, downloadURL });
             resolve(downloadURL);
           } catch (error) {
             console.error('❌ Error getting download URL:', error);

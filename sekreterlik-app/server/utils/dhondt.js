@@ -43,13 +43,23 @@ function calculateDHondt(partyVotes, totalSeats) {
   });
 
   // Bölümleri büyükten küçüğe sırala
-  // Eşit quotient durumunda daha yüksek oyu olan parti önce gelir (deterministik sıralama)
+  // Eşit quotient durumunda:
+  // 1. Daha yüksek oyu olan parti önce
+  // 2. Oylar da eşitse: rastgele sıralama (kura çekme)
+  //    Türk seçim hukuku gereği eşitlik durumunda "kura çekme" yapılır.
+  //    Deterministik olmayan sıralama ile bu simüle edilir.
+  const tieBreaks = [];
   quotients.sort((a, b) => {
     const diff = b.quotient - a.quotient;
     if (Math.abs(diff) < 1e-9) {
       const aVotes = votes.find(v => v.party === a.party)?.votes || 0;
       const bVotes = votes.find(v => v.party === b.party)?.votes || 0;
-      return bVotes - aVotes;
+      if (aVotes !== bVotes) {
+        return bVotes - aVotes;
+      }
+      // Oylar da eşitse: kura çekme (rastgele) — Türk seçim hukuku gereği
+      tieBreaks.push({ parties: [a.party, b.party], quotient: a.quotient });
+      return Math.random() - 0.5;
     }
     return diff;
   });
@@ -61,6 +71,13 @@ function calculateDHondt(partyVotes, totalSeats) {
   const distribution = {};
   topQuotients.forEach(({ party }) => {
     distribution[party] = (distribution[party] || 0) + 1;
+  });
+
+  // Eşitlik (kura) bilgisini non-enumerable olarak ekle
+  Object.defineProperty(distribution, 'tieBreaks', {
+    value: tieBreaks,
+    enumerable: false,
+    configurable: true
   });
 
   return distribution;

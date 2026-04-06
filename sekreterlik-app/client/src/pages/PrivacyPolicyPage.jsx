@@ -272,7 +272,7 @@ const PrivacyPolicyPage = () => {
                 prose-table:border-collapse prose-table:w-full
                 prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-600 prose-th:px-3 prose-th:py-2 prose-th:bg-gray-50 dark:prose-th:bg-gray-700 prose-th:text-left prose-th:text-sm prose-th:font-semibold
                 prose-td:border prose-td:border-gray-300 dark:prose-td:border-gray-600 prose-td:px-3 prose-td:py-2 prose-td:text-sm"
-              dangerouslySetInnerHTML={{ __html: activeSection === 'privacy' ? privacyText : defaultCookiePolicyText }}
+              dangerouslySetInnerHTML={{ __html: (activeSection === 'privacy' ? privacyText : defaultCookiePolicyText).replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+\s*=/gi, 'data-blocked=') }}
             />
           </div>
           {/* Avukat notu */}

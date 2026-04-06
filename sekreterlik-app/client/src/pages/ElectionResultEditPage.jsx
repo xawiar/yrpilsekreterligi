@@ -110,6 +110,7 @@ const ElectionResultEditPage = () => {
                     src={protocolPhoto}
                     alt="İmzalı Tutanak"
                     className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                    loading="lazy"
                     onClick={() => window.open(protocolPhoto, '_blank')}
                   />
                 </div>
@@ -128,6 +129,7 @@ const ElectionResultEditPage = () => {
                     src={objectionPhoto}
                     alt="İtiraz Tutanağı"
                     className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                    loading="lazy"
                     onClick={() => window.open(objectionPhoto, '_blank')}
                   />
                 </div>

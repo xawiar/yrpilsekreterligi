@@ -93,7 +93,6 @@ const VillagesSettings = () => {
   const fetchVillageRepresentatives = async () => {
     try {
       const representativesData = await ApiService.getVillageRepresentatives();
-      console.log('Fetched village representatives:', representativesData);
       setVillageRepresentatives(representativesData);
     } catch (error) {
       console.error('Error fetching village representatives:', error);
@@ -103,7 +102,6 @@ const VillagesSettings = () => {
   const fetchVillageSupervisors = async () => {
     try {
       const supervisorsData = await ApiService.getVillageSupervisors();
-      console.log('Fetched village supervisors:', supervisorsData);
       setVillageSupervisors(supervisorsData);
     } catch (error) {
       console.error('Error fetching village supervisors:', error);

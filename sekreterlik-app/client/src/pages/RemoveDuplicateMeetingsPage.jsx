@@ -26,7 +26,6 @@ const RemoveDuplicateMeetingsPage = () => {
     setResults(null);
 
     try {
-      console.log('🔍 Çift toplantılar aranıyor...');
       
       // Tüm toplantıları al
       const meetings = await FirebaseService.getAll('meetings', {}, false);
@@ -37,7 +36,6 @@ const RemoveDuplicateMeetingsPage = () => {
         return;
       }
 
-      console.log(`📊 ${meetings.length} toplantı bulundu`);
 
       // Tarih ve adı aynı olan toplantıları bul
       const duplicatesMap = new Map(); // key: "name|date" -> [meetings]
@@ -73,7 +71,6 @@ const RemoveDuplicateMeetingsPage = () => {
         }
       });
 
-      console.log(`🔍 ${duplicatesList.length} çift toplantı bulundu`);
       setDuplicates(duplicatesList);
     } catch (error) {
       console.error('❌ Find duplicates error:', error);
@@ -120,7 +117,6 @@ const RemoveDuplicateMeetingsPage = () => {
             await FirebaseService.delete('meetings', String(meeting.id));
             deleted++;
             deletedIds.push(meeting.id);
-            console.log(`✅ Silindi: ID ${meeting.id} - "${meeting.name}" - ${meeting.date}`);
           } catch (error) {
             errors++;
             console.error(`❌ Silme hatası (ID: ${meeting.id}):`, error);

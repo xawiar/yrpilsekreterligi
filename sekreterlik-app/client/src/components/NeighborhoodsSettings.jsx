@@ -92,7 +92,6 @@ const NeighborhoodsSettings = () => {
   const fetchNeighborhoodRepresentatives = async () => {
     try {
       const representativesData = await ApiService.getNeighborhoodRepresentatives();
-      console.log('Fetched neighborhood representatives:', representativesData);
       setNeighborhoodRepresentatives(representativesData);
     } catch (error) {
       console.error('Error fetching neighborhood representatives:', error);
@@ -102,7 +101,6 @@ const NeighborhoodsSettings = () => {
   const fetchNeighborhoodSupervisors = async () => {
     try {
       const supervisorsData = await ApiService.getNeighborhoodSupervisors();
-      console.log('Fetched neighborhood supervisors:', supervisorsData);
       setNeighborhoodSupervisors(supervisorsData);
     } catch (error) {
       console.error('Error fetching neighborhood supervisors:', error);

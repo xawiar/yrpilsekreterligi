@@ -20,6 +20,12 @@ function maskSensitiveData(text) {
   // Telefon numaralarını maskele (05XX ve 5XX formatları)
   text = text.replace(/\b(05\d{2})\d{3}\d{4}\b/g, '$1*******');
   text = text.replace(/\b(5\d{2})\d{3}\d{4}\b/g, '$1*******');
+  // API key'leri maskele (Google/Firebase API keys)
+  text = text.replace(/AIzaSy[A-Za-z0-9_-]{35,}/g, '***API_KEY_GİZLİ***');
+  // Genel credential pattern'leri
+  text = text.replace(/password[\s:=]+\S+/gi, 'password: ***GİZLİ***');
+  text = text.replace(/secret[\s:=]+\S+/gi, 'secret: ***GİZLİ***');
+  text = text.replace(/token[\s:=]+\S+/gi, 'token: ***GİZLİ***');
   return text;
 }
 

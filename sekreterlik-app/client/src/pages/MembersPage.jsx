@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
+import { PAGINATION } from '../utils/constants';
 import Modal from '../components/Modal';
 import MemberDetails from '../components/MemberDetails';
 import MemberForm from '../components/MemberForm';
@@ -43,7 +44,7 @@ const MembersPage = () => {
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   const [filteredMembers, setFilteredMembers] = useState([]); // For filtered and sorted members
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 25;
+  const ITEMS_PER_PAGE = PAGINATION.DEFAULT_PAGE_SIZE;
   const [excelImportPreview, setExcelImportPreview] = useState(null); // Excel import preview data
   const [excelImportFile, setExcelImportFile] = useState(null); // Excel file for import
   const [excelImportLoading, setExcelImportLoading] = useState(false); // Excel import loading state

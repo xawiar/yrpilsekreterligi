@@ -91,7 +91,6 @@ const FirebaseAuthUsersPage = () => {
         if (memberUserId) {
           try {
             await FirebaseService.delete('member_users', memberUserId);
-            console.log('✅ Member user deleted from Firestore:', memberUserId);
           } catch (memberUserError) {
             console.warn('⚠️ Member user deletion failed (non-critical):', memberUserError);
           }

@@ -666,10 +666,8 @@ const TownPresidentDashboardPage = () => {
 
                 if (existingUser) {
                   await ApiService.updateMemberUser(existingUser.id, ballotNumber, tc);
-                  console.log(`✅ Başmüşahit kullanıcı adı güncellendi: TC -> Sandık No: ${ballotNumber}`);
                 } else {
                   await ApiService.createMemberUser(member.id, ballotNumber, tc);
-                  console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}`);
                 }
               } else {
                 const memberUsers = await ApiService.getMemberUsers();
@@ -677,10 +675,8 @@ const TownPresidentDashboardPage = () => {
 
                 if (!existingUser) {
                   await ApiService.createMemberUser(member.id, tc, tc);
-                  console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: TC: ${tc}`);
                 } else if (existingUser.username !== tc) {
                   await ApiService.updateMemberUser(existingUser.id, tc, tc);
-                  console.log(`✅ Başmüşahit kullanıcı adı güncellendi: Sandık No -> TC: ${tc}`);
                 }
               }
             }
@@ -714,7 +710,6 @@ const TownPresidentDashboardPage = () => {
                 try {
                   const result = await ApiService.createMemberUser(member.id, ballotNumber, tc);
                   if (result && result.success) {
-                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: Sandık No: ${ballotNumber}, TC: ${tc}`);
                   }
                 } catch (userError) {
                   console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);
@@ -724,7 +719,6 @@ const TownPresidentDashboardPage = () => {
                 try {
                   const result = await ApiService.createMemberUser(member.id, tc, tc);
                   if (result && result.success) {
-                    console.log(`✅ Başmüşahit kullanıcısı oluşturuldu: TC: ${tc}`);
                   }
                 } catch (userError) {
                   console.warn('⚠️ Başmüşahit kullanıcısı oluşturulamadı:', userError.message);

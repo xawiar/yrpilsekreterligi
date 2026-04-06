@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
+import { PAGINATION } from '../utils/constants';
 import Modal from '../components/Modal';
 import CreateMeetingForm from '../components/CreateMeetingForm';
 import PlanMeetingForm from '../components/PlanMeetingForm';
@@ -44,7 +45,7 @@ const MeetingsPage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 25;
+  const ITEMS_PER_PAGE = PAGINATION.DEFAULT_PAGE_SIZE;
 
   useEffect(() => {
     fetchMeetings();
@@ -539,19 +540,25 @@ const MeetingsPage = () => {
       />
 
       {/* Meetings Table - Responsive Design */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-        <MeetingsTable
-          meetings={paginatedMeetings}
-          sortConfig={sortConfig}
-          handleSort={handleSort}
-          handleShowMeeting={handleShowMeeting}
-          handleEditMeeting={handleEditMeeting}
-          handleArchiveMeeting={handleArchiveMeeting}
-          handleUpdateAttendance={handleUpdateAttendance}
-          calculateAttendanceStats={calculateAttendanceStats}
-          getAttendanceColor={getAttendanceColor}
-        />
-      </div>
+      {filteredMeetings.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <p className="text-lg">Henüz toplantı yok</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+          <MeetingsTable
+            meetings={paginatedMeetings}
+            sortConfig={sortConfig}
+            handleSort={handleSort}
+            handleShowMeeting={handleShowMeeting}
+            handleEditMeeting={handleEditMeeting}
+            handleArchiveMeeting={handleArchiveMeeting}
+            handleUpdateAttendance={handleUpdateAttendance}
+            calculateAttendanceStats={calculateAttendanceStats}
+            getAttendanceColor={getAttendanceColor}
+          />
+        </div>
+      )}
 
       {/* Pagination */}
       <Pagination

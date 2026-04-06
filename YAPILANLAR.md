@@ -330,3 +330,55 @@
 ## TEŞKİLAT — Dalga 3 Eklemeleri
 
 - [x] TeşkilatPage özet istatistikler — ilçe sayısı, atanmış başkan, eksik temsilci
+
+## KVKK BUG FIX (Dalga 3 sonrası — 4 Nisan)
+
+- [x] Firebase modunda veri silme talepleri çalışır hale getirildi (response.data format fix)
+- [x] Firebase modunda onaylanan talep veri SİLER (members, registrations, documents, users)
+- [x] kvkk_consent_date server'da kaydediliyor (ALTER TABLE + INSERT)
+- [x] Firebase'de admin silme listesinde üye bilgileri düzeltildi
+- [x] deleteMemberData() transaction eklendi
+- [x] Login sayfasında aydınlatma metni linki eklendi
+- [x] POST talep oluşturmada member_id doğrulaması eklendi
+- [x] Aydınlatma metninde placeholder değerler gerçek bilgilerle değiştirildi
+- [x] DataRetentionSettings dual-mode (Firebase + SQLite) düzeltildi
+- [x] Veri saklama süresi otomatik silme mekanizması eklendi
+
+## ACİL BUG FIX (Canlı testte tespit — 4 Nisan)
+
+- [x] Storage rules MIME type kontrolü (/personal-documents + /archive)
+- [x] Firestore composite index → client-side filter workaround
+- [x] EmptyDocumentsState DOM nesting hatası düzeltildi
+- [x] Firestore aşırı okuma → in-memory cache eklendi
+- [x] KVKK sayfaları desktop render eksikliği düzeltildi
+- [x] Firebase mode AdminSettings + AuditLog backend bağımlılığı kaldırıldı
+- [x] Chatbot.jsx fazladan </div> build hatası düzeltildi
+
+## BİLDİRİM SİSTEMİ GENİŞLETME (Yeni Özellik — 4 Nisan)
+
+- [x] NotificationService (fan-out pattern: master + per-user kopya)
+- [x] Bildirim tipleri: announcement, meeting_invite, event_invite, poll_invite, election_update
+- [x] Hedefleme: all, region, role, single
+- [x] AdminNotificationPanel (form + geçmiş + zamanlı gönderim + hedef önizleme)
+- [x] NotificationDrawer (Sidebar'dan açılan sağ panel)
+- [x] Bildirim tercihleri (tip bazlı açma/kapama)
+- [x] Anket oluşturunca otomatik bildirim (poll_invite)
+- [x] Toplantı/etkinlik planlanınca otomatik bildirim
+
+## HARİTA MODÜLÜ (Yeni Özellik — 4 Nisan)
+
+- [x] VisitMap component (Leaflet.js entegrasyonu)
+- [x] Mahalle bazlı renklendirme (yeşil/kırmızı/sarı)
+- [x] Dashboard'da harita widget
+
+## DİĞER TAMAMLAMALAR (Dalga 1-3 sonrası)
+
+- [x] Public sayfa crash fix (useAuth sıralaması)
+- [x] Visitor register Firebase modu düzeltmesi
+- [x] Kod birleştirme: EventFormBase (3 form → 1 generic)
+- [x] Kod birleştirme: BranchPage (Kadın + Gençlik Kolları)
+- [x] Kod birleştirme: ManagementMembersPage (İlçe + Belde Üye)
+- [x] Audit log sistemi (middleware bazlı)
+- [x] 2FA admin hesabı
+- [x] SMS scheduler backend
+- [x] Kadın/Gençlik Kolları SQLite backend

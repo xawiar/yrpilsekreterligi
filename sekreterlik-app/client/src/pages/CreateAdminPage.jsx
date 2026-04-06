@@ -14,19 +14,7 @@ function CreateAdminPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [adminInfo, setAdminInfo] = useState(null);
-
-  // Sayfa yüklendiğinde otomatik olarak admin kullanıcısını oluştur
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!adminInfo && !loading) {
-        console.log('🚀 CreateAdminPage: Admin kullanıcısı otomatik oluşturuluyor...');
-        createAdmin();
-      }
-    }, 1000); // 1 saniye bekle, Firebase'in initialize olması için
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [inputPassword, setInputPassword] = useState('');
 
   const createAdmin = async () => {
     setLoading(true);
@@ -35,7 +23,12 @@ function CreateAdminPage() {
 
     try {
       const adminUsername = 'admin';
-      const adminPassword = '1491aaa1491';
+      const adminPassword = inputPassword;
+      if (!adminPassword || adminPassword.length < 6) {
+        setResult({ type: 'error', message: 'Şifre en az 6 karakter olmalıdır' });
+        setLoading(false);
+        return;
+      }
       const adminEmail = `${adminUsername}@ilsekreterlik.local`;
 
       let userCredential;
@@ -59,7 +52,6 @@ function CreateAdminPage() {
       }
 
       // Firestore'da admin bilgilerini kaydet
-      console.log('💾 Firestore\'da admin bilgileri kaydediliyor...');
       const adminDocRef = doc(db, 'admin', 'main');
 
       await setDoc(adminDocRef, {
@@ -71,17 +63,14 @@ function CreateAdminPage() {
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
-      console.log('✅ Admin bilgileri Firestore\'a kaydedildi!');
       setResult({
         type: 'success',
         message: '✅ Admin bilgileri Firestore\'a kaydedildi!'
       });
 
       // Bağlantıyı test et
-      console.log('🧪 Bağlantı test ediliyor...');
       const testDoc = await getDoc(adminDocRef);
       if (testDoc.exists()) {
-        console.log('✅ Admin dokümanı başarıyla okundu:', testDoc.data());
         setAdminInfo({
           username: adminUsername,
           email: adminEmail,
@@ -137,9 +126,24 @@ function CreateAdminPage() {
           </div>
         </div>
 
+        <div className="mb-4">
+          <label htmlFor="adminPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            Admin Şifresi
+          </label>
+          <input
+            id="adminPassword"
+            type="password"
+            value={inputPassword}
+            onChange={(e) => setInputPassword(e.target.value)}
+            placeholder="En az 6 karakter"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            minLength={6}
+          />
+        </div>
+
         <button
           onClick={createAdmin}
-          disabled={loading}
+          disabled={loading || !inputPassword || inputPassword.length < 6}
           className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 disabled:cursor-not-allowed flex items-center justify-center"
         >
           {loading ? (

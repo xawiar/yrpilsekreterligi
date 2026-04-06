@@ -77,7 +77,6 @@ const ClearAllDataPage = () => {
       const adminUid = adminDoc?.uid || null;
       const adminUsername = adminDoc?.username || 'admin';
 
-      console.log('Admin info:', { adminUid, adminUsername, adminDoc });
 
       // Her collection'ı temizle
       for (const collectionName of COLLECTIONS_TO_CLEAR) {

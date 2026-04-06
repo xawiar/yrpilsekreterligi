@@ -155,7 +155,7 @@ class GeminiService {
       // Function call kontrolü — Gemini bir araç çağırmak istiyorsa işle
       if (content?.parts?.[0]?.functionCall) {
         const functionCall = content.parts[0].functionCall;
-        const toolResult = await executeToolCall(functionCall.name, functionCall.args, this._siteData);
+        const toolResult = await executeToolCall(functionCall.name, functionCall.args, this._siteData, this._userRole);
 
         // Araç sonucunu Gemini'ye geri gönder; doğal dil yanıtı al
         const followUpBody = {

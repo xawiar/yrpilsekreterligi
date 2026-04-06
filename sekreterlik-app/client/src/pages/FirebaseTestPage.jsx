@@ -32,9 +32,6 @@ const FirebaseTestPage = () => {
       setResults([test1]);
 
       try {
-        console.log('🔍 Firebase Auth test başlıyor...');
-        console.log('🔍 Auth instance:', auth ? 'Mevcut' : 'Yok');
-        console.log('🔍 Project ID:', firebaseConfig.projectId);
         
         // Auth instance'ı kontrol et
         if (!auth) {
@@ -43,7 +40,6 @@ const FirebaseTestPage = () => {
         
         // Auth'un app'ine erişim kontrolü
         if (auth.app) {
-          console.log('✅ Auth app mevcut:', auth.app.name);
         }
         
         test1.status = 'success';
@@ -60,30 +56,23 @@ const FirebaseTestPage = () => {
       setResults(prev => [...prev, test2]);
 
       try {
-        console.log('🔍 Firestore test başlıyor...');
-        console.log('🔍 DB instance:', db ? 'Mevcut' : 'Yok');
         
         if (!db) {
           throw new Error('Firestore instance bulunamadı - db null veya undefined');
         }
         
-        console.log('📝 Test dokümanı oluşturuluyor...');
         // Test dokümanı oluştur
         const testDocRef = doc(db, 'test', 'connection');
         
-        console.log('💾 Firestore\'a yazma işlemi başlıyor...');
         await setDoc(testDocRef, {
           timestamp: new Date().toISOString(),
           test: true,
           projectId: firebaseConfig.projectId
         });
-        console.log('✅ Firestore\'a yazma başarılı');
         
-        console.log('📖 Firestore\'dan okuma işlemi başlıyor...');
         const testDoc = await getDoc(testDocRef);
         
         if (testDoc.exists()) {
-          console.log('✅ Test dokümanı okundu:', testDoc.data());
           test2.status = 'success';
           test2.message = '✅ Firestore bağlantısı başarılı - Yazma ve okuma test edildi';
         } else {
@@ -119,9 +108,6 @@ const FirebaseTestPage = () => {
       setResults(prev => [...prev, test3]);
 
       try {
-        console.log('🔍 Firebase Storage test başlıyor...');
-        console.log('🔍 Storage instance:', storage ? 'Mevcut' : 'Yok');
-        console.log('🔍 Storage Bucket:', firebaseConfig.storageBucket);
         
         if (!storage) {
           throw new Error('Firebase Storage instance bulunamadı - storage null veya undefined');
@@ -132,7 +118,6 @@ const FirebaseTestPage = () => {
         const testFileRef = ref(storage, testFileName);
         const testContent = new Blob(['Firebase Storage test - ' + new Date().toISOString()], { type: 'text/plain' });
         
-        console.log('📤 Test dosyası yükleniyor...');
         const snapshot = await uploadBytes(testFileRef, testContent, {
           contentType: 'text/plain',
           customMetadata: {
@@ -140,17 +125,12 @@ const FirebaseTestPage = () => {
             projectId: firebaseConfig.projectId
           }
         });
-        console.log('✅ Test dosyası yüklendi');
         
         // Download URL'i al
-        console.log('🔗 Download URL alınıyor...');
         const downloadURL = await getDownloadURL(snapshot.ref);
-        console.log('✅ Download URL alındı:', downloadURL);
         
         // Test dosyasını sil
-        console.log('🗑️ Test dosyası siliniyor...');
         await deleteObject(testFileRef);
-        console.log('✅ Test dosyası silindi');
         
         test3.status = 'success';
         test3.message = `✅ Firebase Storage bağlantısı başarılı (Bucket: ${firebaseConfig.storageBucket}) - Yazma, okuma ve silme test edildi`;

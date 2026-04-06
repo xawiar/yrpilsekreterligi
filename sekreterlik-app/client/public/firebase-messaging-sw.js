@@ -1,6 +1,9 @@
 // Firebase Cloud Messaging Service Worker
 // Bu dosya uygulama kapali/arka planda iken push bildirimlerini alir
 
+// VAPID key duplicated here because Service Workers cannot use ES module imports
+// Keep in sync with VITE_VAPID_PUBLIC_KEY in .env and config/firebase.js
+
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
 
