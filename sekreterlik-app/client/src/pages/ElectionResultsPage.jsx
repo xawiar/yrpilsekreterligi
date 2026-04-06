@@ -10,7 +10,7 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { calculateDHondt, calculateDHondtDetailed, calculateMunicipalCouncilSeats, calculateProvincialAssemblySeats } from '../utils/dhondt';
 
-import { PARTY_COLORS, getPartyColor } from '../utils/partyColors';
+import { PARTY_COLORS, getPartyColor, getPartyChartColor } from '../utils/partyColors';
 
 // Sandıkta en fazla oy alan partiyi/adayı bul (yeni seçim sistemine göre)
 const getWinningParty = (result, election) => {
@@ -910,7 +910,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     return base;
   };
 
-  // Chart colors
+  // Chart colors - fallback, parti renkleri icin getPartyChartColor kullan
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
 
   // Count-up animation hook
@@ -1832,9 +1832,9 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                           dataKey="value"
                         >
                                 {category.data.map((entry, index) => (
-                            <Cell 
+                            <Cell
                                     key={`pie-cell-${categoryIndex}-${index}`}
-                                    fill={COLORS[index % COLORS.length]}
+                                    fill={getPartyChartColor(entry.name, index)}
                             />
                           ))}
                         </Pie>
@@ -2030,7 +2030,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                     <Tooltip />
                     <Bar dataKey="seats" fill="#6366f1" radius={[8, 8, 0, 0]}>
                       {dhondtResults.chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={getPartyChartColor(entry.party, index)} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -2038,22 +2038,22 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
               </div>
               {/* Distribution List with Winning Candidates */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazında Dağılım ve Kazanan Adaylar</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Parti Bazinda Dagilim ve Kazanan Adaylar</h3>
                 <div className="space-y-3">
                   {dhondtResults.chartData
                     .sort((a, b) => b.seats - a.seats)
                     .map((item, index) => {
                       const winningCandidates = dhondtResults.winningCandidates?.[item.party] || [];
                       return (
-                        <div 
+                        <div
                           key={item.party}
                           className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <div 
+                              <div
                                 className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                style={{ backgroundColor: getPartyChartColor(item.party, index) }}
                               ></div>
                               <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{item.party}</span>
                             </div>
@@ -2149,7 +2149,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                     />
                     <Bar dataKey="seats" fill="#6366f1" radius={[8, 8, 0, 0]}>
                       {municipalCouncilResults.chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={getPartyChartColor(entry.party, index)} />
                       ))}
                     </Bar>
                   </BarChart>

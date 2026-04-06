@@ -1,34 +1,75 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect } from 'react';
 
 const Footer = () => {
-  const { t } = useTranslation();
+  const [footerText, setFooterText] = useState(null);
+
+  useEffect(() => {
+    const loadFooter = async () => {
+      try {
+        // Once localStorage'dan hizli yukle
+        const cached = localStorage.getItem('appBranding');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed.footerText) {
+              setFooterText(parsed.footerText);
+              return;
+            }
+          } catch (e) { /* varsayilan kullan */ }
+        }
+
+        // Firebase'den yukle
+        const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+        if (USE_FIREBASE) {
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('../config/firebase');
+            if (db) {
+              // Once app_settings koleksiyonundan dene (mevcut branding yapisi)
+              const { default: FirebaseService } = await import('../services/FirebaseService');
+              const allSettings = await FirebaseService.getAll('app_settings', {}, false);
+              const brandingSettings = allSettings.find(s => s.type === 'branding');
+              if (brandingSettings && brandingSettings.footerText) {
+                setFooterText(brandingSettings.footerText);
+              }
+            }
+          } catch (e) { /* varsayilan kullan */ }
+        }
+      } catch (e) { /* varsayilan kullan */ }
+    };
+
+    loadFooter();
+
+    // Branding guncellendiginde footer'i yeniden yukle
+    const handleBrandingUpdate = () => {
+      try {
+        const cached = localStorage.getItem('appBranding');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.footerText) {
+            setFooterText(parsed.footerText);
+          }
+        }
+      } catch (e) { /* sessiz */ }
+    };
+
+    window.addEventListener('brandingUpdated', handleBrandingUpdate);
+    return () => window.removeEventListener('brandingUpdated', handleBrandingUpdate);
+  }, []);
 
   return (
-    <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto flex-shrink-0">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div className="text-sm text-gray-600 dark:text-gray-400 text-center md:text-left">
-            <p>
-              &copy; {new Date().getFullYear()}{' '}
-              <a href="https://www.datdijital.com/" target="_blank" rel="noopener noreferrer"
-                className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-medium transition-colors">
-                DAT Dijital
-              </a>
-              . {t('footer.allRightsReserved')}
-            </p>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 text-center md:text-right">
-            <p>
-              {t('footer.technicalSupport')}{' '}
-              <a href="https://www.datdijital.com/" target="_blank" rel="noopener noreferrer"
-                className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 font-medium transition-colors">
-                DAT Dijital
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
+    <footer className="border-t border-gray-200 dark:border-gray-700 mt-auto flex-shrink-0 py-2">
+      <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+        {footerText || (
+          <>
+            &copy; {new Date().getFullYear()}{' '}
+            <a href="https://www.datdijital.com/" target="_blank" rel="noopener noreferrer"
+              className="hover:text-primary-500 transition-colors">
+              DAT Dijital
+            </a>
+          </>
+        )}
+      </p>
     </footer>
   );
 };

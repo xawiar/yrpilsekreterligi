@@ -1,52 +1,88 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useToast } from '../contexts/ToastContext';
 import { applyThemeColors } from '../utils/themeUtils';
 
-// Hazir tema sablonlari
-const THEME_TEMPLATES = {
-  'yrp-yesil': {
-    primary: '#16a34a',
-    name: 'YRP Yesil',
-    colors: { 50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac', 400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16' }
-  },
-  'akp-turuncu': {
-    primary: '#ea580c',
-    name: 'AKP Turuncu',
-    colors: { 50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 300: '#fdba74', 400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c', 800: '#9a3412', 900: '#7c2d12', 950: '#431407' }
-  },
-  'chp-kirmizi': {
-    primary: '#dc2626',
-    name: 'CHP Kirmizi',
-    colors: { 50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 300: '#fca5a5', 400: '#f87171', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', 800: '#991b1b', 900: '#7f1d1d', 950: '#450a0a' }
-  },
-  'mhp-kirmizi': {
-    primary: '#b91c1c',
-    name: 'MHP Kirmizi',
-    colors: { 50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 300: '#fca5a5', 400: '#f87171', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', 800: '#991b1b', 900: '#7f1d1d', 950: '#450a0a' }
-  },
-  'iyi-mavi': {
-    primary: '#2563eb',
-    name: 'IYI Mavi',
-    colors: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a', 950: '#172554' }
-  },
-  'deva-mor': {
-    primary: '#7c3aed',
-    name: 'DEVA Mor',
-    colors: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95', 950: '#2e1065' }
-  },
-  'gelecek-lacivert': {
-    primary: '#1e3a5f',
-    name: 'Gelecek Lacivert',
-    colors: { 50: '#f0f5fa', 100: '#dae4f2', 200: '#b5c9e5', 300: '#8faed8', 400: '#6a93cb', 500: '#4578be', 600: '#2d5f9e', 700: '#1e3a5f', 800: '#162d4a', 900: '#0e1f35', 950: '#071120' }
-  },
-  'varsayilan': {
-    primary: '#4f46e5',
-    name: 'Varsayilan (Indigo)',
-    colors: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4e' }
+// ---- Hex <-> HSL donusumleri ----
+function hexToHSL(hex) {
+  let r = parseInt(hex.slice(1, 3), 16) / 255;
+  let g = parseInt(hex.slice(3, 5), 16) / 255;
+  let b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
   }
-};
+
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToHex(h, s, l) {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/**
+ * HSL tabanli renk paleti uretici.
+ * Verilen hex rengi 500 shade olarak kabul eder ve
+ * diger shade'leri HSL lightness degerleriyle hesaplar.
+ */
+function generatePalette(hexColor) {
+  const hsl = hexToHSL(hexColor);
+  return {
+    50:  hslToHex(hsl.h, Math.min(hsl.s + 10, 100), 97),
+    100: hslToHex(hsl.h, Math.min(hsl.s + 5, 100), 93),
+    200: hslToHex(hsl.h, hsl.s, 85),
+    300: hslToHex(hsl.h, hsl.s, 73),
+    400: hslToHex(hsl.h, hsl.s, 60),
+    500: hslToHex(hsl.h, hsl.s, 48),
+    600: hslToHex(hsl.h, hsl.s, 40),
+    700: hslToHex(hsl.h, hsl.s, 33),
+    800: hslToHex(hsl.h, hsl.s, 25),
+    900: hslToHex(hsl.h, hsl.s, 18),
+    950: hslToHex(hsl.h, hsl.s, 10),
+  };
+}
+
+// ---- Parti renk preset'leri ----
+const THEME_PRESETS = [
+  { id: 'yrp-yesil',       name: 'YRP Yesil',        color: '#00843D' },
+  { id: 'akp-turuncu',     name: 'AKP Turuncu',      color: '#FFA500' },
+  { id: 'chp-kirmizi',     name: 'CHP Kirmizi',      color: '#ED1C24' },
+  { id: 'mhp-kirmizi',     name: 'MHP Kirmizi',      color: '#CC0000' },
+  { id: 'iyi-mavi',        name: 'IYI Parti Mavi',   color: '#0066B3' },
+  { id: 'varsayilan-mavi', name: 'Varsayilan Mavi',   color: '#3B82F6' },
+  { id: 'deva-mor',        name: 'DEVA Mor',          color: '#7c3aed' },
+  { id: 'varsayilan',      name: 'Varsayilan (Indigo)', color: '#4f46e5' },
+];
+
+// Her preset icin otomatik palet uret
+const THEME_TEMPLATES = {};
+THEME_PRESETS.forEach(p => {
+  THEME_TEMPLATES[p.id] = {
+    primary: p.color,
+    name: p.name,
+    colors: generatePalette(p.color),
+  };
+});
 
 const ThemeSettings = () => {
   const toast = useToast();
@@ -54,9 +90,11 @@ const ThemeSettings = () => {
   const [saving, setSaving] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('varsayilan');
   const [customColor, setCustomColor] = useState('#4f46e5');
+  const [hexInput, setHexInput] = useState('#4f46e5');
   const [themeSettings, setThemeSettings] = useState({
     primaryColor: '#4f46e5',
     templateId: 'varsayilan',
+    preset: 'varsayilan',
     footerText: '',
     footerCompanyName: '',
     footerCompanyUrl: '',
@@ -66,12 +104,18 @@ const ThemeSettings = () => {
   const [previewActive, setPreviewActive] = useState(false);
   const [originalTheme, setOriginalTheme] = useState(null);
 
+  // Secili rengin paleti (canli hesaplama)
+  const currentPalette = useMemo(() => {
+    const template = THEME_TEMPLATES[selectedTemplate];
+    return template ? template.colors : generatePalette(customColor);
+  }, [selectedTemplate, customColor]);
+
   // Firestore'dan tema ayarlarini yukle
   useEffect(() => {
-    loadThemeSettings();
+    loadThemeSettingsFromStore();
   }, []);
 
-  const loadThemeSettings = async () => {
+  const loadThemeSettingsFromStore = async () => {
     try {
       setLoading(true);
 
@@ -81,8 +125,9 @@ const ThemeSettings = () => {
         try {
           const parsed = JSON.parse(cached);
           setThemeSettings(parsed);
-          setSelectedTemplate(parsed.templateId || 'varsayilan');
+          setSelectedTemplate(parsed.templateId || parsed.preset || 'varsayilan');
           setCustomColor(parsed.primaryColor || '#4f46e5');
+          setHexInput(parsed.primaryColor || '#4f46e5');
         } catch (e) {
           // Sessizce devam
         }
@@ -94,7 +139,8 @@ const ThemeSettings = () => {
         const data = themeDoc.data();
         const settings = {
           primaryColor: data.primaryColor || '#4f46e5',
-          templateId: data.templateId || 'varsayilan',
+          templateId: data.templateId || data.preset || 'varsayilan',
+          preset: data.preset || data.templateId || 'varsayilan',
           footerText: data.footerText || '',
           footerCompanyName: data.footerCompanyName || '',
           footerCompanyUrl: data.footerCompanyUrl || '',
@@ -104,7 +150,8 @@ const ThemeSettings = () => {
         setThemeSettings(settings);
         setSelectedTemplate(settings.templateId);
         setCustomColor(settings.primaryColor);
-        localStorage.setItem('themeSettings', JSON.stringify(settings));
+        setHexInput(settings.primaryColor);
+        localStorage.setItem('themeSettings', JSON.stringify({ ...settings, colors: data.colors }));
       }
     } catch (error) {
       console.error('Error loading theme settings:', error);
@@ -113,34 +160,51 @@ const ThemeSettings = () => {
     }
   };
 
-  // Tema sablonu secildiginde
+  // Tema sablonu / preset secildiginde
   const handleTemplateSelect = (templateId) => {
     const template = THEME_TEMPLATES[templateId];
     if (!template) return;
 
     setSelectedTemplate(templateId);
     setCustomColor(template.primary);
+    setHexInput(template.primary);
     setThemeSettings(prev => ({
       ...prev,
       templateId,
+      preset: templateId,
       primaryColor: template.primary
     }));
 
-    // Canli onizleme uygula
+    // Canli onizleme aktifse hemen uygula
     if (previewActive) {
       applyThemeColors(template.colors);
     }
   };
 
-  // Ozel renk secildiginde
+  // Ozel renk secildiginde (color picker)
   const handleCustomColorChange = (color) => {
     setCustomColor(color);
+    setHexInput(color);
     setSelectedTemplate('custom');
     setThemeSettings(prev => ({
       ...prev,
       templateId: 'custom',
+      preset: 'custom',
       primaryColor: color
     }));
+
+    // Canli onizleme aktifse hemen uygula
+    if (previewActive) {
+      applyThemeColors(generatePalette(color));
+    }
+  };
+
+  // Hex input ile renk degistirme
+  const handleHexInputChange = (value) => {
+    setHexInput(value);
+    if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+      handleCustomColorChange(value);
+    }
   };
 
   // Canli onizleme ac/kapat
@@ -155,12 +219,7 @@ const ThemeSettings = () => {
       setOriginalTheme(current);
 
       // Secili tema onizlemesini uygula
-      const template = THEME_TEMPLATES[selectedTemplate];
-      if (template) {
-        applyThemeColors(template.colors);
-      } else {
-        applyThemeColors(generatePalette(customColor));
-      }
+      applyThemeColors(currentPalette);
       setPreviewActive(true);
     } else {
       // Orijinal temayi geri yukle
@@ -169,20 +228,20 @@ const ThemeSettings = () => {
       }
       setPreviewActive(false);
     }
-  }, [previewActive, selectedTemplate, customColor, originalTheme]);
+  }, [previewActive, currentPalette, originalTheme]);
 
   // Kaydet
   const handleSave = async () => {
     try {
       setSaving(true);
 
-      // Renk paleti olustur
-      const template = THEME_TEMPLATES[selectedTemplate];
-      const colors = template ? template.colors : generatePalette(customColor);
-
       const saveData = {
         ...themeSettings,
-        colors,
+        primaryColor: customColor,
+        palette: currentPalette,
+        colors: currentPalette,
+        preset: selectedTemplate,
+        templateId: selectedTemplate,
         updatedAt: new Date().toISOString()
       };
 
@@ -193,7 +252,7 @@ const ThemeSettings = () => {
       localStorage.setItem('themeSettings', JSON.stringify(saveData));
 
       // CSS variable'lari uygula
-      applyThemeColors(colors);
+      applyThemeColors(currentPalette);
       setPreviewActive(false);
 
       // Diger componentlere bildir
@@ -215,9 +274,11 @@ const ThemeSettings = () => {
 
     setSelectedTemplate(defaultTemplate);
     setCustomColor(template.primary);
+    setHexInput(template.primary);
     setThemeSettings({
       primaryColor: template.primary,
       templateId: defaultTemplate,
+      preset: defaultTemplate,
       footerText: '',
       footerCompanyName: '',
       footerCompanyUrl: '',
@@ -250,30 +311,33 @@ const ThemeSettings = () => {
         </p>
       </div>
 
-      {/* Hazir Tema Sablonlari */}
+      {/* Parti Renk Preset'leri */}
       <div className="space-y-3">
         <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
-          Hazir Tema Sablonlari
+          Parti Renk Preset'leri
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {Object.entries(THEME_TEMPLATES).map(([id, template]) => (
+          {THEME_PRESETS.map((preset) => (
             <button
-              key={id}
-              onClick={() => handleTemplateSelect(id)}
+              key={preset.id}
+              onClick={() => handleTemplateSelect(preset.id)}
               className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                selectedTemplate === id
+                selectedTemplate === preset.id
                   ? 'border-primary-500 ring-2 ring-primary-500/20 bg-primary-50 dark:bg-primary-900/20'
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <div
                 className="w-full h-8 rounded-lg mb-2"
-                style={{ backgroundColor: template.primary }}
+                style={{ backgroundColor: preset.color }}
               />
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {template.name}
+                {preset.name}
               </p>
-              {selectedTemplate === id && (
+              <p className="text-[10px] font-mono text-gray-400 dark:text-gray-500 mt-0.5">
+                {preset.color}
+              </p>
+              {selectedTemplate === preset.id && (
                 <div className="absolute top-2 right-2">
                   <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -290,7 +354,7 @@ const ThemeSettings = () => {
         <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
           Ozel Renk Secimi
         </h3>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <label htmlFor="setting-theme-color" className="sr-only">Ozel renk sec</label>
             <input
@@ -301,15 +365,27 @@ const ThemeSettings = () => {
               className="w-12 h-12 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600"
               title="Ozel renk sec"
             />
-            <div>
-              <p className="text-sm text-gray-700 dark:text-gray-300">Secili renk:</p>
-              <code className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                {customColor}
-              </code>
-            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="setting-hex-input" className="text-sm text-gray-700 dark:text-gray-300">Hex:</label>
+            <input
+              id="setting-hex-input"
+              type="text"
+              value={hexInput}
+              onChange={(e) => handleHexInputChange(e.target.value)}
+              className="w-28 px-3 py-1.5 text-sm font-mono bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:text-gray-100"
+              placeholder="#000000"
+              maxLength={7}
+            />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span>HSL:</span>
+            <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
+              {(() => { const hsl = hexToHSL(customColor); return `${hsl.h}, ${hsl.s}%, ${hsl.l}%`; })()}
+            </code>
           </div>
           <div
-            className="flex-1 h-10 rounded-lg shadow-inner"
+            className="flex-1 min-w-[80px] h-10 rounded-lg shadow-inner"
             style={{ backgroundColor: customColor }}
           />
         </div>
@@ -321,45 +397,132 @@ const ThemeSettings = () => {
           Renk Paleti Onizleme
         </h3>
         <div className="flex gap-1 rounded-lg overflow-hidden">
-          {(() => {
-            const template = THEME_TEMPLATES[selectedTemplate];
-            const colors = template ? template.colors : generatePalette(customColor);
-            return [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((shade) => (
-              <div
-                key={shade}
-                className="flex-1 h-12 relative group cursor-pointer"
-                style={{ backgroundColor: colors[shade] || customColor }}
-                title={`${shade}: ${colors[shade] || customColor}`}
-              >
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity text-white mix-blend-difference">
-                  {shade}
-                </span>
-              </div>
-            ));
-          })()}
+          {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((shade) => (
+            <div
+              key={shade}
+              className="flex-1 h-14 relative group cursor-pointer"
+              style={{ backgroundColor: currentPalette[shade] || customColor }}
+              title={`${shade}: ${currentPalette[shade] || customColor}`}
+            >
+              <span className="absolute inset-0 flex flex-col items-center justify-center text-[9px] font-mono opacity-0 group-hover:opacity-100 transition-opacity text-white mix-blend-difference leading-tight">
+                <span>{shade}</span>
+                <span>{currentPalette[shade]}</span>
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Canli Onizleme Butonu */}
-      <div className="flex gap-3">
-        <button
-          onClick={togglePreview}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            previewActive
-              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-              : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-        >
-          {previewActive ? 'Onizlemeyi Kapat' : 'Canli Onizleme'}
-        </button>
-        {previewActive && (
-          <p className="flex items-center text-sm text-amber-600 dark:text-amber-400">
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            Onizleme modu aktif - Kaydetmeden degisiklikler kaybolur
-          </p>
-        )}
+      {/* Canli Onizleme Butonu + Panel */}
+      <div className="space-y-4">
+        <div className="flex gap-3 items-center">
+          <button
+            onClick={togglePreview}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              previewActive
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            {previewActive ? 'Onizlemeyi Kapat (CSS Geri Al)' : 'Sayfaya Canli Uygula'}
+          </button>
+          {previewActive && (
+            <p className="flex items-center text-sm text-amber-600 dark:text-amber-400">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Onizleme modu aktif - Kaydetmeden degisiklikler kaybolur
+            </p>
+          )}
+        </div>
+
+        {/* Canli Onizleme Paneli -- her zaman gosterilir, palet degisince aninda guncellenir */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            Canli Onizleme Paneli
+          </div>
+          <div className="p-6 bg-white dark:bg-gray-900 space-y-6">
+            {/* Ornek Kart */}
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: currentPalette[200] }}>
+              <div className="px-5 py-3 text-white text-sm font-semibold" style={{ background: `linear-gradient(135deg, ${currentPalette[600]}, ${currentPalette[700]})` }}>
+                Ornek Kart Basligi
+              </div>
+              <div className="px-5 py-4 space-y-2" style={{ backgroundColor: currentPalette[50] }}>
+                <p className="text-sm" style={{ color: currentPalette[900] }}>
+                  Bu bir ornek kart icerigidir. Renklerin nasil gorunecegini buradan kontrol edebilirsiniz.
+                </p>
+                <p className="text-xs" style={{ color: currentPalette[500] }}>
+                  Alt bilgi metni - 500 tonu
+                </p>
+              </div>
+            </div>
+
+            {/* Buton Onizlemeleri */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Butonlar</p>
+              <div className="flex flex-wrap gap-3">
+                <button className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style={{ backgroundColor: currentPalette[600] }}>
+                  Primary
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium border transition-colors" style={{ backgroundColor: currentPalette[50], color: currentPalette[700], borderColor: currentPalette[200] }}>
+                  Secondary
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 transition-colors">
+                  Danger
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style={{ backgroundColor: currentPalette[700] }}>
+                  Dark Primary
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: currentPalette[100], color: currentPalette[800] }}>
+                  Subtle
+                </button>
+              </div>
+            </div>
+
+            {/* Metin Onizlemesi */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Metin Renkleri</p>
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold" style={{ color: currentPalette[900] }}>Baslik metni (900)</p>
+                <p className="text-sm" style={{ color: currentPalette[700] }}>Normal metin (700)</p>
+                <p className="text-sm" style={{ color: currentPalette[500] }}>Aciklama metni (500)</p>
+                <p className="text-sm" style={{ color: currentPalette[400] }}>Deaktif metin (400)</p>
+              </div>
+            </div>
+
+            {/* Arka Plan Onizlemesi */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Arka Plan Tonlari</p>
+              <div className="flex gap-2 flex-wrap">
+                {[50, 100, 200, 300, 400].map(shade => (
+                  <div key={shade} className="px-3 py-2 rounded-lg text-xs font-mono" style={{ backgroundColor: currentPalette[shade], color: shade >= 300 ? '#fff' : currentPalette[800] }}>
+                    bg-{shade}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sidebar Benzeri Onizleme */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sidebar Menu Onizleme</p>
+              <div className="w-64 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+                <div className="px-4 py-3 text-sm font-bold" style={{ color: currentPalette[700] }}>
+                  Parti Sekreterligi
+                </div>
+                <div className="px-2 py-1">
+                  <div className="flex items-center px-3 py-2 rounded-lg text-sm font-medium" style={{ background: `linear-gradient(to right, ${currentPalette[50]}, ${currentPalette[100]})`, color: currentPalette[700], border: `1px solid ${currentPalette[100]}` }}>
+                    <span className="w-4 h-4 mr-2 rounded" style={{ backgroundColor: currentPalette[600] }}></span>
+                    Aktif Menu Ogesi
+                  </div>
+                  <div className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 mt-1">
+                    <span className="w-4 h-4 mr-2 rounded bg-gray-300 dark:bg-gray-600"></span>
+                    Diger Menu Ogesi
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <hr className="border-gray-200 dark:border-gray-700" />
@@ -399,7 +562,7 @@ const ThemeSettings = () => {
         </div>
       </div>
 
-      {/* Footer sabit — DAT Dijital (gelistirici bilgisi, degistirilemez) */}
+      {/* Footer sabit -- DAT Dijital (gelistirici bilgisi, degistirilemez) */}
 
       <hr className="border-gray-200 dark:border-gray-700" />
 
@@ -431,46 +594,5 @@ const ThemeSettings = () => {
   );
 };
 
-/**
- * Tek bir hex renkten tam palet uretir (basit hesaplama)
- */
-function generatePalette(hex) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-
-  const lighten = (r, g, b, amt) => {
-    return [
-      Math.min(255, Math.round(r + (255 - r) * amt)),
-      Math.min(255, Math.round(g + (255 - g) * amt)),
-      Math.min(255, Math.round(b + (255 - b) * amt))
-    ];
-  };
-
-  const darken = (r, g, b, amt) => {
-    return [
-      Math.max(0, Math.round(r * (1 - amt))),
-      Math.max(0, Math.round(g * (1 - amt))),
-      Math.max(0, Math.round(b * (1 - amt)))
-    ];
-  };
-
-  const toHex = ([r, g, b]) => '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
-
-  return {
-    50: toHex(lighten(r, g, b, 0.95)),
-    100: toHex(lighten(r, g, b, 0.88)),
-    200: toHex(lighten(r, g, b, 0.75)),
-    300: toHex(lighten(r, g, b, 0.55)),
-    400: toHex(lighten(r, g, b, 0.3)),
-    500: toHex(lighten(r, g, b, 0.1)),
-    600: hex,
-    700: toHex(darken(r, g, b, 0.15)),
-    800: toHex(darken(r, g, b, 0.3)),
-    900: toHex(darken(r, g, b, 0.45)),
-    950: toHex(darken(r, g, b, 0.65))
-  };
-}
-
-export { THEME_TEMPLATES, generatePalette };
+export { THEME_TEMPLATES, THEME_PRESETS, generatePalette, hexToHSL, hslToHex };
 export default ThemeSettings;

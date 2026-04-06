@@ -5,6 +5,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from './UI/ConfirmDialog';
 import { updateFavicon } from '../utils/themeUtils';
 import { getMemberId } from '../utils/normalizeId';
+import FirebaseStorageService from '../utils/FirebaseStorageService';
 
 const AppBrandingSettings = () => {
   const toast = useToast();
@@ -19,14 +20,19 @@ const AppBrandingSettings = () => {
     icon512Url: '',
     badgeUrl: '',
     notificationIconUrl: '',
-    headerInfoText: ''
+    faviconUrl: '',
+    headerInfoText: '',
+    footerText: ''
   });
+  const [useStorageUpload, setUseStorageUpload] = useState(true);
+  const [uploading, setUploading] = useState({});
   const [preview, setPreview] = useState({
     logo: null,
     icon192: null,
     icon512: null,
     badge: null,
-    notificationIcon: null
+    notificationIcon: null,
+    favicon: null
   });
 
   useEffect(() => {
@@ -48,7 +54,8 @@ const AppBrandingSettings = () => {
             icon192: cached.icon192Url || null,
             icon512: cached.icon512Url || null,
             badge: cached.badgeUrl || null,
-            notificationIcon: cached.notificationIconUrl || null
+            notificationIcon: cached.notificationIconUrl || null,
+            favicon: cached.faviconUrl || null
           });
         } catch (e) {
           console.warn('Error parsing cached settings:', e);
@@ -73,7 +80,9 @@ const AppBrandingSettings = () => {
               icon512Url: data.icon512Url || '',
               badgeUrl: data.badgeUrl || '',
               notificationIconUrl: data.notificationIconUrl || '',
-              headerInfoText: data.headerInfoText || ''
+              faviconUrl: data.faviconUrl || '',
+              headerInfoText: data.headerInfoText || '',
+              footerText: data.footerText || ''
             };
             setSettings(loadedSettings);
             // Preview'ları da ayarla
@@ -82,7 +91,8 @@ const AppBrandingSettings = () => {
               icon192: loadedSettings.icon192Url || null,
               icon512: loadedSettings.icon512Url || null,
               badge: loadedSettings.badgeUrl || null,
-              notificationIcon: loadedSettings.notificationIconUrl || null
+              notificationIcon: loadedSettings.notificationIconUrl || null,
+              favicon: loadedSettings.faviconUrl || null
             });
             // localStorage'a da kaydet
             localStorage.setItem('appBranding', JSON.stringify(loadedSettings));
@@ -112,7 +122,7 @@ const AppBrandingSettings = () => {
 
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
-  const handleFileChange = (field, file) => {
+  const handleFileChange = async (field, file) => {
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE) {
@@ -120,13 +130,44 @@ const AppBrandingSettings = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target.result;
-      setSettings(prev => ({ ...prev, [field]: imageUrl }));
-      setPreview(prev => ({ ...prev, [field.replace('Url', '')]: imageUrl }));
-    };
-    reader.readAsDataURL(file);
+    const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+
+    if (useStorageUpload && USE_FIREBASE) {
+      // Firebase Storage'a yukle
+      try {
+        setUploading(prev => ({ ...prev, [field]: true }));
+        const storagePath = `branding/${field.replace('Url', '')}_${Date.now()}.${file.name.split('.').pop() || 'png'}`;
+        const downloadURL = await FirebaseStorageService.uploadFile(file, storagePath, {
+          contentType: file.type,
+          customMetadata: { field, uploadedAt: new Date().toISOString() }
+        });
+        setSettings(prev => ({ ...prev, [field]: downloadURL }));
+        setPreview(prev => ({ ...prev, [field.replace('Url', '')]: downloadURL }));
+        toast.success(`${field.replace('Url', '')} Firebase Storage'a yuklendi`);
+      } catch (error) {
+        console.error('Storage upload error:', error);
+        toast.error('Storage yuklemesi basarisiz, base64 olarak kaydediliyor...');
+        // Fallback to base64
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const imageUrl = e.target.result;
+          setSettings(prev => ({ ...prev, [field]: imageUrl }));
+          setPreview(prev => ({ ...prev, [field.replace('Url', '')]: imageUrl }));
+        };
+        reader.readAsDataURL(file);
+      } finally {
+        setUploading(prev => ({ ...prev, [field]: false }));
+      }
+    } else {
+      // Base64 olarak kaydet (eski davranis)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target.result;
+        setSettings(prev => ({ ...prev, [field]: imageUrl }));
+        setPreview(prev => ({ ...prev, [field.replace('Url', '')]: imageUrl }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = async () => {
@@ -182,8 +223,8 @@ const AppBrandingSettings = () => {
       // Service Worker'ı güncelle (PWA güncellemesi için)
       await triggerServiceWorkerUpdate();
       
-      // Favicon guncelle (logo veya icon192 ile)
-      const faviconSource = settings.icon192Url || settings.logoUrl;
+      // Favicon guncelle (ozel favicon > icon192 > logo sirasi ile)
+      const faviconSource = settings.faviconUrl || settings.icon192Url || settings.logoUrl;
       if (faviconSource) {
         updateFavicon(faviconSource);
       }
@@ -236,23 +277,31 @@ const AppBrandingSettings = () => {
         ]
       };
       
-      // Manifest'i localStorage'a kaydet (runtime'da kullanmak için)
+      // Manifest'i localStorage'a kaydet (runtime'da kullanmak icin)
       localStorage.setItem('appManifest', JSON.stringify(manifest));
-      
-      // Document title'ı güncelle
+
+      // Manifest link'ini DOM'da guncelle (blob URL ile)
+      try {
+        const { updateManifest: updateManifestDOM } = await import('../utils/brandingLoader');
+        updateManifestDOM(manifest);
+      } catch (e) {
+        console.warn('Error updating manifest DOM link:', e);
+      }
+
+      // Document title'i guncelle
       if (settings.appName) {
         document.title = settings.appName;
       }
-      
-      // Meta description'ı güncelle
+
+      // Meta description'i guncelle
       let metaDescription = document.querySelector('meta[name="description"]');
       if (!metaDescription) {
         metaDescription = document.createElement('meta');
         metaDescription.name = 'description';
         document.head.appendChild(metaDescription);
       }
-      metaDescription.content = settings.appDescription || 'Parti sekreterlik yönetim sistemi';
-      
+      metaDescription.content = settings.appDescription || 'Parti sekreterlik yonetim sistemi';
+
     } catch (error) {
       console.error('Error updating manifest:', error);
     }
@@ -413,7 +462,7 @@ const AppBrandingSettings = () => {
       {/* Header Bilgilendirme Metni */}
       <div className="space-y-2">
         <label htmlFor="setting-header-info-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Web Sayfası Üstündeki Bilgilendirme Metni
+          Web Sayfasi Ustundeki Bilgilendirme Metni
         </label>
         <textarea
           id="setting-header-info-text"
@@ -421,8 +470,43 @@ const AppBrandingSettings = () => {
           onChange={(e) => setSettings(prev => ({ ...prev, headerInfoText: e.target.value }))}
           rows={2}
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
-          placeholder="Örn: Resmi web sitesi bilgilendirme metni"
+          placeholder="Orn: Resmi web sitesi bilgilendirme metni"
         />
+      </div>
+
+      {/* Footer Metni */}
+      <div className="space-y-2">
+        <label htmlFor="setting-footer-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Footer Metni
+        </label>
+        <input
+          id="setting-footer-text"
+          type="text"
+          value={settings.footerText}
+          onChange={(e) => setSettings(prev => ({ ...prev, footerText: e.target.value }))}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+          placeholder={`© ${new Date().getFullYear()} Firma Adi`}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Bos birakilirsa varsayilan "DAT Dijital" metni gosterilir.
+        </p>
+      </div>
+
+      {/* Firebase Storage Upload Toggle */}
+      <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <input
+          id="use-storage-upload"
+          type="checkbox"
+          checked={useStorageUpload}
+          onChange={(e) => setUseStorageUpload(e.target.checked)}
+          className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+        />
+        <label htmlFor="use-storage-upload" className="text-sm text-gray-700 dark:text-gray-300">
+          Gorselleri Firebase Storage'a yukle (onerilen)
+        </label>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Kapali olursa base64 olarak Firestore'a kaydedilir
+        </span>
       </div>
 
       {/* Logo */}
@@ -435,9 +519,11 @@ const AppBrandingSettings = () => {
             id="setting-logo"
             type="file"
             accept="image/*"
+            disabled={uploading.logoUrl}
             onChange={(e) => handleFileChange('logoUrl', e.target.files[0])}
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
+          {uploading.logoUrl && <span className="text-xs text-indigo-600 animate-pulse">Yukleniyor...</span>}
           {preview.logo && (
             <img src={preview.logo} alt="Logo Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
@@ -454,9 +540,11 @@ const AppBrandingSettings = () => {
             id="setting-icon192"
             type="file"
             accept="image/*"
+            disabled={uploading.icon192Url}
             onChange={(e) => handleFileChange('icon192Url', e.target.files[0])}
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
+          {uploading.icon192Url && <span className="text-xs text-indigo-600 animate-pulse">Yukleniyor...</span>}
           {preview.icon192 && (
             <img src={preview.icon192} alt="Icon 192 Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
@@ -473,9 +561,11 @@ const AppBrandingSettings = () => {
             id="setting-icon512"
             type="file"
             accept="image/*"
+            disabled={uploading.icon512Url}
             onChange={(e) => handleFileChange('icon512Url', e.target.files[0])}
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
+          {uploading.icon512Url && <span className="text-xs text-indigo-600 animate-pulse">Yukleniyor...</span>}
           {preview.icon512 && (
             <img src={preview.icon512} alt="Icon 512 Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
@@ -492,9 +582,11 @@ const AppBrandingSettings = () => {
             id="setting-badge-icon"
             type="file"
             accept="image/*"
+            disabled={uploading.badgeUrl}
             onChange={(e) => handleFileChange('badgeUrl', e.target.files[0])}
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
+          {uploading.badgeUrl && <span className="text-xs text-indigo-600 animate-pulse">Yukleniyor...</span>}
           {preview.badge && (
             <img src={preview.badge} alt="Badge Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
           )}
@@ -511,11 +603,37 @@ const AppBrandingSettings = () => {
             id="setting-notification-icon"
             type="file"
             accept="image/*"
+            disabled={uploading.notificationIconUrl}
             onChange={(e) => handleFileChange('notificationIconUrl', e.target.files[0])}
             className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
           />
+          {uploading.notificationIconUrl && <span className="text-xs text-indigo-600 animate-pulse">Yukleniyor...</span>}
           {preview.notificationIcon && (
             <img src={preview.notificationIcon} alt="Notification Icon Preview" className="w-16 h-16 object-contain rounded" loading="lazy" decoding="async" />
+          )}
+        </div>
+      </div>
+
+      {/* Favicon */}
+      <div className="space-y-2">
+        <label htmlFor="setting-favicon" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Favicon - Tarayici sekmesindeki kucuk ikon
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Bos birakilirsa Icon 192x192 veya Logo otomatik olarak favicon olarak kullanilir.
+        </p>
+        <div className="flex items-center space-x-4">
+          <input
+            id="setting-favicon"
+            type="file"
+            accept="image/*"
+            disabled={uploading.faviconUrl}
+            onChange={(e) => handleFileChange('faviconUrl', e.target.files[0])}
+            className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900 dark:file:text-indigo-300"
+          />
+          {uploading.faviconUrl && <span className="text-xs text-indigo-600 animate-pulse">Yukleniyor...</span>}
+          {preview.favicon && (
+            <img src={preview.favicon} alt="Favicon Preview" className="w-8 h-8 object-contain rounded" loading="lazy" decoding="async" />
           )}
         </div>
       </div>

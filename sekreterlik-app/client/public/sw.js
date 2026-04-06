@@ -107,9 +107,6 @@ self.addEventListener('push', (event) => {
     data = event.data.json();
   }
   
-  // Get badge count from data
-  const badgeCount = data.data?.badgeCount || null;
-  
   const options = {
     body: data.body || 'Yeni bildirim',
     icon: data.icon || '/icon-192x192.png',
