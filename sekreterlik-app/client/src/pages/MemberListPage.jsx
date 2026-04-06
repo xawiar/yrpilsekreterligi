@@ -77,13 +77,14 @@ const MemberListPage = () => {
     }));
   }, [members]);
 
-  // Excel EXPORT — sadece isim, bölge, görev, müfettişlik, bağlı kişi
+  // Excel EXPORT — isim, bölge, görev, müfettişlik, ilçe, bağlı kişi
   const handleExcelExport = useCallback(() => {
     const data = filteredMembers.map(m => ({
       'Ad Soyad': m.name || '',
       'Bölge': m.region || '',
       'Görev': m.position || '',
       'Müfettişlik': m.inspectorTitle || '',
+      'Müfettiş İlçesi': m.inspectorDistrict || '',
       'Bağlı Olduğu Kişi': getSupervisorName(m.supervisorId)
     }));
 
@@ -132,6 +133,7 @@ const MemberListPage = () => {
         const newRegion = (row['Bölge'] || '').trim();
         const newPosition = (row['Görev'] || '').trim();
         const newInspectorTitle = (row['Müfettişlik'] || '').trim();
+        const newInspectorDistrict = (row['Müfettiş İlçesi'] || '').trim();
         const newSupervisorName = (row['Bağlı Olduğu Kişi'] || '').trim();
 
         // Bağlı kişi ID bul
@@ -146,6 +148,7 @@ const MemberListPage = () => {
           (newRegion && newRegion !== (member.region || '')) ||
           (newPosition && newPosition !== (member.position || '')) ||
           (newInspectorTitle !== (member.inspectorTitle || '')) ||
+          (newInspectorDistrict !== (member.inspectorDistrict || '')) ||
           (newSupervisorId !== (member.supervisorId || ''));
 
         if (!changed) { skipped++; continue; }
@@ -156,6 +159,7 @@ const MemberListPage = () => {
           if (newRegion) updateData.region = newRegion;
           if (newPosition) updateData.position = newPosition;
           updateData.inspectorTitle = newInspectorTitle || null;
+          updateData.inspectorDistrict = newInspectorDistrict || null;
           updateData.supervisorId = newSupervisorId || null;
 
           await ApiService.updateMember(member.id, updateData);
@@ -190,6 +194,7 @@ const MemberListPage = () => {
       'Bölge': m.region || '',
       'Görev': m.position || '',
       'Müfettişlik': m.inspectorTitle || '',
+      'Müfettiş İlçesi': m.inspectorDistrict || '',
       'Bağlı Olduğu Kişi': getSupervisorName(m.supervisorId)
     }));
 
@@ -340,6 +345,7 @@ const MemberListPage = () => {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bölge</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Görev</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Müfettişlik</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Müfettiş İlçesi</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bağlı Olduğu</th>
                   </tr>
                 </thead>
@@ -356,6 +362,7 @@ const MemberListPage = () => {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${m.inspectorTitle === 'Müfettiş' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'}`}>{m.inspectorTitle}</span>
                         ) : <span className="text-sm text-gray-400">-</span>}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{m.inspectorDistrict || '-'}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{getSupervisorName(m.supervisorId) || '-'}</td>
                     </tr>
                   ))}
