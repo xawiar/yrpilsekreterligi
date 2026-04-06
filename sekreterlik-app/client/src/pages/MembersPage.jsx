@@ -635,6 +635,7 @@ const MembersPage = () => {
             member={selectedMember}
             regions={regions}
             positions={positions}
+            members={allMembers}
             onClose={closeFormModal}
             onMemberSaved={handleMemberSaved}
           />
@@ -848,6 +849,7 @@ const MembersPage = () => {
           member={selectedMember}
           regions={regions}
           positions={positions}
+          members={allMembers}
           onClose={closeFormModal}
           onMemberSaved={handleMemberSaved}
         />

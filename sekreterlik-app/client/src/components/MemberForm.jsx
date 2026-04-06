@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 
-const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
+const MemberForm = ({ member, regions, positions, members, onClose, onMemberSaved }) => {
   const [formData, setFormData] = useState({
     tc: '',
     name: '',
     phone: '',
     position: '',
-    region: ''
+    region: '',
+    inspectorTitle: '',
+    supervisorId: ''
   });
   const [error, setError] = useState(''); // Add state for error messages
   const [successMessage, setSuccessMessage] = useState(''); // Add state for success messages with credentials
@@ -33,7 +35,9 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
         name: member.name || '',
         phone: member.phone || '',
         position: member.position || '',
-        region: member.region || ''
+        region: member.region || '',
+        inspectorTitle: member.inspectorTitle || '',
+        supervisorId: member.supervisorId || ''
       });
     }
   }, [member]);
@@ -400,6 +404,47 @@ const MemberForm = ({ member, regions, positions, onClose, onMemberSaved }) => {
               ))}
             </select>
           </div>
+
+          <div>
+            <label htmlFor="member-inspectorTitle" className="block text-sm font-medium text-gray-700 mb-1">
+              Müfettişlik
+            </label>
+            <select
+              id="member-inspectorTitle"
+              name="inspectorTitle"
+              value={formData.inspectorTitle}
+              onChange={handleChange}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+            >
+              <option value="">(Bos)</option>
+              <option value="Müfettiş">Müfettis</option>
+              <option value="Müfettiş Yardımcısı">Müfettis Yardimcisi</option>
+            </select>
+          </div>
+
+          {(formData.inspectorTitle === 'Müfettiş Yardımcısı' || (formData.position && formData.position.toLowerCase().includes('yardımcı'))) && (
+            <div>
+              <label htmlFor="member-supervisorId" className="block text-sm font-medium text-gray-700 mb-1">
+                Kimin yardimcisi?
+              </label>
+              <select
+                id="member-supervisorId"
+                name="supervisorId"
+                value={formData.supervisorId}
+                onChange={handleChange}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+              >
+                <option value="">Seciniz</option>
+                {(members || [])
+                  .filter(m => !member || String(m.id) !== String(member.id))
+                  .map(m => (
+                    <option key={m.id} value={String(m.id)}>
+                      {m.name}{m.position ? ` - ${m.position}` : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Fotograf Yukleme */}

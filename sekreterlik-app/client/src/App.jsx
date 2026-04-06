@@ -63,6 +63,7 @@ const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
 const CoordinatorLoginPage = lazy(() => import('./pages/CoordinatorLoginPage'));
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage'));
+const MemberListPage = lazy(() => import('./pages/MemberListPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const PublicApplicationPage = lazy(() => import('./pages/PublicApplicationPage'));
@@ -463,6 +464,7 @@ function AuthenticatedContent() {
                         <AnimatePresence mode="wait">
                           <Routes key={location.pathname}>
                             <Route path="/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MembersPage /></Suspense></PageTransition>} />
+                            <Route path="/member-list" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MemberListPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TeşkilatPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat/ilçeler" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictsPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat/kadın-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BranchPage type="women" /></Suspense></PageTransition>} />
