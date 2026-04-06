@@ -13,10 +13,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/admin/main).data.uid == request.auth.uid;
     }
 
-    // Admin settings - admin only
+    // Admin settings - authenticated can read, admin can write
+    // Login flow needs to create/update admin/main doc before isAdmin() works
     match /admin/{document} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     // Push tokens — authenticated users can save their own token
@@ -147,17 +149,51 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Audit logs - admin only
+    // User notifications — subcollection items
+    match /user_notifications/{userId}/items/{itemId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+    // User notifications — parent doc
+    match /user_notifications/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // App settings (branding, theme, etc.)
+    match /app_settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Performance score config
+    match /performance_score_config/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Audit logs - admin read, authenticated create, immutable
     match /audit_logs/{logId} {
       allow read: if isAdmin();
       allow create: if isAuthenticated();
       allow update, delete: if false;
     }
 
-    // Organization data - admin write only, authenticated read
+    // Catch-all for any other collections — authenticated read, admin write
+    // Also covers subcollections with {sub=**} wildcard
     match /{collection}/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
+    }
+    match /{collection}/{docId}/{sub=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
   }
 }
