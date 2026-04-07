@@ -528,8 +528,9 @@ class MemberController {
             continue;
           }
 
-          // Check if TC already exists
-          const existingMember = await db.get('SELECT * FROM members WHERE tc = ?', [tc]);
+          // Check if TC already exists (compare with encrypted value)
+          const encTc = encryptField(tc);
+          const existingMember = await db.get('SELECT * FROM members WHERE tc = ?', [encTc]);
           if (existingMember) {
             errors.push(`Satır ${i + 2}: Bu TC kimlik numarası zaten kayıtlı`);
             continue;
@@ -539,23 +540,26 @@ class MemberController {
           if (region) {
             await MemberController.createRegionIfNotExists(region);
           }
-          
+
           if (position) {
             await MemberController.createPositionIfNotExists(position);
           }
 
+          // Encrypt sensitive fields before inserting
+          const encPhone = encryptField(phone);
+
           // Insert member into database (İlçe kaldırıldı)
           const result = await db.run(
             'INSERT INTO members (tc, name, phone, position, region) VALUES (?, ?, ?, ?, ?)',
-            [tc, name, phone, position, region]
+            [encTc, name, encPhone, position, region]
           );
-          
+
           // Add member to in-memory collection as well
           const newMember = {
             id: result.lastID,
-            tc,
+            tc: encTc,
             name,
-            phone,
+            phone: encPhone,
             position,
             region,
             archived: false

@@ -3,7 +3,7 @@ const router = express.Router();
 const Admin = require('../models/Admin');
 const MemberUser = require('../models/MemberUser');
 const db = require('../config/database');
-const { generateToken } = require('../middleware/auth');
+const { generateToken, authenticateToken, requireAdmin } = require('../middleware/auth');
 
 // Login endpoint
 router.post('/login', async (req, res) => {
@@ -212,7 +212,7 @@ router.post('/login-coordinator', async (req, res) => {
 });
 
 // Coordinator Dashboard endpoint - Get ballot boxes for coordinator
-router.get('/coordinator-dashboard/:coordinatorId', async (req, res) => {
+router.get('/coordinator-dashboard/:coordinatorId', authenticateToken, async (req, res) => {
   try {
     const { coordinatorId } = req.params;
     const ElectionCoordinator = require('../models/ElectionCoordinator');
@@ -506,7 +506,7 @@ router.post('/logout', (req, res) => {
 });
 
 // Get admin info endpoint
-router.get('/admin', async (req, res) => {
+router.get('/admin', authenticateToken, async (req, res) => {
   try {
     const admin = await Admin.getAdmin();
     res.json({
@@ -528,7 +528,7 @@ router.get('/admin', async (req, res) => {
 });
 
 // Update admin credentials endpoint
-router.put('/admin', async (req, res) => {
+router.put('/admin', authenticateToken, requireAdmin, async (req, res) => {
   const { username, password, currentPassword } = req.body;
   
   try {
@@ -567,7 +567,7 @@ router.put('/admin', async (req, res) => {
 });
 
 // Get all member users endpoint
-router.get('/member-users', async (req, res) => {
+router.get('/member-users', authenticateToken, async (req, res) => {
   try {
     const memberUsers = await MemberUser.getAllMemberUsers();
     res.json({
@@ -584,7 +584,7 @@ router.get('/member-users', async (req, res) => {
 });
 
 // Create user for member endpoint
-router.post('/member-users', async (req, res) => {
+router.post('/member-users', authenticateToken, async (req, res) => {
   const { memberId, username, password } = req.body;
   
   try {
@@ -629,7 +629,7 @@ router.post('/member-users', async (req, res) => {
 });
 
 // Update member user credentials endpoint
-router.put('/member-users/:id', async (req, res) => {
+router.put('/member-users/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { username, password } = req.body;
   
@@ -665,7 +665,7 @@ router.put('/member-users/:id', async (req, res) => {
 });
 
 // Toggle member user status endpoint
-router.patch('/member-users/:id/toggle', async (req, res) => {
+router.patch('/member-users/:id/toggle', authenticateToken, async (req, res) => {
   const { id } = req.params;
   
   try {
@@ -685,7 +685,7 @@ router.patch('/member-users/:id/toggle', async (req, res) => {
 });
 
 // Delete member user endpoint
-router.delete('/member-users/:id', async (req, res) => {
+router.delete('/member-users/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   
   try {
@@ -705,7 +705,7 @@ router.delete('/member-users/:id', async (req, res) => {
 });
 
 // Create district president user endpoint
-router.post('/district-president-users', async (req, res) => {
+router.post('/district-president-users', authenticateToken, async (req, res) => {
   const { districtId, districtName, chairmanName, chairmanPhone } = req.body;
   
   try {
@@ -754,7 +754,7 @@ router.post('/district-president-users', async (req, res) => {
 });
 
 // Create town president user endpoint
-router.post('/town-president-users', async (req, res) => {
+router.post('/town-president-users', authenticateToken, async (req, res) => {
   const { townId, townName, chairmanName, chairmanPhone } = req.body;
   
   try {
@@ -803,7 +803,7 @@ router.post('/town-president-users', async (req, res) => {
 });
 
 // Update all user credentials based on current member/district/town data
-router.post('/update-all-credentials', async (req, res) => {
+router.post('/update-all-credentials', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const results = {
       memberUsers: { updated: 0, errors: [] },
@@ -1037,7 +1037,7 @@ router.post('/update-all-credentials', async (req, res) => {
 });
 
 // Find Firebase Auth user by email (server-side, requires Firebase Admin SDK)
-router.post('/find-firebase-auth-user', async (req, res) => {
+router.post('/find-firebase-auth-user', authenticateToken, async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -1094,7 +1094,7 @@ router.post('/find-firebase-auth-user', async (req, res) => {
 });
 
 // Update Firebase Auth password for a user (server-side, requires Firebase Admin SDK)
-router.post('/update-firebase-auth-password', async (req, res) => {
+router.post('/update-firebase-auth-password', authenticateToken, async (req, res) => {
   try {
     let { authUid, password, email } = req.body;
     
@@ -1219,7 +1219,7 @@ router.post('/update-firebase-auth-password', async (req, res) => {
 });
 
 // Update Firebase Auth email and password for a user (server-side, requires Firebase Admin SDK)
-router.post('/update-firebase-auth-user', async (req, res) => {
+router.post('/update-firebase-auth-user', authenticateToken, async (req, res) => {
   try {
     let { authUid, email, password, oldEmail } = req.body;
     
@@ -1362,7 +1362,7 @@ router.post('/update-firebase-auth-user', async (req, res) => {
 });
 
 // Delete Firebase Auth user endpoint (server-side, requires Firebase Admin SDK)
-router.delete('/firebase-auth-user/:authUid', async (req, res) => {
+router.delete('/firebase-auth-user/:authUid', authenticateToken, async (req, res) => {
   try {
     const { authUid } = req.params;
     
@@ -1429,7 +1429,7 @@ router.delete('/firebase-auth-user/:authUid', async (req, res) => {
 
 // Cleanup orphaned Firebase Auth users (users that exist in Firebase Auth but not in Firestore member_users)
 // This endpoint requires admin authentication
-router.post('/cleanup-orphaned-auth-users', async (req, res) => {
+router.post('/cleanup-orphaned-auth-users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     console.log('🧹 Cleanup orphaned Firebase Auth users request received');
     
@@ -1581,7 +1581,7 @@ router.post('/cleanup-orphaned-auth-users', async (req, res) => {
 // 1. Creates Firebase Auth users for member_users that don't have authUid
 // 2. Deletes Firebase Auth users that don't exist in member_users
 // 3. Updates Firebase Auth email/password if they differ from member_users
-router.post('/sync-member-users-with-auth', async (req, res) => {
+router.post('/sync-member-users-with-auth', authenticateToken, requireAdmin, async (req, res) => {
   try {
     console.log('🔄 Sync member_users with Firebase Auth request received');
     console.log('📥 Request headers:', req.headers);

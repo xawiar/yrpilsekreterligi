@@ -14,10 +14,10 @@ service cloud.firestore {
     }
 
     // Admin settings - authenticated can read, admin can write
-    // Login flow needs to create/update admin/main doc before isAdmin() works
+    // First-time setup: admin/main can only be created if it doesn't already exist
     match /admin/{document} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && !exists(/databases/$(database)/documents/admin/main);
       allow update, delete: if isAdmin();
     }
 
@@ -193,7 +193,7 @@ service cloud.firestore {
     }
     match /{collection}/{docId}/{sub=**} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }
