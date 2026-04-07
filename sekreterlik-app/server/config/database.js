@@ -919,6 +919,18 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES members (id) ON DELETE SET NULL
   )`);
   });
+
+  // Add performance indexes
+  db.run('CREATE INDEX IF NOT EXISTS idx_election_results_election_id ON election_results(election_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_election_results_ballot_box_id ON election_results(ballot_box_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_election_results_approval_status ON election_results(approval_status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_member_id ON notifications(member_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_members_archived ON members(archived)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_members_region ON members(region)');
+
   console.log('✅ SQLite database tables initialized');
 } else {
   console.log('ℹ️ Skipping SQLite database initialization (USE_FIREBASE=true)');

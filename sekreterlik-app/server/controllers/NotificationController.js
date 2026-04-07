@@ -6,9 +6,14 @@ class NotificationController {
     try {
       const { memberId } = req.params;
       const { unreadOnly } = req.query;
-      
+
+      // Ownership check — user can only read their own notifications (or admin reads any)
+      if (req.user && req.user.role !== 'admin' && req.user.type !== 'admin' && String(req.user.memberId) !== String(memberId)) {
+        return res.status(403).json({ success: false, message: 'Bu bildirimlere erişim yetkiniz yok' });
+      }
+
       const notifications = await Notification.getByMemberId(
-        memberId, 
+        memberId,
         unreadOnly === 'true'
       );
       

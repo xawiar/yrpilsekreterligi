@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const { ROLES } = require('../utils/roles');
 
 // GET /api/audit-logs - Tum audit loglari getir (sadece admin)
 router.get('/', async (req, res) => {
   try {
     // Admin kontrolu middleware ile yapiliyor, burada ekstra kontrol
-    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+    if (req.user?.type !== ROLES.ADMIN && req.user?.role !== ROLES.ADMIN) {
       return res.status(403).json({ success: false, message: 'Bu islem icin admin yetkisi gerekli' });
     }
 
@@ -65,7 +66,7 @@ router.get('/', async (req, res) => {
 // GET /api/audit-logs/actions - Mevcut action tiplerini getir
 router.get('/actions', async (req, res) => {
   try {
-    if (req.user?.type !== 'admin' && req.user?.role !== 'admin') {
+    if (req.user?.type !== ROLES.ADMIN && req.user?.role !== ROLES.ADMIN) {
       return res.status(403).json({ success: false, message: 'Admin yetkisi gerekli' });
     }
 

@@ -158,11 +158,22 @@ class MeetingController {
       const { id } = req.params;
       const meetingData = req.body;
       const errors = Meeting.validate(meetingData);
-      
+
       if (errors.length > 0) {
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
       }
-      
+
+      // Check if date changed — if so, reset notification flags so new date gets notifications
+      if (meetingData.date) {
+        const existingMeeting = await db.get('SELECT date FROM meetings WHERE id = ?', [parseInt(id)]);
+        if (existingMeeting && meetingData.date !== existingMeeting.date) {
+          await db.run(
+            'UPDATE meetings SET notification_status = ? WHERE id = ?',
+            [JSON.stringify({ oneDayBefore: false, oneHourBefore: false, started: false }), parseInt(id)]
+          );
+        }
+      }
+
       const sql = `UPDATE meetings SET name = ?, date = ?, notes = ?, regions = ? WHERE id = ?`;
       const params = [
         meetingData.name,
@@ -171,7 +182,7 @@ class MeetingController {
         JSON.stringify(meetingData.regions || []),
         parseInt(id)
       ];
-      
+
       const result = await db.run(sql, params);
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Toplantı bulunamadı' });

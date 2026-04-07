@@ -9,13 +9,25 @@
  * @param {number} totalSeats - Toplam milletvekili sayısı
  * @returns {Object} - Parti isimleri ve kazandıkları milletvekili sayıları: { 'Parti Adı': mvSayısı }
  */
-function calculateDHondt(partyVotes, totalSeats) {
+function calculateDHondt(partyVotes, totalSeats, thresholdPercent = 0) {
   if (!partyVotes || typeof partyVotes !== 'object') {
     return {};
   }
 
   if (totalSeats <= 0 || !Number.isInteger(totalSeats)) {
     return {};
+  }
+
+  // Filter parties below threshold (baraj)
+  if (thresholdPercent > 0) {
+    const totalVotes = Object.values(partyVotes).reduce((s, v) => s + (parseInt(v) || 0), 0);
+    if (totalVotes > 0) {
+      for (const party of Object.keys(partyVotes)) {
+        if (((parseInt(partyVotes[party]) || 0) / totalVotes * 100) < thresholdPercent) {
+          delete partyVotes[party];
+        }
+      }
+    }
   }
 
   // Parti oylarını sayıya çevir ve sıfır olmayanları filtrele
@@ -89,8 +101,8 @@ function calculateDHondt(partyVotes, totalSeats) {
  * @param {number} totalSeats - Toplam milletvekili sayısı
  * @returns {Object} - Detaylı D'Hondt sonuçları
  */
-function calculateDHondtDetailed(partyVotes, totalSeats) {
-  const distribution = calculateDHondt(partyVotes, totalSeats);
+function calculateDHondtDetailed(partyVotes, totalSeats, thresholdPercent = 0) {
+  const distribution = calculateDHondt(partyVotes, totalSeats, thresholdPercent);
   
   // Toplam oy sayısını hesapla
   const totalVotes = Object.values(partyVotes).reduce((sum, votes) => sum + (parseInt(votes) || 0), 0);
@@ -127,9 +139,50 @@ function applyThreshold(votes, totalVotes, thresholdPercent = 7.0) {
   return (votes * 100) >= (totalVotes * thresholdPercent);
 }
 
+/**
+ * İkinci tur seçim için aday belirleme
+ * Belediye başkanlığı seçimlerinde %50+1 oy alamayan adaylar için
+ * en çok oy alan 2 aday ikinci tura kalır
+ * @param {Object} candidateVotes - Aday adı ve oy sayısı çiftleri
+ * @param {number} totalValidVotes - Toplam geçerli oy
+ * @returns {Object} { needsSecondRound, winner, runoffCandidates, results }
+ */
+function checkRunoffEligibility(candidateVotes, totalValidVotes) {
+  const sorted = Object.entries(candidateVotes)
+    .map(([name, votes]) => ({ name, votes: parseInt(votes) || 0 }))
+    .sort((a, b) => b.votes - a.votes);
+
+  if (sorted.length === 0) {
+    return { needsSecondRound: false, winner: null, runoffCandidates: [], results: [] };
+  }
+
+  const threshold = Math.floor(totalValidVotes / 2) + 1; // %50+1
+  const leader = sorted[0];
+
+  if (leader.votes >= threshold) {
+    return {
+      needsSecondRound: false,
+      winner: leader.name,
+      winnerVotes: leader.votes,
+      winnerPercentage: ((leader.votes / totalValidVotes) * 100).toFixed(2),
+      runoffCandidates: [],
+      results: sorted,
+    };
+  }
+
+  return {
+    needsSecondRound: true,
+    winner: null,
+    runoffCandidates: sorted.slice(0, 2).map(c => c.name),
+    runoffCandidateVotes: sorted.slice(0, 2),
+    results: sorted,
+  };
+}
+
 module.exports = {
   calculateDHondt,
   calculateDHondtDetailed,
-  applyThreshold
+  applyThreshold,
+  checkRunoffEligibility
 };
 

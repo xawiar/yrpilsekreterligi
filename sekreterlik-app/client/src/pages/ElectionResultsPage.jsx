@@ -5,8 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import PublicApiService from '../utils/PublicApiService';
 import OfflineIndicator from '../components/OfflineIndicator';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+// html2canvas and jsPDF are loaded dynamically in export functions to reduce bundle size
 import * as XLSX from 'xlsx';
 import { calculateDHondt, calculateDHondtDetailed, calculateMunicipalCouncilSeats, calculateProvincialAssemblySeats } from '../utils/dhondt';
 
@@ -962,6 +961,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     if (!chartContainerRef.current || isExporting) return;
     setIsExporting(true);
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(chartContainerRef.current, {
         scale: 2,
         useCORS: true,
@@ -986,6 +986,8 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     if (!chartContainerRef.current || isExporting) return;
     setIsExporting(true);
     try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { default: jsPDF } = await import('jspdf');
       const canvas = await html2canvas(chartContainerRef.current, {
         scale: 2,
         useCORS: true,

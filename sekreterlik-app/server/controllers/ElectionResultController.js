@@ -1,5 +1,7 @@
 const db = require('../config/database');
 const Notification = require('../models/Notification');
+const { parseElectionResultVotes } = require('../utils/electionUtils');
+const { ROLES } = require('../utils/roles');
 
 function validateVoteData(data, res) {
   const errors = [];
@@ -47,11 +49,11 @@ async function getCoordinatorBallotBoxIds(user, dbConn) {
   const coordinatorId = user.id || user.coordinatorId;
   const role = user.type || user.role;
 
-  if (role === 'provincial_coordinator' || role === 'admin') {
+  if (role === ROLES.PROVINCIAL_COORDINATOR || role === ROLES.ADMIN) {
     return null; // tüm sandıklar
   }
 
-  if (role === 'institution_supervisor') {
+  if (role === ROLES.INSTITUTION_SUPERVISOR) {
     // Kendi kurumundaki sandıklar
     const coordinator = await dbConn.get('SELECT institution_name FROM election_coordinators WHERE id = ?', [coordinatorId]);
     if (!coordinator?.institution_name) return [];
@@ -59,7 +61,7 @@ async function getCoordinatorBallotBoxIds(user, dbConn) {
     return boxes.map(b => b.id);
   }
 
-  if (role === 'region_supervisor') {
+  if (role === ROLES.REGION_SUPERVISOR) {
     // Kendi bölgesindeki sandıklar
     const regions = await dbConn.all('SELECT neighborhood_ids, village_ids FROM election_regions WHERE supervisor_id = ?', [coordinatorId]);
     if (!regions.length) return [];
@@ -89,7 +91,7 @@ async function getCoordinatorBallotBoxIds(user, dbConn) {
     return boxes.map(b => b.id);
   }
 
-  if (role === 'district_supervisor') {
+  if (role === ROLES.DISTRICT_SUPERVISOR) {
     // Alt koordinatörlerin bölgelerindeki sandıklar
     const subCoordinators = await dbConn.all('SELECT id FROM election_coordinators WHERE parent_coordinator_id = ?', [coordinatorId]);
     const subIds = subCoordinators.map(c => c.id);
@@ -139,13 +141,13 @@ class ElectionResultController {
       if (req.user) {
         const userType = req.user.type || req.user.role;
 
-        if (userType === 'chief_observer') {
+        if (userType === ROLES.CHIEF_OBSERVER) {
           // Başmüşahit sadece kendi sandığının sonuçlarını görebilir
           if (req.user.ballot_box_id) {
             sql += ' AND er.ballot_box_id = ?';
             params.push(req.user.ballot_box_id);
           }
-        } else if (['region_supervisor', 'district_supervisor', 'institution_supervisor'].includes(userType)) {
+        } else if ([ROLES.REGION_SUPERVISOR, ROLES.DISTRICT_SUPERVISOR, ROLES.INSTITUTION_SUPERVISOR].includes(userType)) {
           // Koordinatörler sadece kendi sandıklarının sonuçlarını görebilir
           const allowedBallotBoxIds = await getCoordinatorBallotBoxIds(req.user, db);
           if (allowedBallotBoxIds && allowedBallotBoxIds.length > 0) {
@@ -193,17 +195,7 @@ class ElectionResultController {
       const results = await db.all(sql, params);
       
       // Parse JSON fields
-      const parsedResults = results.map(result => ({
-        ...result,
-        cb_votes: result.cb_votes ? JSON.parse(result.cb_votes) : {},
-        mv_votes: result.mv_votes ? JSON.parse(result.mv_votes) : {},
-        mayor_votes: result.mayor_votes ? JSON.parse(result.mayor_votes) : {},
-        provincial_assembly_votes: result.provincial_assembly_votes ? JSON.parse(result.provincial_assembly_votes) : {},
-        municipal_council_votes: result.municipal_council_votes ? JSON.parse(result.municipal_council_votes) : {},
-        referendum_votes: result.referendum_votes ? JSON.parse(result.referendum_votes) : {},
-        party_votes: result.party_votes ? JSON.parse(result.party_votes) : {},
-        candidate_votes: result.candidate_votes ? JSON.parse(result.candidate_votes) : {}
-      }));
+      const parsedResults = results.map(parseElectionResultVotes);
 
       res.json(parsedResults);
     } catch (error) {
@@ -227,18 +219,8 @@ class ElectionResultController {
       }
 
       // Parse JSON fields
-      const parsedResult = {
-        ...result,
-        cb_votes: result.cb_votes ? JSON.parse(result.cb_votes) : {},
-        mv_votes: result.mv_votes ? JSON.parse(result.mv_votes) : {},
-        mayor_votes: result.mayor_votes ? JSON.parse(result.mayor_votes) : {},
-        provincial_assembly_votes: result.provincial_assembly_votes ? JSON.parse(result.provincial_assembly_votes) : {},
-        municipal_council_votes: result.municipal_council_votes ? JSON.parse(result.municipal_council_votes) : {},
-        referendum_votes: result.referendum_votes ? JSON.parse(result.referendum_votes) : {},
-        party_votes: result.party_votes ? JSON.parse(result.party_votes) : {},
-        candidate_votes: result.candidate_votes ? JSON.parse(result.candidate_votes) : {}
-      };
-      
+      const parsedResult = parseElectionResultVotes(result);
+
       res.json(parsedResult);
     } catch (error) {
       console.error('Error fetching election result:', error);
@@ -261,18 +243,8 @@ class ElectionResultController {
       }
 
       // Parse JSON fields
-      const parsedResult = {
-        ...result,
-        cb_votes: result.cb_votes ? JSON.parse(result.cb_votes) : {},
-        mv_votes: result.mv_votes ? JSON.parse(result.mv_votes) : {},
-        mayor_votes: result.mayor_votes ? JSON.parse(result.mayor_votes) : {},
-        provincial_assembly_votes: result.provincial_assembly_votes ? JSON.parse(result.provincial_assembly_votes) : {},
-        municipal_council_votes: result.municipal_council_votes ? JSON.parse(result.municipal_council_votes) : {},
-        referendum_votes: result.referendum_votes ? JSON.parse(result.referendum_votes) : {},
-        party_votes: result.party_votes ? JSON.parse(result.party_votes) : {},
-        candidate_votes: result.candidate_votes ? JSON.parse(result.candidate_votes) : {}
-      };
-      
+      const parsedResult = parseElectionResultVotes(result);
+
       res.json(parsedResult);
     } catch (error) {
       console.error('Error fetching election result:', error);
@@ -643,15 +615,7 @@ class ElectionResultController {
       
       // Parse JSON fields
       const parsedResults = results.map(result => ({
-        ...result,
-        cb_votes: result.cb_votes ? JSON.parse(result.cb_votes) : {},
-        mv_votes: result.mv_votes ? JSON.parse(result.mv_votes) : {},
-        mayor_votes: result.mayor_votes ? JSON.parse(result.mayor_votes) : {},
-        provincial_assembly_votes: result.provincial_assembly_votes ? JSON.parse(result.provincial_assembly_votes) : {},
-        municipal_council_votes: result.municipal_council_votes ? JSON.parse(result.municipal_council_votes) : {},
-        referendum_votes: result.referendum_votes ? JSON.parse(result.referendum_votes) : {},
-        party_votes: result.party_votes ? JSON.parse(result.party_votes) : {},
-        candidate_votes: result.candidate_votes ? JSON.parse(result.candidate_votes) : {},
+        ...parseElectionResultVotes(result),
         filled_by_ai: result.filled_by_ai === 1 || result.filled_by_ai === true
       }));
 
@@ -791,9 +755,14 @@ class ElectionResultController {
         return res.status(400).json({ message: 'imageUrl parametresi gerekli' });
       }
 
-      // Validate URL (sadece Firebase Storage URL'lerine izin ver)
-      if (!imageUrl.includes('firebasestorage.googleapis.com')) {
-        return res.status(400).json({ message: 'Geçersiz URL. Sadece Firebase Storage URL\'leri desteklenir.' });
+      // Validate URL (sadece Firebase Storage URL'lerine izin ver — SSRF koruması)
+      try {
+        const parsedUrl = new URL(imageUrl);
+        if (parsedUrl.hostname !== 'firebasestorage.googleapis.com') {
+          return res.status(400).json({ message: 'Geçersiz URL. Sadece Firebase Storage URL\'leri desteklenir.' });
+        }
+      } catch (e) {
+        return res.status(400).json({ message: 'Geçersiz URL formatı' });
       }
 
       // Fetch image from Firebase Storage

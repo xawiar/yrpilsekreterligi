@@ -48,18 +48,18 @@ const router = express.Router();
 
 // IMPORTANT: Specific routes must be defined BEFORE parameterized routes
 // Test endpoint — sadece authenticated kullanıcılar
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 router.get('/test-import', authenticateToken, (req, res) => {
   res.json({ message: 'Test import endpoint working' });
 });
 
-// Import members from Excel
-router.post('/import', upload.single('file'), (req, res) => {
+// Import members from Excel (admin only)
+router.post('/import', authenticateToken, requireAdmin, upload.single('file'), (req, res) => {
   MemberController.importFromExcel(req, res);
 });
 
-// Export members to Excel
-router.get('/export', (req, res) => {
+// Export members to Excel (admin only)
+router.get('/export', authenticateToken, requireAdmin, (req, res) => {
   MemberController.exportToExcel(req, res);
 });
 
@@ -68,8 +68,8 @@ router.post('/upload-photo', photoUpload.single('photo'), (req, res) => {
   MemberController.uploadPhoto(req, res);
 });
 
-// Archive all members (completely new endpoint)
-router.post('/bulk-archive', (req, res) => {
+// Archive all members (admin only)
+router.post('/bulk-archive', authenticateToken, requireAdmin, (req, res) => {
   MemberController.bulkArchive(req, res);
 });
 

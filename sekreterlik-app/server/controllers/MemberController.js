@@ -6,6 +6,7 @@ const xlsx = require('xlsx');
 const { encryptField, decryptField } = require('../utils/crypto');
 const { invalidate } = require('../middleware/cache');
 const { syncAfterSqliteOperation } = require('../utils/autoSyncToFirebase');
+const { formatEmail } = require('../utils/constants');
 
 class MemberController {
   // Get all members
@@ -95,11 +96,21 @@ class MemberController {
         return res.status(400).json({ message: 'Doğrulama hatası', errors });
       }
 
-      // Check if TC already exists (compare with encrypted value)
+      // Check if TC already exists among non-archived members
       const encTc = encryptField(memberData.tc);
-      const existingMember = await db.get('SELECT * FROM members WHERE tc = ?', [encTc]);
+      const existingMember = await db.get('SELECT * FROM members WHERE tc = ? AND (archived = 0 OR archived IS NULL)', [encTc]);
       if (existingMember) {
         return res.status(400).json({ message: 'Bu TC kimlik numarası zaten kayıtlı' });
+      }
+
+      // Check if an archived member with same TC exists - offer restore
+      const archivedMember = await db.get('SELECT * FROM members WHERE tc = ? AND archived = 1', [encTc]);
+      if (archivedMember) {
+        return res.status(409).json({
+          message: 'Bu TC ile arşivlenmiş bir üye bulundu. Geri yüklemek ister misiniz?',
+          archivedMemberId: archivedMember.id,
+          canRestore: true
+        });
       }
       
       const sql = `INSERT INTO members (tc, name, region, position, phone, email, address, district, notes, archived, kvkk_consent_date)
@@ -246,8 +257,8 @@ class MemberController {
                 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
                 const url = new URL(`${API_BASE_URL}/auth/update-firebase-auth-user`);
                 
-                const oldEmail = oldTc + '@ilsekreterlik.local';
-                const newEmail = memberData.tc + '@ilsekreterlik.local';
+                const oldEmail = formatEmail(oldTc);
+                const newEmail = formatEmail(memberData.tc);
                 const newPassword = memberData.phone.replace(/\D/g, '');
                 
                 // Email ile kullanıcıyı bul (authUid SQLite'da saklanmıyor)

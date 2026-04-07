@@ -241,13 +241,22 @@ app.use(cors({
 // Basic CSRF protection — verify Origin header matches allowed origins
 app.use((req, res, next) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    const origin = req.get('Origin') || req.get('Referer') || '';
     const csrfAllowedOrigins = [
       'https://spilsekreterligi.web.app',
       'https://spilsekreterligi.firebaseapp.com',
       'http://localhost',
     ];
-    const isAllowed = !origin || csrfAllowedOrigins.some(o => origin.startsWith(o));
+    const origin = req.get('Origin');
+    // Allow requests without Origin only from same-origin (Referer check)
+    if (!origin) {
+      const referer = req.get('Referer') || '';
+      const isAllowed = !referer || csrfAllowedOrigins.some(o => referer.startsWith(o));
+      if (!isAllowed) {
+        return res.status(403).json({ error: 'CSRF check failed' });
+      }
+      return next();
+    }
+    const isAllowed = csrfAllowedOrigins.some(o => origin.startsWith(o));
     if (!isAllowed) {
       return res.status(403).json({ error: 'CSRF check failed' });
     }
@@ -363,6 +372,13 @@ app.use(compression({
 }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
+// Rate limiters (defined before usage)
+// Stricter login limiter: 5 req / 1 minute per IP (brute force koruması)
+const loginLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 5 });
+// Export endpoint limiter: 10 req / 1 minute per IP (agir islemler icin)
+const exportLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 10 });
+// Write (POST/PUT/DELETE) limiter: 30 req / 1 minute per IP
+const writeLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 30 });
 // Basic rate limiting (apply to all APIs)
 app.use('/api', rateLimit);
 // Granular rate limiting for write operations (POST/PUT/DELETE)
@@ -380,12 +396,6 @@ app.use('/api/election-results', (req, res, next) => {
 });
 // Global input validation (XSS, SQL injection, path traversal)
 app.use(validateInput);
-// Stricter login limiter: 5 req / 1 minute per IP (brute force koruması)
-const loginLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 5 });
-// Export endpoint limiter: 10 req / 1 minute per IP (agir islemler icin)
-const exportLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 10 });
-// Write (POST/PUT/DELETE) limiter: 30 req / 1 minute per IP
-const writeLimiter = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 30 });
 
 // Correlation ID and request timing
 app.use((req, res, next) => {

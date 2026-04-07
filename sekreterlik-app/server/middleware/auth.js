@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { ROLES } = require('../utils/roles');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -24,8 +25,8 @@ const authenticateToken = (req, res, next) => {
     req.user = {
       id: decoded.id,
       username: decoded.username,
-      role: decoded.role || decoded.type || 'member',
-      type: decoded.type || decoded.role || 'member',
+      role: decoded.role || decoded.type || ROLES.MEMBER,
+      type: decoded.type || decoded.role || ROLES.MEMBER,
       memberId: decoded.memberId || null,
     };
     next();
@@ -41,7 +42,7 @@ const authenticateToken = (req, res, next) => {
  * Admin rolü kontrolü — authenticateToken'dan sonra kullanılmalı
  */
 const requireAdmin = (req, res, next) => {
-  if (!req.user || (req.user.role !== 'admin' && req.user.type !== 'admin')) {
+  if (!req.user || (req.user.role !== ROLES.ADMIN && req.user.type !== ROLES.ADMIN)) {
     return res.status(403).json({ success: false, message: 'Bu işlem için admin yetkisi gerekli' });
   }
   next();
