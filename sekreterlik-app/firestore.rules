@@ -178,6 +178,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Member dashboard analytics — authenticated users can write their own sessions
+    match /member_dashboard_analytics/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     // Audit logs - admin read, authenticated create, immutable
     match /audit_logs/{logId} {
       allow read: if isAdmin();
