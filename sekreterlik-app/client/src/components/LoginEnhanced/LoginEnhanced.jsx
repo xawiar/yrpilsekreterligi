@@ -481,82 +481,10 @@ const LoginEnhanced = () => {
      RENDER
      ================================================================== */
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-900">
+    <main className="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-900 items-center justify-center">
 
-      {/* ============================================================
-          LEFT PANEL - Branding (hidden on mobile / small screens)
-          ============================================================ */}
-      <section
-        className="hidden lg:flex flex-col justify-between w-1/2 relative overflow-hidden p-16"
-        style={{ backgroundColor: '#101c2e' }}
-      >
-        {/* Shield watermark */}
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none flex items-center justify-center">
-          <IconShield className="w-[40rem] h-[40rem] text-white" />
-        </div>
-
-        {/* Top: Identity */}
-        <div className="relative z-10 space-y-6">
-          {/* Logo row */}
-          <div className="flex items-center gap-4">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
-              style={{ background: 'linear-gradient(135deg, #745b00 0%, #e5c365 100%)' }}
-            >
-              {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded-full" loading="lazy" />
-              ) : (
-                <IconBuilding className="w-8 h-8 text-white" />
-              )}
-            </div>
-            <div className="border-l border-white/20 pl-6">
-              <h2
-                className="text-xs tracking-[0.2em] uppercase font-semibold"
-                style={{ color: '#e5c365', fontFamily: "'Public Sans', sans-serif" }}
-              >
-                T.C. Siyasi Parti Portali
-              </h2>
-            </div>
-          </div>
-
-          {/* Party name */}
-          <div className="pt-24 max-w-lg">
-            <h1
-              className="text-6xl font-bold leading-tight tracking-tight"
-              style={{ fontFamily: "'Noto Serif', serif", color: '#e5c365' }}
-            >
-              {loginTitle.toUpperCase()}
-            </h1>
-            <div className="h-1 w-24 mt-8 mb-4" style={{ backgroundColor: '#e5c365' }} />
-            <p
-              className="text-2xl text-white/80 font-light italic tracking-wide"
-              style={{ fontFamily: "'Noto Serif', serif" }}
-            >
-              {loginSlogan}
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom: Kurumsal Erisim box */}
-        <div className="relative z-10">
-          <div className="bg-white/5 backdrop-blur-md p-8 rounded-lg border border-white/10 max-w-sm">
-            <p
-              className="text-sm font-semibold tracking-widest mb-2 uppercase"
-              style={{ color: '#ffe08d', fontFamily: "'Public Sans', sans-serif" }}
-            >
-              Kurumsal Erisim
-            </p>
-            <p className="text-white/60 text-sm leading-relaxed">
-              Parti ici yonetim surecleri, uye takip ve teskilat koordinasyon sistemi resmi giris ekranidir.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          RIGHT PANEL - Login Form
-          ============================================================ */}
-      <section className="flex-1 flex flex-col bg-white dark:bg-gray-900 relative">
+      {/* Login Form — tek panel, ortalanmış */}
+      <section className="w-full max-w-lg flex flex-col bg-white dark:bg-gray-900 relative mx-4">
 
         {/* Tab navigation */}
         <nav className="flex justify-center items-end h-20 px-4 sm:px-12 space-x-4 sm:space-x-12 border-b border-gray-200 dark:border-gray-700">
@@ -582,24 +510,27 @@ const LoginEnhanced = () => {
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12 overflow-y-auto">
           <div className="w-full max-w-md">
 
-            {/* Mobile logo (visible on small screens only) */}
-            <div className="lg:hidden flex flex-col items-center mb-10 text-center">
+            {/* Logo + Parti adı */}
+            <div className="flex flex-col items-center mb-8 text-center">
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg mb-4"
+                className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg mb-3"
                 style={{ background: 'linear-gradient(135deg, #745b00 0%, #e5c365 100%)' }}
               >
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded-full" loading="lazy" />
+                  <img src={logoUrl} alt="Logo" className="h-9 w-9 object-contain rounded-full" loading="lazy" />
                 ) : (
-                  <IconBuilding className="w-8 h-8 text-white" />
+                  <IconBuilding className="w-7 h-7 text-white" />
                 )}
               </div>
               <h1
-                className="text-2xl font-bold"
-                style={{ fontFamily: "'Noto Serif', serif", color: '#101c2e' }}
+                className="text-xl font-bold text-gray-900 dark:text-white"
+                style={{ fontFamily: "'Noto Serif', serif" }}
               >
-                {loginTitle.toUpperCase()}
+                {loginTitle}
               </h1>
+              {loginSlogan && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{loginSlogan}</p>
+              )}
             </div>
 
             {/* ---- Success state ---- */}
