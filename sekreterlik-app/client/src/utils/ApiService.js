@@ -1,27 +1,9 @@
 import FirebaseApiService from './FirebaseApiService';
 import FirebaseService from '../services/FirebaseService';
 import { getCached, setCache, clearCache } from './apiCache';
+import { USE_FIREBASE } from './constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
-
-// Firebase kullanımı kontrolü - Environment variable ile kontrol edilir
-const VITE_USE_FIREBASE_ENV = import.meta.env.VITE_USE_FIREBASE;
-const USE_FIREBASE =
-  VITE_USE_FIREBASE_ENV === 'true' ||
-  VITE_USE_FIREBASE_ENV === true ||
-  String(VITE_USE_FIREBASE_ENV).toLowerCase() === 'true';
-
-// Debug log - ZORUNLU (production debug için)
-if (typeof window !== 'undefined') {
-
-  // Uyarı: Eğer Firebase kullanılması gerekiyorsa ama kullanılmıyorsa
-  if (VITE_USE_FIREBASE_ENV && !USE_FIREBASE) {
-    console.warn('[ApiService] WARNING: VITE_USE_FIREBASE is set but USE_FIREBASE is false!', {
-      env: VITE_USE_FIREBASE_ENV,
-      type: typeof VITE_USE_FIREBASE_ENV
-    });
-  }
-}
 
 class ApiService {
   // Firebase kullanılıyorsa FirebaseApiService'i kullan

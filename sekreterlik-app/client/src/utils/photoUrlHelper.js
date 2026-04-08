@@ -2,14 +2,7 @@
  * Photo URL helper - Converts localhost URLs to production URLs
  * and handles relative paths
  */
-
-// Firebase kullanımı kontrolü
-const VITE_USE_FIREBASE_ENV = import.meta.env.VITE_USE_FIREBASE;
-const USE_FIREBASE = 
-  VITE_USE_FIREBASE_ENV === 'true' || 
-  VITE_USE_FIREBASE_ENV === true ||
-  String(VITE_USE_FIREBASE_ENV).toLowerCase() === 'true' ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('render.com') && VITE_USE_FIREBASE_ENV !== undefined);
+import { USE_FIREBASE } from './constants';
 
 /**
  * Normalizes photo URL to use correct base URL

@@ -1,8 +1,7 @@
 const db = require('../config/database');
 const Meeting = require('../models/Meeting');
 const { syncAfterSqliteOperation } = require('../utils/autoSyncToFirebase');
-const PushSubscription = require('../models/PushSubscription');
-const PushNotificationService = require('../services/pushNotificationService');
+const { broadcastNotification } = require('../utils/pushNotificationHelper');
 
 class MeetingController {
   // Get all meetings
@@ -104,45 +103,16 @@ class MeetingController {
         console.warn('⚠️ Firebase sync hatası (meeting create):', syncError.message);
       }
       
-      // Send push notification to all subscribed users and save to database
+      // Send push notification and save to database
       try {
-        const Notification = require('../models/Notification');
-        const subscriptions = await PushSubscription.getAll();
-        if (subscriptions.length > 0) {
-          // Get unread count for badge
-          const unreadCount = await Notification.getUnreadCount(null);
-
-          const payload = PushNotificationService.createPayload(
-            'Yeni Toplantı Oluşturuldu',
-            `${meetingData.name} - ${meetingData.date || 'Tarih belirtilmemiş'}`,
-            '/icon-192x192.png',
-            '/badge-72x72.png',
-            { type: 'meeting', id: result.lastID, action: 'view' },
-            unreadCount + 1
-          );
-
-          // Format subscriptions for web-push
-          const formattedSubscriptions = subscriptions.map(sub => ({
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh || sub.keys?.p256dh,
-              auth: sub.auth || sub.keys?.auth
-            }
-          }));
-          await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
-          console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
-        }
-
-        // Save notification to database for all members (or specific members if regions specified)
-        await Notification.create({
-          memberId: null, // null = all members
+        await broadcastNotification({
           title: 'Yeni Toplantı Oluşturuldu',
           body: `${meetingData.name} - ${meetingData.date || 'Tarih belirtilmemiş'}`,
           type: 'meeting',
-          data: { meetingId: result.lastID, meetingName: meetingData.name, date: meetingData.date }
+          data: { id: result.lastID, action: 'view', meetingId: result.lastID, meetingName: meetingData.name, date: meetingData.date }
         });
       } catch (pushError) {
-        console.warn('⚠️ Push notification hatası (meeting create):', pushError.message);
+        console.warn('Push notification hatasi (meeting create):', pushError.message);
       }
       
       res.status(201).json(newMeeting);

@@ -22,10 +22,27 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain', 'text/csv'
+    ];
+    const allowedExts = /\.(pdf|jpg|jpeg|png|gif|webp|doc|docx|xls|xlsx|txt|csv)$/i;
+    if (allowedTypes.includes(file.mimetype) || allowedExts.test(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Bu dosya türü desteklenmiyor. İzin verilen: PDF, resim, Word, Excel, metin dosyaları.'));
+    }
   }
 });
 
@@ -183,12 +200,7 @@ class ArchiveController {
       try {
         const { decryptField } = require('../utils/crypto');
         const tc = decryptField(member.tc);
-        const usersByUsername = await new Promise((resolve, reject) => {
-          db.all('SELECT * FROM member_users WHERE username = ? AND user_type = ?', [tc, 'member'], (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
+        const usersByUsername = await db.all('SELECT * FROM member_users WHERE username = ? AND user_type = ?', [tc, 'member']);
         
         for (const user of usersByUsername) {
           if (user.member_id === parseInt(id) || !user.member_id) {

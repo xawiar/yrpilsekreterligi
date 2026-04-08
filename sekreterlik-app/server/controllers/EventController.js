@@ -2,8 +2,7 @@ const db = require('../config/database');
 const Event = require('../models/Event');
 const { invalidate } = require('../middleware/cache');
 const VisitController = require('./VisitController');
-const PushSubscription = require('../models/PushSubscription');
-const PushNotificationService = require('../services/pushNotificationService');
+const { broadcastNotification } = require('../utils/pushNotificationHelper');
 
 class EventController {
   // Get all events
@@ -114,45 +113,16 @@ class EventController {
       // Invalidate events cache so new event appears immediately
       try { invalidate('/api/events'); } catch (_) {}
 
-      // Send push notification to all subscribed users and save to database
+      // Send push notification and save to database
       try {
-        const Notification = require('../models/Notification');
-        const subscriptions = await PushSubscription.getAll();
-        if (subscriptions.length > 0) {
-          // Get unread count for badge
-          const unreadCount = await Notification.getUnreadCount(null);
-
-          const payload = PushNotificationService.createPayload(
-            'Yeni Etkinlik Oluşturuldu',
-            `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
-            '/icon-192x192.png',
-            '/badge-72x72.png',
-            { type: 'event', id: result.lastID, action: 'view' },
-            unreadCount + 1
-          );
-
-          // Format subscriptions for web-push
-          const formattedSubscriptions = subscriptions.map(sub => ({
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh || sub.keys?.p256dh,
-              auth: sub.auth || sub.keys?.auth
-            }
-          }));
-          await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
-          console.log(`✅ Push notification gönderildi: ${subscriptions.length} kullanıcı`);
-        }
-
-        // Save notification to database for all members
-        await Notification.create({
-          memberId: null, // null = all members
+        await broadcastNotification({
           title: 'Yeni Etkinlik Oluşturuldu',
           body: `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
           type: 'event',
-          data: { eventId: result.lastID, eventName: eventData.name, date: eventData.date }
+          data: { id: result.lastID, action: 'view', eventId: result.lastID, eventName: eventData.name, date: eventData.date }
         });
       } catch (pushError) {
-        console.warn('⚠️ Push notification hatası (event create):', pushError.message);
+        console.warn('Push notification hatasi (event create):', pushError.message);
       }
       
       res.status(201).json(newEvent);
@@ -197,39 +167,14 @@ class EventController {
 
       // Send push notification and save to database for event update
       try {
-        const Notification = require('../models/Notification');
-        const subscriptions = await PushSubscription.getAll();
-        if (subscriptions.length > 0) {
-          const unreadCount = await Notification.getUnreadCount(null);
-
-          const payload = PushNotificationService.createPayload(
-            'Etkinlik Güncellendi',
-            `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
-            '/icon-192x192.png',
-            '/badge-72x72.png',
-            { type: 'event', id: parseInt(id), action: 'view' },
-            unreadCount + 1
-          );
-
-          const formattedSubscriptions = subscriptions.map(sub => ({
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh || sub.keys?.p256dh,
-              auth: sub.auth || sub.keys?.auth
-            }
-          }));
-          await PushNotificationService.sendToMultipleUsers(formattedSubscriptions, payload);
-        }
-
-        await Notification.create({
-          memberId: null,
+        await broadcastNotification({
           title: 'Etkinlik Güncellendi',
           body: `${eventData.name} - ${eventData.date || 'Tarih belirtilmemiş'}`,
           type: 'event',
-          data: { eventId: parseInt(id), eventName: eventData.name, date: eventData.date }
+          data: { id: parseInt(id), action: 'view', eventId: parseInt(id), eventName: eventData.name, date: eventData.date }
         });
       } catch (pushError) {
-        console.warn('Push notification hatası (event update):', pushError.message);
+        console.warn('Push notification hatasi (event update):', pushError.message);
       }
 
       res.json(updatedEvent);

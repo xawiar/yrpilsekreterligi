@@ -4,6 +4,8 @@
  * API anahtarları backend'de tutulur, frontend'den doğrudan SMS API'sine erişim yoktur.
  */
 
+import { USE_FIREBASE } from '../utils/constants';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 class SmsService {
@@ -28,7 +30,6 @@ class SmsService {
   async loadConfig() {
     // Config artık backend'de yönetiliyor, frontend'de sadece provider bilgisi tutulabilir
     try {
-      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       if (USE_FIREBASE) {
         const { FirebaseService } = await import('./FirebaseService');
         try {

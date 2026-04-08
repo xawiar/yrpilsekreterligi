@@ -3,6 +3,7 @@ const Poll = require('../models/Poll');
 const PushSubscription = require('../models/PushSubscription');
 const PushNotificationService = require('../services/pushNotificationService');
 const Notification = require('../models/Notification');
+const { broadcastNotification } = require('../utils/pushNotificationHelper');
 
 class PollController {
   // Get all polls
@@ -128,60 +129,16 @@ class PollController {
         updatedAt: newPoll.updated_at
       };
       
-      // Send push notifications to all subscribed users
+      // Send push notification and save to database
       try {
-        const allSubscriptions = await PushSubscription.getAll();
-        if (allSubscriptions.length > 0) {
-          const payload = PushNotificationService.createPayload(
-            'Yeni Anket/Oylama Oluşturuldu',
-            `${pollData.title} - Katılımınızı bekliyoruz!`,
-            '/icon-192x192.png',
-            '/badge-72x72.png',
-            { 
-              type: 'poll', 
-              pollId: result.lastID,
-              action: 'view'
-            },
-            null
-          );
-          
-          // Send to all subscribers
-          const subscriptions = allSubscriptions.map(sub => ({
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh,
-              auth: sub.auth
-            }
-          }));
-          
-          await PushNotificationService.sendToMultipleUsers(subscriptions, payload);
-          
-          // Save notification to database for all members
-          const Member = require('../models/Member');
-          const allMembers = await db.all('SELECT id FROM members WHERE archived = 0');
-          
-          for (const member of allMembers) {
-            await Notification.create({
-              memberId: member.id,
-              title: 'Yeni Anket/Oylama',
-              body: `${pollData.title} - Katılımınızı bekliyoruz!`,
-              type: 'poll',
-              data: JSON.stringify({ pollId: result.lastID }),
-              expiresAt: new Date(pollData.endDate).toISOString()
-            });
-          }
-          
-          // Update badge count (use first member as reference)
-          if (allMembers.length > 0) {
-            const unreadCount = await Notification.getUnreadCount(allMembers[0].id);
-            if (unreadCount > 0) {
-              payload.data.badgeCount = unreadCount;
-            }
-          }
-        }
+        await broadcastNotification({
+          title: 'Yeni Anket/Oylama Oluşturuldu',
+          body: `${pollData.title} - Katılımınızı bekliyoruz!`,
+          type: 'poll',
+          data: { pollId: result.lastID, action: 'view' }
+        });
       } catch (error) {
         console.error('Error sending poll creation notification:', error);
-        // Don't fail the request if notification fails
       }
       
       res.status(201).json(processedPoll);

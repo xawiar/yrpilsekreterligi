@@ -1,11 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
 import { VAPID_KEY } from '../config/firebase';
-
-// Firebase kullanımı kontrolü
-const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' || 
-                     import.meta.env.VITE_USE_FIREBASE === true ||
-                     String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
+import { USE_FIREBASE } from '../utils/constants';
 
 const AuthContext = createContext();
 

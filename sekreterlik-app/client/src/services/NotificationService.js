@@ -168,22 +168,7 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
   try {
     var subscriptions = [];
 
-    // Tum push_tokens'lari bir kez oku (ID eslestirme sorunu cozumu)
-    var allTokens = {};
-    try {
-      var tokensSnap = await getDocs(collection(db, 'push_tokens'));
-      tokensSnap.forEach(function(d) {
-        var data = d.data();
-        if (data.subscription && data.isActive) {
-          allTokens[d.id] = data.subscription;
-          if (data.userId) allTokens[String(data.userId)] = data.subscription;
-        }
-      });
-    } catch (e) {
-      console.warn('[Push] Token load error:', e.message);
-    }
-
-    // memberId → authUid mapping tablosu olustur
+    // memberId → authUid mapping tablosu olustur (ID mismatch cozumu icin gerekli)
     var memberToAuth = {};
     try {
       var muSnap = await getDocs(collection(db, 'member_users'));
@@ -195,16 +180,26 @@ async function sendPushNotifications(userIds, { title, body, type, url }) {
       });
     } catch (e2) { /* skip */ }
 
-    // Her userId icin token bul
+    // Her userId icin push_token'i hedefli sorguyla bul (tum koleksiyonu okumak yerine)
+    var seenEndpoints = new Set();
     for (var i = 0; i < userIds.length; i++) {
       var uid = String(userIds[i]);
-      // 1. Direkt ID ile ara
-      if (allTokens[uid]) {
-        subscriptions.push(allTokens[uid]);
-      }
-      // 2. member_users mapping ile ara
-      else if (memberToAuth[uid] && allTokens[memberToAuth[uid]]) {
-        subscriptions.push(allTokens[memberToAuth[uid]]);
+      // Denenecek ID'ler: dogrudan uid ve mapping'den gelen authUid
+      var candidateIds = [uid];
+      if (memberToAuth[uid]) candidateIds.push(memberToAuth[uid]);
+
+      for (var j = 0; j < candidateIds.length; j++) {
+        try {
+          var tokenDoc = await getDoc(doc(db, 'push_tokens', candidateIds[j]));
+          if (tokenDoc.exists()) {
+            var tokenData = tokenDoc.data();
+            if (tokenData.subscription && tokenData.isActive && !seenEndpoints.has(tokenData.subscription.endpoint)) {
+              subscriptions.push(tokenData.subscription);
+              seenEndpoints.add(tokenData.subscription.endpoint);
+              break; // Bu userId icin token bulundu, sonrakine gec
+            }
+          }
+        } catch (e) { /* skip */ }
       }
     }
 

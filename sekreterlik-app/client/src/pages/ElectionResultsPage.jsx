@@ -257,8 +257,8 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     }
   };
 
-  // Get filtered results based on location filters and search query
-  const getFilteredResults = () => {
+  // Get filtered results based on location filters and search query (memoized)
+  const filteredResultsMemo = useMemo(() => {
     let filtered = results;
 
     // Arama sorgusu ile filtrele
@@ -388,7 +388,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     }
 
     return filtered;
-  };
+  }, [results, selectedDistrict, selectedTown, selectedNeighborhood, selectedVillage, searchQuery, selectedBallotNumber, filterByObjection, filterByProtocolOnly, filterByNoProtocol, ballotBoxes, districts, towns, neighborhoods, villages]);
 
   // Get chief observer for a ballot box
   const getChiefObserver = (ballotBoxId) => {
@@ -415,7 +415,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
 
   // Calculate participation percentage
   const calculateParticipationPercentage = () => {
-    const filtered = getFilteredResults();
+    const filtered = filteredResultsMemo;
     if (filtered.length === 0) return '0.00';
     
     // Toplam seçmen sayısını ballot box'lardan hesapla
@@ -448,7 +448,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
 
   // Calculate aggregated results for new election system - returns separate results for each category
   const calculateAggregatedResults = () => {
-    const filtered = getFilteredResults();
+    const filtered = filteredResultsMemo;
     
     if (election?.type === 'genel') {
       // Genel Seçim: CB ve MV oyları ayrı ayrı
@@ -763,13 +763,13 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
 
   // Calculate total used votes (oy kullanan seçmen)
   const calculateTotalUsedVotes = () => {
-    const filtered = getFilteredResults();
+    const filtered = filteredResultsMemo;
     return filtered.reduce((sum, result) => sum + (parseInt(result.used_votes) || 0), 0);
   };
 
   // Calculate total invalid votes
   const calculateTotalInvalidVotes = () => {
-    const filtered = getFilteredResults();
+    const filtered = filteredResultsMemo;
     return filtered.reduce((sum, result) => sum + (parseInt(result.invalid_votes) || 0), 0);
   };
 
@@ -783,7 +783,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
 
   // Calculate location-based analysis (mahalle/ilçe)
   const calculateLocationBasedAnalysis = () => {
-    const filtered = getFilteredResults();
+    const filtered = filteredResultsMemo;
     const locationMap = {};
 
       filtered.forEach(result => {
@@ -1046,7 +1046,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     if (isExporting) return;
     setIsExporting(true);
     try {
-      const filtered = getFilteredResults();
+      const filtered = filteredResultsMemo;
       if (!filtered || filtered.length === 0) {
         toast.warning('Dışa aktarılacak veri bulunamadı');
         return;
@@ -1105,7 +1105,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     } finally {
       setIsExporting(false);
     }
-  }, [election, getFilteredResults, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes, isExporting]);
+  }, [election, filteredResultsMemo, getTotalBallotBoxes, calculateTotalUsedVotes, aggregatedResults, calculateTotalInvalidVotes, isExporting]);
 
   // Helper function to calculate winning candidates based on party seats and candidate order
   const calculateWinningCandidatesFromSeats = useCallback((partySeats, partyCandidates) => {
@@ -1337,7 +1337,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
   const provincialAssemblyResults = useMemo(() => {
     if (!election || election?.type !== 'yerel') return null;
     
-    const filtered = getFilteredResults();
+    const filtered = filteredResultsMemo;
     if (!filtered || filtered.length === 0) return null;
     
     // İlçe bazlı üye sayıları seçim verisinden alınır
@@ -1415,7 +1415,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     );
   }
 
-  const filteredResults = getFilteredResults() || [];
+  const filteredResults = filteredResultsMemo || [];
   
   // Pagination
   const totalPages = Math.ceil((filteredResults.length || 0) / itemsPerPage);
@@ -1532,7 +1532,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
             </div>
             {searchQuery && (
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                "{searchQuery}" için {getFilteredResults().length} sonuç bulundu
+                "{searchQuery}" için {filteredResultsMemo.length} sonuç bulundu
               </p>
             )}
           </div>
