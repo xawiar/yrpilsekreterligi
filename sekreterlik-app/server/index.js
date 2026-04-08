@@ -195,9 +195,17 @@ console.log('Starting server setup');
 const allowedOrigins = [
   'https://yrpilsekreterligi.onrender.com',
   'https://sekreterlik-backend.onrender.com',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
 ];
+
+// Only allow localhost in development
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push(
+    'http://localhost:5173',
+    'http://localhost:5180',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5180'
+  );
+}
 
 // Environment variable'dan ekstra origin'ler ekle
 const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);

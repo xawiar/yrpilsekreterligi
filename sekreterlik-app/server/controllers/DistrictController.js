@@ -204,7 +204,7 @@ class DistrictController {
           if (districtUser) {
             // Check if phone number has changed by comparing with the new phone from the request
             const oldPhone = districtUser.password; // Password is stored as phone number
-            const newPhone = chairman_phone.replace(/\D/g, ''); // Remove non-digits from NEW phone
+            const newPhone = (chairman_phone || '').replace(/\D/g, ''); // Remove non-digits from NEW phone
             
             // Update existing user (always update to ensure username and password are current)
             await MemberUser.updateDistrictPresidentUser(

@@ -135,7 +135,7 @@ class MemberController {
       // Automatically create member_user for the new member
       try {
         const username = memberData.tc; // Use TC as username
-        const password = memberData.phone.replace(/\D/g, ''); // Normalize password (remove non-digits)
+        const password = (memberData.phone || '').replace(/\D/g, ''); // Normalize password (remove non-digits)
 
         // Check if username already exists
         const existingUserWithSameUsername = await db.get('SELECT * FROM member_users WHERE username = ?', [username]);
@@ -259,7 +259,7 @@ class MemberController {
                 
                 const oldEmail = formatEmail(oldTc);
                 const newEmail = formatEmail(memberData.tc);
-                const newPassword = memberData.phone.replace(/\D/g, '');
+                const newPassword = (memberData.phone || '').replace(/\D/g, '');
                 
                 // Email ile kullanıcıyı bul (authUid SQLite'da saklanmıyor)
                 const requestData = JSON.stringify({
@@ -307,7 +307,7 @@ class MemberController {
           } else {
             // Create new user if doesn't exist
             const username = memberData.tc;
-            const password = memberData.phone.replace(/\D/g, '');
+            const password = (memberData.phone || '').replace(/\D/g, '');
             await MemberUser.createMemberUser(parseInt(id), username, password);
           }
         } catch (userError) {

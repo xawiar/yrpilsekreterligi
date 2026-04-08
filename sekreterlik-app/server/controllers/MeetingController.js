@@ -3,6 +3,11 @@ const Meeting = require('../models/Meeting');
 const { syncAfterSqliteOperation } = require('../utils/autoSyncToFirebase');
 const { broadcastNotification } = require('../utils/pushNotificationHelper');
 
+function safeParse(str, fallback = null) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch (e) { return fallback; }
+}
+
 class MeetingController {
   // Get all meetings
   static async getAll(req, res) {
@@ -27,10 +32,10 @@ class MeetingController {
       // Parse regions and attendees
       const processedMeetings = meetings.map(meeting => ({
         ...meeting,
-        regions: meeting.regions ? JSON.parse(meeting.regions) : [],
-        attendees: meeting.attendees ? JSON.parse(meeting.attendees) : []
+        regions: safeParse(meeting.regions, []),
+        attendees: safeParse(meeting.attendees, [])
       }));
-      
+
       res.json(processedMeetings);
     } catch (error) {
       console.error('Error getting meetings:', error);
@@ -51,10 +56,10 @@ class MeetingController {
       // Parse regions and attendees
       const processedMeeting = {
         ...meeting,
-        regions: meeting.regions ? JSON.parse(meeting.regions) : [],
-        attendees: meeting.attendees ? JSON.parse(meeting.attendees) : []
+        regions: safeParse(meeting.regions, []),
+        attendees: safeParse(meeting.attendees, [])
       };
-      
+
       res.json(processedMeeting);
     } catch (error) {
       console.error('Error getting meeting by ID:', error);

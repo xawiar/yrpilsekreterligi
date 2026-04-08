@@ -317,7 +317,7 @@ class TownController {
                   const tc = decryptField(member.tc);
                   const phone = decryptField(member.phone);
                   const username = tc;
-                  const password = phone.replace(/\D/g, '');
+                  const password = (phone || '').replace(/\D/g, '');
                   await MemberUser.createMemberUser(chairman_member_id, username, password);
                   console.log(`Created member user for chairman member ID ${chairman_member_id} (TC: ${username})`);
                 } else {
@@ -329,16 +329,16 @@ class TownController {
               // Continue to create town president user if member check fails
             }
           }
-          
+
           // Only create/update town president user if chairman is not a member
           if (!chairmanIsMember) {
             const townUser = await MemberUser.getUserByTownId(town_id);
             console.log('Existing town user:', townUser);
-            
+
             if (townUser) {
               // Check if phone number has changed by comparing with the new phone from the request
               const oldPhone = townUser.password; // Password is stored as phone number
-              const newPhone = chairman_phone.replace(/\D/g, ''); // Remove non-digits from NEW phone
+              const newPhone = (chairman_phone || '').replace(/\D/g, ''); // Remove non-digits from NEW phone
               
               console.log(`Phone comparison: old=${oldPhone}, new=${newPhone}`);
               

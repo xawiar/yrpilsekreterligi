@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import ApiService from '../utils/ApiService';
 import { VAPID_KEY } from '../config/firebase';
 import { USE_FIREBASE } from '../utils/constants';
@@ -281,7 +281,7 @@ export const AuthProvider = ({ children }) => {
     saveToLocalStorage(userData, true);
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     isLoggedIn,
     loading,
@@ -291,7 +291,7 @@ export const AuthProvider = ({ children }) => {
     verify2FA,
     logout,
     setUserFromLogin // For direct user setting (e.g., chief observer login)
-  };
+  }), [user, isLoggedIn, loading, error]);
 
   return (
     <AuthContext.Provider value={value}>

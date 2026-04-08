@@ -4,6 +4,11 @@ const { invalidate } = require('../middleware/cache');
 const VisitController = require('./VisitController');
 const { broadcastNotification } = require('../utils/pushNotificationHelper');
 
+function safeParse(str, fallback = null) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch (e) { return fallback; }
+}
+
 class EventController {
   // Get all events
   static async getAll(req, res) {
@@ -28,9 +33,9 @@ class EventController {
       // Parse attendees
       const processedEvents = events.map(event => ({
         ...event,
-        attendees: event.attendees ? JSON.parse(event.attendees) : []
+        attendees: safeParse(event.attendees, [])
       }));
-      
+
       res.json(processedEvents);
     } catch (error) {
       console.error('Error getting events:', error);
@@ -51,9 +56,9 @@ class EventController {
       // Parse attendees
       const processedEvent = {
         ...event,
-        attendees: event.attendees ? JSON.parse(event.attendees) : []
+        attendees: safeParse(event.attendees, [])
       };
-      
+
       res.json(processedEvent);
     } catch (error) {
       console.error('Error getting event by ID:', error);
@@ -240,8 +245,8 @@ class EventController {
       // Decrement visit counts for locations affected by this event
       try {
         if (existing.selected_location_types && existing.selected_locations) {
-          const selectedLocationTypes = JSON.parse(existing.selected_location_types);
-          const selectedLocations = JSON.parse(existing.selected_locations);
+          const selectedLocationTypes = safeParse(existing.selected_location_types, []);
+          const selectedLocations = safeParse(existing.selected_locations, {});
           
           for (const locationType of selectedLocationTypes) {
             const locationIds = selectedLocations[locationType];

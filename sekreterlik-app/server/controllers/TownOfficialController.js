@@ -176,7 +176,7 @@ class TownOfficialController {
                     const tc = decryptField(member.tc);
                     const phone = decryptField(member.phone);
                     const username = tc;
-                    const password = phone.replace(/\D/g, '');
+                    const password = (phone || '').replace(/\D/g, '');
                     await MemberUser.createMemberUser(chairman_member_id, username, password);
                     console.log(`Created member user for chairman member ID ${chairman_member_id} (TC: ${username})`);
                   } else {

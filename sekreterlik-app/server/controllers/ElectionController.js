@@ -1,5 +1,10 @@
 const db = require('../config/database');
 
+function safeParse(str, fallback = null) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch (e) { return fallback; }
+}
+
 class ElectionController {
   static async getAll(req, res) {
     try {
@@ -24,14 +29,14 @@ class ElectionController {
       // Parse JSON fields
       const parsedElections = elections.map(election => ({
         ...election,
-        cb_candidates: election.cb_candidates ? JSON.parse(election.cb_candidates) : [],
-        parties: election.parties ? JSON.parse(election.parties) : [],
-        independent_cb_candidates: election.independent_cb_candidates ? JSON.parse(election.independent_cb_candidates) : [],
-        independent_mv_candidates: election.independent_mv_candidates ? JSON.parse(election.independent_mv_candidates) : [],
-        mayor_parties: election.mayor_parties ? JSON.parse(election.mayor_parties) : [],
-        mayor_candidates: election.mayor_candidates ? JSON.parse(election.mayor_candidates) : [],
-        provincial_assembly_parties: election.provincial_assembly_parties ? JSON.parse(election.provincial_assembly_parties) : [],
-        municipal_council_parties: election.municipal_council_parties ? JSON.parse(election.municipal_council_parties) : [],
+        cb_candidates: safeParse(election.cb_candidates, []),
+        parties: safeParse(election.parties, []),
+        independent_cb_candidates: safeParse(election.independent_cb_candidates, []),
+        independent_mv_candidates: safeParse(election.independent_mv_candidates, []),
+        mayor_parties: safeParse(election.mayor_parties, []),
+        mayor_candidates: safeParse(election.mayor_candidates, []),
+        provincial_assembly_parties: safeParse(election.provincial_assembly_parties, []),
+        municipal_council_parties: safeParse(election.municipal_council_parties, []),
         baraj_percent: election.baraj_percent || 7.0
       }));
 
@@ -54,17 +59,17 @@ class ElectionController {
       // Parse JSON fields
       const parsedElection = {
         ...election,
-        cb_candidates: election.cb_candidates ? JSON.parse(election.cb_candidates) : [],
-        parties: election.parties ? JSON.parse(election.parties) : [],
-        independent_cb_candidates: election.independent_cb_candidates ? JSON.parse(election.independent_cb_candidates) : [],
-        independent_mv_candidates: election.independent_mv_candidates ? JSON.parse(election.independent_mv_candidates) : [],
-        mayor_parties: election.mayor_parties ? JSON.parse(election.mayor_parties) : [],
-        mayor_candidates: election.mayor_candidates ? JSON.parse(election.mayor_candidates) : [],
-        provincial_assembly_parties: election.provincial_assembly_parties ? JSON.parse(election.provincial_assembly_parties) : [],
-        municipal_council_parties: election.municipal_council_parties ? JSON.parse(election.municipal_council_parties) : [],
+        cb_candidates: safeParse(election.cb_candidates, []),
+        parties: safeParse(election.parties, []),
+        independent_cb_candidates: safeParse(election.independent_cb_candidates, []),
+        independent_mv_candidates: safeParse(election.independent_mv_candidates, []),
+        mayor_parties: safeParse(election.mayor_parties, []),
+        mayor_candidates: safeParse(election.mayor_candidates, []),
+        provincial_assembly_parties: safeParse(election.provincial_assembly_parties, []),
+        municipal_council_parties: safeParse(election.municipal_council_parties, []),
         baraj_percent: election.baraj_percent || 7.0
       };
-      
+
       res.json(parsedElection);
     } catch (error) {
       console.error('Error fetching election:', error);

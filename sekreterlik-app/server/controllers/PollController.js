@@ -5,6 +5,11 @@ const PushNotificationService = require('../services/pushNotificationService');
 const Notification = require('../models/Notification');
 const { broadcastNotification } = require('../utils/pushNotificationHelper');
 
+function safeParse(str, fallback = null) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch (e) { return fallback; }
+}
+
 class PollController {
   // Get all polls
   static async getAll(req, res) {
@@ -25,13 +30,13 @@ class PollController {
       // Parse options JSON
       const processedPolls = polls.map(poll => ({
         ...poll,
-        options: poll.options ? JSON.parse(poll.options) : [],
+        options: safeParse(poll.options, []),
         endDate: poll.end_date,
         createdBy: poll.created_by,
         createdAt: poll.created_at,
         updatedAt: poll.updated_at
       }));
-      
+
       res.json(processedPolls);
     } catch (error) {
       console.error('Error getting polls:', error);
@@ -53,13 +58,13 @@ class PollController {
       // Parse options JSON
       const processedPolls = polls.map(poll => ({
         ...poll,
-        options: poll.options ? JSON.parse(poll.options) : [],
+        options: safeParse(poll.options, []),
         endDate: poll.end_date,
         createdBy: poll.created_by,
         createdAt: poll.created_at,
         updatedAt: poll.updated_at
       }));
-      
+
       res.json(processedPolls);
     } catch (error) {
       console.error('Error getting active polls:', error);
@@ -80,13 +85,13 @@ class PollController {
       // Parse options JSON
       const processedPoll = {
         ...poll,
-        options: poll.options ? JSON.parse(poll.options) : [],
+        options: safeParse(poll.options, []),
         endDate: poll.end_date,
         createdBy: poll.created_by,
         createdAt: poll.created_at,
         updatedAt: poll.updated_at
       };
-      
+
       res.json(processedPoll);
     } catch (error) {
       console.error('Error getting poll by ID:', error);
@@ -176,7 +181,7 @@ class PollController {
       }
       
       // Check if options are valid
-      const options = JSON.parse(poll.options);
+      const options = safeParse(poll.options, []);
       if (optionIndex < 0 || optionIndex >= options.length) {
         return res.status(400).json({ message: 'Geçersiz seçenek' });
       }
@@ -204,7 +209,7 @@ class PollController {
           const creatorSubscriptions = await PushSubscription.getByUserId(poll.created_by.toString());
           
           if (creatorSubscriptions.length > 0) {
-            const options = JSON.parse(poll.options);
+            const options = safeParse(poll.options, []);
             const selectedOption = options[optionIndex] || 'Bir seçenek';
             
             const payload = PushNotificationService.createPayload(
@@ -261,8 +266,8 @@ class PollController {
       );
       
       // Parse options
-      const options = JSON.parse(poll.options);
-      
+      const options = safeParse(poll.options, []);
+
       // Count votes per option
       const results = options.map((option, index) => {
         const voteCount = votes.filter(v => v.option_index === index).length;

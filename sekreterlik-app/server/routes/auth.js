@@ -1705,7 +1705,6 @@ router.post('/login-chief-observer', async (req, res) => {
     const token = generateToken({
       id: observer.id,
       ballot_box_id: ballotBox.id,
-      tc: observer.tc,
       role: 'chief_observer',
       type: 'chief_observer'
     });
