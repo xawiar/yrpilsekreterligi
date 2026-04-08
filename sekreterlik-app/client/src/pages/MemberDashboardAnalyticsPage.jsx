@@ -14,10 +14,10 @@ const MemberDashboardAnalyticsPage = () => {
     fetchAnalytics();
     fetchVisitorCounts();
     
-    // Update visitor counts every 10 seconds
+    // Update visitor counts every 60 seconds
     const interval = setInterval(() => {
       fetchVisitorCounts();
-    }, 10000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);

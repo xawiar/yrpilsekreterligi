@@ -1749,7 +1749,7 @@ const TownPresidentDashboardPage = () => {
                   >
                     <option value="">Üye Seçin</option>
                     {members.map(m => (
-                      <option key={m.id} value={m.id}>{m.name} - {m.tc}</option>
+                      <option key={m.id} value={m.id}>{m.name} - {maskTC(m.tc)}</option>
                     ))}
                   </select>
                 </div>
