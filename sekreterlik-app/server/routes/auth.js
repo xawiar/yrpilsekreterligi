@@ -32,7 +32,7 @@ router.post('/login', async (req, res) => {
       if (is2FAEnabled) {
         // 2FA aktifse gecici token dondur, tam token icin 2FA dogrulamasini bekle
         const jwt = require('jsonwebtoken');
-        const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_ENCRYPTION_KEY;
+        const JWT_SECRET = process.env.JWT_SECRET;
         const tempToken = jwt.sign(
           { id: admin.id, username: admin.username, role: 'admin', type: 'admin' },
           JWT_SECRET,
@@ -1806,7 +1806,7 @@ router.post('/2fa/verify', async (req, res) => {
     }
     // tempToken ile JWT olustur (tempToken zaten dogrulanmis bilgiyi tasiyor)
     const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || process.env.VITE_ENCRYPTION_KEY;
+    const JWT_SECRET = process.env.JWT_SECRET;
     try {
       const decoded = jwt.verify(tempToken, JWT_SECRET);
       const token = generateToken({ id: decoded.id, username: decoded.username, role: decoded.role, type: decoded.type });
