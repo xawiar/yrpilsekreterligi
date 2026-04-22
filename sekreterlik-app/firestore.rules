@@ -110,9 +110,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Election results - admin + coordinators can write
+    // Election results - public read (halka açık seçim sonuçları için)
+    // Write: admin + coordinators
     match /election_results/{resultId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['chief_observer', 'provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor']);
     }

@@ -11,6 +11,7 @@ const PublicApplicationPage = () => {
     tc: '',
     phone: '',
     district_id: '',
+    application_level: '',
     reason: '',
     kvkk_consent: false,
   });
@@ -106,6 +107,10 @@ const PublicApplicationPage = () => {
       setError('Gecerli bir telefon numarasi giriniz (10-11 hane).');
       return;
     }
+    if (!formData.application_level) {
+      setError('Lutfen basvurmak istediginiz kademeyi seciniz.');
+      return;
+    }
     if (!formData.kvkk_consent) {
       setError('KVKK metnini onaylamaniz gerekmektedir.');
       return;
@@ -129,6 +134,7 @@ const PublicApplicationPage = () => {
         tc: formData.tc.trim(),
         phone: formData.phone.trim(),
         district_id: formData.district_id || '',
+        application_level: formData.application_level,
         reason: formData.reason.trim(),
         kvkk_consent: true,
         kvkk_consent_date: new Date().toISOString(),
@@ -140,9 +146,16 @@ const PublicApplicationPage = () => {
       // Sadece admin'e bildirim gonder (tum uyelere DEGIL)
       try {
         var NotificationService = (await import('../services/NotificationService')).default;
+        const levelLabels = {
+          'il_yonetimi': 'İl Yönetimi',
+          'ilce_yonetimi': 'İlçe Yönetimi',
+          'kadin_kollari': 'Kadın Kolları',
+          'genclik_kollari': 'Gençlik Kolları'
+        };
+        const levelLabel = levelLabels[formData.application_level] || formData.application_level;
         await NotificationService.createNotification({
-          title: 'Yeni Uyelik Basvurusu',
-          body: formData.name.trim() + ' uyelik basvurusu yapti',
+          title: 'Yeni Yönetim Başvurusu',
+          body: formData.name.trim() + ' ' + levelLabel + ' için başvurdu',
           type: 'member_application',
           target: { type: 'role', value: 'admin' },
           url: '/settings?tab=membership-applications'
@@ -202,7 +215,7 @@ const PublicApplicationPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold">Parti Uyelik Basvurusu</h1>
+          <h1 className="text-2xl font-bold">Parti Yönetim Kademesi Başvuru Formu</h1>
           <p className={`mt-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Asagidaki formu doldurarak uyelik basvurunuzu yapabilirsiniz.
           </p>
@@ -277,10 +290,30 @@ const PublicApplicationPage = () => {
             />
           </div>
 
+          {/* Başvurulan Kademe */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
+              Başvurmak İstediğiniz Kademe <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="application_level"
+              value={formData.application_level}
+              onChange={handleChange}
+              required
+              className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass}`}
+            >
+              <option value="">Kademe seçiniz...</option>
+              <option value="il_yonetimi">İl Yönetimi</option>
+              <option value="ilce_yonetimi">İlçe Yönetimi</option>
+              <option value="kadin_kollari">Kadın Kolları</option>
+              <option value="genclik_kollari">Gençlik Kolları</option>
+            </select>
+          </div>
+
           {/* Ilce Dropdown */}
           <div>
             <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
-              Ilce
+              İlçe
             </label>
             <select
               name="district_id"
@@ -288,7 +321,7 @@ const PublicApplicationPage = () => {
               onChange={handleChange}
               className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass}`}
             >
-              <option value="">Ilce seciniz (opsiyonel)</option>
+              <option value="">İlçe seçiniz (ilçe başvurusu için zorunlu)</option>
               {districts.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}

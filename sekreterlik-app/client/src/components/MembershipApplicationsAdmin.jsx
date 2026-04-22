@@ -255,8 +255,19 @@ const MembershipApplicationsAdmin = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                       <span>TC: {app.tc}</span>
                       <span>Tel: {app.phone}</span>
-                      <span>Ilce: {getDistrictName(app.district_id)}</span>
+                      <span>İlçe: {getDistrictName(app.district_id)}</span>
                       <span>Tarih: {formatDate(app.created_at)}</span>
+                      {app.application_level && (
+                        <span className="col-span-2 lg:col-span-4">
+                          <span className="font-medium text-indigo-600 dark:text-indigo-400">Kademe:</span>{' '}
+                          {{
+                            il_yonetimi: 'İl Yönetimi',
+                            ilce_yonetimi: 'İlçe Yönetimi',
+                            kadin_kollari: 'Kadın Kolları',
+                            genclik_kollari: 'Gençlik Kolları'
+                          }[app.application_level] || app.application_level}
+                        </span>
+                      )}
                     </div>
                     {app.reason && (
                       <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
