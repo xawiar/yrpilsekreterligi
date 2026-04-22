@@ -19,7 +19,12 @@ const PersonalDocuments = ({ memberId }) => {
 
   // Check if user is admin or viewing their own documents
   const isAdmin = user && user.role === 'admin';
-  const isOwnDocuments = user && user.role === 'member' && user.memberId === parseInt(memberId);
+  // memberId hem string (Firebase doc ID) hem number olabilir — esnek karşılaştırma
+  const isOwnDocuments = Boolean(
+    user && user.role === 'member' && memberId &&
+    (String(user.memberId) === String(memberId) ||
+     String(user.id) === String(memberId))
+  );
   const canViewDocuments = isAdmin || isOwnDocuments;
 
   useEffect(() => {
