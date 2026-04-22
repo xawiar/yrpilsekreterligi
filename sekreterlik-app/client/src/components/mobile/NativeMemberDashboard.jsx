@@ -3,7 +3,6 @@
  * Üye dashboard'u için native mobil görünümü (sadece dashboard view)
  */
 import React from 'react';
-import { Link } from 'react-router-dom';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
 import DataDeletionRequestButton from '../DataDeletionRequestButton';
@@ -12,6 +11,8 @@ import PersonalDocuments from '../PersonalDocuments';
 import ProfileUpdateRequestModal from '../ProfileUpdateRequestModal';
 import MemberProfileRequestsList from '../MemberProfileRequestsList';
 import MemberApplicationsPanel from '../MemberApplicationsPanel';
+import Modal from '../Modal';
+import MemberRequestsPage from '../../pages/MemberRequestsPage';
 
 const NativeMemberDashboard = ({
   member = null,
@@ -193,24 +194,39 @@ const NativeMemberDashboard = ({
 
   // Accordion state - ilk kategori acik
   const [openCategory, setOpenCategory] = React.useState(0);
-  const [profileModalOpen, setProfileModalOpen] = React.useState(false);
+  const [profileRequestModalOpen, setProfileRequestModalOpen] = React.useState(false);
+  const [profileViewModalOpen, setProfileViewModalOpen] = React.useState(false);
   const [profileRequestsKey, setProfileRequestsKey] = React.useState(0);
   const [memberState, setMemberState] = React.useState(member);
+  const [actionsExpanded, setActionsExpanded] = React.useState(false);
+  const [actionsTab, setActionsTab] = React.useState('requests');
   React.useEffect(() => { setMemberState(member); }, [member]);
 
   return (
     <div className="px-4 py-6 space-y-4 pb-24">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-          Hoş Geldiniz
-        </h1>
-        {member && (
-          <p className="text-gray-600 dark:text-gray-400 text-base">
-            {member.name} - {member.position}
-          </p>
-        )}
-      </div>
+      {/* Profil Başlığı — tıklanınca profil modal */}
+      {memberState && (
+        <button
+          type="button"
+          onClick={() => setProfileViewModalOpen(true)}
+          className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-lg p-4 text-white mb-4 flex items-center space-x-3 active:scale-95 transition-transform text-left"
+        >
+          {memberState.photo ? (
+            <img src={memberState.photo} alt={memberState.name || 'Profil'} className="w-12 h-12 rounded-full object-cover border-2 border-white/30 flex-shrink-0" />
+          ) : (
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
+              {(memberState.name || 'Ü').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold truncate">{memberState.name || 'Üye'}</div>
+            <div className="text-indigo-100 text-xs truncate">{memberState.position || 'Üye'}</div>
+          </div>
+          <svg className="w-5 h-5 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
 
       {/* Kategorize Menu - Akordeon */}
       {activeCategories.length > 0 && (
@@ -310,59 +326,100 @@ const NativeMemberDashboard = ({
         </div>
       )}
 
-      {/* Profil Paneli */}
-      {memberState && (
-        <MemberProfilePanel
-          member={memberState}
-          onRequestChange={() => setProfileModalOpen(true)}
-          onPhotoUpdated={(newUrl) => setMemberState((m) => ({ ...m, photo: newUrl }))}
-        />
-      )}
-
-      {/* Profil Değişiklik Talepleri (kendi talepleri) */}
-      {memberState && (
-        <MemberProfileRequestsList
-          key={profileRequestsKey}
-          memberId={memberState.id}
-        />
-      )}
-
       {/* Kişisel Belgeler */}
       {memberState?.id && <PersonalDocuments memberId={memberState.id} />}
 
-      {/* Başvurular Paneli */}
-      {memberState && <MemberApplicationsPanel member={memberState} />}
-
-      {/* Taleplerim — Hızlı erişim kartı */}
-      <Link
-        to="/my-requests"
-        className="block bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 active:scale-95 transition-transform"
-      >
-        <div className="flex items-center space-x-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      {/* Taleplerim & Başvurularım — Akordeon */}
+      <NativeCard className="!p-0 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setActionsExpanded((v) => !v)}
+          className="w-full flex items-center px-4 py-3 text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 text-white mr-3">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">
-              Taleplerim & Şikayetlerim
+              Taleplerim & Başvurularım
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Yeni talep oluştur, gelen cevapları gör
+              Talep oluştur, başvurulara katıl
             </div>
           </div>
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            className={`w-5 h-5 text-gray-400 transition-transform ${actionsExpanded ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-        </div>
-      </Link>
+        </button>
+
+        {actionsExpanded && (
+          <div className="border-t border-gray-200 dark:border-gray-700">
+            <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+              <button
+                type="button"
+                onClick={() => setActionsTab('requests')}
+                className={`flex-1 py-3 px-2 text-xs font-medium ${
+                  actionsTab === 'requests'
+                    ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-white dark:bg-gray-800'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Talepler
+              </button>
+              <button
+                type="button"
+                onClick={() => setActionsTab('applications')}
+                className={`flex-1 py-3 px-2 text-xs font-medium ${
+                  actionsTab === 'applications'
+                    ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-white dark:bg-gray-800'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Başvurular
+              </button>
+            </div>
+            <div className="p-1">
+              {actionsTab === 'requests' && <MemberRequestsPage />}
+              {actionsTab === 'applications' && memberState && <MemberApplicationsPanel member={memberState} />}
+            </div>
+          </div>
+        )}
+      </NativeCard>
+
+      {/* Profil Görüntüleme Modal */}
+      {memberState && (
+        <Modal
+          isOpen={profileViewModalOpen}
+          onClose={() => setProfileViewModalOpen(false)}
+          title="Profilim"
+        >
+          <div className="space-y-4">
+            <MemberProfilePanel
+              member={memberState}
+              onRequestChange={() => {
+                setProfileViewModalOpen(false);
+                setProfileRequestModalOpen(true);
+              }}
+              onPhotoUpdated={(newUrl) => setMemberState((m) => ({ ...m, photo: newUrl }))}
+            />
+            <MemberProfileRequestsList
+              key={profileRequestsKey}
+              memberId={memberState.id}
+            />
+          </div>
+        </Modal>
+      )}
 
       {/* Profil Değişiklik Talebi Modal */}
       {memberState && (
         <ProfileUpdateRequestModal
-          isOpen={profileModalOpen}
-          onClose={() => setProfileModalOpen(false)}
+          isOpen={profileRequestModalOpen}
+          onClose={() => setProfileRequestModalOpen(false)}
           member={memberState}
           onSubmitted={() => setProfileRequestsKey((k) => k + 1)}
         />

@@ -38,7 +38,7 @@ import PersonalDocuments from '../components/PersonalDocuments';
 import ProfileUpdateRequestModal from '../components/ProfileUpdateRequestModal';
 import MemberProfileRequestsList from '../components/MemberProfileRequestsList';
 import MemberApplicationsPanel from '../components/MemberApplicationsPanel';
-import { Link } from 'react-router-dom';
+import MemberRequestsPage from './MemberRequestsPage';
 
 // URL path <-> view name mappings
 const viewToPathMap = {
@@ -227,6 +227,9 @@ const MemberDashboardPage = () => {
   const [youthBranchManagement, setYouthBranchManagement] = useState([]);
   const [profileRequestModalOpen, setProfileRequestModalOpen] = useState(false);
   const [profileRequestsRefreshKey, setProfileRequestsRefreshKey] = useState(0);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [actionsExpanded, setActionsExpanded] = useState(false);
+  const [actionsTab, setActionsTab] = useState('requests'); // 'requests' | 'applications'
   
   // URL pathname degistiginde currentView'i guncelle
   useEffect(() => {
@@ -760,30 +763,30 @@ const MemberDashboardPage = () => {
             />
           ) : (
             <div className="space-y-4 sm:space-y-6 md:space-y-8">
-          {/* Welcome Card */}
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 text-white relative overflow-hidden">
-            <div className="absolute inset-0 bg-black bg-opacity-10"></div>
-            <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
+          {/* Kompakt Profil Başlığı — avatar tıklanınca profil modalı */}
+          <button
+            type="button"
+            onClick={() => setProfileModalOpen(true)}
+            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-xl p-4 text-white relative overflow-hidden hover:shadow-2xl transition-shadow text-left"
+          >
+            <div className="flex items-center space-x-4">
+              {member?.photo ? (
+                <img src={member.photo} alt={member?.name || 'Profil'} className="w-14 h-14 rounded-full object-cover border-2 border-white/30" />
+              ) : (
+                <div className="w-14 h-14 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm text-xl font-bold">
+                  {(member?.name || 'Ü').charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1">
-                  <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold mb-1 sm:mb-2">Kişisel Dashboard</h2>
-                  <p className="text-indigo-100 text-xs sm:text-sm md:text-base lg:text-lg">
-                    Bu sayfada sadece sizin bilgileriniz ve katılım durumunuz görüntülenmektedir.
-                  </p>
-                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-bold truncate">{member?.name || 'Üye'}</div>
+                <div className="text-indigo-100 text-sm truncate">{member?.position || 'Üye'} · {member?.region || ''}</div>
+                <div className="text-white/80 text-xs mt-0.5">Profili görüntülemek için dokun</div>
               </div>
+              <svg className="w-5 h-5 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 bg-white bg-opacity-10 rounded-full -translate-y-8 sm:-translate-y-12 lg:-translate-y-16 translate-x-8 sm:translate-x-12 lg:translate-x-16"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 sm:w-16 sm:h-16 lg:w-24 lg:h-24 bg-white bg-opacity-10 rounded-full translate-y-6 sm:translate-y-8 lg:translate-y-12 -translate-x-6 sm:-translate-x-8 lg:-translate-x-12"></div>
-          </div>
+          </button>
 
           {/* Eski dağınık bölümler kaldırıldı - Tüm yetkiler Hızlı İşlemler'de */}
 
@@ -1171,16 +1174,7 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
-          {/* Empty state when user has no permissions */}
-          {grantedPermissions.length === 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <h3 className="mt-3 text-lg font-medium text-gray-900 dark:text-gray-100">Henüz yetki atanmamış</h3>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Yöneticinizle iletişime geçerek sayfa erişim yetkisi talep edebilirsiniz.</p>
-            </div>
-          )}
+          {/* Empty state kaldırıldı — yetki yoksa bölüm gizli */}
 
           {/* Active Polls Section */}
           {polls.length > 0 && (
@@ -1305,55 +1299,75 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
-          {/* Profil Paneli */}
-          {member && (
-            <MemberProfilePanel
-              member={member}
-              onRequestChange={() => setProfileRequestModalOpen(true)}
-              onPhotoUpdated={(newUrl) => setMember((m) => ({ ...m, photo: newUrl }))}
-            />
-          )}
-
-          {/* Profil Değişiklik Talepleri (kendi talepleri) */}
-          {member && (
-            <MemberProfileRequestsList
-              key={profileRequestsRefreshKey}
-              memberId={member.id}
-            />
-          )}
-
           {/* Kişisel Belgeler */}
           {member?.id && <PersonalDocuments memberId={member.id} />}
 
-          {/* Başvurular Paneli */}
-          {member && <MemberApplicationsPanel member={member} />}
-
-          {/* Taleplerim — Hızlı erişim kartı */}
-          <Link
-            to="/my-requests"
-            className="block bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-shadow"
-          >
-            <div className="flex items-center justify-between">
+          {/* Taleplerim & Başvurularım — Tek Akordeon */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setActionsExpanded((v) => !v)}
+              className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <div>
+                <div className="text-left">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Taleplerim & Şikayetlerim
+                    Taleplerim & Başvurularım
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Yeni talep oluşturun, gelen cevapları görün
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                    Talep oluştur, aktif başvurulara katıl
                   </p>
                 </div>
               </div>
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${actionsExpanded ? 'rotate-180' : ''}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </div>
-          </Link>
+            </button>
+
+            {actionsExpanded && (
+              <div className="border-t border-gray-200 dark:border-gray-700">
+                {/* Tab başlıkları */}
+                <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                  <button
+                    type="button"
+                    onClick={() => setActionsTab('requests')}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                      actionsTab === 'requests'
+                        ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-white dark:bg-gray-800'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Taleplerim & Şikayetlerim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActionsTab('applications')}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                      actionsTab === 'applications'
+                        ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-white dark:bg-gray-800'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Başvurular
+                  </button>
+                </div>
+
+                {/* Tab içerik */}
+                <div className="p-2 sm:p-4">
+                  {actionsTab === 'requests' && <MemberRequestsPage />}
+                  {actionsTab === 'applications' && member && <MemberApplicationsPanel member={member} />}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Member Details */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1369,6 +1383,30 @@ const MemberDashboardPage = () => {
 
           {/* KVKK - Veri Silme Talep Butonu */}
           <DataDeletionRequestButton memberId={member?.id} />
+
+          {/* Profil Görüntüleme Modal (avatar tıklanınca) */}
+          {member && (
+            <Modal
+              isOpen={profileModalOpen}
+              onClose={() => setProfileModalOpen(false)}
+              title="Profilim"
+            >
+              <div className="space-y-4">
+                <MemberProfilePanel
+                  member={member}
+                  onRequestChange={() => {
+                    setProfileModalOpen(false);
+                    setProfileRequestModalOpen(true);
+                  }}
+                  onPhotoUpdated={(newUrl) => setMember((m) => ({ ...m, photo: newUrl }))}
+                />
+                <MemberProfileRequestsList
+                  key={profileRequestsRefreshKey}
+                  memberId={member.id}
+                />
+              </div>
+            </Modal>
+          )}
 
           {/* Profil Değişiklik Talebi Modal */}
           {member && (
