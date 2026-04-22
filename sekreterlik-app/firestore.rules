@@ -39,10 +39,10 @@ service cloud.firestore {
       allow create: if isAuthenticated();
     }
 
-    // Members - admin write, authenticated read
-    // İstisna: authenticated user sadece kendi dokümanındaki `photo` alanını güncelleyebilir
+    // Members - public read (landing page için gerekli), write sadece admin/başkan
+    // Hassas alanlar frontend'de `safeMember` helper'ı ile filtrelenir.
     match /members/{memberId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
       allow update: if isAdmin() ||

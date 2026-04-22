@@ -72,7 +72,7 @@ const PublicLandingPage = () => {
   const [content, setContent] = useState(DEFAULTS);
   const [leaders, setLeaders] = useState([]);
   const [election, setElection] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Dark mode auto-detect
   useEffect(() => {
@@ -221,7 +221,8 @@ const PublicLandingPage = () => {
     fetchAll();
   }, []);
 
-  if (loading) {
+  // Loading bloğu kaldırıldı — içerik DEFAULTS ile anında render, fetch geldikçe güncellenir
+  if (false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="flex flex-col items-center gap-3">
