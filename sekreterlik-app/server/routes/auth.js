@@ -1081,6 +1081,73 @@ router.post('/update-firebase-auth-user', authenticateToken, async (req, res) =>
   }
 });
 
+// Firebase Auth kullanıcısı oluştur (Admin SDK ile — admin session bozulmaz)
+router.post('/firebase-auth-user', async (req, res) => {
+  try {
+    const { email, password, username } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'email ve password zorunlu' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Şifre minimum 6 karakter olmalı' });
+    }
+
+    const { getAdmin } = require('../config/firebaseAdmin');
+    const firebaseAdmin = getAdmin();
+
+    if (!firebaseAdmin) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Admin SDK initialize edilemedi. FIREBASE_SERVICE_ACCOUNT_KEY environment variable kontrol edin.'
+      });
+    }
+
+    try {
+      const userRecord = await firebaseAdmin.auth().createUser({
+        email: email,
+        password: password,
+        emailVerified: true,
+        disabled: false
+      });
+
+      return res.json({
+        success: true,
+        uid: userRecord.uid,
+        email: userRecord.email,
+        message: 'Firebase Auth kullanıcısı oluşturuldu'
+      });
+    } catch (authError) {
+      // Email zaten varsa, mevcut kullanıcıyı döndür (idempotent davranış)
+      if (authError.code === 'auth/email-already-exists') {
+        try {
+          const existingUser = await firebaseAdmin.auth().getUserByEmail(email);
+          // Şifreyi güncelle (kullanıcı login olabilsin)
+          await firebaseAdmin.auth().updateUser(existingUser.uid, { password: password });
+          return res.json({
+            success: true,
+            uid: existingUser.uid,
+            email: existingUser.email,
+            message: 'Mevcut Auth kullanıcısının şifresi güncellendi',
+            existing: true
+          });
+        } catch (getUserError) {
+          console.error('Get existing user error:', getUserError);
+          return res.status(500).json({ success: false, message: 'Mevcut kullanıcı alınamadı: ' + getUserError.message });
+        }
+      }
+      throw authError;
+    }
+  } catch (error) {
+    console.error('Firebase Auth create error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Firebase Auth kullanıcısı oluşturulamadı: ' + (error.message || error.code)
+    });
+  }
+});
+
 // Delete Firebase Auth user endpoint (server-side, requires Firebase Admin SDK)
 router.delete('/firebase-auth-user/:authUid', authenticateToken, async (req, res) => {
   try {

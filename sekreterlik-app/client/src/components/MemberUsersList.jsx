@@ -14,6 +14,18 @@ const PasswordResetButton = ({ user, setPasswordResetUser, setNewPassword, setIs
   </button>
 );
 
+const DeleteButton = ({ user, onDelete }) => (
+  <button
+    onClick={() => onDelete(user)}
+    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-2"
+    title="Kullanıcıyı Sil"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  </button>
+);
+
 const StatusBadge = ({ user }) => (
   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
     user.is_active || user.isActive
@@ -37,7 +49,7 @@ const TableHeader = ({ columns }) => (
 );
 
 // District Presidents Table
-const DistrictPresidentsTable = ({ users, districts, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => {
+const DistrictPresidentsTable = ({ users, districts, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser }) => {
   if (users.length === 0) return null;
 
   const filtered = users.filter((user) => {
@@ -82,6 +94,7 @@ const DistrictPresidentsTable = ({ users, districts, searchTerm, setPasswordRese
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <PasswordResetButton user={user} setPasswordResetUser={setPasswordResetUser} setNewPassword={setNewPassword} setIsResettingPassword={setIsResettingPassword} />
+                      <DeleteButton user={user} onDelete={onDeleteUser} />
                     </div>
                   </td>
                 </tr>
@@ -95,7 +108,7 @@ const DistrictPresidentsTable = ({ users, districts, searchTerm, setPasswordRese
 };
 
 // Town Presidents Table
-const TownPresidentsTable = ({ users, towns, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => {
+const TownPresidentsTable = ({ users, towns, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser }) => {
   if (users.length === 0) return null;
 
   const filtered = users.filter((user) => {
@@ -139,6 +152,7 @@ const TownPresidentsTable = ({ users, towns, searchTerm, setPasswordResetUser, s
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <PasswordResetButton user={user} setPasswordResetUser={setPasswordResetUser} setNewPassword={setNewPassword} setIsResettingPassword={setIsResettingPassword} />
+                      <DeleteButton user={user} onDelete={onDeleteUser} />
                     </div>
                   </td>
                 </tr>
@@ -152,7 +166,7 @@ const TownPresidentsTable = ({ users, towns, searchTerm, setPasswordResetUser, s
 };
 
 // Member Users Table
-const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => {
+const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser }) => {
   const filteredUsers = users.filter((user) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
@@ -242,6 +256,7 @@ const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, se
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <PasswordResetButton user={user} setPasswordResetUser={setPasswordResetUser} setNewPassword={setNewPassword} setIsResettingPassword={setIsResettingPassword} />
+                      <DeleteButton user={user} onDelete={onDeleteUser} />
                     </div>
                   </td>
                 </tr>
@@ -255,7 +270,7 @@ const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, se
 };
 
 // Observer Users Table
-const ObserverUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => {
+const ObserverUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser }) => {
   const filtered = users.filter((user) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
@@ -296,6 +311,7 @@ const ObserverUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPas
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
                     <PasswordResetButton user={user} setPasswordResetUser={setPasswordResetUser} setNewPassword={setNewPassword} setIsResettingPassword={setIsResettingPassword} />
+                    <DeleteButton user={user} onDelete={onDeleteUser} />
                   </div>
                 </td>
               </tr>
@@ -308,7 +324,7 @@ const ObserverUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPas
 };
 
 // Coordinator Users Table
-const CoordinatorUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => {
+const CoordinatorUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser }) => {
   const filtered = users.filter((user) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
@@ -349,6 +365,7 @@ const CoordinatorUsersTable = ({ users, searchTerm, setPasswordResetUser, setNew
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
                     <PasswordResetButton user={user} setPasswordResetUser={setPasswordResetUser} setNewPassword={setNewPassword} setIsResettingPassword={setIsResettingPassword} />
+                    <DeleteButton user={user} onDelete={onDeleteUser} />
                   </div>
                 </td>
               </tr>
@@ -369,6 +386,7 @@ const MemberUsersList = ({
   setPasswordResetUser,
   setNewPassword,
   setIsResettingPassword,
+  onDeleteUser,
 }) => {
   // Kullanıcıları tipine göre ayır
   const memberTypeUsers = memberUsers.filter(u =>
@@ -379,7 +397,7 @@ const MemberUsersList = ({
   const observerTypeUsers = memberUsers.filter(u => u.userType === 'musahit');
   const coordinatorUsers = memberUsers.filter(u => u.userType === 'coordinator');
 
-  const commonProps = { searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword };
+  const commonProps = { searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser };
 
   return (
     <>

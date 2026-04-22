@@ -294,10 +294,22 @@ const MemberUsersSettings = () => {
           const existingUser = existingUsersList.find(u => u.username === username || (u.member_id === member.id || u.memberId === member.id) || (u.member_id === String(member.id) || u.memberId === String(member.id)));
           if (!existingUser) {
             const email = `${username}@ilsekreterlik.local`;
-            let authUser = null;
-            try { authUser = await createUserWithEmailAndPassword(auth, email, password); }
-            catch (authError) { if (authError.code !== 'auth/email-already-in-use') { throw authError; } }
-            await FirebaseService.create('member_users', null, { username, password, userType: 'member', member_id: member.id, memberId: member.id, isActive: true, name: member.name, authUid: authUser?.user?.uid || null }, false);
+            // Firebase Auth kullanıcısını backend'den oluştur (admin session'ı korunur)
+            let authUid = null;
+            try {
+              const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+              const normalizedApiUrl = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
+              const authRes = await fetch(`${normalizedApiUrl}/auth/firebase-auth-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, username })
+              });
+              const authData = await authRes.json();
+              if (authData.success) authUid = authData.uid;
+            } catch (e) {
+              console.warn('Backend Auth create failed (continuing):', e.message);
+            }
+            await FirebaseService.create('member_users', null, { username, password, userType: 'member', member_id: member.id, memberId: member.id, isActive: true, name: member.name, authUid: authUid }, false);
             createdCount++;
           } else {
             const needsUpdate = existingUser.name !== member.name || (existingUser.member_id !== member.id && existingUser.memberId !== member.id) || existingUser.userType !== 'member';
@@ -392,12 +404,40 @@ const MemberUsersSettings = () => {
     finally { setIsProcessingAll(false); }
   };
 
+  // Tek bir üye kullanıcısını sil
+  const handleDeleteMemberUser = async (user) => {
+    const displayName = user.name || user.username || 'Bu kullanıcı';
+    const confirmed = await confirm({
+      title: 'Kullanıcıyı Sil',
+      message: `"${displayName}" kullanıcısını silmek istediğinize emin misiniz?\n\nBu işlem GERİ ALINAMAZ.`,
+      confirmText: 'Sil',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await ApiService.deleteMemberUser(user.id);
+      if (response.success) {
+        toast.success(response.message || 'Kullanıcı silindi');
+        await fetchMemberUsers();
+      } else {
+        toast.error(response.message || 'Silme başarısız');
+      }
+    } catch (error) {
+      console.error('Error deleting member user:', error);
+      toast.error('Silinirken hata: ' + (error.message || 'Bilinmeyen hata'));
+    }
+  };
+
   // Tüm üye kullanıcılarını sil
   const handleDeleteAllMemberUsers = async () => {
-    const confirmed = await confirm({ title: 'TÜM Kullanıcıları Sil', message: 'DİKKAT: Üye kullanıcıları sayfasındaki TÜM kullanıcıları silmek istediğinize emin misiniz?\n\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?' });
+    const confirmed = await confirm({
+      title: 'TÜM Kullanıcıları Sil',
+      message: 'DİKKAT: Üye kullanıcıları sayfasındaki TÜM kullanıcıları silmek istediğinize emin misiniz?\n\nBu işlem GERİ ALINAMAZ!\n\nDevam etmek istiyor musunuz?\n\nBu işlem GERİ ALINAMAZ. Son onay olarak devam etmek istediğinize emin misiniz?',
+      confirmText: 'Evet, tümünü sil',
+      variant: 'danger'
+    });
     if (!confirmed) return;
-    const confirmedFinal = await confirm({ title: 'Son Onay', message: 'Son bir kez daha onaylayın: TÜM kullanıcıları silmek istediğinize emin misiniz?' });
-    if (!confirmedFinal) return;
     try {
       setIsDeletingAll(true); setMessage(''); setMessageType('info');
       const allMemberUsers = await ApiService.getMemberUsers();
@@ -502,6 +542,7 @@ const MemberUsersSettings = () => {
         setPasswordResetUser={setPasswordResetUser}
         setNewPassword={setNewPassword}
         setIsResettingPassword={setIsResettingPassword}
+        onDeleteUser={handleDeleteMemberUser}
       />
 
       {isResettingPassword && passwordResetUser && (
