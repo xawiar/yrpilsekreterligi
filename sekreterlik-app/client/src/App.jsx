@@ -312,6 +312,16 @@ function AuthenticatedContent() {
             }
           />
 
+          {/* Member Requests Route (talepler/şikayetler) */}
+          <Route
+            path="/my-requests"
+            element={
+              <MemberRoute>
+                <MemberRequestsPage />
+              </MemberRoute>
+            }
+          />
+
           {/* District President Dashboard Route */}
           <Route
             path="/district-president-dashboard"
@@ -494,7 +504,6 @@ function AuthenticatedContent() {
                             <Route path="/settings/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense></PageTransition>} />
                             <Route path="/notifications" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><NotificationsPage /></Suspense></PageTransition>} />
                             <Route path="/sync-to-firebase" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SyncToFirebasePage /></Suspense></PageTransition>} />
-                            <Route path="/my-requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MemberRequestsPage /></Suspense></PageTransition>} />
                             <Route path="/admin/requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminRequestsPage /></Suspense></PageTransition>} />
                             <Route path="/admin/profile-requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminProfileRequestsPage /></Suspense></PageTransition>} />
                             <Route path="/admin/applications" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminApplicationsPage /></Suspense></PageTransition>} />
