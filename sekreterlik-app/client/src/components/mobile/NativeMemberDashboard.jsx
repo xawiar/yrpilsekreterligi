@@ -353,8 +353,7 @@ const NativeMemberDashboard = ({
         </div>
       )}
 
-      {/* Kişisel Belgeler */}
-      {memberState?.id && <PersonalDocuments memberId={memberState.id} />}
+      {/* Kişisel Belgeler paneli kaldırıldı — Profilim modal'ı içinde */}
 
       {/* Taleplerim & Başvurularım — Akordeon */}
       <NativeCard className="!p-0 overflow-hidden">
@@ -438,6 +437,8 @@ const NativeMemberDashboard = ({
               key={profileRequestsKey}
               memberId={memberState.id}
             />
+            {/* Kişisel Belgeler — profil modal içinde */}
+            {memberState?.id && <PersonalDocuments memberId={memberState.id} />}
           </div>
         </Modal>
       )}

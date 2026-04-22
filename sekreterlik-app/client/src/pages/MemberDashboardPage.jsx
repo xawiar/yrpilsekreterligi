@@ -1327,8 +1327,7 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
-          {/* Kişisel Belgeler */}
-          {member?.id && <PersonalDocuments memberId={member.id} />}
+          {/* Kişisel Belgeler panel olarak kaldırıldı — Profilim modal'ı içinde */}
 
           {/* Taleplerim & Başvurularım — Tek Akordeon */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1432,6 +1431,8 @@ const MemberDashboardPage = () => {
                   key={profileRequestsRefreshKey}
                   memberId={member.id}
                 />
+                {/* Kişisel Belgeler — profil modal içinde */}
+                {member?.id && <PersonalDocuments memberId={member.id} />}
               </div>
             </Modal>
           )}
