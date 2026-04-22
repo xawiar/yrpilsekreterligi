@@ -32,6 +32,7 @@ const MembersPage = () => {
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [isRegistrationHistoryOpen, setIsRegistrationHistoryOpen] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState(null);
+  const [addingNewRegistration, setAddingNewRegistration] = useState(false);
   const [meetings, setMeetings] = useState([]);
   const [events, setEvents] = useState([]);
   const [memberRegistrations, setMemberRegistrations] = useState([]);
@@ -663,11 +664,26 @@ const MembersPage = () => {
 
         <Modal
           isOpen={isRegistrationHistoryOpen}
-          onClose={() => { setIsRegistrationHistoryOpen(false); setSelectedMember(null); setEditingRegistration(null); }}
+          onClose={() => { setIsRegistrationHistoryOpen(false); setSelectedMember(null); setEditingRegistration(null); setAddingNewRegistration(false); }}
           title={selectedMember ? `${selectedMember.name} - Kayıt Geçmişi` : 'Kayıt Geçmişi'}
         >
           {selectedMember && (
             <div className="space-y-4">
+              {/* Yeni Kayıt Ekle butonu */}
+              {!editingRegistration && !addingNewRegistration && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setAddingNewRegistration(true)}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Yeni Kayıt Ekle
+                  </button>
+                </div>
+              )}
+
               {editingRegistration ? (
                 <MemberRegistrationForm
                   member={selectedMember}
@@ -676,6 +692,15 @@ const MembersPage = () => {
                   onRegistrationSaved={async () => {
                     await fetchMemberRegistrations();
                     setEditingRegistration(null);
+                  }}
+                />
+              ) : addingNewRegistration ? (
+                <MemberRegistrationForm
+                  member={selectedMember}
+                  onClose={() => setAddingNewRegistration(false)}
+                  onRegistrationSaved={async () => {
+                    await fetchMemberRegistrations();
+                    setAddingNewRegistration(false);
                   }}
                 />
               ) : null}
@@ -877,11 +902,25 @@ const MembersPage = () => {
 
       <Modal
         isOpen={isRegistrationHistoryOpen}
-        onClose={() => { setIsRegistrationHistoryOpen(false); setSelectedMember(null); setEditingRegistration(null); }}
+        onClose={() => { setIsRegistrationHistoryOpen(false); setSelectedMember(null); setEditingRegistration(null); setAddingNewRegistration(false); }}
         title={selectedMember ? `${selectedMember.name} - Kayıt Geçmişi` : 'Kayıt Geçmişi'}
       >
         {selectedMember && (
           <div className="space-y-4">
+            {!editingRegistration && !addingNewRegistration && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setAddingNewRegistration(true)}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Yeni Kayıt Ekle
+                </button>
+              </div>
+            )}
+
             {editingRegistration ? (
               <MemberRegistrationForm
                 member={selectedMember}
@@ -890,6 +929,15 @@ const MembersPage = () => {
                 onRegistrationSaved={async () => {
                   await fetchMemberRegistrations();
                   setEditingRegistration(null);
+                }}
+              />
+            ) : addingNewRegistration ? (
+              <MemberRegistrationForm
+                member={selectedMember}
+                onClose={() => setAddingNewRegistration(false)}
+                onRegistrationSaved={async () => {
+                  await fetchMemberRegistrations();
+                  setAddingNewRegistration(false);
                 }}
               />
             ) : null}

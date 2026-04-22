@@ -474,7 +474,7 @@ function AuthenticatedContent() {
                     </AnimatePresence>
 
                     <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-6">
-                      <div className="w-full max-w-7xl mx-auto">
+                      <div className="w-full max-w-screen-2xl mx-auto">
                         <AnimatePresence mode="wait">
                           <Routes key={location.pathname}>
                             <Route path="/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MembersPage /></Suspense></PageTransition>} />

@@ -140,17 +140,7 @@ const MembersTable = ({
               {registrations}
             </button>
           </div>
-          {onAddRegistration && (
-            <div className="pt-2">
-              <button
-                onClick={() => onAddRegistration(member.id)}
-                className="w-full inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs rounded-md text-white bg-green-600 hover:bg-green-700"
-                title="Üye Kaydı Ekle"
-              >
-                Kayıt Ekle
-              </button>
-            </div>
-          )}
+          {/* Kayıt Ekle butonu kaldırıldı — Kayıt Geçmişi modal'ında */}
         </div>
       </div>
     );
@@ -373,15 +363,7 @@ const MembersTable = ({
                         <ShowMemberButton onClick={() => onShowMember(member)} />
                         <EditMemberButton onClick={() => onEditMember(member)} />
                         <ArchiveMemberButton onClick={() => onArchiveMember(member)} />
-                        {onAddRegistration && (
-                          <button
-                            onClick={() => onAddRegistration(member.id)}
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs rounded-md text-white bg-green-600 hover:bg-green-700"
-                            title="Üye Kaydı Ekle"
-                          >
-                            Kayıt Ekle
-                          </button>
-                        )}
+                        {/* Kayıt Ekle butonu kaldırıldı — Kayıt Geçmişi modal'ında */}
                       </div>
                     </td>
                   </tr>
