@@ -601,6 +601,8 @@ const MembersPage = () => {
           members={filteredMembers}
           onMemberClick={handleShowMember}
           onAddMember={handleAddMember}
+          onEditMember={handleEditMember}
+          onArchiveMember={handleArchiveMember}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           selectedRegion={selectedRegion}
