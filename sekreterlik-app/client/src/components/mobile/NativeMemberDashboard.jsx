@@ -3,9 +3,15 @@
  * Üye dashboard'u için native mobil görünümü (sadece dashboard view)
  */
 import React from 'react';
+import { Link } from 'react-router-dom';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
 import DataDeletionRequestButton from '../DataDeletionRequestButton';
+import MemberProfilePanel from '../MemberProfilePanel';
+import PersonalDocuments from '../PersonalDocuments';
+import ProfileUpdateRequestModal from '../ProfileUpdateRequestModal';
+import MemberProfileRequestsList from '../MemberProfileRequestsList';
+import MemberApplicationsPanel from '../MemberApplicationsPanel';
 
 const NativeMemberDashboard = ({
   member = null,
@@ -187,6 +193,10 @@ const NativeMemberDashboard = ({
 
   // Accordion state - ilk kategori acik
   const [openCategory, setOpenCategory] = React.useState(0);
+  const [profileModalOpen, setProfileModalOpen] = React.useState(false);
+  const [profileRequestsKey, setProfileRequestsKey] = React.useState(0);
+  const [memberState, setMemberState] = React.useState(member);
+  React.useEffect(() => { setMemberState(member); }, [member]);
 
   return (
     <div className="px-4 py-6 space-y-4 pb-24">
@@ -300,8 +310,66 @@ const NativeMemberDashboard = ({
         </div>
       )}
 
+      {/* Profil Paneli */}
+      {memberState && (
+        <MemberProfilePanel
+          member={memberState}
+          onRequestChange={() => setProfileModalOpen(true)}
+          onPhotoUpdated={(newUrl) => setMemberState((m) => ({ ...m, photo: newUrl }))}
+        />
+      )}
+
+      {/* Profil Değişiklik Talepleri (kendi talepleri) */}
+      {memberState && (
+        <MemberProfileRequestsList
+          key={profileRequestsKey}
+          memberId={memberState.id}
+        />
+      )}
+
+      {/* Kişisel Belgeler */}
+      {memberState?.id && <PersonalDocuments memberId={memberState.id} />}
+
+      {/* Başvurular Paneli */}
+      {memberState && <MemberApplicationsPanel member={memberState} />}
+
+      {/* Taleplerim — Hızlı erişim kartı */}
+      <Link
+        to="/my-requests"
+        className="block bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 active:scale-95 transition-transform"
+      >
+        <div className="flex items-center space-x-3">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">
+              Taleplerim & Şikayetlerim
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Yeni talep oluştur, gelen cevapları gör
+            </div>
+          </div>
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
+
+      {/* Profil Değişiklik Talebi Modal */}
+      {memberState && (
+        <ProfileUpdateRequestModal
+          isOpen={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+          member={memberState}
+          onSubmitted={() => setProfileRequestsKey((k) => k + 1)}
+        />
+      )}
+
       {/* KVKK - Veri Silme Talep Butonu */}
-      <DataDeletionRequestButton memberId={member?.id} />
+      <DataDeletionRequestButton memberId={memberState?.id} />
 
       {/* Logout Button */}
       <NativeButton
