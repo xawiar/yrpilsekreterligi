@@ -173,17 +173,21 @@ const PublicLandingPage = () => {
             const snap = await getDocs(collection(db, 'members'));
             const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            // 1. Il Baskani (position "il baskan" iceren)
-            const ilBaskani = all.filter(m =>
-              typeof m.position === 'string' &&
-              m.position.toLocaleLowerCase('tr-TR').includes('il baskan')
-            );
+            // 1. Il Baskani (Türkçe karakter normalize edilerek arama)
+            const normalizeTr = (s) => (s || '').toLocaleLowerCase('tr-TR')
+              .replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o')
+              .replace(/ü/g, 'u').replace(/ç/g, 'c').replace(/ğ/g, 'g');
+            const ilBaskani = all.filter(m => {
+              const pos = normalizeTr(m.position);
+              return typeof m.position === 'string' &&
+                (pos.includes('il baskan') || pos === 'il baskani');
+            });
 
             // 2. Divan uyeleri (region=Divan), pozisyon onceligi sirali
             const divan = all
               .filter(m =>
                 typeof m.region === 'string' &&
-                m.region.toLocaleLowerCase('tr-TR').includes('divan') &&
+                normalizeTr(m.region).includes('divan') &&
                 !ilBaskani.find(ib => ib.id === m.id)
               )
               .sort((a, b) => {
@@ -199,8 +203,7 @@ const PublicLandingPage = () => {
               .filter(m =>
                 !used.has(m.id) &&
                 typeof m.region === 'string' &&
-                (m.region.toLocaleLowerCase('tr-TR').includes('il yonetim') ||
-                 m.region.toLocaleLowerCase('tr-TR').includes('il yönet'))
+                normalizeTr(m.region).includes('il yonetim')
               )
               .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
 
@@ -221,10 +224,27 @@ const PublicLandingPage = () => {
         if (merged.sections?.electionSummary !== false && merged.electionSummaryEnabled !== false) {
           try {
             if (merged.featuredElectionId) {
-              const elSnap = await getDoc(doc(db, 'election_results', merged.featuredElectionId));
-              if (elSnap.exists()) {
-                setElection({ id: elSnap.id, ...elSnap.data() });
+              // Once election_results koleksiyonunda ara (dogrudan id ile)
+              let found = null;
+              try {
+                const elSnap = await getDoc(doc(db, 'election_results', merged.featuredElectionId));
+                if (elSnap.exists()) {
+                  found = { id: elSnap.id, ...elSnap.data() };
+                }
+              } catch {}
+              // Bulunamazsa: featuredElectionId 'elections' koleksiyonundan secilmis olabilir
+              // election_results'ta electionId veya election_id alanina esitlikle ara
+              if (!found) {
+                try {
+                  const allResults = await getDocs(collection(db, 'election_results'));
+                  const match = allResults.docs.find(d => {
+                    const data = d.data();
+                    return String(data.electionId || data.election_id || data.election) === String(merged.featuredElectionId);
+                  });
+                  if (match) found = { id: match.id, ...match.data() };
+                } catch {}
               }
+              if (found) setElection(found);
             } else {
               // En son eklenen (created_at desc, yoksa date desc)
               let loaded = null;
