@@ -4317,6 +4317,69 @@ class ApiService {
     if (USE_FIREBASE) return FirebaseApiService.updateLandingContent(data);
     throw new Error('Tanıtım sayfası CMS yalnızca Firebase modunda desteklenir');
   }
+
+  // ============================================
+  // Landing News (Duyurular)
+  // ============================================
+
+  static async getLandingNews() {
+    if (USE_FIREBASE) return FirebaseApiService.getLandingNews();
+    throw new Error('Duyurular yalnızca Firebase modunda desteklenir');
+  }
+
+  static async createLandingNews(data) {
+    if (USE_FIREBASE) return FirebaseApiService.createLandingNews(data);
+    throw new Error('Duyurular yalnızca Firebase modunda desteklenir');
+  }
+
+  static async updateLandingNews(id, data) {
+    if (USE_FIREBASE) return FirebaseApiService.updateLandingNews(id, data);
+    throw new Error('Duyurular yalnızca Firebase modunda desteklenir');
+  }
+
+  static async deleteLandingNews(id) {
+    if (USE_FIREBASE) return FirebaseApiService.deleteLandingNews(id);
+    throw new Error('Duyurular yalnızca Firebase modunda desteklenir');
+  }
+
+  static async uploadLandingNewsImage(file) {
+    if (USE_FIREBASE) return FirebaseApiService.uploadLandingNewsImage(file);
+    throw new Error('Duyurular yalnızca Firebase modunda desteklenir');
+  }
+
+  // ============================================
+  // Landing Gallery (Saha Galerisi)
+  // ============================================
+
+  static async getLandingGallery() {
+    if (USE_FIREBASE) return FirebaseApiService.getLandingGallery();
+    throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async createLandingGalleryItem(data) {
+    if (USE_FIREBASE) return FirebaseApiService.createLandingGalleryItem(data);
+    throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async updateLandingGalleryItem(id, data) {
+    if (USE_FIREBASE) return FirebaseApiService.updateLandingGalleryItem(id, data);
+    throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async deleteLandingGalleryItem(id) {
+    if (USE_FIREBASE) return FirebaseApiService.deleteLandingGalleryItem(id);
+    throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async uploadLandingGalleryImage(file) {
+    if (USE_FIREBASE) return FirebaseApiService.uploadLandingGalleryImage(file);
+    throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async deleteLandingStorageFile(path) {
+    if (USE_FIREBASE) return FirebaseApiService.deleteLandingStorageFile(path);
+    throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
 }
 
 export default ApiService;

@@ -7,6 +7,8 @@ import PublicFooter from '../components/public/PublicFooter';
 import HeroSection from '../components/public/landing/HeroSection';
 import AboutSection from '../components/public/landing/AboutSection';
 import LeadersSection from '../components/public/landing/LeadersSection';
+import NewsSection from '../components/public/landing/NewsSection';
+import GallerySection from '../components/public/landing/GallerySection';
 import ElectionSummarySection from '../components/public/landing/ElectionSummarySection';
 import ApplyCTASection from '../components/public/landing/ApplyCTASection';
 import ContactSection from '../components/public/landing/ContactSection';
@@ -16,8 +18,10 @@ import ContactSection from '../components/public/landing/ContactSection';
  * Tek sayfa scroll landing. Mobile-first, dark mode auto-detect.
  * Veri kaynaklari:
  *   - landing_content/main     (anasayfa icerikleri)
- *   - members (collection)     (Il Baskani + region "divan" icerenler)
+ *   - members (collection)     (Il Baskani + Divan + Il Yonetimi)
  *   - election_results         (featuredElectionId veya son)
+ *   - landing_news             (haberler / duyurular)
+ *   - landing_gallery          (etkinlik galerisi)
  *
  * Kullanim (App.jsx tarafindan):
  *   <Route path="/" element={<PublicLandingPage />} />
@@ -51,6 +55,8 @@ const DEFAULTS = {
     hero: true,
     about: true,
     leaders: true,
+    news: true,
+    gallery: true,
     electionSummary: true,
     applyCta: true,
     contact: true,
@@ -65,13 +71,32 @@ const safeMember = (m) => ({
   region: m.region || '',
   photo: m.photo || '',
   muvefettislik: m.muvefettislik || '',
+  _group: m._group || '',
 });
+
+// Divan pozisyon oncelik sirasi (ust -> alt)
+const DIVAN_ORDER = [
+  'il sekreter', 'teskilat baskan', 'siyasi isler', 'mali isler',
+  'tanitim medya', 'seçim isleri', 'secim isleri', 'sosyal isler', 'stk', 'hukuk',
+  'egitim', 'ar-ge', 'yurt disi', 'engelliler', 'halkla iliskiler',
+  'mahalli idareler', 'kadin kollari', 'genclik kollari',
+];
+
+const divanPriority = (pos) => {
+  const p = (pos || '').toLocaleLowerCase('tr-TR');
+  for (let i = 0; i < DIVAN_ORDER.length; i++) {
+    if (p.includes(DIVAN_ORDER[i])) return i;
+  }
+  return 99;
+};
 
 const PublicLandingPage = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [content, setContent] = useState(DEFAULTS);
   const [leaders, setLeaders] = useState([]);
   const [election, setElection] = useState(null);
+  const [news, setNews] = useState([]);
+  const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Dark mode auto-detect
@@ -142,33 +167,51 @@ const PublicLandingPage = () => {
         }
         setContent(merged);
 
-        // 2) Liderler (Il Baskani + region "divan")
+        // 2) Liderler: Il Baskani + Divan + Il Yonetimi (3 grup, sirali)
         if (merged.sections?.leaders !== false && merged.leadersEnabled !== false) {
           try {
             const snap = await getDocs(collection(db, 'members'));
             const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+            // 1. Il Baskani (position "il baskan" iceren)
             const ilBaskani = all.filter(m =>
               typeof m.position === 'string' &&
-              m.position.toLocaleLowerCase('tr-TR').includes('baskan')
-            );
-            const divan = all.filter(m =>
-              typeof m.region === 'string' &&
-              m.region.toLocaleLowerCase('tr-TR').includes('divan')
+              m.position.toLocaleLowerCase('tr-TR').includes('il baskan')
             );
 
-            // Unique + sirala: il baskani once, sonra divan (ada gore)
-            const ids = new Set();
-            const list = [];
-            for (const m of ilBaskani) {
-              if (!ids.has(m.id)) { ids.add(m.id); list.push(m); }
-            }
-            for (const m of divan) {
-              if (!ids.has(m.id)) { ids.add(m.id); list.push(m); }
-            }
+            // 2. Divan uyeleri (region=Divan), pozisyon onceligi sirali
+            const divan = all
+              .filter(m =>
+                typeof m.region === 'string' &&
+                m.region.toLocaleLowerCase('tr-TR').includes('divan') &&
+                !ilBaskani.find(ib => ib.id === m.id)
+              )
+              .sort((a, b) => {
+                const pa = divanPriority(a.position);
+                const pb = divanPriority(b.position);
+                if (pa !== pb) return pa - pb;
+                return (a.name || '').localeCompare(b.name || '', 'tr');
+              });
 
-            // Safe pick
-            setLeaders(list.map(safeMember));
+            // 3. Il Yonetimi uyeleri (region "il yonetim" veya "il yönet")
+            const used = new Set([...ilBaskani.map(m => m.id), ...divan.map(m => m.id)]);
+            const ilYonetim = all
+              .filter(m =>
+                !used.has(m.id) &&
+                typeof m.region === 'string' &&
+                (m.region.toLocaleLowerCase('tr-TR').includes('il yonetim') ||
+                 m.region.toLocaleLowerCase('tr-TR').includes('il yönet'))
+              )
+              .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
+
+            // Her uyeye _group ekle
+            const tagged = [
+              ...ilBaskani.map(m => ({ ...m, _group: 'ilBaskani' })),
+              ...divan.map(m => ({ ...m, _group: 'divan' })),
+              ...ilYonetim.map(m => ({ ...m, _group: 'ilYonetim' })),
+            ];
+
+            setLeaders(tagged.map(safeMember));
           } catch (err) {
             console.warn('Liderler yuklenemedi:', err.message);
           }
@@ -209,6 +252,40 @@ const PublicLandingPage = () => {
             }
           } catch (err) {
             console.warn('Secim sonucu yuklenemedi:', err.message);
+          }
+        }
+
+        // 4) Haberler (landing_news koleksiyonu)
+        if (merged.sections?.news !== false) {
+          try {
+            const q = query(collection(db, 'landing_news'), orderBy('date', 'desc'), limit(6));
+            const snap = await getDocs(q);
+            setNews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (err) {
+            try {
+              const snap = await getDocs(collection(db, 'landing_news'));
+              const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              arr.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+              setNews(arr.slice(0, 6));
+            } catch {
+              setNews([]);
+            }
+          }
+        }
+
+        // 5) Galeri (landing_gallery koleksiyonu)
+        if (merged.sections?.gallery !== false) {
+          try {
+            const q = query(collection(db, 'landing_gallery'), orderBy('date', 'desc'), limit(12));
+            const snap = await getDocs(q);
+            setGallery(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (err) {
+            try {
+              const snap = await getDocs(collection(db, 'landing_gallery'));
+              setGallery(snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 12));
+            } catch {
+              setGallery([]);
+            }
           }
         }
       } catch (err) {
@@ -268,6 +345,14 @@ const PublicLandingPage = () => {
           />
         )}
 
+        {s.news !== false && news.length > 0 && (
+          <NewsSection news={news} />
+        )}
+
+        {s.gallery !== false && gallery.length > 0 && (
+          <GallerySection gallery={gallery} />
+        )}
+
         {s.electionSummary !== false && election && (
           <ElectionSummarySection electionResult={election} />
         )}
@@ -291,7 +376,13 @@ const PublicLandingPage = () => {
         )}
       </main>
 
-      <PublicFooter appName={content.appName} />
+      <PublicFooter
+        appName={content.appName}
+        address={content.address || ''}
+        phone={content.phone || ''}
+        email={content.email || ''}
+        social={content.social || {}}
+      />
     </div>
   );
 };

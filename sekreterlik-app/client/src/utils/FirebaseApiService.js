@@ -9019,6 +9019,163 @@ class FirebaseApiService {
       return { success: false, message: e?.message || 'Kaydetme hatası' };
     }
   }
+
+  // ========= LANDING NEWS CRUD =========
+  // Firestore: landing_news/{id}
+  // Storage:   landing_news/{timestamp}.{ext}
+
+  static async getLandingNews() {
+    try {
+      const items = await FirebaseService.getAll('landing_news', {}, false);
+      return (items || []).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    } catch (e) {
+      console.warn('getLandingNews:', e?.message || e);
+      return [];
+    }
+  }
+
+  static async createLandingNews(data) {
+    try {
+      const now = new Date().toISOString();
+      const id = await FirebaseService.create('landing_news', null, {
+        ...data,
+        createdAt: now,
+        updatedAt: now
+      }, false);
+      return { success: true, id };
+    } catch (e) {
+      console.error('createLandingNews:', e);
+      return { success: false, message: e?.message || 'Duyuru oluşturulamadı' };
+    }
+  }
+
+  static async updateLandingNews(id, data) {
+    try {
+      await FirebaseService.update('landing_news', id, {
+        ...data,
+        updatedAt: new Date().toISOString()
+      }, false);
+      return { success: true };
+    } catch (e) {
+      console.error('updateLandingNews:', e);
+      return { success: false, message: e?.message || 'Duyuru güncellenemedi' };
+    }
+  }
+
+  static async deleteLandingNews(id) {
+    try {
+      await FirebaseService.delete('landing_news', id);
+      return { success: true };
+    } catch (e) {
+      console.error('deleteLandingNews:', e);
+      return { success: false, message: e?.message || 'Duyuru silinemedi' };
+    }
+  }
+
+  static async uploadLandingNewsImage(file) {
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const storage = getStorage();
+      const ext = (file?.name || '').split('.').pop() || 'png';
+      const path = `landing_news/${Date.now()}.${ext}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file, { contentType: file.type });
+      const url = await getDownloadURL(storageRef);
+      return { success: true, url, path };
+    } catch (e) {
+      console.error('uploadLandingNewsImage:', e);
+      return { success: false, message: e?.message || 'Görsel yüklenemedi' };
+    }
+  }
+
+  // ========= LANDING GALLERY CRUD =========
+  // Firestore: landing_gallery/{id}
+  // Storage:   landing_gallery/{timestamp}.{ext}
+
+  static async getLandingGallery() {
+    try {
+      const items = await FirebaseService.getAll('landing_gallery', {}, false);
+      return (items || []).sort((a, b) => {
+        const orderDiff = (a.order ?? 999) - (b.order ?? 999);
+        if (orderDiff !== 0) return orderDiff;
+        return new Date(b.date || 0) - new Date(a.date || 0);
+      });
+    } catch (e) {
+      console.warn('getLandingGallery:', e?.message || e);
+      return [];
+    }
+  }
+
+  static async createLandingGalleryItem(data) {
+    try {
+      const now = new Date().toISOString();
+      const id = await FirebaseService.create('landing_gallery', null, {
+        ...data,
+        createdAt: now,
+        updatedAt: now
+      }, false);
+      return { success: true, id };
+    } catch (e) {
+      console.error('createLandingGalleryItem:', e);
+      return { success: false, message: e?.message || 'Galeri öğesi eklenemedi' };
+    }
+  }
+
+  static async updateLandingGalleryItem(id, data) {
+    try {
+      await FirebaseService.update('landing_gallery', id, {
+        ...data,
+        updatedAt: new Date().toISOString()
+      }, false);
+      return { success: true };
+    } catch (e) {
+      console.error('updateLandingGalleryItem:', e);
+      return { success: false, message: e?.message || 'Galeri öğesi güncellenemedi' };
+    }
+  }
+
+  static async deleteLandingGalleryItem(id) {
+    try {
+      await FirebaseService.delete('landing_gallery', id);
+      return { success: true };
+    } catch (e) {
+      console.error('deleteLandingGalleryItem:', e);
+      return { success: false, message: e?.message || 'Galeri öğesi silinemedi' };
+    }
+  }
+
+  static async uploadLandingGalleryImage(file) {
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const storage = getStorage();
+      const ext = (file?.name || '').split('.').pop() || 'png';
+      const path = `landing_gallery/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file, { contentType: file.type });
+      const url = await getDownloadURL(storageRef);
+      return { success: true, url, path };
+    } catch (e) {
+      console.error('uploadLandingGalleryImage:', e);
+      return { success: false, message: e?.message || 'Görsel yüklenemedi' };
+    }
+  }
+
+  static async deleteLandingStorageFile(path) {
+    try {
+      if (!path) return { success: true };
+      const { getStorage, ref, deleteObject } = await import('firebase/storage');
+      const storage = getStorage();
+      await deleteObject(ref(storage, path));
+      return { success: true };
+    } catch (e) {
+      // object-not-found sessiz geç — zaten silinmiş olabilir
+      if (e?.code === 'storage/object-not-found') {
+        return { success: true };
+      }
+      console.warn('deleteLandingStorageFile:', e?.message || e);
+      return { success: false, message: e?.message || 'Dosya silinemedi' };
+    }
+  }
 }
 
 export default FirebaseApiService;

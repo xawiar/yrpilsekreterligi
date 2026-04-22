@@ -245,6 +245,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Landing page haberler/duyurular — public read, admin write
+    match /landing_news/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Landing page galeri — public read, admin write
+    match /landing_gallery/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Catch-all for any other collections — authenticated read, admin write
     // Also covers subcollections with {sub=**} wildcard
     match /{collection}/{docId} {

@@ -49,6 +49,22 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    // Landing haberler/duyurular görselleri
+    match /landing_news/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Landing galeri görselleri
+    match /landing_gallery/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     // Profil fotoğrafları (üyenin kendi yüklediği)
     match /profile_photos/{allPaths=**} {
       allow read: if request.auth != null;

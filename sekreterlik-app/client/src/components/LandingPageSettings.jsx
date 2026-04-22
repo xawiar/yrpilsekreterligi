@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 import FirebaseApiService from '../utils/FirebaseApiService';
 import FirebaseStorageService from '../utils/FirebaseStorageService';
+import NewsManagement from './landing/NewsManagement';
+import GalleryManagement from './landing/GalleryManagement';
 
 /**
  * Landing Page CMS Admin Panel
@@ -53,7 +55,9 @@ const DEFAULT_CONTENT = {
     leaders: true,
     electionSummary: true,
     applyCta: true,
-    contact: true
+    contact: true,
+    news: true,
+    gallery: true
   }
 };
 
@@ -637,6 +641,46 @@ const LandingPageSettings = () => {
               GA4 hesabı oluşturmak için: <a href="https://analytics.google.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">analytics.google.com</a>
             </p>
           </div>
+        </div>
+      </details>
+
+      {/* KART 8: HABERLER & DUYURULAR */}
+      <details className={cardCls}>
+        <summary className={summaryCls}>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">8. Haberler & Duyurular</span>
+            {!content.sections?.news && (
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Gizli</span>
+            )}
+          </div>
+          <SectionToggle
+            checked={!!content.sections?.news}
+            onChange={(v) => setSection('news', v)}
+            ariaLabel="Haberler bölümünü göster/gizle"
+          />
+        </summary>
+        <div className={cardBodyCls}>
+          <NewsManagement />
+        </div>
+      </details>
+
+      {/* KART 9: SAHA CALISMALARI GALERISI */}
+      <details className={cardCls}>
+        <summary className={summaryCls}>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">9. Saha Çalışmaları Galerisi</span>
+            {!content.sections?.gallery && (
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Gizli</span>
+            )}
+          </div>
+          <SectionToggle
+            checked={!!content.sections?.gallery}
+            onChange={(v) => setSection('gallery', v)}
+            ariaLabel="Galeri bölümünü göster/gizle"
+          />
+        </summary>
+        <div className={cardBodyCls}>
+          <GalleryManagement />
         </div>
       </details>
 
