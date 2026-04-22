@@ -48,7 +48,7 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']) ||
         (isAuthenticated() &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo']));
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo', 'updatedAt']));
       allow delete: if isAdmin();
     }
 
@@ -219,9 +219,13 @@ service cloud.firestore {
     }
 
     // Başvuru kampanyaları (admin açar, herkes okur)
+    // İstisna: üye başvuru gönderirken submissionCount sayacını artırabilir
     match /applications/{applicationId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submissionCount', 'updatedAt']));
     }
 
     // Başvurular (üye gönderir, admin onaylar/ret)

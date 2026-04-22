@@ -48,7 +48,7 @@ const ProfilePhotoUpload = ({ memberId, currentPhotoUrl, memberName = '', onPhot
       return;
     }
     if (file.size > MAX_SIZE) {
-      toast.error('Dosya boyutu 2MB\'dan küçük olmalıdır');
+      toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
       return;
     }
     if (!memberId) {
