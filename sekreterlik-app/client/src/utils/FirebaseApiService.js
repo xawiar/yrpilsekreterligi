@@ -8981,6 +8981,44 @@ class FirebaseApiService {
       return { success: false, message: e.message };
     }
   }
+
+  // ========= LANDING PAGE CMS =========
+  // Firestore path: landing_content/main (dokuman id sabit)
+
+  static async getLandingContent() {
+    try {
+      const doc = await FirebaseService.getById('landing_content', 'main', false);
+      return doc || {};
+    } catch (e) {
+      console.warn('getLandingContent:', e?.message || e);
+      return {};
+    }
+  }
+
+  static async updateLandingContent(data) {
+    try {
+      const existing = await FirebaseService.getById('landing_content', 'main', false);
+      const payload = {
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      if (existing) {
+        await FirebaseService.update('landing_content', 'main', payload, false);
+      } else {
+        // Doc id sabit oldugu icin setDoc gerekir (FirebaseService.create null id ile auto-id verir)
+        const { setDoc, doc } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        await setDoc(doc(db, 'landing_content', 'main'), {
+          ...payload,
+          createdAt: new Date().toISOString()
+        });
+      }
+      return { success: true };
+    } catch (e) {
+      console.error('updateLandingContent:', e);
+      return { success: false, message: e?.message || 'Kaydetme hatası' };
+    }
+  }
 }
 
 export default FirebaseApiService;

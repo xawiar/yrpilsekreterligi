@@ -236,6 +236,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Landing page içeriği — public read, admin write
+    match /landing_content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Catch-all for any other collections — authenticated read, admin write
     // Also covers subcollections with {sub=**} wildcard
     match /{collection}/{docId} {

@@ -4303,6 +4303,20 @@ class ApiService {
     if (USE_FIREBASE) return FirebaseApiService.processSubmission(submissionId, status, adminNote);
     throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
   }
+
+  // ============================================
+  // Landing Page CMS
+  // ============================================
+
+  static async getLandingContent() {
+    if (USE_FIREBASE) return FirebaseApiService.getLandingContent();
+    throw new Error('Tanıtım sayfası CMS yalnızca Firebase modunda desteklenir');
+  }
+
+  static async updateLandingContent(data) {
+    if (USE_FIREBASE) return FirebaseApiService.updateLandingContent(data);
+    throw new Error('Tanıtım sayfası CMS yalnızca Firebase modunda desteklenir');
+  }
 }
 
 export default ApiService;

@@ -36,6 +36,7 @@ const MemberRequestsPage = lazy(() => import('./pages/MemberRequestsPage'));
 const AdminRequestsPage = lazy(() => import('./pages/AdminRequestsPage'));
 const AdminProfileRequestsPage = lazy(() => import('./pages/AdminProfileRequestsPage'));
 const AdminApplicationsPage = lazy(() => import('./pages/AdminApplicationsPage'));
+const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'));
 const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
 const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
 const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
@@ -193,6 +194,26 @@ function RouterContent() {
     return <PublicRoutesWrapper />;
   }
 
+  // Root path: logged-out → public landing, logged-in → dashboard yönlendirmesi AuthenticatedContent'te
+  if (location.pathname === '/') {
+    return <RootPathHandler />;
+  }
+
+  return <AuthenticatedContent />;
+}
+
+// Root path handler: oturum durumuna göre landing ya da dashboard
+function RootPathHandler() {
+  const { isLoggedIn, loading } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  if (!isLoggedIn) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <PublicLandingPage />
+      </Suspense>
+    );
+  }
+  // Logged-in kullanıcı için mevcut AuthenticatedContent devreye girer (role-based yönlendirme)
   return <AuthenticatedContent />;
 }
 
