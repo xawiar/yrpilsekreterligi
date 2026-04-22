@@ -71,6 +71,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
         { id: 'bylaws', name: 'Parti Tuzugu' },
         { id: 'seçim-ekle', name: 'Secim Ekle' },
         { id: 'voter-list', name: 'Secmen Listesi' },
+        { id: 'landing-page', name: 'Tanitim Sayfasi' },
       ]
     },
     {
