@@ -220,31 +220,86 @@ const PublicLandingPage = () => {
           }
         }
 
-        // 3) Secim sonucu
+        // 3) Secim sonucu — election_results sandik bazli, aggregate et
         if (merged.sections?.electionSummary !== false && merged.electionSummaryEnabled !== false) {
           try {
+            const aggregateResults = (docs, electionMeta = {}) => {
+              // Tum oy alanlarini birlestir (cb_votes, mv_votes, mayor_votes,
+              // provincial_assembly_votes, municipal_council_votes)
+              const voteFields = ['cb_votes', 'mv_votes', 'mayor_votes',
+                'provincial_assembly_votes', 'municipal_council_votes'];
+              // Oncelik: cb_votes > mayor_votes > mv_votes > diger
+              // Hangi alan dolu ise onu kullan
+              const totals = {};
+              let pickedField = null;
+              for (const field of voteFields) {
+                let fieldTotal = {};
+                let hasData = false;
+                docs.forEach(d => {
+                  const data = d.data ? d.data() : d;
+                  const votes = data[field];
+                  if (votes && typeof votes === 'object') {
+                    Object.entries(votes).forEach(([key, val]) => {
+                      const n = parseInt(val) || 0;
+                      if (n > 0) {
+                        fieldTotal[key] = (fieldTotal[key] || 0) + n;
+                        hasData = true;
+                      }
+                    });
+                  }
+                });
+                if (hasData && !pickedField) {
+                  Object.assign(totals, fieldTotal);
+                  pickedField = field;
+                }
+              }
+              if (Object.keys(totals).length === 0) return null;
+              const results = Object.entries(totals)
+                .map(([name, votes]) => ({ name, votes }))
+                .sort((a, b) => b.votes - a.votes);
+              return {
+                ...electionMeta,
+                results,
+                total_votes: results.reduce((s, r) => s + r.votes, 0),
+                total_ballot_boxes: docs.length,
+              };
+            };
+
             if (merged.featuredElectionId) {
-              // Once election_results koleksiyonunda ara (dogrudan id ile)
-              let found = null;
+              // featuredElectionId genellikle 'elections' koleksiyonunun doc id'si
+              // election_results'ta election_id, electionId veya election alanina match et
+              let electionMeta = {};
               try {
-                const elSnap = await getDoc(doc(db, 'election_results', merged.featuredElectionId));
-                if (elSnap.exists()) {
-                  found = { id: elSnap.id, ...elSnap.data() };
+                const eSnap = await getDoc(doc(db, 'elections', merged.featuredElectionId));
+                if (eSnap.exists()) {
+                  const d = eSnap.data() || {};
+                  electionMeta = {
+                    id: eSnap.id,
+                    title: d.name || d.title || 'Secim Sonuclari',
+                    date: d.date || d.election_date || '',
+                  };
                 }
               } catch {}
-              // Bulunamazsa: featuredElectionId 'elections' koleksiyonundan secilmis olabilir
-              // election_results'ta electionId veya election_id alanina esitlikle ara
-              if (!found) {
-                try {
-                  const allResults = await getDocs(collection(db, 'election_results'));
-                  const match = allResults.docs.find(d => {
-                    const data = d.data();
-                    return String(data.electionId || data.election_id || data.election) === String(merged.featuredElectionId);
-                  });
-                  if (match) found = { id: match.id, ...match.data() };
-                } catch {}
+
+              try {
+                const allResults = await getDocs(collection(db, 'election_results'));
+                const matched = allResults.docs.filter(d => {
+                  const data = d.data();
+                  return String(data.electionId || data.election_id || data.election) === String(merged.featuredElectionId);
+                });
+                if (matched.length > 0) {
+                  const agg = aggregateResults(matched, electionMeta);
+                  if (agg) setElection(agg);
+                } else {
+                  // Fallback: featuredElectionId tek bir result doc id olabilir
+                  const single = await getDoc(doc(db, 'election_results', merged.featuredElectionId));
+                  if (single.exists()) {
+                    setElection({ id: single.id, ...single.data(), ...electionMeta });
+                  }
+                }
+              } catch (err) {
+                console.warn('Election aggregate failed:', err.message);
               }
-              if (found) setElection(found);
             } else {
               // En son eklenen (created_at desc, yoksa date desc)
               let loaded = null;
