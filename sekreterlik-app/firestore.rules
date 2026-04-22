@@ -52,10 +52,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Member users - admin only (contains credentials)
+    // Member users - read public (login flow için gerekli), write admin only
+    // NOT: Şifreler zaten encryptData ile şifrelenmiş saklanır. Login akışı
+    // (başmüşahit, sorumlu, üye) authenticate olmadan member_users'ı okumak
+    // zorunda — bu yüzden read public. İleride Cloud Function ile
+    // güvenli login mantığına taşınabilir.
     match /member_users/{userId} {
-      allow read: if isAdmin() ||
-        (isAuthenticated() && resource.data.authUid == request.auth.uid);
+      allow read: if true;
       allow write: if isAdmin();
     }
 
