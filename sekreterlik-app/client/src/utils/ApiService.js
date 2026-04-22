@@ -4185,6 +4185,124 @@ class ApiService {
     }
     return response.json();
   }
+
+  // ===================== PROFİL DEĞİŞİKLİK TALEPLERİ =====================
+
+  static async createProfileUpdateRequest(data) {
+    if (USE_FIREBASE) return FirebaseApiService.createProfileUpdateRequest(data);
+    throw new Error('Profil değişiklik talepleri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getProfileUpdateRequests(filters = {}) {
+    if (USE_FIREBASE) return FirebaseApiService.getProfileUpdateRequests(filters);
+    throw new Error('Profil değişiklik talepleri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async approveProfileUpdateRequest(requestId) {
+    if (USE_FIREBASE) return FirebaseApiService.approveProfileUpdateRequest(requestId);
+    throw new Error('Profil değişiklik talepleri yalnızca Firebase modunda desteklenir');
+  }
+
+  static async rejectProfileUpdateRequest(requestId, adminNote) {
+    if (USE_FIREBASE) return FirebaseApiService.rejectProfileUpdateRequest(requestId, adminNote);
+    throw new Error('Profil değişiklik talepleri yalnızca Firebase modunda desteklenir');
+  }
+
+  // ===================== TALEPLER & MESAJLAŞMA =====================
+
+  static async createRequest(data) {
+    if (USE_FIREBASE) return FirebaseApiService.createRequest(data);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getRequests(filters = {}) {
+    if (USE_FIREBASE) return FirebaseApiService.getRequests(filters);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getRequestById(requestId) {
+    if (USE_FIREBASE) return FirebaseApiService.getRequestById(requestId);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getRequestMessages(requestId) {
+    if (USE_FIREBASE) return FirebaseApiService.getRequestMessages(requestId);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async sendRequestMessage(requestId, message, opts) {
+    if (USE_FIREBASE) return FirebaseApiService.sendRequestMessage(requestId, message, opts);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async closeRequest(requestId, closedBy) {
+    if (USE_FIREBASE) return FirebaseApiService.closeRequest(requestId, closedBy);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async reopenRequest(requestId) {
+    if (USE_FIREBASE) return FirebaseApiService.reopenRequest(requestId);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async markRequestRead(requestId, readerType) {
+    if (USE_FIREBASE) return FirebaseApiService.markRequestRead(requestId, readerType);
+    throw new Error('Talep sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  // ============================================
+  // Başvuru Sistemi (Applications)
+  // ============================================
+
+  static async createApplication(data) {
+    if (USE_FIREBASE) return FirebaseApiService.createApplication(data);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async updateApplication(id, data) {
+    if (USE_FIREBASE) return FirebaseApiService.updateApplication(id, data);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async closeApplication(id) {
+    if (USE_FIREBASE) return FirebaseApiService.closeApplication(id);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async deleteApplication(id) {
+    if (USE_FIREBASE) return FirebaseApiService.deleteApplication(id);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getApplications(filters = {}) {
+    if (USE_FIREBASE) return FirebaseApiService.getApplications(filters);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getActiveApplicationsForMember(memberId) {
+    if (USE_FIREBASE) return FirebaseApiService.getActiveApplicationsForMember(memberId);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async submitApplication(data) {
+    if (USE_FIREBASE) return FirebaseApiService.submitApplication(data);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async uploadApplicationAttachment(memberId, file) {
+    if (USE_FIREBASE) return FirebaseApiService.uploadApplicationAttachment(memberId, file);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async getSubmissions(filters = {}) {
+    if (USE_FIREBASE) return FirebaseApiService.getSubmissions(filters);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
+
+  static async processSubmission(submissionId, status, adminNote = null) {
+    if (USE_FIREBASE) return FirebaseApiService.processSubmission(submissionId, status, adminNote);
+    throw new Error('Başvuru sistemi yalnızca Firebase modunda desteklenir');
+  }
 }
 
 export default ApiService;

@@ -33,6 +33,12 @@ import Modal from '../components/Modal';
 import MobileBottomNav from '../components/MobileBottomNav';
 import BranchManagementSection from '../components/BranchManagementSection';
 import DataDeletionRequestButton from '../components/DataDeletionRequestButton';
+import MemberProfilePanel from '../components/MemberProfilePanel';
+import PersonalDocuments from '../components/PersonalDocuments';
+import ProfileUpdateRequestModal from '../components/ProfileUpdateRequestModal';
+import MemberProfileRequestsList from '../components/MemberProfileRequestsList';
+import MemberApplicationsPanel from '../components/MemberApplicationsPanel';
+import { Link } from 'react-router-dom';
 
 // URL path <-> view name mappings
 const viewToPathMap = {
@@ -219,6 +225,8 @@ const MemberDashboardPage = () => {
   const [isYouthBranchPresident, setIsYouthBranchPresident] = useState(false);
   const [womenBranchManagement, setWomenBranchManagement] = useState([]);
   const [youthBranchManagement, setYouthBranchManagement] = useState([]);
+  const [profileRequestModalOpen, setProfileRequestModalOpen] = useState(false);
+  const [profileRequestsRefreshKey, setProfileRequestsRefreshKey] = useState(0);
   
   // URL pathname degistiginde currentView'i guncelle
   useEffect(() => {
@@ -1297,6 +1305,56 @@ const MemberDashboardPage = () => {
             </div>
           )}
 
+          {/* Profil Paneli */}
+          {member && (
+            <MemberProfilePanel
+              member={member}
+              onRequestChange={() => setProfileRequestModalOpen(true)}
+              onPhotoUpdated={(newUrl) => setMember((m) => ({ ...m, photo: newUrl }))}
+            />
+          )}
+
+          {/* Profil Değişiklik Talepleri (kendi talepleri) */}
+          {member && (
+            <MemberProfileRequestsList
+              key={profileRequestsRefreshKey}
+              memberId={member.id}
+            />
+          )}
+
+          {/* Kişisel Belgeler */}
+          {member?.id && <PersonalDocuments memberId={member.id} />}
+
+          {/* Başvurular Paneli */}
+          {member && <MemberApplicationsPanel member={member} />}
+
+          {/* Taleplerim — Hızlı erişim kartı */}
+          <Link
+            to="/my-requests"
+            className="block bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-shadow"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Taleplerim & Şikayetlerim
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Yeni talep oluşturun, gelen cevapları görün
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+
           {/* Member Details */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <MemberDetails
@@ -1311,6 +1369,16 @@ const MemberDashboardPage = () => {
 
           {/* KVKK - Veri Silme Talep Butonu */}
           <DataDeletionRequestButton memberId={member?.id} />
+
+          {/* Profil Değişiklik Talebi Modal */}
+          {member && (
+            <ProfileUpdateRequestModal
+              isOpen={profileRequestModalOpen}
+              onClose={() => setProfileRequestModalOpen(false)}
+              member={member}
+              onSubmitted={() => setProfileRequestsRefreshKey((k) => k + 1)}
+            />
+          )}
         </div>
           )}
         </>

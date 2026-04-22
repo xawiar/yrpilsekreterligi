@@ -8435,6 +8435,552 @@ class FirebaseApiService {
       throw new Error('Veri silme talebi reddedilirken hata oluştu');
     }
   }
+
+  /**
+   * Üye profil fotoğrafı yükle (profile_photos/ path'i altına)
+   * Eski fotoğrafı Firebase Storage'dan silmeyi dener.
+   * members/{memberId}.photo alanını URL ile günceller.
+   * @param {string|number} memberId
+   * @param {File} file  JPG veya PNG, <=2MB (çağıran tarafta kontrol edilir)
+   * @returns {Promise<{success:boolean, url?:string, message?:string}>}
+   */
+  static async uploadProfilePhoto(memberId, file) {
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } = await import('firebase/storage');
+      const storage = getStorage();
+      const memberIdStr = String(memberId);
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `profile_photos/${memberIdStr}_${Date.now()}.${ext}`;
+      const storageRef = ref(storage, path);
+
+      await uploadBytes(storageRef, file, {
+        contentType: file.type,
+        customMetadata: {
+          memberId: memberIdStr,
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      const url = await getDownloadURL(storageRef);
+
+      // Eski fotoğrafı silmeyi dene (başarısızsa yut)
+      try {
+        const member = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, memberIdStr);
+        if (member?.photo && typeof member.photo === 'string' && member.photo.includes('profile_photos/')) {
+          const afterO = member.photo.split('/o/')[1];
+          if (afterO) {
+            const oldPath = decodeURIComponent(afterO.split('?')[0]);
+            const oldRef = ref(storage, oldPath);
+            await deleteObject(oldRef);
+          }
+        }
+      } catch (e) {
+        console.warn('Eski profil fotoğrafı silinemedi (devam ediliyor):', e?.message || e);
+      }
+
+      // members dokümanını güncelle
+      await FirebaseService.update(this.COLLECTIONS.MEMBERS, memberIdStr, { photo: url }, true);
+
+      return { success: true, url };
+    } catch (error) {
+      console.error('uploadProfilePhoto error:', error);
+      return { success: false, message: error?.message || 'Profil fotoğrafı yüklenemedi' };
+    }
+  }
+
+  // ===================== PROFİL DEĞİŞİKLİK TALEPLERİ =====================
+
+  /**
+   * Üye profil değişiklik talebi oluşturur.
+   * @param {Object} data - { memberId, currentTc, currentPhone, newTc, newPhone, reason }
+   * @returns {Promise<{success: boolean, id?: string, message?: string}>}
+   */
+  static async createProfileUpdateRequest(data) {
+    try {
+      if (!data || !data.memberId) {
+        return { success: false, message: 'Üye bilgisi eksik' };
+      }
+      const payload = {
+        memberId: String(data.memberId),
+        currentTc: data.currentTc || '',
+        currentPhone: data.currentPhone || '',
+        newTc: data.newTc || '',
+        newPhone: data.newPhone || '',
+        reason: data.reason || '',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        adminNote: null,
+        processedAt: null
+      };
+      const docId = await FirebaseService.create(
+        'profile_update_requests',
+        null,
+        payload,
+        false
+      );
+      return { success: true, id: docId };
+    } catch (e) {
+      console.error('createProfileUpdateRequest error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Profil değişiklik taleplerini listeler.
+   * @param {Object} filters - { memberId?, status? }
+   * @returns {Promise<Array>}
+   */
+  static async getProfileUpdateRequests(filters = {}) {
+    try {
+      const all = await FirebaseService.getAll('profile_update_requests', {}, false);
+      let filtered = Array.isArray(all) ? all : [];
+      if (filters.memberId) {
+        filtered = filtered.filter(r => String(r.memberId) === String(filters.memberId));
+      }
+      if (filters.status) {
+        filtered = filtered.filter(r => r.status === filters.status);
+      }
+      return filtered.sort((a, b) => {
+        const ad = new Date(a.createdAt || 0).getTime();
+        const bd = new Date(b.createdAt || 0).getTime();
+        return bd - ad;
+      });
+    } catch (e) {
+      console.error('getProfileUpdateRequests error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Profil değişiklik talebini onaylar ve üye bilgilerini günceller.
+   * @param {string} requestId
+   * @returns {Promise<{success: boolean, message?: string}>}
+   */
+  static async approveProfileUpdateRequest(requestId) {
+    try {
+      const req = await FirebaseService.getById('profile_update_requests', String(requestId), false);
+      if (!req) return { success: false, message: 'Talep bulunamadı' };
+      if (req.status !== 'pending') {
+        return { success: false, message: 'Talep zaten işlenmiş' };
+      }
+
+      const updateData = {};
+      if (req.newTc && req.newTc !== req.currentTc) {
+        updateData.tc = req.newTc;
+      }
+      if (req.newPhone && req.newPhone !== req.currentPhone) {
+        updateData.phone = req.newPhone;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        // Mevcut updateMember fonksiyonu member_user ve Firebase Auth senkronizasyonunu da halleder
+        await this.updateMember(req.memberId, updateData);
+      }
+
+      await FirebaseService.update('profile_update_requests', String(requestId), {
+        status: 'approved',
+        processedAt: new Date().toISOString()
+      }, false);
+
+      return { success: true };
+    } catch (e) {
+      console.error('approveProfileUpdateRequest error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Profil değişiklik talebini reddeder.
+   * @param {string} requestId
+   * @param {string} adminNote
+   * @returns {Promise<{success: boolean, message?: string}>}
+   */
+  static async rejectProfileUpdateRequest(requestId, adminNote) {
+    try {
+      const req = await FirebaseService.getById('profile_update_requests', String(requestId), false);
+      if (!req) return { success: false, message: 'Talep bulunamadı' };
+      if (req.status !== 'pending') {
+        return { success: false, message: 'Talep zaten işlenmiş' };
+      }
+      await FirebaseService.update('profile_update_requests', String(requestId), {
+        status: 'rejected',
+        adminNote: adminNote || '',
+        processedAt: new Date().toISOString()
+      }, false);
+      return { success: true };
+    } catch (e) {
+      console.error('rejectProfileUpdateRequest error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  // ===================== TALEPLER & MESAJLAŞMA =====================
+
+  /**
+   * Yeni talep/şikayet oluşturur ve ilk mesajı thread'e ekler
+   * @param {Object} data - { memberId, memberName, category, subject, description }
+   */
+  static async createRequest(data) {
+    try {
+      const now = new Date().toISOString();
+      const requestId = await FirebaseService.create('requests', null, {
+        memberId: String(data.memberId || ''),
+        memberName: String(data.memberName || ''),
+        category: data.category || 'diğer',
+        subject: String(data.subject || '').trim(),
+        description: String(data.description || '').trim(),
+        status: 'new',
+        createdAtISO: now,
+        lastMessageAt: now,
+        closedBy: null,
+        closedAt: null,
+        unreadByAdmin: 1,
+        unreadByMember: 0
+      }, false);
+
+      // İlk mesaj olarak description'ı thread'e ekle (parent zaten güncel)
+      await this.sendRequestMessage(requestId, {
+        senderId: data.memberId,
+        senderType: 'member',
+        senderName: data.memberName,
+        text: data.description
+      }, { skipParentUpdate: true });
+
+      try { FirebaseService.clearCache('fs_requests'); } catch (_) {}
+      return { success: true, id: requestId };
+    } catch (e) {
+      console.error('createRequest error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Talepleri listeler. Filtreler: { memberId?, status?, category? }
+   */
+  static async getRequests(filters = {}) {
+    try {
+      const all = await FirebaseService.getAll('requests', {}, false);
+      let filtered = Array.isArray(all) ? all : [];
+      if (filters.memberId) {
+        filtered = filtered.filter(r => String(r.memberId) === String(filters.memberId));
+      }
+      if (filters.status) {
+        filtered = filtered.filter(r => r.status === filters.status);
+      }
+      if (filters.category) {
+        filtered = filtered.filter(r => r.category === filters.category);
+      }
+      return filtered.sort((a, b) => {
+        const ta = new Date(a.lastMessageAt || a.createdAtISO || 0).getTime();
+        const tb = new Date(b.lastMessageAt || b.createdAtISO || 0).getTime();
+        return tb - ta;
+      });
+    } catch (e) {
+      console.error('getRequests error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Bir talebi ID ile getirir
+   */
+  static async getRequestById(requestId) {
+    try {
+      return await FirebaseService.getById('requests', String(requestId), false);
+    } catch (e) {
+      console.error('getRequestById error:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Talebin mesaj thread'ini kronolojik sırayla getirir
+   */
+  static async getRequestMessages(requestId) {
+    try {
+      const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const ref = collection(db, 'requests', String(requestId), 'messages');
+      const q = query(ref, orderBy('createdAt', 'asc'));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('getRequestMessages error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Talebe yeni mesaj ekler ve parent doc'un sayaçlarını günceller
+   * @param {string} requestId
+   * @param {Object} message - { senderId, senderType, senderName, text }
+   * @param {Object} opts - { skipParentUpdate? }
+   */
+  static async sendRequestMessage(requestId, message, opts = {}) {
+    try {
+      const { collection, addDoc, doc, updateDoc, increment, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const now = new Date().toISOString();
+
+      const msgPayload = {
+        senderId: String(message.senderId || ''),
+        senderType: message.senderType === 'admin' ? 'admin' : 'member',
+        senderName: String(message.senderName || ''),
+        text: String(message.text || '').trim(),
+        createdAt: now,
+        _serverTs: serverTimestamp()
+      };
+
+      if (!msgPayload.text) {
+        return { success: false, message: 'Mesaj boş olamaz' };
+      }
+
+      await addDoc(collection(db, 'requests', String(requestId), 'messages'), msgPayload);
+
+      if (!opts.skipParentUpdate) {
+        const updates = {
+          lastMessageAt: now,
+          updatedAt: serverTimestamp()
+        };
+        if (msgPayload.senderType === 'member') {
+          updates.unreadByAdmin = increment(1);
+          updates.status = 'in_review';
+        } else {
+          updates.unreadByMember = increment(1);
+          updates.status = 'answered';
+        }
+        await updateDoc(doc(db, 'requests', String(requestId)), updates);
+        try { FirebaseService.clearCache('fs_requests'); } catch (_) {}
+      }
+
+      return { success: true };
+    } catch (e) {
+      console.error('sendRequestMessage error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Talebi kapatır (soft close — durum değişir, silinmez)
+   */
+  static async closeRequest(requestId, closedBy) {
+    try {
+      await FirebaseService.update('requests', String(requestId), {
+        status: 'closed',
+        closedBy: closedBy === 'admin' ? 'admin' : 'member',
+        closedAt: new Date().toISOString()
+      }, false);
+      try { FirebaseService.clearCache('fs_requests'); } catch (_) {}
+      return { success: true };
+    } catch (e) {
+      console.error('closeRequest error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Kapalı talebi yeniden açar
+   */
+  static async reopenRequest(requestId) {
+    try {
+      await FirebaseService.update('requests', String(requestId), {
+        status: 'in_review',
+        closedBy: null,
+        closedAt: null
+      }, false);
+      try { FirebaseService.clearCache('fs_requests'); } catch (_) {}
+      return { success: true };
+    } catch (e) {
+      console.error('reopenRequest error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * İlgili tarafın okunmamış sayacını sıfırlar
+   * @param {'member'|'admin'} readerType
+   */
+  static async markRequestRead(requestId, readerType) {
+    try {
+      const update = readerType === 'admin'
+        ? { unreadByAdmin: 0 }
+        : { unreadByMember: 0 };
+      await FirebaseService.update('requests', String(requestId), update, false);
+      try { FirebaseService.clearCache('fs_requests'); } catch (_) {}
+    } catch (e) {
+      console.warn('markRequestRead error:', e);
+    }
+  }
+
+  // ===================== BAŞVURU SİSTEMİ =====================
+
+  /**
+   * Admin — yeni başvuru kampanyası oluşturur.
+   * data: { title, description, category, requiresAttachment, deadline }
+   */
+  static async createApplication(data) {
+    try {
+      const docId = await FirebaseService.create('applications', null, {
+        ...data,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        submissionCount: 0
+      }, false);
+      return { success: true, id: docId };
+    } catch (e) {
+      console.error('createApplication error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  static async updateApplication(id, data) {
+    try {
+      await FirebaseService.update('applications', String(id), data, false);
+      return { success: true };
+    } catch (e) {
+      console.error('updateApplication error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  static async closeApplication(id) {
+    return this.updateApplication(id, { status: 'closed' });
+  }
+
+  static async deleteApplication(id) {
+    try {
+      await FirebaseService.delete('applications', String(id));
+      return { success: true };
+    } catch (e) {
+      console.error('deleteApplication error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  static async getApplications(filters = {}) {
+    try {
+      const all = await FirebaseService.getAll('applications', {}, false);
+      let filtered = Array.isArray(all) ? all : [];
+      if (filters.status) filtered = filtered.filter(a => a.status === filters.status);
+      return filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    } catch (e) {
+      console.error('getApplications error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Üye için — aktif ve son tarihi geçmemiş kampanyalar
+   */
+  static async getActiveApplicationsForMember(/* memberId */) {
+    try {
+      const all = await this.getApplications({ status: 'active' });
+      const now = new Date();
+      return all.filter(a => !a.deadline || new Date(a.deadline) >= now);
+    } catch (e) {
+      console.error('getActiveApplicationsForMember error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Üye — başvuru gönderir.
+   * data: { applicationId, memberId, memberName, answer, attachmentUrl, attachmentName }
+   */
+  static async submitApplication(data) {
+    try {
+      const subId = await FirebaseService.create('application_submissions', null, {
+        ...data,
+        status: 'pending',
+        adminNote: null,
+        submittedAt: new Date().toISOString(),
+        processedAt: null
+      }, false);
+
+      // Parent başvuru sayacını artır (hata olursa yut)
+      try {
+        const app = await FirebaseService.getById('applications', String(data.applicationId), false);
+        if (app) {
+          await FirebaseService.update('applications', String(data.applicationId), {
+            submissionCount: (app.submissionCount || 0) + 1
+          }, false);
+        }
+      } catch (err) {
+        console.warn('submissionCount güncellenemedi:', err?.message || err);
+      }
+
+      return { success: true, id: subId };
+    } catch (e) {
+      console.error('submitApplication error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Üye başvurusu için ek dosya yükle.
+   * file: PDF / JPG / PNG (çağıran tarafta boyut ve MIME kontrolü yapılır)
+   */
+  static async uploadApplicationAttachment(memberId, file) {
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const storage = getStorage();
+      const memberIdStr = String(memberId);
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+      const path = `application_attachments/${memberIdStr}_${Date.now()}.${ext}`;
+      const storageRef = ref(storage, path);
+
+      await uploadBytes(storageRef, file, {
+        contentType: file.type,
+        customMetadata: {
+          memberId: memberIdStr,
+          originalName: file.name,
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      const url = await getDownloadURL(storageRef);
+      return { success: true, url, name: file.name };
+    } catch (e) {
+      console.error('uploadApplicationAttachment error:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  static async getSubmissions(filters = {}) {
+    try {
+      const all = await FirebaseService.getAll('application_submissions', {}, false);
+      let filtered = Array.isArray(all) ? all : [];
+      if (filters.applicationId) {
+        filtered = filtered.filter(s => String(s.applicationId) === String(filters.applicationId));
+      }
+      if (filters.memberId) {
+        filtered = filtered.filter(s => String(s.memberId) === String(filters.memberId));
+      }
+      if (filters.status) {
+        filtered = filtered.filter(s => s.status === filters.status);
+      }
+      return filtered.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
+    } catch (e) {
+      console.error('getSubmissions error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Admin — başvuruyu onayla / reddet
+   * status: 'approved' | 'rejected'
+   */
+  static async processSubmission(submissionId, status, adminNote = null) {
+    try {
+      await FirebaseService.update('application_submissions', String(submissionId), {
+        status,
+        adminNote: adminNote || null,
+        processedAt: new Date().toISOString()
+      }, false);
+      return { success: true };
+    } catch (e) {
+      console.error('processSubmission error:', e);
+      return { success: false, message: e.message };
+    }
+  }
 }
 
 export default FirebaseApiService;

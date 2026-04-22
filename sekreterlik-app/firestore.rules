@@ -192,6 +192,40 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Profil değişiklik talepleri (TC/telefon)
+    match /profile_update_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Talep / Şikayet / İstek / Soru + mesaj thread'leri
+    match /requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if false;
+      }
+    }
+
+    // Başvuru kampanyaları (admin açar, herkes okur)
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Başvurular (üye gönderir, admin onaylar/ret)
+    match /application_submissions/{submissionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
     // Catch-all for any other collections — authenticated read, admin write
     // Also covers subcollections with {sub=**} wildcard
     match /{collection}/{docId} {

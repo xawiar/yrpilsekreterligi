@@ -32,6 +32,10 @@ const ArchivePage = lazy(() => import('./pages/ArchivePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ManagementChartPage = lazy(() => import('./pages/ManagementChartPage'));
 const MemberDashboardPage = lazy(() => import('./pages/MemberDashboardPage'));
+const MemberRequestsPage = lazy(() => import('./pages/MemberRequestsPage'));
+const AdminRequestsPage = lazy(() => import('./pages/AdminRequestsPage'));
+const AdminProfileRequestsPage = lazy(() => import('./pages/AdminProfileRequestsPage'));
+const AdminApplicationsPage = lazy(() => import('./pages/AdminApplicationsPage'));
 const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
 const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
 const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
@@ -490,6 +494,10 @@ function AuthenticatedContent() {
                             <Route path="/settings/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense></PageTransition>} />
                             <Route path="/notifications" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><NotificationsPage /></Suspense></PageTransition>} />
                             <Route path="/sync-to-firebase" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SyncToFirebasePage /></Suspense></PageTransition>} />
+                            <Route path="/my-requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MemberRequestsPage /></Suspense></PageTransition>} />
+                            <Route path="/admin/requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminRequestsPage /></Suspense></PageTransition>} />
+                            <Route path="/admin/profile-requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminProfileRequestsPage /></Suspense></PageTransition>} />
+                            <Route path="/admin/applications" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminApplicationsPage /></Suspense></PageTransition>} />
                             <Route path="/remove-duplicate-meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><RemoveDuplicateMeetingsPage /></Suspense></PageTransition>} />
 
                             {/* STK Manager Routes */}
