@@ -396,8 +396,11 @@ class FirebaseApiService {
         phoneStr = phoneStr.padStart(6, '0');
       }
 
-      // Tüm kullanıcıları al ve userType='coordinator' olanları filtrele
-      const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
+      // Direkt Firestore query — getAll decrypt fail edebilir
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDocs(collection(db, 'member_users'));
+      const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       // Coordinator kullanıcılarını bul
       const coordinatorUsers = allUsers.filter(u =>
@@ -691,8 +694,12 @@ class FirebaseApiService {
       const tcStr = String(tc).trim();
       const password = tcStr;
 
-      // Tüm kullanıcıları al ve userType='musahit' olanları filtrele
-      const allUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
+      // Tüm kullanıcıları al — FirebaseService.getAll decrypt fail edebilir,
+      // direkt Firestore query yap
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDocs(collection(db, 'member_users'));
+      const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       // Önce sandık numarası ile kullanıcı bul (userType='musahit' olmalı)
       let memberUsers = allUsers.filter(u =>
