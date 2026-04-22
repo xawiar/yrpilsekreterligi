@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
-import { decryptData } from '../utils/crypto';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { decryptData, encryptData } from '../utils/crypto';
 import FirebaseService from '../services/FirebaseService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
@@ -146,15 +144,11 @@ const MemberUsersSettings = () => {
           if (!password || password.length < 6) { errors.push(`${official.chairman_name}: Geçerli telefon numarası yok`); errorCount++; continue; }
           const existingUser = existingUsers.users?.find(u => u.username === username || (u.userType === 'district_president' && String(u.districtId) === String(official.district_id)));
           if (!existingUser) {
-            const email = `${username}@ilsekreterlik.local`;
-            let authUser = null;
-            try { authUser = await createUserWithEmailAndPassword(auth, email, password); }
-            catch (authError) { if (authError.code !== 'auth/email-already-in-use') throw authError; }
-            await FirebaseService.create('member_users', null, { username, password, userType: 'district_president', districtId: official.district_id, isActive: true, chairmanName: official.chairman_name, authUid: authUser?.user?.uid || null }, false);
+            await FirebaseService.create('member_users', null, { username, password: encryptData(password), userType: 'district_president', districtId: official.district_id, isActive: true, chairmanName: official.chairman_name, authUid: null }, false);
             createdCount++;
           } else {
             const updateData = { userType: 'district_president', districtId: official.district_id, chairmanName: official.chairman_name };
-            if (existingUser.password !== password) updateData.password = password;
+            if (existingUser.password !== password) updateData.password = encryptData(password);
             await FirebaseService.update('member_users', existingUser.id, updateData, false);
             updatedCount++;
           }
@@ -186,15 +180,11 @@ const MemberUsersSettings = () => {
           if (!password || password.length < 6) { errors.push(`${official.chairman_name}: Geçerli telefon numarası yok`); errorCount++; continue; }
           const existingUser = existingUsers.users?.find(u => u.username === username || (u.userType === 'town_president' && String(u.townId) === String(official.town_id)));
           if (!existingUser) {
-            const email = `${username}@ilsekreterlik.local`;
-            let authUser = null;
-            try { authUser = await createUserWithEmailAndPassword(auth, email, password); }
-            catch (authError) { if (authError.code !== 'auth/email-already-in-use') throw authError; }
-            await FirebaseService.create('member_users', null, { username, password, userType: 'town_president', townId: official.town_id, isActive: true, chairmanName: official.chairman_name, authUid: authUser?.user?.uid || null }, false);
+            await FirebaseService.create('member_users', null, { username, password: encryptData(password), userType: 'town_president', townId: official.town_id, isActive: true, chairmanName: official.chairman_name, authUid: null }, false);
             createdCount++;
           } else {
             const updateData = { userType: 'town_president', townId: official.town_id, chairmanName: official.chairman_name };
-            if (existingUser.password !== password) updateData.password = password;
+            if (existingUser.password !== password) updateData.password = encryptData(password);
             await FirebaseService.update('member_users', existingUser.id, updateData, false);
             updatedCount++;
           }
@@ -247,15 +237,11 @@ const MemberUsersSettings = () => {
           password = tc;
           const existingUser = updatedUsers.users?.find(u => u.username === username);
           if (!existingUser) {
-            const email = `${username}@ilsekreterlik.local`;
-            let authUser = null;
-            try { authUser = await createUserWithEmailAndPassword(auth, email, password); }
-            catch (authError) { if (authError.code !== 'auth/email-already-in-use') throw authError; }
-            await FirebaseService.create('member_users', null, { username, password, userType: 'musahit', observerId: observer.id, isActive: true, name: observer.name, tc: observer.tc, authUid: authUser?.user?.uid || null }, false);
+            await FirebaseService.create('member_users', null, { username, password: encryptData(password), userType: 'musahit', observerId: observer.id, isActive: true, name: observer.name, tc: observer.tc, authUid: null }, false);
             createdCount++;
           } else {
             const updateData = { userType: 'musahit', observerId: observer.id, name: observer.name };
-            if (existingUser.password !== password) updateData.password = password;
+            if (existingUser.password !== password) updateData.password = encryptData(password);
             await FirebaseService.update('member_users', existingUser.id, updateData, false);
             updatedCount++;
           }
@@ -293,23 +279,8 @@ const MemberUsersSettings = () => {
           if (!password || password.length < 6) { errors.push(`${member.name || 'Bilinmeyen'}: Geçerli telefon numarası yok (minimum 6 karakter)`); errorCount++; continue; }
           const existingUser = existingUsersList.find(u => u.username === username || (u.member_id === member.id || u.memberId === member.id) || (u.member_id === String(member.id) || u.memberId === String(member.id)));
           if (!existingUser) {
-            const email = `${username}@ilsekreterlik.local`;
-            // Firebase Auth kullanıcısını backend'den oluştur (admin session'ı korunur)
-            let authUid = null;
-            try {
-              const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-              const normalizedApiUrl = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
-              const authRes = await fetch(`${normalizedApiUrl}/auth/firebase-auth-user`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, username })
-              });
-              const authData = await authRes.json();
-              if (authData.success) authUid = authData.uid;
-            } catch (e) {
-              console.warn('Backend Auth create failed (continuing):', e.message);
-            }
-            await FirebaseService.create('member_users', null, { username, password, userType: 'member', member_id: member.id, memberId: member.id, isActive: true, name: member.name, authUid: authUid }, false);
+            // Firebase Auth hesabı onMemberUserCreate trigger'ı tarafından otomatik oluşturulur
+            await FirebaseService.create('member_users', null, { username, password: encryptData(password), userType: 'member', member_id: member.id, memberId: member.id, isActive: true, name: member.name, authUid: null }, false);
             createdCount++;
           } else {
             const needsUpdate = existingUser.name !== member.name || (existingUser.member_id !== member.id && existingUser.memberId !== member.id) || existingUser.userType !== 'member';
@@ -317,7 +288,7 @@ const MemberUsersSettings = () => {
               const updateData = { userType: 'member', member_id: member.id, memberId: member.id, name: member.name };
               let decryptedCurrentPassword = existingUser.password || '';
               try { if (decryptedCurrentPassword && typeof decryptedCurrentPassword === 'string' && decryptedCurrentPassword.startsWith('U2FsdGVkX1')) decryptedCurrentPassword = decryptData(decryptedCurrentPassword); } catch (e) {}
-              if (decryptedCurrentPassword !== password) updateData.password = password;
+              if (decryptedCurrentPassword !== password) updateData.password = encryptData(password);
               await FirebaseService.update('member_users', existingUser.id, updateData, false);
               updatedCount++;
             }
@@ -346,15 +317,11 @@ const MemberUsersSettings = () => {
           const existingUser = (existingUsers.users || []).find(u => u.coordinatorId === coordinator.id || u.coordinator_id === coordinator.id || (u.userType === 'coordinator' && u.username === username));
           if (existingUser) {
             const updateData = { userType: 'coordinator', coordinatorId: coordinator.id, coordinator_id: coordinator.id };
-            if (existingUser.password !== password) updateData.password = password;
+            if (existingUser.password !== password) updateData.password = encryptData(password);
             await FirebaseService.update('member_users', existingUser.id, updateData, false);
             updatedCount++;
           } else {
-            const email = `${username}@ilsekreterlik.local`;
-            let authUser = null;
-            try { authUser = await createUserWithEmailAndPassword(auth, email, password); }
-            catch (authError) { if (authError.code !== 'auth/email-already-in-use') throw authError; }
-            await FirebaseService.create('member_users', null, { username, password, userType: 'coordinator', coordinatorId: coordinator.id, coordinator_id: coordinator.id, isActive: true, name: coordinator.name, tc: coordinator.tc, phone: coordinator.phone, authUid: authUser?.user?.uid || null }, false);
+            await FirebaseService.create('member_users', null, { username, password: encryptData(password), userType: 'coordinator', coordinatorId: coordinator.id, coordinator_id: coordinator.id, isActive: true, name: coordinator.name, tc: coordinator.tc, phone: coordinator.phone, authUid: null }, false);
             createdCount++;
           }
         } catch (error) { errorCount++; errors.push(`${coordinator.name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`); console.error('Sorumlu kullanıcısı oluşturma hatası:', error); }

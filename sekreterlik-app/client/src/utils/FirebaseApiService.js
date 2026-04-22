@@ -1680,32 +1680,8 @@ class FirebaseApiService {
             }
 
 
-            // authUid'yi backend'den al (Admin SDK ile oluşturulur — admin session'ı korunur)
-            // Backend'e ulaşılamazsa hata fırlatma, sadece log at — üye yine de Firestore'a oluşturulsun
-            let authUid = null;
-            try {
-              const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-              const normalizedApiUrl = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
-              const authResponse = await fetch(`${normalizedApiUrl}/auth/firebase-auth-user`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  email: `${username}@ilsekreterlik.local`,
-                  password: password,
-                  username: username
-                })
-              });
-              const authResult = await authResponse.json();
-              if (authResult.success && authResult.uid) {
-                authUid = authResult.uid;
-              } else {
-                console.warn('Backend Auth oluşturma başarısız:', authResult.message);
-              }
-            } catch (authError) {
-              console.warn('Backend Auth endpoint çağrılamadı (üye yine de oluşturuldu):', authError.message);
-            }
-
-            // Firestore'a kaydet (authUid backend'den gelmiş olabilir)
+            // Firebase Auth hesabı onMemberUserCreate Firestore trigger'ı tarafından
+            // otomatik oluşturulur (Admin SDK ile). Burada sadece Firestore'a yazıyoruz.
             const userDocId = await FirebaseService.create(
               this.COLLECTIONS.MEMBER_USERS,
               null,
@@ -1715,7 +1691,7 @@ class FirebaseApiService {
                 password: password, // Telefon numarası - Şifreleme FirebaseService içinde yapılacak
                 userType: 'member',
                 isActive: true,
-                authUid: authUid // Backend Admin SDK ile oluşturulan UID (yoksa null)
+                authUid: null // onMemberUserCreate trigger Admin SDK ile oluşturup dolduracak
               }
             );
 
