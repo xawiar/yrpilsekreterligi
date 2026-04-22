@@ -18,10 +18,7 @@ export const ThemeProvider = ({ children }) => {
     if (savedTheme) {
       return savedTheme === 'dark';
     }
-    // Sistem tercihini kontrol et
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return true;
-    }
+    // Varsayılan: Gündüz modu (kullanıcı butonu ile geceye alabilir)
     return false;
   });
 

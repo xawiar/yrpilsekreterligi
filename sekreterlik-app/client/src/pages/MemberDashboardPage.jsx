@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import ApiService from '../utils/ApiService';
 import { isMobile } from '../utils/capacitorUtils';
 import NativeMemberDashboard from '../components/mobile/NativeMemberDashboard';
@@ -77,6 +78,7 @@ const getViewFromPathname = (pathname) => {
 
 const MemberDashboardPage = () => {
   const { user, logout } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -763,6 +765,32 @@ const MemberDashboardPage = () => {
             />
           ) : (
             <div className="space-y-4 sm:space-y-6 md:space-y-8">
+          {/* Tema Toggle — sağ üst köşe */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow transition-all"
+              title={isDarkMode ? 'Gündüz moduna geç' : 'Gece moduna geç'}
+            >
+              {isDarkMode ? (
+                <>
+                  <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Gündüz Modu</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Gece Modu</span>
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Kompakt Profil Başlığı — avatar tıklanınca profil modalı */}
           <button
             type="button"
