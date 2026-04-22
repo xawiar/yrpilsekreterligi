@@ -14,7 +14,7 @@ import ApiService from '../../utils/ApiService';
  *   { url, caption, date (YYYY-MM-DD), order (number), path?, createdAt, updatedAt }
  */
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 const todayISODate = () => {
@@ -33,6 +33,9 @@ const GalleryManagement = () => {
   const [loading, setLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(null); // { done, total }
   const [captionDraft, setCaptionDraft] = useState({}); // { [id]: string }
+  const [urlInput, setUrlInput] = useState('');
+  const [urlCaption, setUrlCaption] = useState('');
+  const [addingUrl, setAddingUrl] = useState(false);
   const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -203,6 +206,60 @@ const GalleryManagement = () => {
             Yükleniyor: {uploadProgress.done}/{uploadProgress.total}
           </div>
         )}
+
+        {/* Link ile görsel ekle */}
+        <div className="pt-3 mt-3 border-t border-primary-200 dark:border-primary-800 space-y-2">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-200">Veya harici link ile ekle</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://..."
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+            />
+            <input
+              type="text"
+              value={urlCaption}
+              onChange={(e) => setUrlCaption(e.target.value)}
+              placeholder="Açıklama (opsiyonel)"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+            />
+            <button
+              type="button"
+              disabled={!urlInput.trim() || addingUrl}
+              onClick={async () => {
+                if (!urlInput.trim()) return;
+                try {
+                  setAddingUrl(true);
+                  const today = new Date().toISOString().slice(0, 10);
+                  const created = await ApiService.createLandingGalleryItem({
+                    url: urlInput.trim(),
+                    caption: urlCaption.trim(),
+                    date: today,
+                    order: items.length,
+                    external: true
+                  });
+                  if (created?.success) {
+                    toast.success('Görsel eklendi');
+                    setUrlInput('');
+                    setUrlCaption('');
+                    await load();
+                  } else {
+                    toast.error(created?.message || 'Eklenemedi');
+                  }
+                } catch (err) {
+                  toast.error('Hata: ' + (err?.message || ''));
+                } finally {
+                  setAddingUrl(false);
+                }
+              }}
+              className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-medium"
+            >
+              {addingUrl ? 'Ekleniyor...' : 'Ekle'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Liste */}

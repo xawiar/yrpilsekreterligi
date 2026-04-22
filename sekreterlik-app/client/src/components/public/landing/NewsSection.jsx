@@ -91,7 +91,6 @@ const NewsCard = ({ item }) => {
 
 const NewsSection = ({ news = [] }) => {
   const list = Array.isArray(news) ? news : [];
-  if (list.length === 0) return null;
 
   return (
     <section
@@ -113,12 +112,23 @@ const NewsSection = ({ news = [] }) => {
           </p>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {list.map(item => (
-            <NewsCard key={item.id || item.title} item={item} />
-          ))}
-        </div>
+        {/* Grid veya placeholder */}
+        {list.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {list.map(item => (
+              <NewsCard key={item.id || item.title} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="max-w-md mx-auto text-center py-12 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl">
+            <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+            </svg>
+            <p className="text-gray-600 dark:text-gray-400">
+              Yakında haberler ve duyurular burada paylaşılacak.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -338,22 +338,15 @@ const PublicLandingPage = () => {
           />
         )}
 
-        {s.leaders !== false && leaders.length > 0 && (
-          <LeadersSection
-            members={leaders}
-            title={content.leadersTitle || DEFAULTS.leadersTitle}
-          />
-        )}
-
-        {s.news !== false && news.length > 0 && (
+        {s.news !== false && (
           <NewsSection news={news} />
         )}
 
-        {s.gallery !== false && gallery.length > 0 && (
+        {s.gallery !== false && (
           <GallerySection gallery={gallery} />
         )}
 
-        {s.electionSummary !== false && election && (
+        {s.electionSummary !== false && (
           <ElectionSummarySection electionResult={election} />
         )}
 
@@ -363,6 +356,13 @@ const PublicLandingPage = () => {
             text={content.applyCtaText || DEFAULTS.applyCtaText}
             buttonText="Basvur"
             buttonLink="/public/apply"
+          />
+        )}
+
+        {s.leaders !== false && (
+          <LeadersSection
+            members={leaders}
+            title={content.leadersTitle || DEFAULTS.leadersTitle}
           />
         )}
 

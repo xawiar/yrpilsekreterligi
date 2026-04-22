@@ -14,7 +14,7 @@ import ApiService from '../../utils/ApiService';
  *   { title, content, date (YYYY-MM-DD), image (URL), createdAt, updatedAt }
  */
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 const todayISODate = () => {
@@ -106,7 +106,7 @@ const NewsManagement = () => {
       return;
     }
     if (file.size > MAX_IMAGE_SIZE) {
-      toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
+      toast.error('Dosya boyutu 10MB\'dan küçük olmalıdır');
       return;
     }
     try {
@@ -244,8 +244,8 @@ const NewsManagement = () => {
               />
             </div>
             <div>
-              <label className={labelCls} htmlFor="news-image">Görsel (jpg/png/webp, maks 5MB)</label>
-              <div className="flex items-center gap-3">
+              <label className={labelCls} htmlFor="news-image">Görsel — dosya yükle veya link yapıştır</label>
+              <div className="flex items-center gap-3 mb-2">
                 <input
                   id="news-image"
                   type="file"
@@ -256,6 +256,16 @@ const NewsManagement = () => {
                 />
                 {uploading && <span className="text-xs text-primary-600 animate-pulse whitespace-nowrap">Yükleniyor...</span>}
               </div>
+              <input
+                type="url"
+                value={form.image || ''}
+                onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
+                placeholder="veya görsel URL'si yapıştır (https://...)"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                jpg/png/webp, dosya maks 10MB. Harici link kullanıyorsan yapıştır.
+              </p>
             </div>
           </div>
           {form.image && (

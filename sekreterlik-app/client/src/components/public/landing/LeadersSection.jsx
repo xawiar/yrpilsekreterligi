@@ -93,8 +93,8 @@ const PresidentCard = ({ member }) => {
         <div className="h-2 bg-gradient-to-r from-primary-600 via-amber-500 to-primary-700" />
 
         <div className="px-6 pt-8 pb-6 text-center">
-          {/* Dairesel avatar */}
-          <div className="relative mx-auto w-44 h-44 md:w-52 md:h-52">
+          {/* Dairesel avatar (kompakt) */}
+          <div className="relative mx-auto w-28 h-28 md:w-32 md:h-32">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-600 via-primary-700 to-amber-500 blur-md opacity-30 group-hover:opacity-50 transition-opacity" />
             <div className="relative w-full h-full rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-900 shadow-lg bg-gradient-to-br from-primary-100 via-primary-50 to-white dark:from-primary-900/60 dark:via-gray-800 dark:to-gray-900">
               {photo ? (
@@ -106,7 +106,7 @@ const PresidentCard = ({ member }) => {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-6xl md:text-7xl font-bold bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent select-none">
+                  <span className="text-3xl md:text-4xl font-bold bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent select-none">
                     {initialsOf(name)}
                   </span>
                 </div>
@@ -119,19 +119,15 @@ const PresidentCard = ({ member }) => {
             )}
           </div>
 
-          <div className="mt-8">
-            <span className="inline-block px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-[11px] font-bold uppercase tracking-[0.2em]">
+          <div className="mt-4">
+            <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-[10px] font-bold uppercase tracking-[0.2em]">
               {position || 'İl Başkanı'}
             </span>
-            <h3 className="mt-4 text-2xl md:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
+            <h3 className="mt-2 text-lg md:text-xl font-bold text-gray-900 dark:text-white leading-tight">
               {name || 'İsimsiz'}
             </h3>
             {region && (
-              <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                 {region}
               </p>
             )}
@@ -187,7 +183,7 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
   return (
     <section
       id="leaders"
-      className="relative w-full py-20 md:py-28 lg:py-32 bg-gray-50 dark:bg-gray-900"
+      className="relative w-full py-14 md:py-20 bg-gray-50 dark:bg-gray-900"
     >
       {/* Arka plan dekoratif pattern */}
       <svg
@@ -206,25 +202,22 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
       </svg>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Bolum basligi */}
-        <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
-          <p className="text-xs font-bold tracking-[0.25em] uppercase text-primary-700 dark:text-primary-400 mb-4">
+        {/* Bolum basligi (kompakt) */}
+        <div className="text-center max-w-3xl mx-auto mb-10 md:mb-14">
+          <p className="text-xs font-bold tracking-[0.25em] uppercase text-primary-700 dark:text-primary-400 mb-3">
             Yönetim Kadromuz
           </p>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
             {title}
           </h2>
-          <div className="mt-6 h-1 w-16 mx-auto bg-gradient-to-r from-primary-600 to-amber-500 rounded-full" />
-          <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-            İl Başkanımız, divan üyelerimiz ve il yönetim kadromuzla; sahada, vatandaşın yanında, sözümüzün arkasındayız.
-          </p>
+          <div className="mt-4 h-0.5 w-12 mx-auto bg-gradient-to-r from-primary-600 to-amber-500 rounded-full" />
         </div>
 
         {!hasAny && <EmptyPlaceholder />}
 
         {/* 1. İl Başkanı */}
         {ilBaskani.length > 0 && (
-          <div className="mb-20 md:mb-24">
+          <div className="mb-12 md:mb-16">
             <GroupHeading
               eyebrow="Partimizin Lideri"
               title="İl Başkanı"
@@ -239,7 +232,7 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
 
         {/* 2. Divan Kurulu */}
         {divan.length > 0 && (
-          <div className="mb-20 md:mb-24">
+          <div className="mb-12 md:mb-16">
             <GroupHeading
               eyebrow="Karar Mercii"
               title="Divan Kurulu"
