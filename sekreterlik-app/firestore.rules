@@ -40,10 +40,15 @@ service cloud.firestore {
     }
 
     // Members - admin write, authenticated read
+    // İstisna: authenticated user sadece kendi dokümanındaki `photo` alanını güncelleyebilir
     match /members/{memberId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdmin() ||
+      allow create: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
+      allow update: if isAdmin() ||
+        (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']) ||
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo']));
       allow delete: if isAdmin();
     }
 
