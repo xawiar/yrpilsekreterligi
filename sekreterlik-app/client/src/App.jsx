@@ -354,6 +354,18 @@ function AuthenticatedContent() {
             }
           />
 
+          {/* Ayarlar — her authenticated kullanıcı için (yetki bazlı tab filtrelemesi SettingsPage içinde) */}
+          <Route
+            path="/settings/*"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <SettingsPage />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+
           {/* District President Dashboard Route */}
           <Route
             path="/district-president-dashboard"
