@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 /**
  * LeadersSection — Yonetim kadrosu, 3 grup: İl Başkanı, Divan Kurulu, İl Yönetimi.
@@ -16,18 +16,28 @@ const initialsOf = (name) => {
 };
 
 // Standart kart (Divan ve Il Yonetimi icin)
-const LeaderCard = ({ member, size = 'md' }) => {
+const LeaderCard = ({ member, size = 'md', onOpen }) => {
   const name = member?.name || '';
   const position = member?.position || '';
   const region = member?.region || '';
   const photo = member?.photo || '';
   const muvefettislik = member?.muvefettislik || '';
+  const hasBio = !!(member?.biography && String(member.biography).trim());
 
   const padding = size === 'sm' ? 'p-4' : 'p-5';
   const nameClass = size === 'sm' ? 'text-sm md:text-base' : 'text-base md:text-lg';
 
+  const handleClick = () => {
+    if (typeof onOpen === 'function') onOpen(member);
+  };
+
   return (
-    <article className={`group relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 overflow-hidden`}>
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
+      className={`group relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500`}>
       {/* Avatar */}
       <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-primary-100 via-primary-50 to-white dark:from-primary-900/60 dark:via-gray-800 dark:to-gray-900">
         {photo ? (
@@ -50,6 +60,11 @@ const LeaderCard = ({ member, size = 'md' }) => {
         {muvefettislik && (
           <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500 text-white shadow-md backdrop-blur-sm">
             {muvefettislik}
+          </span>
+        )}
+        {hasBio && (
+          <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/85 dark:bg-gray-900/85 text-primary-700 dark:text-primary-300 shadow-sm backdrop-blur-sm">
+            Özgeçmiş
           </span>
         )}
       </div>
@@ -79,16 +94,32 @@ const LeaderCard = ({ member, size = 'md' }) => {
 };
 
 // Il Baskani icin ozel buyuk merkezi kart
-const PresidentCard = ({ member }) => {
+const PresidentCard = ({ member, onOpen }) => {
   const name = member?.name || '';
   const position = member?.position || '';
   const region = member?.region || '';
   const photo = member?.photo || '';
   const muvefettislik = member?.muvefettislik || '';
+  const hasBio = !!(member?.biography && String(member.biography).trim());
+
+  const handleClick = () => {
+    if (typeof onOpen === 'function') onOpen(member);
+  };
 
   return (
-    <article className="relative mx-auto max-w-lg group">
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
+      className="relative mx-auto max-w-lg group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-3xl"
+    >
       <div className="relative bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 overflow-hidden">
+        {hasBio && (
+          <span className="absolute top-4 right-4 z-10 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-primary-600 text-white shadow-md">
+            Özgeçmiş
+          </span>
+        )}
         {/* Üst dekorasyon bandı */}
         <div className="h-2 bg-gradient-to-r from-primary-600 via-amber-500 to-primary-700" />
 
@@ -171,8 +202,112 @@ const EmptyPlaceholder = () => (
   </div>
 );
 
+// Özgeçmiş modal'ı — fotoğraf + bilgi + biyografi metni
+const BiographyModal = ({ member, onClose }) => {
+  useEffect(() => {
+    if (!member) return;
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [member, onClose]);
+
+  if (!member) return null;
+
+  const name = member.name || 'İsimsiz';
+  const position = member.position || '';
+  const region = member.region || '';
+  const photo = member.photo || '';
+  const bio = (member.biography || '').trim();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="leader-bio-title"
+    >
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Kapat */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Kapat"
+          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-800 transition"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Üst dekorasyon */}
+        <div className="h-2 bg-gradient-to-r from-primary-600 via-amber-500 to-primary-700 rounded-t-2xl" />
+
+        <div className="p-6 md:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+            {/* Avatar */}
+            <div className="mx-auto sm:mx-0 w-28 h-28 md:w-36 md:h-36 shrink-0 rounded-full overflow-hidden ring-4 ring-primary-100 dark:ring-primary-900/60 shadow-lg bg-gradient-to-br from-primary-100 via-primary-50 to-white dark:from-primary-900/60 dark:via-gray-800 dark:to-gray-900">
+              {photo ? (
+                <img src={photo} alt={name} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-3xl md:text-4xl font-bold bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
+                    {initialsOf(name)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* İsim / pozisyon / bölge */}
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              {position && (
+                <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-[10px] font-bold uppercase tracking-[0.2em]">
+                  {position}
+                </span>
+              )}
+              <h3 id="leader-bio-title" className="mt-2 text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                {name}
+              </h3>
+              {region && (
+                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{region}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Biyografi */}
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+            {bio ? (
+              <div>
+                <h4 className="text-[11px] font-bold tracking-[0.25em] uppercase text-primary-700 dark:text-primary-400 mb-3">
+                  Özgeçmiş
+                </h4>
+                <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                  {bio}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-6">
+                Bu üye henüz özgeçmiş bilgisi eklememiş.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
   const list = Array.isArray(members) ? members : [];
+  const [selected, setSelected] = useState(null);
 
   const ilBaskani = list.filter(m => m._group === 'ilBaskani');
   const divan = list.filter(m => m._group === 'divan');
@@ -224,7 +359,7 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
             />
             <div className="grid grid-cols-1 gap-8 justify-items-center">
               {ilBaskani.map(m => (
-                <PresidentCard key={m.id || m.name} member={m} />
+                <PresidentCard key={m.id || m.name} member={m} onOpen={setSelected} />
               ))}
             </div>
           </div>
@@ -240,7 +375,7 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
             />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {divan.map(m => (
-                <LeaderCard key={m.id || m.name} member={m} size="sm" />
+                <LeaderCard key={m.id || m.name} member={m} size="sm" onOpen={setSelected} />
               ))}
             </div>
           </div>
@@ -256,12 +391,14 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
             />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {ilYonetim.map(m => (
-                <LeaderCard key={m.id || m.name} member={m} size="sm" />
+                <LeaderCard key={m.id || m.name} member={m} size="sm" onOpen={setSelected} />
               ))}
             </div>
           </div>
         )}
       </div>
+
+      <BiographyModal member={selected} onClose={() => setSelected(null)} />
     </section>
   );
 };

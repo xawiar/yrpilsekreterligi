@@ -1,5 +1,6 @@
 import React from 'react';
 import ProfilePhotoUpload from './ProfilePhotoUpload';
+import BiographyEditor from './BiographyEditor';
 
 /**
  * MemberProfilePanel
@@ -53,7 +54,7 @@ const InfoRow = ({ label, value, muted = false }) => (
   </div>
 );
 
-const MemberProfilePanel = ({ member, onRequestChange, onPhotoUpdated }) => {
+const MemberProfilePanel = ({ member, onRequestChange, onPhotoUpdated, onBiographyUpdated }) => {
   if (!member) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -101,6 +102,15 @@ const MemberProfilePanel = ({ member, onRequestChange, onPhotoUpdated }) => {
           <InfoRow label="Bölge" value={region} />
           <InfoRow label="Görev" value={position} />
         </div>
+      </div>
+
+      {/* Özgeçmiş editörü */}
+      <div className="px-6 pb-4">
+        <BiographyEditor
+          memberId={member.id}
+          initialValue={member.biography || ''}
+          onSaved={onBiographyUpdated}
+        />
       </div>
 
       {/* Bilgi + değişiklik talebi */}

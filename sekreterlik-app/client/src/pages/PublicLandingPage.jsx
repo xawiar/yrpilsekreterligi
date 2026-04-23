@@ -71,6 +71,7 @@ const safeMember = (m) => ({
   region: m.region || '',
   photo: m.photo || '',
   muvefettislik: m.muvefettislik || '',
+  biography: m.biography || '',
   _group: m._group || '',
 });
 

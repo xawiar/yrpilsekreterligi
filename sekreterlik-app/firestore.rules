@@ -48,7 +48,7 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']) ||
         (isAuthenticated() &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo', 'updatedAt']));
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo', 'biography', 'updatedAt']));
       allow delete: if isAdmin();
     }
 
