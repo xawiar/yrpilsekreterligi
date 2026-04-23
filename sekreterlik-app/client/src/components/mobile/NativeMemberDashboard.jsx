@@ -359,7 +359,7 @@ const NativeMemberDashboard = ({
       {/* Tanıtım Sayfası Yönetimi — yetkisi varsa görünür */}
       {grantedPermissions.includes('manage_landing_page') && (
         <Link
-          to="/settings?tab=landing-page"
+          to="/landing-manager"
           className="block bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 active:scale-95 transition-transform"
         >
           <div className="flex items-center space-x-3">
