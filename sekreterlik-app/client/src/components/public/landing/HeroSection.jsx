@@ -14,6 +14,9 @@ const HeroSection = ({
   image = '',
   ctaText = 'Yönetime Başvur',
   ctaLink = '/public/apply',
+  chairmanPhoto = '',
+  chairmanName = '',
+  chairmanTitle = '',
 }) => {
   return (
     <section
@@ -66,6 +69,7 @@ const HeroSection = ({
 
       {/* Icerik */}
       <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 md:py-32">
+        <div className={`grid ${chairmanPhoto ? 'lg:grid-cols-[1fr_420px] gap-10 items-center' : ''}`}>
         <div className="max-w-3xl">
           {/* Eyebrow tag */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-xs font-semibold tracking-[0.2em] uppercase mb-8">
@@ -119,6 +123,37 @@ const HeroSection = ({
               Elazığ İl Sekreterliği
             </div>
           </div>
+        </div>
+        {/* Genel Başkan fotoğrafı (sağda) */}
+        {chairmanPhoto && (
+          <div className="hidden lg:flex flex-col items-center justify-center">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-gradient-to-br from-amber-400/40 to-primary-500/40 rounded-3xl blur-2xl" />
+              <div className="relative rounded-3xl overflow-hidden ring-2 ring-white/30 shadow-2xl bg-white/5 backdrop-blur-sm">
+                <img
+                  src={chairmanPhoto}
+                  alt={chairmanName || 'Genel Başkan'}
+                  className="w-full max-w-[400px] h-auto object-cover"
+                  loading="eager"
+                />
+              </div>
+            </div>
+            {(chairmanName || chairmanTitle) && (
+              <div className="mt-4 text-center">
+                {chairmanTitle && (
+                  <div className="text-amber-300 text-[11px] font-bold tracking-[0.25em] uppercase">
+                    {chairmanTitle}
+                  </div>
+                )}
+                {chairmanName && (
+                  <div className="mt-1 text-white font-semibold text-lg">
+                    {chairmanName}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         </div>
       </div>
 

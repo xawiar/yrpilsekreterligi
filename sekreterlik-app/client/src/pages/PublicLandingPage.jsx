@@ -32,6 +32,9 @@ const DEFAULTS = {
   heroSubtitle: 'Il Sekreterligi',
   heroImage: '',
   heroCtaText: 'Yonetime Basvur',
+  chairmanPhoto: '',
+  chairmanName: '',
+  chairmanTitle: 'Genel Başkan',
 
   aboutTitle: 'Hakkimizda',
   aboutContent: 'Icerik admin tarafindan eklenecek.',
@@ -416,6 +419,9 @@ const PublicLandingPage = () => {
             image={content.heroImage || ''}
             ctaText={content.heroCtaText || DEFAULTS.heroCtaText}
             ctaLink="/public/apply"
+            chairmanPhoto={content.chairmanPhoto || ''}
+            chairmanName={content.chairmanName || ''}
+            chairmanTitle={content.chairmanTitle || DEFAULTS.chairmanTitle}
           />
         )}
 

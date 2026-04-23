@@ -340,6 +340,58 @@ const LandingPageSettings = () => {
               placeholder="Örn: Bize Katılın"
             />
           </div>
+
+          {/* GENEL BAŞKAN — hero sağ tarafta gösterilir */}
+          <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Genel Başkan (hero sağı)</h4>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls} htmlFor="lp-chairman-photo">Genel Başkan Fotoğrafı (jpg/png/webp)</label>
+                <div className="flex items-start gap-3">
+                  <input
+                    id="lp-chairman-photo"
+                    type="file"
+                    accept={ALLOWED_IMAGE_TYPES.join(',')}
+                    disabled={!!uploading.chairmanPhoto}
+                    onChange={(e) => handleImageUpload('chairmanPhoto', e.target.files?.[0], 'chairman')}
+                    className="block text-sm text-gray-700 dark:text-gray-300"
+                  />
+                  {uploading.chairmanPhoto && <span className="text-xs text-primary-600 animate-pulse">Yükleniyor...</span>}
+                  {content.chairmanPhoto && (
+                    <img
+                      src={content.chairmanPhoto}
+                      alt="Genel başkan önizleme"
+                      className="h-20 w-20 rounded object-cover border border-gray-200 dark:border-gray-700"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls} htmlFor="lp-chairman-name">Ad Soyad</label>
+                  <input
+                    id="lp-chairman-name"
+                    type="text"
+                    className={inputCls}
+                    value={content.chairmanName || ''}
+                    onChange={(e) => setField('chairmanName', e.target.value)}
+                    placeholder="Örn: Dr. Fatih Erbakan"
+                  />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="lp-chairman-title">Ünvan</label>
+                  <input
+                    id="lp-chairman-title"
+                    type="text"
+                    className={inputCls}
+                    value={content.chairmanTitle || ''}
+                    onChange={(e) => setField('chairmanTitle', e.target.value)}
+                    placeholder="Örn: Genel Başkan"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </details>
 

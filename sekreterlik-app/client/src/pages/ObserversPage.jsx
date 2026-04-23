@@ -297,49 +297,95 @@ const ObserversPage = () => {
     try {
       setLoading(true);
       const chiefs = observers.filter(o => o.is_chief_observer);
-      const currentAssignments = new Set(
+
+      // Atanmış sandıklar seti (dublike engelle)
+      const taken = new Set(
         observers.filter(o => o.ballot_box_id).map(o => String(o.ballot_box_id))
       );
 
-      let assigned = 0, skipped = 0;
+      // Henüz ataması olmayan müşahitler
+      const pending = chiefs.filter(o => !o.ballot_box_id);
+
+      let assigned = 0;
+      const notAssigned = [];
       const errors = [];
 
-      for (const obs of chiefs) {
-        try {
-          if (obs.ballot_box_id) { skipped++; continue; } // zaten atanmış
-          // Kendi mahalle/köyündeki sandıklar
-          let pool = ballotBoxes.filter(bb => {
-            if (obs.neighborhood_id && String(bb.neighborhood_id) === String(obs.neighborhood_id)) return true;
-            if (obs.village_id && String(bb.village_id) === String(obs.village_id)) return true;
-            return false;
-          });
-          // Hiç yoksa district'teki sandıklara genişlet
-          if (pool.length === 0 && obs.district_id) {
-            pool = ballotBoxes.filter(bb => String(bb.district_id) === String(obs.district_id));
+      // Yardımcı: pool'dan atanmamış bir sandık seç ve taken'a ekle
+      const pickUnassigned = (pool) => {
+        const free = pool.filter(bb => !taken.has(String(bb.id)));
+        if (free.length === 0) return null;
+        const chosen = free[Math.floor(Math.random() * free.length)];
+        taken.add(String(chosen.id));
+        return chosen;
+      };
+
+      // 3-geçişli atama: mahalle/köy → ilçe → tüm sandıklar
+      // Pass 1: mahalle/köy
+      const stillPending = [];
+      for (const obs of pending) {
+        const pool = ballotBoxes.filter(bb => {
+          if (obs.neighborhood_id && String(bb.neighborhood_id) === String(obs.neighborhood_id)) return true;
+          if (obs.village_id && String(bb.village_id) === String(obs.village_id)) return true;
+          return false;
+        });
+        const chosen = pickUnassigned(pool);
+        if (chosen) {
+          try {
+            await ApiService.updateBallotBoxObserver(obs.id, { ...obs, ballot_box_id: chosen.id });
+            assigned++;
+          } catch (e) {
+            errors.push(`${obs.name}: ${e.message || 'hata'}`);
+            taken.delete(String(chosen.id));
+            stillPending.push(obs);
           }
-          if (pool.length === 0) { skipped++; continue; }
+        } else {
+          stillPending.push(obs);
+        }
+      }
 
-          // Önce atanmamış sandıklar
-          const unassigned = pool.filter(bb => !currentAssignments.has(String(bb.id)));
-          const chosen = (unassigned.length > 0 ? unassigned : pool)[
-            Math.floor(Math.random() * (unassigned.length > 0 ? unassigned.length : pool.length))
-          ];
+      // Pass 2: aynı ilçe
+      const stillPending2 = [];
+      for (const obs of stillPending) {
+        if (!obs.district_id) { stillPending2.push(obs); continue; }
+        const pool = ballotBoxes.filter(bb => String(bb.district_id) === String(obs.district_id));
+        const chosen = pickUnassigned(pool);
+        if (chosen) {
+          try {
+            await ApiService.updateBallotBoxObserver(obs.id, { ...obs, ballot_box_id: chosen.id });
+            assigned++;
+          } catch (e) {
+            errors.push(`${obs.name}: ${e.message || 'hata'}`);
+            taken.delete(String(chosen.id));
+            stillPending2.push(obs);
+          }
+        } else {
+          stillPending2.push(obs);
+        }
+      }
 
-          await ApiService.updateBallotBoxObserver(obs.id, {
-            ...obs,
-            ballot_box_id: chosen.id
-          });
-          currentAssignments.add(String(chosen.id));
-          assigned++;
-        } catch (e) {
-          errors.push(`${obs.name}: ${e.message || 'hata'}`);
+      // Pass 3: tüm sandıklar (son çare)
+      for (const obs of stillPending2) {
+        const chosen = pickUnassigned(ballotBoxes);
+        if (chosen) {
+          try {
+            await ApiService.updateBallotBoxObserver(obs.id, { ...obs, ballot_box_id: chosen.id });
+            assigned++;
+          } catch (e) {
+            errors.push(`${obs.name}: ${e.message || 'hata'}`);
+            taken.delete(String(chosen.id));
+            notAssigned.push(obs);
+          }
+        } else {
+          notAssigned.push(obs);
         }
       }
 
       await fetchData();
-      const msg = `${assigned} müşahite sandık atandı, ${skipped} atlandı${errors.length ? `, ${errors.length} hata` : ''}`;
-      if (errors.length) toast.error(msg); else toast.success(msg);
-      if (errors.length) console.warn('Assign errors:', errors.slice(0, 10));
+      const remaining = chiefs.length - pending.length; // zaten atanmıştı
+      const msg = `${assigned} yeni atama • ${remaining} zaten atanmıştı • ${notAssigned.length} sandık bulunamadı${errors.length ? ` • ${errors.length} API hatası` : ''}`;
+      if (notAssigned.length || errors.length) toast.error(msg); else toast.success(msg);
+      if (notAssigned.length) console.warn('Atanamayanlar:', notAssigned.slice(0, 20).map(o => o.name));
+      if (errors.length) console.warn('Hatalar:', errors.slice(0, 10));
     } catch (e) {
       toast.error('Rastgele atama hatası: ' + e.message);
     } finally {
