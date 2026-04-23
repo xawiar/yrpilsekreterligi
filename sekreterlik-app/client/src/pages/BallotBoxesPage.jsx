@@ -253,20 +253,52 @@ const BallotBoxesPage = () => {
           const errors = [];
           let importedCount = 0;
 
+          // Header'a göre format tespiti (8 kolon yeni / 6 kolon eski)
+          const headerRow = jsonData[0] || [];
+          const hasBeldeCol = headerRow.some(h =>
+            typeof h === 'string' && /belde/i.test(h)
+          );
+          const hasSeparateKoy = headerRow.some(h =>
+            typeof h === 'string' && /^köy$/i.test(String(h).trim())
+          );
+          const newFormat = hasBeldeCol && hasSeparateKoy; // 8 kolon
+
+          // İlçe eşleşmesinde "ELAZIĞ MERKEZ" → "MERKEZ" fallback
+          const normIlce = (s) => (s || '').toLocaleLowerCase('tr-TR')
+            .replace(/^elazığ\s+/i, '').trim();
+
           for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
-            const rowNumber = i + 2; // Excel satır numarası (başlık dahil)
+            const rowNumber = i + 2;
 
-            if (row.length === 0 || row.every(cell => !cell)) continue; // Boş satırları atla
+            if (row.length === 0 || row.every(cell => !cell)) continue;
 
             try {
-              // Excel formatı: İl, İlçe, Mahalle/Köy, Sandık Alanı/Okul Adı, Sandık Numarası, Sandık Seçmen Sayısı
-              const regionName = row[0] ? String(row[0]).trim() : '';
-              const districtName = row[1] ? String(row[1]).trim() : '';
-              const locationName = row[2] ? String(row[2]).trim() : ''; // Mahalle veya Köy
-              const institutionName = row[3] ? String(row[3]).trim() : '';
-              const ballotNumber = row[4] ? String(row[4]).trim() : '';
-              const voterCount = row[5] ? String(row[5]).trim() : '';
+              let regionName, districtName, townName, neighborhoodName, villageName,
+                  institutionName, ballotNumber, voterCount;
+
+              if (newFormat) {
+                // 8 kolon: İl | İlçe | Belde | Mahalle | Köy | Kurum | Sandık No | Seçmen
+                regionName       = row[0] ? String(row[0]).trim() : '';
+                districtName     = row[1] ? String(row[1]).trim() : '';
+                townName         = row[2] ? String(row[2]).trim() : '';
+                neighborhoodName = row[3] ? String(row[3]).trim() : '';
+                villageName      = row[4] ? String(row[4]).trim() : '';
+                institutionName  = row[5] ? String(row[5]).trim() : '';
+                ballotNumber     = row[6] ? String(row[6]).trim() : '';
+                voterCount       = row[7] ? String(row[7]).trim() : '';
+              } else {
+                // 6 kolon eski: İl | İlçe | Mahalle/Köy | Kurum | Sandık No | Seçmen
+                regionName       = row[0] ? String(row[0]).trim() : '';
+                districtName     = row[1] ? String(row[1]).trim() : '';
+                townName         = '';
+                const locName    = row[2] ? String(row[2]).trim() : '';
+                neighborhoodName = locName;
+                villageName      = locName;
+                institutionName  = row[3] ? String(row[3]).trim() : '';
+                ballotNumber     = row[4] ? String(row[4]).trim() : '';
+                voterCount       = row[5] ? String(row[5]).trim() : '';
+              }
 
               // Validasyon
               if (!ballotNumber) {
@@ -277,17 +309,18 @@ const BallotBoxesPage = () => {
                 errors.push(`Satır ${rowNumber}: Kurum adı zorunludur`);
                 continue;
               }
-
               if (voterCount && parseInt(voterCount) > 400) {
                 errors.push(`Satır ${rowNumber}: Seçmen sayısı 400'ü aşıyor`);
                 continue;
               }
 
-              // İlçe kontrolü
+              // İlçe kontrolü (ELAZIĞ MERKEZ fallback)
               let districtId = null;
               if (districtName) {
-                const district = districts.find(d => 
-                  d.name.toLowerCase() === districtName.toLowerCase()
+                const targetDist = normIlce(districtName);
+                const district = districts.find(d =>
+                  d.name.toLowerCase() === districtName.toLowerCase() ||
+                  normIlce(d.name) === targetDist
                 );
                 if (!district) {
                   errors.push(`Satır ${rowNumber}: "${districtName}" ilçesi bulunamadı`);
@@ -296,27 +329,77 @@ const BallotBoxesPage = () => {
                 districtId = district.id;
               }
 
-              // Mahalle/Köy kontrolü
-              let neighborhoodId = null;
-              let villageId = null;
-              if (locationName && districtId) {
-                const neighborhood = neighborhoods.find(n => 
-                  n.name.toLowerCase() === locationName.toLowerCase() && 
-                  String(n.district_id) === String(districtId)
+              // Belde (opsiyonel)
+              let townId = null;
+              if (townName && districtId) {
+                const town = towns.find(t =>
+                  t.name.toLowerCase() === townName.toLowerCase() &&
+                  String(t.district_id) === String(districtId)
                 );
-                const village = villages.find(v => 
-                  v.name.toLowerCase() === locationName.toLowerCase() && 
+                if (town) townId = town.id;
+                else {
+                  const anyTown = towns.find(t =>
+                    t.name.toLowerCase() === townName.toLowerCase()
+                  );
+                  if (anyTown) townId = anyTown.id;
+                  else errors.push(`Satır ${rowNumber}: "${townName}" beldesi bulunamadı (devam edildi)`);
+                }
+              }
+
+              // Mahalle kontrolü (district + optional town)
+              let neighborhoodId = null;
+              if (newFormat ? neighborhoodName : neighborhoodName) {
+                if (newFormat && neighborhoodName) {
+                  const neighborhood = neighborhoods.find(n =>
+                    n.name.toLowerCase() === neighborhoodName.toLowerCase() &&
+                    String(n.district_id) === String(districtId) &&
+                    (townId ? String(n.town_id) === String(townId) : true)
+                  ) || neighborhoods.find(n =>
+                    n.name.toLowerCase() === neighborhoodName.toLowerCase() &&
+                    String(n.district_id) === String(districtId)
+                  );
+                  if (neighborhood) neighborhoodId = neighborhood.id;
+                } else if (!newFormat && neighborhoodName && districtId) {
+                  // Eski format: locationName → önce mahalle dene
+                  const n = neighborhoods.find(n =>
+                    n.name.toLowerCase() === neighborhoodName.toLowerCase() &&
+                    String(n.district_id) === String(districtId)
+                  );
+                  if (n) neighborhoodId = n.id;
+                }
+              }
+
+              // Köy kontrolü (district + optional town)
+              let villageId = null;
+              if (newFormat && villageName) {
+                const village = villages.find(v =>
+                  v.name.toLowerCase() === villageName.toLowerCase() &&
+                  String(v.district_id) === String(districtId) &&
+                  (townId ? String(v.town_id) === String(townId) : true)
+                ) || villages.find(v =>
+                  v.name.toLowerCase() === villageName.toLowerCase() &&
                   String(v.district_id) === String(districtId)
                 );
-                
-                if (neighborhood) {
-                  neighborhoodId = neighborhood.id;
-                } else if (village) {
-                  villageId = village.id;
-                } else {
-                  errors.push(`Satır ${rowNumber}: "${locationName}" mahalle/köyü bulunamadı`);
-                  // Devam et, sadece uyarı ver
+                if (village) villageId = village.id;
+              } else if (!newFormat && !neighborhoodId && villageName && districtId) {
+                // Eski format mahalle bulamadıysa köy dene
+                const v = villages.find(v =>
+                  v.name.toLowerCase() === villageName.toLowerCase() &&
+                  String(v.district_id) === String(districtId)
+                );
+                if (v) villageId = v.id;
+              }
+
+              // Mahalle/köy hiç bulunamadıysa uyarı (sandık yine eklenir)
+              if (newFormat) {
+                if ((neighborhoodName && !neighborhoodId) && (!villageName)) {
+                  errors.push(`Satır ${rowNumber}: "${neighborhoodName}" mahallesi bulunamadı (sandık yine de eklendi)`);
                 }
+                if ((villageName && !villageId) && (!neighborhoodName)) {
+                  errors.push(`Satır ${rowNumber}: "${villageName}" köyü bulunamadı (sandık yine de eklendi)`);
+                }
+              } else if (neighborhoodName && !neighborhoodId && !villageId) {
+                errors.push(`Satır ${rowNumber}: "${neighborhoodName}" mahalle/köyü bulunamadı (sandık yine de eklendi)`);
               }
 
               // Sandık oluştur
@@ -325,7 +408,7 @@ const BallotBoxesPage = () => {
                 institution_name: institutionName,
                 region_name: regionName || null,
                 district_id: districtId,
-                town_id: null,
+                town_id: townId,
                 neighborhood_id: neighborhoodId,
                 village_id: villageId,
                 voter_count: voterCount ? parseInt(voterCount) : null
@@ -371,22 +454,30 @@ const BallotBoxesPage = () => {
     }
   };
 
-  // Excel Template Download
+  // Excel Template Download (yeni 8 kolonlu format)
+  // Kolonlar: İl | İlçe | Belde | Mahalle | Köy | Kurum | Sandık No | Seçmen
+  // Bir satırda ya Mahalle ya Köy dolu olur (ikisi birden değil)
   const downloadExcelTemplate = () => {
     const templateData = [
-      ['İl', 'İlçe', 'Mahalle / Köy', 'Sandık Alanı / Okul Adı', 'Sandık Numarası', 'Sandık Seçmen Sayısı (Toplam)'],
-      ['Elazığ', 'Merkez', 'Ataşehir', 'İlkokul', '1001', '200'],
-      ['Elazığ', 'Merkez', 'Yenimahalle', 'Ortaokul', '1002', '250']
+      [
+        'İl', 'İlçe', 'Belde (opsiyonel)', 'Mahalle', 'Köy',
+        'Sandık Alanı / Kurum', 'Sandık Numarası', 'Seçmen Sayısı (Toplam)'
+      ],
+      ['Elazığ', 'MERKEZ', '',          'ABDULLAH PAŞA', '',           'ABDULLAH PAŞA İLKOKULU', '1001', '250'],
+      ['Elazığ', 'MERKEZ', 'AKÇAKİRAZ', 'AKPINAR',       '',           'AKPINAR ORTAOKULU',       '2001', '300'],
+      ['Elazığ', 'AĞIN',   '',          '',              'ALTINAYVA',  'ALTINAYVA KÖY OKULU',     '1015', '80']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
     ws['!cols'] = [
-      { wch: 12 }, // İl
-      { wch: 15 }, // İlçe
-      { wch: 20 }, // Mahalle / Köy
-      { wch: 25 }, // Sandık Alanı / Okul Adı
-      { wch: 15 }, // Sandık Numarası
-      { wch: 25 }  // Sandık Seçmen Sayısı
+      { wch: 10 }, // İl
+      { wch: 14 }, // İlçe
+      { wch: 18 }, // Belde
+      { wch: 22 }, // Mahalle
+      { wch: 22 }, // Köy
+      { wch: 30 }, // Kurum
+      { wch: 14 }, // Sandık No
+      { wch: 18 }  // Seçmen
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sandıklar');
@@ -692,31 +783,37 @@ const BallotBoxesPage = () => {
               <button
                 onClick={() => {
                   const excelData = [
-                    ['İl', 'İlçe', 'Mahalle / Köy', 'Sandık Alanı / Okul Adı', 'Sandık Numarası', 'Sandık Seçmen Sayısı (Toplam)']
+                    [
+                      'İl', 'İlçe', 'Belde (opsiyonel)', 'Mahalle', 'Köy',
+                      'Sandık Alanı / Kurum', 'Sandık Numarası', 'Seçmen Sayısı (Toplam)'
+                    ]
                   ];
-                  
+
                   filteredBallotBoxes.forEach(ballotBox => {
                     const locationInfo = getLocationInfo(ballotBox);
-                    const neighborhoodOrVillage = locationInfo.neighborhood || locationInfo.village || '';
-                    
+
                     excelData.push([
                       locationInfo.region || '',
                       locationInfo.district || '',
-                      neighborhoodOrVillage,
+                      locationInfo.town || '',
+                      locationInfo.neighborhood || '',
+                      locationInfo.village || '',
                       ballotBox.institution_name || '',
                       ballotBox.ballot_number || '',
                       ballotBox.voter_count || ''
                     ]);
                   });
-                  
+
                   const ws = XLSX.utils.aoa_to_sheet(excelData);
                   ws['!cols'] = [
-                    { wch: 12 }, // İl
-                    { wch: 15 }, // İlçe
-                    { wch: 20 }, // Mahalle / Köy
-                    { wch: 25 }, // Sandık Alanı / Okul Adı
-                    { wch: 15 }, // Sandık Numarası
-                    { wch: 25 }  // Sandık Seçmen Sayısı
+                    { wch: 10 }, // İl
+                    { wch: 14 }, // İlçe
+                    { wch: 18 }, // Belde
+                    { wch: 22 }, // Mahalle
+                    { wch: 22 }, // Köy
+                    { wch: 30 }, // Kurum
+                    { wch: 14 }, // Sandık No
+                    { wch: 18 }  // Seçmen
                   ];
                   const wb = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(wb, ws, 'Sandıklar');
