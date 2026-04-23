@@ -87,16 +87,16 @@ const PresidentCard = ({ member }) => {
   const muvefettislik = member?.muvefettislik || '';
 
   return (
-    <article className="relative mx-auto max-w-md group">
+    <article className="relative mx-auto max-w-lg group">
       <div className="relative bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 overflow-hidden">
         {/* Üst dekorasyon bandı */}
         <div className="h-2 bg-gradient-to-r from-primary-600 via-amber-500 to-primary-700" />
 
-        <div className="px-6 pt-8 pb-6 text-center">
-          {/* Dairesel avatar (kompakt) */}
-          <div className="relative mx-auto w-28 h-28 md:w-32 md:h-32">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-600 via-primary-700 to-amber-500 blur-md opacity-30 group-hover:opacity-50 transition-opacity" />
-            <div className="relative w-full h-full rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-900 shadow-lg bg-gradient-to-br from-primary-100 via-primary-50 to-white dark:from-primary-900/60 dark:via-gray-800 dark:to-gray-900">
+        <div className="px-6 pt-10 pb-8 md:px-8 md:pt-12 md:pb-10 text-center">
+          {/* Dairesel büyük avatar */}
+          <div className="relative mx-auto w-44 h-44 md:w-56 md:h-56">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-600 via-primary-700 to-amber-500 blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
+            <div className="relative w-full h-full rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-900 shadow-2xl bg-gradient-to-br from-primary-100 via-primary-50 to-white dark:from-primary-900/60 dark:via-gray-800 dark:to-gray-900">
               {photo ? (
                 <img
                   src={photo}
@@ -106,28 +106,28 @@ const PresidentCard = ({ member }) => {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-3xl md:text-4xl font-bold bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent select-none">
+                  <span className="text-6xl md:text-7xl font-bold bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent select-none">
                     {initialsOf(name)}
                   </span>
                 </div>
               )}
             </div>
             {muvefettislik && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500 text-white shadow-md whitespace-nowrap">
+              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500 text-white shadow-md whitespace-nowrap">
                 {muvefettislik}
               </span>
             )}
           </div>
 
-          <div className="mt-4">
-            <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-[10px] font-bold uppercase tracking-[0.2em]">
+          <div className="mt-8">
+            <span className="inline-block px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-[11px] font-bold uppercase tracking-[0.2em]">
               {position || 'İl Başkanı'}
             </span>
-            <h3 className="mt-2 text-lg md:text-xl font-bold text-gray-900 dark:text-white leading-tight">
+            <h3 className="mt-3 text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
               {name || 'İsimsiz'}
             </h3>
             {region && (
-              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-2 text-sm md:text-base text-gray-500 dark:text-gray-400">
                 {region}
               </p>
             )}
@@ -238,9 +238,9 @@ const LeadersSection = ({ members = [], title = 'Yönetim Kademesi' }) => {
               title="Divan Kurulu"
               subtitle="İl sekreterliğinin karar organı; teşkilatımızın omurgasını oluşturan divan üyelerimiz."
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {divan.map(m => (
-                <LeaderCard key={m.id || m.name} member={m} />
+                <LeaderCard key={m.id || m.name} member={m} size="sm" />
               ))}
             </div>
           </div>
