@@ -52,12 +52,11 @@ import NativeSettingsList from '../components/mobile/NativeSettingsList';
 const SettingsPage = ({ tab }) => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  // Başlangıç tab'ını prop'a göre set et
+  // Başlangıç tab'ını prop veya URL query param'dan set et
   const getInitialTab = () => {
-    if (tab === 'stks') return 'stks';
-    if (tab === 'public-institutions') return 'public-institutions';
-    if (searchParams.get('tab') === 'stks') return 'stks';
-    if (searchParams.get('tab') === 'public-institutions') return 'public-institutions';
+    if (tab) return tab;
+    const qTab = searchParams.get('tab');
+    if (qTab) return qTab;
     return 'admin';
   };
   const [activeTab, setActiveTab] = useState(getInitialTab());
@@ -105,25 +104,18 @@ const SettingsPage = ({ tab }) => {
   useEffect(() => {
     if (loadingPermissions) return;
 
-    // Eğer tab prop'u geçilmişse, direkt o tab'ı aç (yetki kontrolü MemberDashboardPage'de yapılıyor)
+    // Prop ile gelen tab'a öncelik ver
     if (tab) {
-      if (tab === 'stks') {
-        setActiveTab('stks');
-        return;
-      }
-      if (tab === 'public-institutions') {
-        setActiveTab('public-institutions');
-        return;
-      }
+      setActiveTab(tab);
+      return;
     }
 
-    // URL params kontrolü (geriye dönük uyumluluk)
-    if (isSTKManagement) {
-      setActiveTab('stks');
-    } else if (isPublicInstitutionManagement) {
-      setActiveTab('public-institutions');
+    // URL query param'daki tab'ı uygula
+    const qTab = searchParams.get('tab');
+    if (qTab) {
+      setActiveTab(qTab);
     }
-  }, [tab, isSTKManagement, isPublicInstitutionManagement, loadingPermissions]);
+  }, [tab, searchParams, loadingPermissions]);
 
   const mobileView = isMobile();
 
