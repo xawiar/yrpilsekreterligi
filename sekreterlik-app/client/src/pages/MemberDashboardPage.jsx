@@ -551,19 +551,19 @@ const MemberDashboardPage = () => {
   // STK Management view
   if (currentView === 'stk-management') {
     if (!hasViewPermission('stk-management')) return null;
-    return renderEmbeddedView('STK Yonetimi', 'STK ekleme, duzenleme ve silme islemleri', <SettingsPage tab="stks" />);
+    return renderEmbeddedView('STK Yonetimi', 'STK ekleme, duzenleme ve silme islemleri', <SettingsPage tab="stks" grantedPermissions={grantedPermissions} />);
   }
 
   // Public Institution Management view
   if (currentView === 'public-institution-management') {
     if (!hasViewPermission('public-institution-management')) return null;
-    return renderEmbeddedView('Kamu Kurumu Yonetimi', 'Kamu kurumu ekleme, duzenleme ve silme islemleri', <SettingsPage tab="public-institutions" />);
+    return renderEmbeddedView('Kamu Kurumu Yonetimi', 'Kamu kurumu ekleme, duzenleme ve silme islemleri', <SettingsPage tab="public-institutions" grantedPermissions={grantedPermissions} />);
   }
 
   // Landing Page (Tanıtım Sayfası) view — embedded
   if (currentView === 'landing-page') {
     if (!hasViewPermission('landing-page')) return null;
-    return renderEmbeddedView('Tanıtım Sayfası Yönetimi', 'Halka açık landing sayfası içeriğini düzenleyin', <SettingsPage tab="landing-page" />);
+    return renderEmbeddedView('Tanıtım Sayfası Yönetimi', 'Halka açık landing sayfası içeriğini düzenleyin', <SettingsPage tab="landing-page" grantedPermissions={grantedPermissions} />);
   }
 
   // STK Events view

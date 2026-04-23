@@ -49,7 +49,7 @@ import {
 } from '../components/Settings';
 import NativeSettingsList from '../components/mobile/NativeSettingsList';
 
-const SettingsPage = ({ tab }) => {
+const SettingsPage = ({ tab, grantedPermissions: grantedPermissionsProp }) => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   // Başlangıç tab'ını prop veya URL query param'dan set et
@@ -83,12 +83,34 @@ const SettingsPage = ({ tab }) => {
         return;
       }
 
+      // Parent komponent'ten geliyorsa doğrudan kullan (MemberDashboardPage embed)
+      if (Array.isArray(grantedPermissionsProp)) {
+        setGrantedPermissions(grantedPermissionsProp);
+        setLoadingPermissions(false);
+        return;
+      }
+
       if (user?.role === 'member' && user?.position) {
         try {
           const perms = await ApiService.getPermissionsForPosition(user.position);
           setGrantedPermissions(Array.isArray(perms) ? perms : []);
         } catch (error) {
           console.error('Error loading permissions:', error);
+          setGrantedPermissions([]);
+        }
+      } else if (user?.role === 'member' && user?.id) {
+        // user.position yoksa members koleksiyonundan çek
+        try {
+          const m = await ApiService.getMemberById(user.id);
+          const pos = m?.position;
+          if (pos) {
+            const perms = await ApiService.getPermissionsForPosition(pos);
+            setGrantedPermissions(Array.isArray(perms) ? perms : []);
+          } else {
+            setGrantedPermissions([]);
+          }
+        } catch (error) {
+          console.error('Error loading member for permissions:', error);
           setGrantedPermissions([]);
         }
       } else {
@@ -98,7 +120,7 @@ const SettingsPage = ({ tab }) => {
     };
 
     loadPermissions();
-  }, [user, isAdmin]);
+  }, [user, isAdmin, grantedPermissionsProp]);
 
   // Set initial tab based on URL params and permissions
   useEffect(() => {
