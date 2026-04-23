@@ -722,17 +722,25 @@ class FirebaseApiService {
       // Şifre kontrolü - password alanı şifrelenmiş olabilir
       let storedPassword = memberUser.password || '';
       try {
-        // Şifrelenmişse decrypt et
         if (storedPassword && storedPassword.startsWith('U2FsdGVkX1')) {
           storedPassword = decryptData(storedPassword);
         }
       } catch (e) {
         console.error('Şifre decrypt hatası:', e);
-        // Decrypt başarısız, direkt kullan
       }
 
-      // Şifre eşleşmiyorsa hata
-      if (storedPassword !== password) {
+      // Fallback: password eşleşmezse tc alanı ile de dene
+      // (decrypt ENCRYPTION_KEY uyuşmazlığı yaşayabilir — tc alanı plain ise doğrudan karşılaştır)
+      let storedTc = memberUser.tc || '';
+      try {
+        if (storedTc && storedTc.startsWith('U2FsdGVkX1')) {
+          storedTc = decryptData(storedTc);
+        }
+      } catch (e) {}
+
+      const rawPw = memberUser.password || '';
+      const rawTc = memberUser.tc || '';
+      if (storedPassword !== password && storedTc !== password && rawPw !== password && rawTc !== password) {
         throw new Error('Geçersiz TC kimlik numarası');
       }
 
