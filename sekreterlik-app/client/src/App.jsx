@@ -38,7 +38,6 @@ const AdminProfileRequestsPage = lazy(() => import('./pages/AdminProfileRequests
 const AdminApplicationsPage = lazy(() => import('./pages/AdminApplicationsPage'));
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'));
 const VoterSearchPage = lazy(() => import('./pages/VoterSearchPage'));
-const LandingPageManagerPage = lazy(() => import('./pages/LandingPageManagerPage'));
 const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
 const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
 const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
@@ -355,29 +354,6 @@ function AuthenticatedContent() {
             }
           />
 
-          {/* Tanıtım Sayfası Yönetimi — yetki sayfa içinde kontrol edilir */}
-          <Route
-            path="/landing-manager"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <LandingPageManagerPage />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Ayarlar — her authenticated kullanıcı için (yetki bazlı tab filtrelemesi SettingsPage içinde) */}
-          <Route
-            path="/settings/*"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <SettingsPage />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
 
           {/* District President Dashboard Route */}
           <Route

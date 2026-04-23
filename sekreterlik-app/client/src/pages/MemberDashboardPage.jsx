@@ -64,6 +64,7 @@ const viewToPathMap = {
   'member-list-page': 'member-list',
   'ballot-boxes': 'ballot-boxes',
   'observers': 'observers',
+  'landing-page': 'landing-page',
 };
 
 const pathToViewMap = Object.fromEntries(
@@ -120,6 +121,7 @@ const MemberDashboardPage = () => {
     'neighborhoods-page': ['access_neighborhoods_page'],
     'villages-page': ['access_villages_page'],
     'groups-page': ['access_groups_page'],
+    'landing-page': ['manage_landing_page'],
   };
 
   // Navigate to a view by updating the URL (which in turn updates currentView via useEffect)
@@ -556,6 +558,12 @@ const MemberDashboardPage = () => {
   if (currentView === 'public-institution-management') {
     if (!hasViewPermission('public-institution-management')) return null;
     return renderEmbeddedView('Kamu Kurumu Yonetimi', 'Kamu kurumu ekleme, duzenleme ve silme islemleri', <SettingsPage tab="public-institutions" />);
+  }
+
+  // Landing Page (Tanıtım Sayfası) view — embedded
+  if (currentView === 'landing-page') {
+    if (!hasViewPermission('landing-page')) return null;
+    return renderEmbeddedView('Tanıtım Sayfası Yönetimi', 'Halka açık landing sayfası içeriğini düzenleyin', <SettingsPage tab="landing-page" />);
   }
 
   // STK Events view
@@ -1331,9 +1339,10 @@ const MemberDashboardPage = () => {
 
           {/* Tanıtım Sayfası Yönetimi — yetkisi varsa görünür */}
           {grantedPermissions.includes('manage_landing_page') && (
-            <Link
-              to="/landing-manager"
-              className="block bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-xl transition-shadow"
+            <button
+              type="button"
+              onClick={() => setViewWithPermission('landing-page')}
+              className="block w-full text-left bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-xl transition-shadow"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -1351,7 +1360,7 @@ const MemberDashboardPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
-            </Link>
+            </button>
           )}
 
           {/* Seçmen Sorgulama — yetkisi varsa görünür */}
