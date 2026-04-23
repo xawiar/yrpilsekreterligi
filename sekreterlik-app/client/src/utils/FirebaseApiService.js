@@ -90,8 +90,11 @@ class FirebaseApiService {
   static async login(username, password) {
     try {
       // Firebase Auth ile giriş yap
-      // Email formatına çevir (username@domain.com)
-      const email = username.includes('@') ? username : `${username}@ilsekreterlik.local`;
+      // Email formatına çevir — Türkçe karakter vb. ASCII'ye
+      const { toEmailSafeUsername } = await import('./districtCode');
+      const email = username.includes('@')
+        ? username
+        : `${toEmailSafeUsername(username)}@ilsekreterlik.local`;
 
       let userCredential = null;
       let user = null;
@@ -765,7 +768,10 @@ class FirebaseApiService {
 
       // Firebase Auth ile giriş yapmayı dene
       const username = memberUser.username;
-      const email = `${username}@ilsekreterlik.local`;
+      // Username Türkçe karakter içerebilir (örn. eski kayıtlar) — ASCII'ye çevir
+      const { toEmailSafeUsername } = await import('./districtCode');
+      const emailLocal = toEmailSafeUsername(username);
+      const email = `${emailLocal}@ilsekreterlik.local`;
       let userCredential = null;
       let user = null;
 

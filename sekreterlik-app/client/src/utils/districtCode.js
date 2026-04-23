@@ -29,6 +29,17 @@ export function districtCodeFromName(name) {
 }
 
 /**
+ * Kullanıcı adını Firebase Auth email yerel kısmı için güvenli hale getirir.
+ * Türkçe karakterleri ASCII'ye çevirir, alfanumerik olmayan her şeyi atar,
+ * küçük harfe dönüştürür.
+ * Örn: "AĞI1001" → "agi1001", "Müşahit 12" → "musahit12"
+ */
+export function toEmailSafeUsername(username) {
+  const ascii = toAscii(username);
+  return ascii.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
  * Başmüşahit username üret: IlceKodu + SandıkNo
  * Örn: districtCode="MER", ballotNumber="1001" → "MER1001"
  */
