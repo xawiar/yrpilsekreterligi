@@ -9273,22 +9273,67 @@ class FirebaseApiService {
   }
 
   static async searchVoters(filters = {}) {
+    // Firestore indexed prefix search — 414k+ kayıtta hızlı çalışır
     try {
-      const { collection, getDocs, query, limit } = await import('firebase/firestore');
+      const { collection, getDocs, query, where, limit } = await import('firebase/firestore');
       const { db } = await import('../config/firebase');
-      const q = query(collection(db, 'voters'), limit(1000));
-      const snap = await getDocs(q);
-      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
       const up = (s) => (s || '').toString().toLocaleUpperCase('tr-TR');
-      return all.filter((v) => {
-        if (filters.firstName && !up(v.firstName).includes(up(filters.firstName))) return false;
-        if (filters.lastName && !up(v.lastName).includes(up(filters.lastName))) return false;
-        if (filters.ballotNumber && String(v.ballotNumber || '') !== String(filters.ballotNumber)) return false;
-        if (filters.district && up(v.district) !== up(filters.district)) return false;
-        if (filters.town && !up(v.town).includes(up(filters.town))) return false;
-        return true;
-      });
+      const LIMIT = 200;
+
+      // Öncelik sırasına göre tek bir indexed query kur
+      let q = null;
+      if (filters.firstName) {
+        const p = up(filters.firstName);
+        q = query(
+          collection(db, 'voters'),
+          where('firstName', '>=', p),
+          where('firstName', '<=', p + '\uf8ff'),
+          limit(LIMIT)
+        );
+      } else if (filters.lastName) {
+        const p = up(filters.lastName);
+        q = query(
+          collection(db, 'voters'),
+          where('lastName', '>=', p),
+          where('lastName', '<=', p + '\uf8ff'),
+          limit(LIMIT)
+        );
+      } else if (filters.ballotNumber) {
+        q = query(
+          collection(db, 'voters'),
+          where('ballotNumber', '==', String(filters.ballotNumber)),
+          limit(LIMIT)
+        );
+      } else if (filters.district) {
+        q = query(
+          collection(db, 'voters'),
+          where('district', '==', filters.district),
+          limit(LIMIT)
+        );
+      } else {
+        q = query(collection(db, 'voters'), limit(LIMIT));
+      }
+
+      const snap = await getDocs(q);
+      let results = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      // İkincil client-side filtreler (primary query ile daraltıldıktan sonra)
+      if (filters.firstName && filters.lastName) {
+        const p = up(filters.lastName);
+        results = results.filter((v) => up(v.lastName).startsWith(p));
+      }
+      if (filters.ballotNumber && !q.toString().includes('ballotNumber')) {
+        results = results.filter((v) => String(v.ballotNumber || '') === String(filters.ballotNumber));
+      }
+      if (filters.district) {
+        results = results.filter((v) => up(v.district) === up(filters.district));
+      }
+      if (filters.town) {
+        const tp = up(filters.town);
+        results = results.filter((v) => up(v.town).includes(tp));
+      }
+
+      return results;
     } catch (e) {
       console.warn('searchVoters:', e?.message || e);
       return [];

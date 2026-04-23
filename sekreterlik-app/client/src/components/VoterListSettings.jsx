@@ -132,11 +132,12 @@ const rowToVoter = (row, colMap) => {
   const tc = tcRaw.replace(/\D/g, '');
   if (tc.length !== 11) return null;
 
-  const firstName = (row[colMap.firstName] || '').toString().trim();
-  const lastName = (row[colMap.lastName] || '').toString().trim();
+  // Türkçe locale ile uppercase — search için indexli prefix query şart
+  const firstName = trUpper((row[colMap.firstName] || '').toString().trim());
+  const lastName = trUpper((row[colMap.lastName] || '').toString().trim());
   const birthDate = (row[colMap.birthDate] || '').toString().trim();
-  const district = (row[colMap.district] || '').toString().trim();
-  const town = (row[colMap.town] || '').toString().trim();
+  const district = trUpper((row[colMap.district] || '').toString().trim());
+  const town = trUpper((row[colMap.town] || '').toString().trim());
   const muhtarlik = colMap.muhtarlik >= 0 ? (row[colMap.muhtarlik] || '').toString().trim() : '';
   const addressRaw = (row[colMap.address] || '').toString().trim();
   // Mahalle + cadde birlikte daha anlamlı bir adres üretir
