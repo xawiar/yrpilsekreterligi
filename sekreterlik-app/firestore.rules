@@ -257,6 +257,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Seçmen listesi (YSK CSV import) — authenticated read, admin write
+    match /voters/{voterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     // Catch-all for any other collections — authenticated read, admin write
     // Also covers subcollections with {sub=**} wildcard
     match /{collection}/{docId} {

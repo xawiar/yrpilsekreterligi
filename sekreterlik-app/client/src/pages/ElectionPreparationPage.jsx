@@ -9,6 +9,7 @@ import NeighborhoodsPage from './NeighborhoodsPage';
 import VillagesPage from './VillagesPage';
 import GroupsPage from './GroupsPage';
 import CoordinatorsPage from './CoordinatorsPage';
+import VoterListSettings from '../components/VoterListSettings';
 
 const ElectionPreparationPage = () => {
   const location = useLocation();
@@ -24,6 +25,7 @@ const ElectionPreparationPage = () => {
     if (path.includes('/villages')) return 'villages';
     if (path.includes('/groups')) return 'groups';
     if (path.includes('/coordinators')) return 'coordinators';
+    if (path.includes('/voter-list')) return 'voter-list';
     return 'ballot-boxes'; // Default
   };
 
@@ -112,6 +114,17 @@ const ElectionPreparationPage = () => {
       ),
       color: 'blue',
       path: '/election-preparation/coordinators'
+    },
+    {
+      id: 'voter-list',
+      name: 'Seçmen Listesi',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      ),
+      color: 'indigo',
+      path: '/election-preparation/voter-list'
     }
   ];
 
@@ -223,6 +236,7 @@ const ElectionPreparationPage = () => {
                 <Route path="villages" element={<VillagesPage />} />
                 <Route path="groups" element={<GroupsPage />} />
                 <Route path="coordinators/*" element={<CoordinatorsPage />} />
+                <Route path="voter-list" element={<VoterListSettings />} />
               </Routes>
             ) : (
               /* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */
@@ -238,6 +252,7 @@ const ElectionPreparationPage = () => {
                     <CoordinatorsPage />
                   </div>
                 )}
+                {activeTab === 'voter-list' && <VoterListSettings />}
               </>
             )}
           </div>
@@ -314,6 +329,7 @@ const ElectionPreparationPage = () => {
                   <CoordinatorsPage />
                 </div>
               )}
+              {activeTab === 'voter-list' && <VoterListSettings />}
             </>
           )}
         </div>

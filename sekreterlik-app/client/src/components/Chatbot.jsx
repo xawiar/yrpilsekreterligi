@@ -473,24 +473,36 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Build context from site data
       const context = [];
 
-      // RAG: SEÇMEN SORGULAMA (Dosyalardan Arama)
-      // Kullanıcı mesajı ile veritabanında dinamik arama yap
+      // RAG: SEÇMEN SORGULAMA (Firestore voters koleksiyonundan)
+      // Sadece TC (11 hane) veya ad/soyad içeren sorularda dene
       if (userMessage.length >= 2) {
         try {
-          const voterResults = await ApiService.searchVoters(userMessage);
+          let voterResults = [];
+          const digits = userMessage.replace(/\D/g, '');
+          if (digits.length === 11) {
+            const single = await ApiService.searchVoterByTc(digits);
+            if (single) voterResults = [single];
+          } else {
+            // Mesajdan en uzun 2 kelimeyi ad/soyad filtresi olarak dene
+            const words = userMessage.split(/\s+/).filter(w => w.length >= 3).slice(0, 2);
+            if (words.length > 0) {
+              voterResults = await ApiService.searchVoters({
+                firstName: words[0] || '',
+                lastName: words[1] || ''
+              });
+            }
+          }
 
           if (voterResults && voterResults.length > 0) {
-            context.push(`\n=== 📂 YÜKLENEN DOSYALARDAN BULUNAN KAYITLAR (RAG) ===`);
-            context.push(`Kullanıcının sorusuyla ("${userMessage}") eşleşen ${voterResults.length} kişi dosyalarınızda bulundu:`);
-
-            voterResults.slice(0, 5).forEach((voter, index) => { // Max 5 kayıt göster (token tasarrufu)
-              context.push(`${index + 1}. AD SOYAD: ${voter.fullName} | TC: ${voter.tc} | TEL: ${voter.phone} | BÖLGE: ${voter.region} ${voter.district ? `(${voter.district})` : ''} | GÖREV: ${voter.role}`);
+            context.push(`\n=== SEÇMEN KAYITLARI (RAG) ===`);
+            context.push(`Kullanıcı sorgusu ("${userMessage}") ile eşleşen ${voterResults.length} kayıt:`);
+            voterResults.slice(0, 5).forEach((v, i) => {
+              context.push(`${i + 1}. ${v.firstName || ''} ${v.lastName || ''} | TC: ${v.tc} | İlçe: ${v.district || '-'} | Belde: ${v.town || '-'} | Sandık: ${v.ballotNumber || '-'} (${v.ballotArea || '-'})`);
             });
-
             if (voterResults.length > 5) {
               context.push(`... ve ${voterResults.length - 5} benzer kayıt daha var.`);
             }
-            context.push(`YÖNERGE: Kullanıcı bu kişileri soruyorsa yukarıdaki bilgileri ver. Eğer sormuyorsa bu bilgiyi görmezden gel.`);
+            context.push(`YÖNERGE: Kullanıcı bu kişileri soruyorsa yukarıdaki bilgileri ver, aksi takdirde görmezden gel.`);
           }
         } catch (searchErr) {
           console.warn('Chatbot voter search error:', searchErr);

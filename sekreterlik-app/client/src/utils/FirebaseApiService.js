@@ -9204,6 +9204,151 @@ class FirebaseApiService {
       return { success: false, message: e?.message || 'Dosya silinemedi' };
     }
   }
+
+  // ============================================================
+  // VOTERS (Seçmen Listesi) — Firestore koleksiyon: 'voters'
+  // TC kimlik = document ID (tekillik + hızlı equality lookup)
+  // ============================================================
+
+  static async batchCreateVoters(voters) {
+    try {
+      if (!Array.isArray(voters) || voters.length === 0) {
+        return { success: true, created: 0, skipped: 0 };
+      }
+      const { collection, writeBatch, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const BATCH_SIZE = 400;
+      let created = 0;
+      let skipped = 0;
+      const now = new Date().toISOString();
+
+      for (let i = 0; i < voters.length; i += BATCH_SIZE) {
+        const chunk = voters.slice(i, i + BATCH_SIZE);
+        const batch = writeBatch(db);
+        let batchCount = 0;
+        for (const v of chunk) {
+          if (!v || !v.tc || String(v.tc).length !== 11) {
+            skipped++;
+            continue;
+          }
+          const ref = doc(collection(db, 'voters'), String(v.tc));
+          batch.set(ref, {
+            tc: String(v.tc),
+            firstName: v.firstName || '',
+            lastName: v.lastName || '',
+            birthDate: v.birthDate || '',
+            district: v.district || '',
+            town: v.town || '',
+            address: v.address || '',
+            ballotNumber: v.ballotNumber || '',
+            ballotArea: v.ballotArea || '',
+            updatedAt: now,
+          }, { merge: true });
+          batchCount++;
+        }
+        if (batchCount > 0) {
+          await batch.commit();
+          created += batchCount;
+        }
+      }
+      return { success: true, created, skipped };
+    } catch (e) {
+      console.error('batchCreateVoters error:', e);
+      return { success: false, message: e?.message || 'Seçmen batch write hatası', created: 0, skipped: 0 };
+    }
+  }
+
+  static async searchVoterByTc(tc) {
+    try {
+      const cleanTc = String(tc || '').replace(/\D/g, '');
+      if (cleanTc.length !== 11) return null;
+      const { getDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDoc(doc(db, 'voters', cleanTc));
+      return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    } catch (e) {
+      console.warn('searchVoterByTc:', e?.message || e);
+      return null;
+    }
+  }
+
+  static async searchVoters(filters = {}) {
+    try {
+      const { collection, getDocs, query, limit } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const q = query(collection(db, 'voters'), limit(1000));
+      const snap = await getDocs(q);
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      const up = (s) => (s || '').toString().toLocaleUpperCase('tr-TR');
+      return all.filter((v) => {
+        if (filters.firstName && !up(v.firstName).includes(up(filters.firstName))) return false;
+        if (filters.lastName && !up(v.lastName).includes(up(filters.lastName))) return false;
+        if (filters.ballotNumber && String(v.ballotNumber || '') !== String(filters.ballotNumber)) return false;
+        if (filters.district && up(v.district) !== up(filters.district)) return false;
+        if (filters.town && !up(v.town).includes(up(filters.town))) return false;
+        return true;
+      });
+    } catch (e) {
+      console.warn('searchVoters:', e?.message || e);
+      return [];
+    }
+  }
+
+  static async getVoterDistricts() {
+    try {
+      const { collection, getDocs, query, limit } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const q = query(collection(db, 'voters'), limit(3000));
+      const snap = await getDocs(q);
+      const set = new Set();
+      snap.docs.forEach((d) => {
+        const v = d.data();
+        if (v?.district) set.add(v.district);
+      });
+      return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+    } catch (e) {
+      console.warn('getVoterDistricts:', e?.message || e);
+      return [];
+    }
+  }
+
+  static async getVoterCount() {
+    try {
+      const { collection, getCountFromServer } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getCountFromServer(collection(db, 'voters'));
+      return snap.data().count;
+    } catch (e) {
+      console.warn('getVoterCount:', e?.message || e);
+      return null;
+    }
+  }
+
+  static async deleteAllVoters() {
+    try {
+      const { collection, getDocs, writeBatch, query, limit } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const BATCH_SIZE = 400;
+      let deleted = 0;
+
+      // Sayfalama: her turda 400 döküman çekip siliyoruz (koleksiyon boşalana dek)
+      for (let guard = 0; guard < 1000; guard++) {
+        const q = query(collection(db, 'voters'), limit(BATCH_SIZE));
+        const snap = await getDocs(q);
+        if (snap.empty) break;
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+        deleted += snap.size;
+        if (snap.size < BATCH_SIZE) break;
+      }
+      return { success: true, deleted };
+    } catch (e) {
+      console.error('deleteAllVoters:', e);
+      return { success: false, message: e?.message || 'Silme hatası', deleted: 0 };
+    }
+  }
 }
 
 export default FirebaseApiService;
