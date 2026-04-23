@@ -171,12 +171,25 @@ const PublicLandingPage = () => {
         if (merged.sections?.leaders !== false && merged.leadersEnabled !== false) {
           try {
             const snap = await getDocs(collection(db, 'members'));
-            const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            // 1. Il Baskani (Türkçe karakter normalize edilerek arama)
+            // Türkçe normalize (hem dedupe hem filtreleme için)
             const normalizeTr = (s) => (s || '').toLocaleLowerCase('tr-TR')
               .replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o')
               .replace(/ü/g, 'u').replace(/ç/g, 'c').replace(/ğ/g, 'g');
+
+            // Duplicate üyeleri ele: TC varsa TC, yoksa normalize(name+position+region)
+            const seen = new Map();
+            const all = [];
+            for (const m of raw) {
+              const tc = String(m.tc || m.tcNo || '').trim();
+              const key = tc && tc.length >= 10
+                ? `tc:${tc}`
+                : `np:${normalizeTr(m.name)}|${normalizeTr(m.position)}|${normalizeTr(m.region)}`;
+              if (seen.has(key)) continue;
+              seen.set(key, true);
+              all.push(m);
+            }
             const ilBaskani = all.filter(m => {
               const pos = normalizeTr(m.position);
               return typeof m.position === 'string' &&
