@@ -562,6 +562,108 @@ const NeighborhoodsSettings = () => {
     }
   };
 
+  // Duplike mahalle temizleme — sandık bağlantılarını koruyarak
+  const handleDedupe = async () => {
+    const ok1 = await confirm({
+      title: 'Duplike Mahalleleri Temizle',
+      message: 'Aynı adda birden fazla mahalle kaydı varsa sandık bağlantısı fazla olan tutulur, diğerinin temsilcisi taşınır ve sonra silinir. Devam edilsin mi?',
+      confirmText: 'Başlat',
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!ok1) return;
+
+    setIsProcessingExcel(true);
+    try {
+      const [allN, allReps, allBoxes] = await Promise.all([
+        ApiService.getNeighborhoods(),
+        ApiService.getNeighborhoodRepresentatives(),
+        ApiService.getBallotBoxes()
+      ]);
+
+      // Normalize ad: suffix + boşluk temizle
+      const normName = (s) => (s || '').toLocaleLowerCase('tr-TR')
+        .replace(/\s*(mahallesi|mah\.|mahalle)\s*$/i, '')
+        .replace(/\s+/g, '').trim();
+
+      // Gruplandır: "ilce|belde|normName"
+      const groups = new Map();
+      for (const n of allN) {
+        const key = `${n.district_id || ''}|${n.town_id || ''}|${normName(n.name)}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(n);
+      }
+
+      let merged = 0, deleted = 0, repsMoved = 0, kept = 0, errors = [];
+
+      for (const [key, group] of groups) {
+        if (group.length <= 1) continue; // dublike yok
+
+        // En çok sandık referansı olan "keeper" (eşitse en eski)
+        const boxCount = (nid) => allBoxes.filter(b => String(b.neighborhood_id) === String(nid)).length;
+        group.sort((a, b) => {
+          const ba = boxCount(a.id); const bb = boxCount(b.id);
+          if (ba !== bb) return bb - ba;
+          const ta = a.createdAt?.seconds || 0;
+          const tb = b.createdAt?.seconds || 0;
+          return ta - tb; // eski önce
+        });
+        const keeper = group[0];
+        const duplicates = group.slice(1);
+
+        // Keeper'ın temsilcisi var mı?
+        let keeperRep = allReps.find(r => String(r.neighborhood_id) === String(keeper.id));
+
+        for (const dup of duplicates) {
+          try {
+            // Dup'ın temsilcisi
+            const dupReps = allReps.filter(r => String(r.neighborhood_id) === String(dup.id));
+
+            for (const dr of dupReps) {
+              if (!keeperRep) {
+                // Keeper'da temsilci yok → dup'ın temsilcisini keeper'a taşı
+                await ApiService.updateNeighborhoodRepresentative(dr.id, {
+                  ...dr,
+                  neighborhood_id: keeper.id
+                });
+                keeperRep = { ...dr, neighborhood_id: keeper.id };
+                repsMoved++;
+              } else {
+                // Keeper'da zaten var — dup'ın temsilcisini sil
+                await ApiService.deleteNeighborhoodRepresentative(dr.id);
+              }
+            }
+
+            // Sandık referanslarını keeper'a taşı
+            const boxesToMove = allBoxes.filter(b => String(b.neighborhood_id) === String(dup.id));
+            for (const bb of boxesToMove) {
+              await ApiService.updateBallotBox(bb.id, { ...bb, neighborhood_id: keeper.id });
+            }
+
+            // Dup'ı sil
+            await ApiService.deleteNeighborhood(dup.id);
+            deleted++;
+          } catch (e) {
+            errors.push(`${dup.name}: ${e.message || 'hata'}`);
+          }
+        }
+        merged++;
+        kept++;
+      }
+
+      await fetchData();
+      const msg = `${merged} grup temizlendi • ${deleted} dublike silindi • ${repsMoved} temsilci taşındı${errors.length ? ` • ${errors.length} hata` : ''}`;
+      setMessage(msg);
+      setMessageType(errors.length ? 'warning' : 'success');
+      if (errors.length) console.warn('Dedupe errors:', errors);
+    } catch (e) {
+      setMessage('Dublike temizleme hatası: ' + e.message);
+      setMessageType('error');
+    } finally {
+      setIsProcessingExcel(false);
+    }
+  };
+
   const downloadExcelTemplate = () => {
     const templateData = [
       ['İlçe Adı', 'Belde Adı (opsiyonel)', 'Mahalle Adı', 'Mahalle Temsilcisi Adı', 'Mahalle Temsilcisi TC', 'Mahalle Temsilcisi Telefon'],
@@ -671,6 +773,17 @@ const NeighborhoodsSettings = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Excel Şablonu İndir
+          </button>
+          <button
+            onClick={handleDedupe}
+            disabled={isProcessingExcel}
+            title="Aynı isimdeki mahalleleri birleştir, sandık ve temsilci bağlantılarını koru"
+            className="inline-flex items-center px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors duration-200"
+          >
+            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            Duplikeleri Temizle
           </button>
           <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 cursor-pointer">
             <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

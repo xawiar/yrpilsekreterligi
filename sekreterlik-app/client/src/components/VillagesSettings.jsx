@@ -559,6 +559,95 @@ const VillagesSettings = () => {
     }
   };
 
+  // Duplike köy temizleme — sandık bağlantısı korunur
+  const handleDedupe = async () => {
+    const ok1 = await confirm({
+      title: 'Duplike Köyleri Temizle',
+      message: 'Aynı adda birden fazla köy kaydı varsa sandık bağlantısı fazla olan tutulur, diğerinin temsilcisi taşınır ve sonra silinir. Devam edilsin mi?',
+      confirmText: 'Başlat',
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!ok1) return;
+
+    setIsProcessingExcel(true);
+    try {
+      const [allV, allReps, allBoxes] = await Promise.all([
+        ApiService.getVillages(),
+        ApiService.getVillageRepresentatives(),
+        ApiService.getBallotBoxes()
+      ]);
+
+      const normName = (s) => (s || '').toLocaleLowerCase('tr-TR')
+        .replace(/\s*(köyü|köy|koyu)\s*$/i, '')
+        .replace(/\s+/g, '').trim();
+
+      const groups = new Map();
+      for (const v of allV) {
+        const key = `${v.district_id || ''}|${v.town_id || ''}|${normName(v.name)}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(v);
+      }
+
+      let merged = 0, deleted = 0, repsMoved = 0, errors = [];
+
+      for (const [, group] of groups) {
+        if (group.length <= 1) continue;
+
+        const boxCount = (vid) => allBoxes.filter(b => String(b.village_id) === String(vid)).length;
+        group.sort((a, b) => {
+          const ba = boxCount(a.id); const bb = boxCount(b.id);
+          if (ba !== bb) return bb - ba;
+          const ta = a.createdAt?.seconds || 0;
+          const tb = b.createdAt?.seconds || 0;
+          return ta - tb;
+        });
+        const keeper = group[0];
+        const duplicates = group.slice(1);
+
+        let keeperRep = allReps.find(r => String(r.village_id) === String(keeper.id));
+
+        for (const dup of duplicates) {
+          try {
+            const dupReps = allReps.filter(r => String(r.village_id) === String(dup.id));
+            for (const dr of dupReps) {
+              if (!keeperRep) {
+                await ApiService.updateVillageRepresentative(dr.id, {
+                  ...dr,
+                  village_id: keeper.id
+                });
+                keeperRep = { ...dr, village_id: keeper.id };
+                repsMoved++;
+              } else {
+                await ApiService.deleteVillageRepresentative(dr.id);
+              }
+            }
+            const boxesToMove = allBoxes.filter(b => String(b.village_id) === String(dup.id));
+            for (const bb of boxesToMove) {
+              await ApiService.updateBallotBox(bb.id, { ...bb, village_id: keeper.id });
+            }
+            await ApiService.deleteVillage(dup.id);
+            deleted++;
+          } catch (e) {
+            errors.push(`${dup.name}: ${e.message || 'hata'}`);
+          }
+        }
+        merged++;
+      }
+
+      await fetchData();
+      const msg = `${merged} grup temizlendi • ${deleted} dublike silindi • ${repsMoved} temsilci taşındı${errors.length ? ` • ${errors.length} hata` : ''}`;
+      setMessage(msg);
+      setMessageType(errors.length ? 'warning' : 'success');
+      if (errors.length) console.warn('Dedupe errors:', errors);
+    } catch (e) {
+      setMessage('Dublike temizleme hatası: ' + e.message);
+      setMessageType('error');
+    } finally {
+      setIsProcessingExcel(false);
+    }
+  };
+
   const downloadExcelTemplate = () => {
     const templateData = [
       ['İlçe Adı', 'Belde Adı (opsiyonel)', 'Köy Adı', 'Köy Temsilcisi Adı', 'Köy Temsilcisi Telefon', 'Köy Temsilcisi TC'],
@@ -668,6 +757,17 @@ const VillagesSettings = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Excel Şablonu İndir
+          </button>
+          <button
+            onClick={handleDedupe}
+            disabled={isProcessingExcel}
+            title="Aynı isimdeki köyleri birleştir, sandık ve temsilci bağlantılarını koru"
+            className="inline-flex items-center px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors duration-200"
+          >
+            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            Duplikeleri Temizle
           </button>
           <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 cursor-pointer">
             <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
