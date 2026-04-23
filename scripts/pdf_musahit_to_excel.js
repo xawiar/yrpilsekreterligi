@@ -107,35 +107,38 @@ function loadAllPageTexts() {
 // 5) Mahalle kısmını normalize ederek çıkar
 
 const KNOWN_MAHALLE_KEYWORDS = [
+  // Mahalleler
   'ABDULLAHPAŞA','ABDULAHPAŞA','ABDULLAH PAŞA',
-  'AKPINAR',
-  'AKSARAY',
-  'ALAYAPRAK',
-  'AŞAĞI DEMİRTAŞ','AŞAĞIDEMİRTAŞ',
-  'YUKARI DEMİRTAŞ','YUKARIDEMİRTAŞ',
-  'ATAŞEHİR','ATAŞEHİ',
-  'BAHÇELİEVLER','BİZMİŞEN',
-  'CUMHURİYET',
-  'ÇARŞI','ÇATALÇEŞME','ÇAYDAÇIRA',
-  'DOĞUKENT','DOĞUKET',
-  'ESENTEPE',
-  'FEVZİÇAKMAK','FEYZİÇAKMAK','FEVZİ ÇAKMAK',
-  'GÖLLÜBAĞ',
-  'GÜMÜŞKAVAK',
-  'GÜNEYKENT',
-  'HANKENDİ','HARPUT','HİCRET','HİLALKENT',
-  'İCADİYE','İZZETPAŞA',
-  'KARŞIYAKA','KIRKLAR','KIZILAY','KÜLTÜR',
-  'MUSTAFAPAŞA','MUSTAFA PAŞA',
-  'NAİLBEY',
-  'OLGUNLAR',
-  'RIZAİYE','RÜSTEMPAŞA',
+  'AKPINAR','AKSARAY','ALAYAPRAK','AŞAĞI DEMİRTAŞ','AŞAĞIDEMİRTAŞ',
+  'YUKARI DEMİRTAŞ','YUKARIDEMİRTAŞ','ATAŞEHİR','ATAŞEHİ',
+  'BAHÇELİEVLER','BİZMİŞEN','CUMHURİYET','ÇARŞI','ÇATALÇEŞME','ÇAYDAÇIRA',
+  'DOĞUKENT','DOĞUKET','ESENTEPE','FEVZİÇAKMAK','FEYZİÇAKMAK','FEVZİ ÇAKMAK',
+  'GÖLLÜBAĞ','GÜMÜŞKAVAK','GÜNEYKENT','HANKENDİ','HARPUT','HİCRET','HİLALKENT',
+  'İCADİYE','İZZETPAŞA','KARŞIYAKA','KIRKLAR','KIZILAY','KÜLTÜR',
+  'MUSTAFAPAŞA','MUSTAFA PAŞA','NAİLBEY','OLGUNLAR','RIZAİYE','RÜSTEMPAŞA',
   'SALI BABA','SALIBABA','SANAYİ','SARAYATİK','SUGÖZÜ','SÜRSÜRÜ',
-  'ŞAHİNKAYA',
-  'ULUKENT','ÜNİVERSİTE',
-  'YENİ MAHALLE','YENİMAHALLE','YENİ',
-  'YEMİŞLİK','YILDIZBAĞLARI',
-  'ZAFRAN',
+  'ŞAHİNKAYA','ULUKENT','ÜNİVERSİTE','YENİ MAHALLE','YENİMAHALLE','YENİ',
+  'YEMİŞLİK','YILDIZBAĞLARI','ZAFRAN',
+  // Beldeler
+  'AKÇAKİRAZ','AKÇAKIRAZ','ERİMLİ','BEYHAN','ÜÇOCAK','BÜKARDİ','BÜKARDI',
+  'SARICAN','YAZIKONAK','MOLLAKENDİ','YURTBAŞI',
+  // Yaygın köy isimleri (PDF'deki kayıtlardan)
+  'BALIKÖYÜ','BALIKÖY','BALI','BELDELER',
+  'ELMAPINAR','ELMAPINARKÖYU','ELMAPINAR KÖYÜ',
+  'ACIPAYAM','AKÇAKALE','ALACA','ALATARLA','ALPAĞUT','ARINDIK','AVCILI','AYDINLAR',
+  'BADEMPINARI','BAĞDERE','BAĞLARCA','BALIBEY','BALLICA','BEŞİKKÖY','BEŞOLUK',
+  'BÖLÜKLÜ','BULUTLU','CEVİZDERE','CİPKÖY','ÇAĞLAR','ÇALICA','ÇÖTELİ','DALLICA',
+  'DEDEPINARI','DEREBOĞAZI','DOĞANKUŞ','DURUPINAR','ERBİLDİ','GEDİKYOLU',
+  'GÖLARDI','GÖLKÖY','GÖZEBAŞI','GÖZPINAR','GÜMÜŞBAĞLAR','GÜNAÇTI','GÜNBAĞI',
+  'GÜNEYÇAYIRI','GÜZELYALI','HAL','HARMANTEPE','HIDIRBABA','HOŞKÖY','IŞIKYOLU',
+  'İÇME','İKİTEPE','KALKANTEPE','KAPLIKAYA','KARAALİ','KARASAZ','KARATAŞ',
+  'KAVAKTEPE','KELMAHMUT','KIRAÇKÖY','KOÇHARMANI','KOÇKALE','KONAKALMAZ',
+  'KOPARUŞAĞI','KORUCU','KORUKÖY','KOZLUK','KÖRPE','KUMLA','KUŞHANE','KUYULU',
+  'KÜLLÜK','MEŞELİ','NURALI','OBUZ','OYMAAĞAÇ','GÜZELYURT','ÖRENÇAY','PELTEKÖY',
+  'POYRAZ','SAKABAŞI','SALKAYA','SARIÇUBUK','SARIGÜL','SARIKAMIŞ','SARIYAKUP',
+  'SEDEFTEPE','SULTANUŞAĞI','SÜNKÖY','SÜTLÜCE','ŞABANLI','ŞEHSUVAR','ŞEYHACI',
+  'TADIM','TEPEKÖY','UZUNTARLA','ÜÇAĞAÇ','ÜRÜNVEREN','YALINDAMLAR','YALNIZ',
+  'YAZIPINARI','YEDİGÖZE','YENİKONAK','YOLÇATI','YOLÜSTÜ','YÜNLÜCE',
 ];
 
 const MAHALLE_RE = new RegExp(
@@ -173,12 +176,15 @@ function parseRecords() {
 
   const flat = text.replace(/\s+/g, ' ').trim();
 
-  // TC'leri sırayla bul
+  // TC'leri sırayla bul — 11+ hane rakam grupları (14 hanelik "TC+sira" birleşikleri için)
+  // "35788336508278" → ilk 11 = TC, geri kalan = sonraki kaydın sira no
   const tcMatches = [];
-  const tcRe = /\b(\d{11})\b/g;
+  const tcRe = /(?<!\d)(\d{11,})(?!\d)/g;
   let mt;
   while ((mt = tcRe.exec(flat)) !== null) {
-    tcMatches.push({ tc: mt[1], start: mt.index, end: mt.index + 11 });
+    const block = mt[1];
+    const tc = block.slice(0, 11);
+    tcMatches.push({ tc, start: mt.index, end: mt.index + 11 });
   }
 
   // Keyword regex (canonical mahalle adlarını yakalar)
@@ -213,22 +219,23 @@ function parseRecords() {
       const kwStart = kwM.index;
       const kwEnd = kwStart + kwM[0].length;
       // mahalle keyword + olası ekler (MAH, MAHALLE, TOKİ, MALLE, *, OKUL, OKULSOR) boşluk sonuna kadar
-      // Keyword'dan sonra gelen tüm "ek" kelimeleri ata (ad soyada giren ilk normal kelimeye kadar)
+      // Keyword'den SONRA gelen ek kelimeler mahalle'ye, kalan = isim
+      // Keyword'den ÖNCE: önceki kaydın çöp artığı (telefon, eski isim) — YOK SAYILIR
       const rest = afterSira.slice(kwEnd);
-      // İlk kelimeden itibaren ek kelimeleri topla
       const tokens = rest.split(/\s+/).filter(Boolean);
       let suffixTokens = [];
       let nameTokens = [];
       let collectingSuffix = true;
       for (const t of tokens) {
-        if (collectingSuffix && /^(MAH\.?|MAHALLE|MAHALLESİ|MALLE|MAL|TOKİ|TOKI|OKUL|OKULSOR|[*]+)$/i.test(t)) {
+        if (collectingSuffix && /^(MAH\.?|MAHALLE|MAHALLESİ|MALLE|MAL|TOKİ|TOKI|OKUL|OKULSOR|KÖYÜ|KÖY|KOYU|[*]+)$/i.test(t)) {
           suffixTokens.push(t);
         } else {
           collectingSuffix = false;
           nameTokens.push(t);
         }
       }
-      mahalleRaw = afterSira.slice(0, kwEnd) + (suffixTokens.length ? ' ' + suffixTokens.join(' ') : '');
+      // Sadece keyword + suffix'ler mahalle
+      mahalleRaw = afterSira.slice(kwStart, kwEnd) + (suffixTokens.length ? ' ' + suffixTokens.join(' ') : '');
       name = nameTokens.join(' ').trim();
     } else {
       // fallback: ilk kelime mahalle
@@ -288,20 +295,36 @@ function main() {
     }
   }
 
-  // TC dublike: aynı TC varsa ilk kaydı tut
-  const seenTc = new Map();
-  const rows = [];
+  // TC dublike: aynı TC varsa en temiz isim alanı olanı tut
+  // Bozuk parse: ad alanında rakam veya 35+ karakter → tercih etmeyip sonrakine bak
+  const isBadName = (n) => /\d/.test(n || '') || (n || '').length > 35 || (n || '').length < 3;
+
+  const tcBest = new Map(); // tc → en iyi record
   const noTc = [];
-  const unmatched = [];
 
   for (const r of records) {
-    if (!r.tc) {
-      noTc.push(r);
+    if (!r.tc) { noTc.push(r); continue; }
+    const prev = tcBest.get(r.tc);
+    if (!prev) {
+      tcBest.set(r.tc, r);
       continue;
     }
-    // TC dublike
-    if (seenTc.has(r.tc)) continue;
-    seenTc.set(r.tc, true);
+    // Hangisi daha iyi? Bozuk olmayan tercih edilir.
+    if (isBadName(prev.name) && !isBadName(r.name)) {
+      tcBest.set(r.tc, r);
+    }
+  }
+
+  const rows = [];
+  const unmatched = [];
+  const bozukIsim = [];
+
+  for (const r of tcBest.values()) {
+    // Bozuk isim kayıtları Excel'e yazma — rapora at
+    if (isBadName(r.name)) {
+      bozukIsim.push(r);
+      continue;
+    }
 
     // Mahalle eşleştir
     const mahKey = normKey(r.mahalle);
@@ -377,11 +400,19 @@ function main() {
     wsN['!cols'] = [{wch:8},{wch:20},{wch:24},{wch:14}];
     XLSX.utils.book_append_sheet(wbR, wsN, 'TC Yok');
   }
+  if (bozukIsim.length > 0) {
+    const bAoa = [['TC', 'Bozuk Ad (PDF)', 'Mahalle', 'Telefon', 'Not']];
+    for (const r of bozukIsim) bAoa.push([r.tc, r.name, r.mahalleRaw, r.phone, 'Manuel düzeltme gerek']);
+    const wsB = XLSX.utils.aoa_to_sheet(bAoa);
+    wsB['!cols'] = [{wch:14},{wch:50},{wch:20},{wch:14},{wch:22}];
+    XLSX.utils.book_append_sheet(wbR, wsB, 'Bozuk İsim (manuel)');
+  }
   XLSX.writeFile(wbR, REPORT_OUT);
 
   console.log(`\n[✓] Yazıldı: ${OUT}`);
-  console.log(`[✓] Kayıt:    ${rows.length} (dublike TC elendi)`);
+  console.log(`[✓] Kayıt:    ${rows.length} (dublike TC elendi, bozuk isimli ${bozukIsim.length} kayıt hariç)`);
   console.log(`[✓] TC yok:   ${noTc.length}`);
+  console.log(`[✓] Bozuk isim (manuel):  ${bozukIsim.length}`);
   console.log(`[✓] Mahalle eşleşmeyen: ${unmatched.length}`);
   console.log(`[✓] Rapor:    ${REPORT_OUT}`);
   console.log('\n[✓] Mahalle başına müşahit (ilk 20):');
