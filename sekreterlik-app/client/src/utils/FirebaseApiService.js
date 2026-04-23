@@ -763,18 +763,22 @@ class FirebaseApiService {
           try {
             userCredential = await createUserWithEmailAndPassword(auth, email, password);
             user = userCredential.user;
-            // authUid'yi Firestore'a kaydet
-            await FirebaseService.update(
-              this.COLLECTIONS.MEMBER_USERS,
-              memberUser.id,
-              { authUid: user.uid },
-              false
-            );
+            // authUid'yi Firestore'a kaydet — rules fail ederse sessiz geç
+            try {
+              await FirebaseService.update(
+                this.COLLECTIONS.MEMBER_USERS,
+                memberUser.id,
+                { authUid: user.uid },
+                false
+              );
+            } catch (updateErr) {
+              console.warn('authUid Firestore update fail (rules):', updateErr.message);
+              // Login yine de başarılı — Auth hesabı oluşturuldu
+            }
           } catch (createError) {
-            // Email zaten kullanılıyorsa sessiz geç (Auth'da var ama şifre farklı olabilir)
+            // Email zaten kullanılıyorsa sessiz geç
             if (createError.code === 'auth/email-already-in-use') {
-              // Firestore'da şifre eşleşmiş zaten, kullanıcıyı Firestore bilgileriyle kabul et
-              user = null; // userCredential yok ama member_user var
+              user = null;
             } else {
               console.error('Failed to create Firebase Auth user:', createError);
               throw new Error('Giriş yapılamadı: ' + createError.message);
