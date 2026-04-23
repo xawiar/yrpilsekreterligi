@@ -211,19 +211,13 @@ function RouterContent() {
   return <AuthenticatedContent />;
 }
 
-// Root path handler: oturum durumuna göre landing ya da dashboard
+// Root path handler: herkes — logged-in dahil — public landing görür
 function RootPathHandler() {
-  const { isLoggedIn, loading } = useAuth();
-  if (loading) return <LoadingSpinner />;
-  if (!isLoggedIn) {
-    return (
-      <Suspense fallback={<LoadingSpinner />}>
-        <PublicLandingPage />
-      </Suspense>
-    );
-  }
-  // Logged-in kullanıcı için mevcut AuthenticatedContent devreye girer (role-based yönlendirme)
-  return <AuthenticatedContent />;
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PublicLandingPage />
+    </Suspense>
+  );
 }
 
 // Auth gerektiren route'lar icin ayri component (hooks kurali ihlal edilmez)
@@ -538,8 +532,8 @@ function AuthenticatedContent() {
                             <Route path="/bulk-sms" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BulkSmsPage /></Suspense></PageTransition>} />
                             <Route path="/meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MeetingsPage /></Suspense></PageTransition>} />
                             <Route path="/events" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><EventsPage /></Suspense></PageTransition>} />
-                            <Route path="/reports" element={<Navigate to="/" replace />} />
-                            <Route path="/" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ReportsPage /></Suspense></PageTransition>} />
+                            <Route path="/reports" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="/dashboard" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ReportsPage /></Suspense></PageTransition>} />
                             <Route path="/archive" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ArchivePage /></Suspense></PageTransition>} />
                             <Route path="/management-chart" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><ManagementChartPage /></Suspense></PageTransition>} />
                             <Route path="/settings/*" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense></PageTransition>} />

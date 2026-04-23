@@ -62,7 +62,7 @@ const GalleryManagement = () => {
 
   const validateFile = (file) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) return 'Sadece JPG, PNG veya WebP destekleniyor';
-    if (file.size > MAX_IMAGE_SIZE) return 'Dosya 10MB\'dan küçük olmalı';
+    // Boyut kontrolü kaldırıldı — resizeImageFile otomatik küçültür
     return null;
   };
 

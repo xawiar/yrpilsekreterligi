@@ -49,10 +49,6 @@ const ProfilePhotoUpload = ({ memberId, currentPhotoUrl, memberName = '', onPhot
       toast.error('Sadece JPG veya PNG formatı kabul edilir');
       return;
     }
-    if (file.size > MAX_SIZE) {
-      toast.error('Dosya boyutu 10MB\'dan küçük olmalıdır');
-      return;
-    }
     if (!memberId) {
       toast.error('Üye bilgisi bulunamadı');
       return;
@@ -137,7 +133,7 @@ const ProfilePhotoUpload = ({ memberId, currentPhotoUrl, memberName = '', onPhot
       </button>
 
       <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-        JPG veya PNG, maksimum 2MB
+        JPG veya PNG — otomatik küçültülür
       </p>
     </div>
   );

@@ -106,10 +106,7 @@ const NewsManagement = () => {
       toast.error('Sadece JPG, PNG veya WebP dosyaları yükleyebilirsiniz');
       return;
     }
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error('Dosya boyutu 10MB\'dan küçük olmalıdır');
-      return;
-    }
+    // Boyut kontrolü kaldırıldı — resizeImageFile otomatik küçültür
     try {
       setUploading(true);
       const optimized = await resizeImageFile(file, { maxBytes: 2 * 1024 * 1024, maxDim: 1920 });

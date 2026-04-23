@@ -90,11 +90,11 @@ const LoginEnhanced = () => {
         }
         setTimeout(() => {
           switch (role) {
-            case 'admin': navigate('/'); break;
+            case 'admin': navigate('/dashboard'); break;
             case 'member': navigate('/member-dashboard'); break;
             case 'district_president': navigate('/district-president-dashboard'); break;
             case 'chief_observer': navigate('/chief-observer-dashboard'); break;
-            default: navigate('/'); break;
+            default: navigate('/dashboard'); break;
           }
         }, 1000);
       } else {
