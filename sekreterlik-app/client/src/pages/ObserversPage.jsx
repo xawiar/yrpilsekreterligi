@@ -422,11 +422,20 @@ const ObserversPage = () => {
     try {
       setLoading(true);
       const withAssignment = observers.filter(o => o.ballot_box_id);
+      console.log('[ClearAssign] Toplam müşahit:', observers.length, '| Atanmış:', withAssignment.length);
+
+      if (withAssignment.length === 0) {
+        toast.info('Atanmış sandığı olan müşahit yok');
+        setLoading(false);
+        return;
+      }
+      toast.info(`${withAssignment.length} müşahit işleniyor...`);
+
       let cleared = 0;
       const errors = [];
-      // Direkt Firestore update — sadece ballot_box_id alanına dokun
       const { doc, updateDoc } = await import('firebase/firestore');
       const { db } = await import('../config/firebase');
+
       for (const obs of withAssignment) {
         try {
           await updateDoc(doc(db, 'ballot_box_observers', String(obs.id)), {
@@ -435,20 +444,30 @@ const ObserversPage = () => {
           });
           cleared++;
         } catch (e) {
-          errors.push(`${obs.name}: ${e.message || 'hata'}`);
+          console.error('[ClearAssign] hata obsId=', obs.id, 'code=', e.code, 'msg=', e.message);
+          errors.push({ id: obs.id, name: obs.name, code: e.code, msg: e.message });
         }
       }
-      await fetchData();
-      const msg = `${cleared} müşahitin sandık ataması kaldırıldı${errors.length ? ` (${errors.length} hata)` : ''}`;
+
+      console.log('[ClearAssign] Tamamlandı. Cleared:', cleared, 'Errors:', errors.length);
       if (errors.length) {
-        toast.error(msg);
-        console.warn('Clear errors:', errors.slice(0, 10));
+        console.table(errors.slice(0, 10));
+      }
+
+      await fetchData();
+
+      if (cleared === 0 && errors.length > 0) {
+        // Hepsi başarısız — muhtemelen rules problemi
+        const first = errors[0];
+        toast.error(`Hiçbir kayıt güncellenemedi. Hata: ${first.code || ''} ${first.msg || ''}`);
+      } else if (errors.length > 0) {
+        toast.error(`${cleared} kayıt güncellendi, ${errors.length} hata — konsolu kontrol et`);
       } else {
-        toast.success(msg);
+        toast.success(`${cleared} müşahitin sandık ataması kaldırıldı`);
       }
     } catch (e) {
-      console.error('Atamaları kaldırma hatası:', e);
-      toast.error('Atamaları kaldırma hatası: ' + e.message);
+      console.error('[ClearAssign] TOP-LEVEL hata:', e);
+      toast.error('Atamaları kaldırma hatası: ' + (e.message || 'bilinmeyen'));
     } finally {
       setLoading(false);
     }
