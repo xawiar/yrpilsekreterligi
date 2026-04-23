@@ -337,6 +337,63 @@ exports.onMemberUserUpdate = onDocumentUpdated(
       const userId = event.params.userId;
 
       try {
+        // AUTH SIFIRLAMA: authUid dolu iken null'a düşürüldüyse
+        // eski Auth hesabını sil, yenisini Firestore şifresiyle oluştur
+        if (beforeData.authUid && !afterData.authUid) {
+          logger.info(`Auth reset triggered: ${userId}`);
+          try {
+            await admin.auth().deleteUser(beforeData.authUid);
+            logger.info(`Old Auth deleted: ${beforeData.authUid}`);
+          } catch (e) {
+            if (e.code !== "auth/user-not-found") {
+              logger.warn(`Old Auth delete failed: ${e.message}`);
+            }
+          }
+
+          const email = formatEmail(afterData.username);
+          if (!email) {
+            logger.warn(`Invalid username for recreate: ${afterData.username}`);
+            return null;
+          }
+          let password = decryptPassword(afterData.password);
+          if (!password) {
+            logger.warn(`No password for recreate: ${userId}`);
+            return null;
+          }
+          if (password.length < 6) password = password.padStart(6, "0");
+
+          try {
+            const authUser = await admin.auth().createUser({
+              email,
+              password,
+              displayName: afterData.username,
+              disabled: afterData.isActive === false,
+            });
+            await event.data.after.ref.update({authUid: authUser.uid});
+            logger.info(`New Auth created: ${authUser.uid}`);
+          } catch (createErr) {
+            if (createErr.code === "auth/email-already-exists") {
+              // Email başka bir Auth hesabında kilitli, onu da sil ve tekrar dene
+              try {
+                const existing = await admin.auth().getUserByEmail(email);
+                await admin.auth().deleteUser(existing.uid);
+                const authUser = await admin.auth().createUser({
+                  email, password,
+                  displayName: afterData.username,
+                  disabled: afterData.isActive === false,
+                });
+                await event.data.after.ref.update({authUid: authUser.uid});
+                logger.info(`Auth recreated after cleanup: ${authUser.uid}`);
+              } catch (e2) {
+                logger.error(`Auth recreate failed: ${e2.message}`);
+              }
+            } else {
+              logger.error(`Auth create failed: ${createErr.message}`);
+            }
+          }
+          return null;
+        }
+
         if (!afterData.authUid) return null;
 
         const authUid = afterData.authUid;
