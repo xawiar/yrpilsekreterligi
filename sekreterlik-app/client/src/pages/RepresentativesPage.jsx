@@ -24,6 +24,7 @@ const RepresentativesPage = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('neighborhood'); // 'neighborhood' or 'village'
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDistrict, setFilterDistrict] = useState('');
   const [showSmsModal, setShowSmsModal] = useState(false);
   const [smsMessage, setSmsMessage] = useState('');
   const [sendingSms, setSendingSms] = useState(false);
@@ -248,19 +249,33 @@ const RepresentativesPage = () => {
     };
   };
 
+  const matchesBasicSearch = (rep, locName) => {
+    if (!searchTerm) return true;
+    const s = searchTerm.toLowerCase();
+    return (rep.name || '').toLowerCase().includes(s) ||
+           (locName || '').toLowerCase().includes(s) ||
+           (rep.tc || '').includes(searchTerm) ||
+           (rep.phone || '').includes(searchTerm);
+  };
+  const matchesDistrict = (rep) => {
+    if (!filterDistrict) return true;
+    return (rep.district_name || '').toLowerCase() === filterDistrict.toLowerCase();
+  };
+
   const filteredNeighborhoodReps = neighborhoodRepresentatives.filter(rep =>
-    rep.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rep.neighborhood_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rep.tc?.includes(searchTerm) ||
-    rep.phone?.includes(searchTerm)
+    matchesBasicSearch(rep, rep.neighborhood_name) && matchesDistrict(rep)
   );
 
   const filteredVillageReps = villageRepresentatives.filter(rep =>
-    rep.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rep.village_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rep.tc?.includes(searchTerm) ||
-    rep.phone?.includes(searchTerm)
+    matchesBasicSearch(rep, rep.village_name) && matchesDistrict(rep)
   );
+
+  // İlçe listesi (dropdown için)
+  const districtOptions = Array.from(new Set(
+    [...neighborhoodRepresentatives, ...villageRepresentatives]
+      .map(r => r.district_name)
+      .filter(Boolean)
+  )).sort((a,b) => a.localeCompare(b, 'tr'));
 
   useEffect(() => {
     fetchData();
@@ -419,15 +434,41 @@ const RepresentativesPage = () => {
           </nav>
         </div>
 
-        {/* Search */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        {/* Search + Filter */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
           <input
             type="text"
             placeholder="İsim, TC, telefon veya mahalle/köy adı ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
           />
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <label className="text-gray-700 dark:text-gray-300">İlçe:</label>
+            <select
+              value={filterDistrict}
+              onChange={(e) => setFilterDistrict(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+            >
+              <option value="">Tümü</option>
+              {districtOptions.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-semibold">
+              {activeTab === 'neighborhood'
+                ? `${filteredNeighborhoodReps.length} mahalle temsilcisi`
+                : `${filteredVillageReps.length} köy temsilcisi`}
+            </span>
+            {(filterDistrict || searchTerm) && (
+              <button
+                onClick={() => { setFilterDistrict(''); setSearchTerm(''); }}
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+              >
+                Filtreleri Temizle
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}

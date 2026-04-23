@@ -1138,6 +1138,30 @@ const VillagesSettings = () => {
         </div>
       )}
 
+      {/* İlçe bazında köy sayısı */}
+      {villages.length > 0 && (() => {
+        const byD = {};
+        for (const v of villages) {
+          const name = (districts.find(d => String(d.id) === String(v.district_id))?.name) || '-';
+          byD[name] = (byD[name] || 0) + 1;
+        }
+        const entries = Object.entries(byD).sort((a,b)=>a[0].localeCompare(b[0],'tr'));
+        return (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+            <div className="text-sm font-semibold text-green-900 dark:text-green-200 mb-2">
+              Toplam {villages.length} köy — İlçe bazında:
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              {entries.map(([name, c]) => (
+                <span key={name} className="inline-flex items-center px-2 py-1 rounded-full bg-white dark:bg-gray-800 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700">
+                  {name}: <strong className="ml-1">{c}</strong>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Villages List */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

@@ -57,6 +57,7 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroupNo, setFilterGroupNo] = useState('');
+  const [filterDistrict, setFilterDistrict] = useState('');
   const [editingGroup, setEditingGroup] = useState(null);
   const [groupNoInput, setGroupNoInput] = useState('');
   const [showVisitModal, setShowVisitModal] = useState(false);
@@ -202,7 +203,7 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
   ).length;
 
   const filteredItems = items.filter(item => {
-    const matchesSearch =
+    const matchesSearch = !searchTerm ||
       item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.district_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.town_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -211,7 +212,12 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
       ? String(item.group_no || '') === String(filterGroupNo)
       : true;
 
-    return matchesSearch && matchesGroup;
+    const matchesDistrict = filterDistrict
+      ? String(item.district_id || '') === String(filterDistrict) ||
+        (item.district_name || '').toLowerCase() === filterDistrict.toLowerCase()
+      : true;
+
+    return matchesSearch && matchesGroup && matchesDistrict;
   }).sort((a, b) => {
     // Sort by group_no first (nulls last)
     const groupA = a.group_no ? parseInt(a.group_no) : 999999;
@@ -333,15 +339,35 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
 
       {/* Info Card */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-blue-800">
-            <span className="font-semibold">{cfg.totalLabel}:</span> {items.length} |
-            <span className="font-semibold ml-2">Temsilci Atanmamış:</span> {itemsWithoutReps}
-          </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-blue-800">
+          <span>
+            <span className="font-semibold">{cfg.totalLabel}:</span> {items.length}
+          </span>
+          <span>
+            <span className="font-semibold">Görüntülenen:</span> {filteredItems.length}
+          </span>
+          <span>
+            <span className="font-semibold">Temsilci Atanmamış:</span> {itemsWithoutReps}
+          </span>
         </div>
+        {/* İlçe bazında dağılım */}
+        {items.length > 0 && (() => {
+          const byD = {};
+          for (const it of items) {
+            const d = it.district_name || '-';
+            byD[d] = (byD[d] || 0) + 1;
+          }
+          const entries = Object.entries(byD).sort((a,b) => a[0].localeCompare(b[0],'tr'));
+          return (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              {entries.map(([d, c]) => (
+                <span key={d} className="inline-flex items-center px-2 py-0.5 rounded-full bg-white text-blue-700 border border-blue-200">
+                  {d}: <strong className="ml-1">{c}</strong>
+                </span>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Search and Filter */}
@@ -353,23 +379,41 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         />
-        <div className="flex items-center space-x-2">
-          <label htmlFor="filterGroupNo" className="text-sm text-gray-700 whitespace-nowrap">Grup No Filtrele:</label>
-          <input
-            type="number"
-            id="filterGroupNo"
-            value={filterGroupNo}
-            onChange={(e) => setFilterGroupNo(e.target.value)}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Tümü"
-            min="1"
-          />
-          {filterGroupNo && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center space-x-2">
+            <label htmlFor="filterDistrict" className="text-sm text-gray-700 whitespace-nowrap">İlçe:</label>
+            <select
+              id="filterDistrict"
+              value={filterDistrict}
+              onChange={(e) => setFilterDistrict(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            >
+              <option value="">Tümü</option>
+              {Array.from(new Set(items.map(i => i.district_name).filter(Boolean)))
+                .sort((a, b) => a.localeCompare(b, 'tr'))
+                .map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+            </select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <label htmlFor="filterGroupNo" className="text-sm text-gray-700 whitespace-nowrap">Grup No:</label>
+            <input
+              type="number"
+              id="filterGroupNo"
+              value={filterGroupNo}
+              onChange={(e) => setFilterGroupNo(e.target.value)}
+              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Tümü"
+              min="1"
+            />
+          </div>
+          {(filterDistrict || filterGroupNo || searchTerm) && (
             <button
-              onClick={() => setFilterGroupNo('')}
+              onClick={() => { setFilterDistrict(''); setFilterGroupNo(''); setSearchTerm(''); }}
               className="text-sm text-indigo-600 hover:text-indigo-800"
             >
-              Temizle
+              Filtreleri Temizle
             </button>
           )}
         </div>

@@ -1154,6 +1154,30 @@ const NeighborhoodsSettings = () => {
         </div>
       )}
 
+      {/* İlçe bazında mahalle sayısı */}
+      {neighborhoods.length > 0 && (() => {
+        const byD = {};
+        for (const n of neighborhoods) {
+          const name = (districts.find(d => String(d.id) === String(n.district_id))?.name) || '-';
+          byD[name] = (byD[name] || 0) + 1;
+        }
+        const entries = Object.entries(byD).sort((a,b)=>a[0].localeCompare(b[0],'tr'));
+        return (
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3">
+            <div className="text-sm font-semibold text-indigo-900 dark:text-indigo-200 mb-2">
+              Toplam {neighborhoods.length} mahalle — İlçe bazında:
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              {entries.map(([name, c]) => (
+                <span key={name} className="inline-flex items-center px-2 py-1 rounded-full bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                  {name}: <strong className="ml-1">{c}</strong>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Neighborhoods List */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
