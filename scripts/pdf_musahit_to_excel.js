@@ -299,6 +299,37 @@ function main() {
   // Bozuk parse: ad alanında rakam veya 35+ karakter → tercih etmeyip sonrakine bak
   const isBadName = (n) => /\d/.test(n || '') || (n || '').length > 35 || (n || '').length < 3;
 
+  // MANUEL OVERRIDE — PDF'te çakışma yüzünden parse edilemeyen 11 kayıt
+  // TC → { name, mahalle (opsiyonel) }
+  const MANUAL_OVERRIDES = {
+    '24396708872': { name: 'ABDULKADİR OĞLU', mahalle: 'GÜNEYKENT MAHALLESİ' },
+    '37339277506': { name: 'AHMET TÜRK', mahalle: 'GÜNEYKENT MAHALLESİ' },
+    '58690289052': { name: 'AHMET FURKAN İLBAŞ', mahalle: 'HİCRET MAHALLESİ' },
+    '19129891864': { name: 'MEHMET ALİ YILDIRIM', mahalle: 'ULUKENT MAHALLESİ' },
+    '10613172674': { name: 'ERTURUL ERHAN', mahalle: 'ÜNİVERSİTE MAHALLESİ' },
+    '27025622444': { name: 'SAMET KIZILELMA', mahalle: 'ZAFRAN MAHALLESİ' },
+    '29947520266': { name: 'NİHAT ASMA', mahalle: '' },
+    '10496178534': { name: 'YUSUF ALPTİKEN', mahalle: '' },
+    '22559658204': { name: 'MEHMET DİKMEN', mahalle: '' },
+    '38467241230': { name: 'KEMAL KAPTAN', mahalle: '' },
+    '38443249816': { name: 'OKTAY KARABUDAK', mahalle: '' },
+    // Ekran'da gözüken 6 hane telefonlular için de isim doğru, telefon boş bırakılacak
+    '22756763794': { name: 'HIDIR KOÇOĞLU', phone: '' },
+    '14648020498': { name: 'YAHYA AYDOĞDU', phone: '' },
+    '34618375120': { name: 'MUHLİS KARAMAN', phone: '' },
+    '31634759664': { name: 'MEHMET KILIÇ', phone: '' },
+    '31615475518': { name: 'ORHAN KILIÇ', phone: '' },
+    '11615142214': { name: 'CEVDET YAMAN', phone: '' },
+    '39946184734': { name: 'HAMZA DURAN', phone: '' },
+    '19906898721': { name: 'FATMA GÜLRU ÖZDEMİR', phone: '' },
+    '12305110902': { name: 'MELEK KILINÇ', phone: '' },
+    '23179757120': { name: 'MERVE ESMERAY', phone: '' },
+    '26230648720': { name: 'İLHAMİ YALÇIN', phone: '' },
+    '33374171540': { name: 'HASAN ANAT', phone: '' },
+    '16699658400': { name: 'SİBEL ORTA', phone: '' },
+    '17329255540': { name: 'ESRA ALYAPI İLHAL', phone: '' },
+  };
+
   const tcBest = new Map(); // tc → en iyi record
   const noTc = [];
 
@@ -320,6 +351,13 @@ function main() {
   const bozukIsim = [];
 
   for (const r of tcBest.values()) {
+    // Manuel override varsa uygula
+    const ov = MANUAL_OVERRIDES[r.tc];
+    if (ov) {
+      if (ov.name) r.name = ov.name;
+      if (ov.mahalle !== undefined) r.mahalle = ov.mahalle;
+      if (ov.phone !== undefined) r.phone = ov.phone;
+    }
     // Bozuk isim kayıtları Excel'e yazma — rapora at
     if (isBadName(r.name)) {
       bozukIsim.push(r);

@@ -184,8 +184,18 @@ const ObserversPage = () => {
           const koyRaw = String(r[7] || '').trim();
           const chief = String(r[8] || '').trim().toLocaleLowerCase('tr-TR');
 
-          if (!tc || !name || !phone) {
-            errLog.push(`Satır ${rowNo}: TC, Ad, Telefon zorunlu`);
+          if (!tc || !name) {
+            errLog.push(`Satır ${rowNo}: TC ve Ad zorunlu`);
+            errors++; continue;
+          }
+          // Telefon boşsa mevcut kaydın telefonunu koru (isim düzeltme senaryosu)
+          let effectivePhone = phone;
+          if (!effectivePhone) {
+            const ex = observers.find(o => String(o.tc || '').trim() === tc);
+            effectivePhone = ex?.phone || '';
+          }
+          if (!effectivePhone) {
+            errLog.push(`Satır ${rowNo}: Telefon yok ve sistemde de telefon bulunamadı`);
             errors++; continue;
           }
 
@@ -240,7 +250,7 @@ const ObserversPage = () => {
           }
 
           const payload = {
-            tc, name, phone,
+            tc, name, phone: effectivePhone,
             region_name: regionName || null,
             district_id,
             town_id,
