@@ -9278,7 +9278,7 @@ class FirebaseApiService {
       const { collection, getDocs, query, where, limit } = await import('firebase/firestore');
       const { db } = await import('../config/firebase');
       const up = (s) => (s || '').toString().toLocaleUpperCase('tr-TR');
-      const LIMIT = 200;
+      const LIMIT = 1000; // Firestore tek query max ~1000, yeterli
 
       // Öncelik sırasına göre tek bir indexed query kur
       let q = null;
