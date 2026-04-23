@@ -202,6 +202,60 @@ const BallotBoxesPage = () => {
     }
   };
 
+  // Tüm sandıkları topluca sil (iki aşamalı onay)
+  const handleDeleteAll = async () => {
+    const total = ballotBoxes.length;
+    if (total === 0) {
+      toast.info('Silinecek sandık yok');
+      return;
+    }
+
+    const step1 = await confirm({
+      title: 'TÜM Sandıkları Sil',
+      message: `${total} sandığın TAMAMI silinecek. Müşahit atamaları da kaybolacak. Emin misin?`,
+      confirmText: 'Devam et',
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!step1) return;
+
+    const step2 = await confirm({
+      title: 'Son Onay',
+      message: `Geri dönüşü YOKTUR. Gerçekten ${total} sandığı silmek istiyor musun?`,
+      confirmText: `Evet, ${total} sandığı sil`,
+      cancelText: 'Hayır',
+      variant: 'danger'
+    });
+    if (!step2) return;
+
+    try {
+      setLoading(true);
+      setError('');
+      let done = 0;
+      const errors = [];
+      for (const bb of [...ballotBoxes]) {
+        try {
+          await ApiService.deleteBallotBox(bb.id);
+          done++;
+        } catch (e) {
+          errors.push(bb.ballot_number + ': ' + (e.message || 'hata'));
+        }
+      }
+      await fetchBallotBoxes();
+      if (errors.length === 0) {
+        toast.success(`${done} sandık silindi`);
+      } else {
+        toast.error(`${done} silindi, ${errors.length} hata oluştu`);
+        console.error('Delete errors:', errors.slice(0, 20));
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      setError('Toplu silme sırasında hata oluştu: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCancel = () => {
     // Reset form but keep region_name from localStorage
     const savedRegionName = localStorage.getItem('admin_region_name') || '';
@@ -866,6 +920,18 @@ const BallotBoxesPage = () => {
                 </svg>
                 <span className="hidden sm:inline">Şablon</span>
                 <span className="sm:hidden">Şablon</span>
+              </button>
+              <button
+                onClick={handleDeleteAll}
+                disabled={loading || ballotBoxes.length === 0}
+                title="Tüm sandıkları sil"
+                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="hidden sm:inline">Tümünü Sil</span>
+                <span className="sm:hidden">Sil</span>
               </button>
               <Link
                 to="/election-preparation"
