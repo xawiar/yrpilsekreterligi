@@ -356,6 +356,29 @@ const NativeMemberDashboard = ({
 
       {/* Kişisel Belgeler paneli kaldırıldı — Profilim modal'ı içinde */}
 
+      {/* Tanıtım Sayfası Yönetimi — yetkisi varsa görünür */}
+      {grantedPermissions.includes('manage_landing_page') && (
+        <Link
+          to="/settings?tab=landing-page"
+          className="block bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 active:scale-95 transition-transform"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">Tanıtım Sayfası</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Landing sayfası içeriğini düzenle</div>
+            </div>
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </Link>
+      )}
+
       {/* Seçmen Sorgulama — yetkisi varsa görünür */}
       {grantedPermissions.includes('access_voter_list') && (
         <Link
