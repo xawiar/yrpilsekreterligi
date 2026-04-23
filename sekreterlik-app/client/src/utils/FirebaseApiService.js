@@ -2559,12 +2559,25 @@ class FirebaseApiService {
 
   static async getPermissionsForPosition(position) {
     try {
-      const permissions = await FirebaseService.findByField(
+      const target = String(position || '').trim().toLocaleLowerCase('tr-TR');
+      if (!target) return [];
+
+      // 1) Önce exact match (hızlı yol - indexed)
+      const exact = await FirebaseService.findByField(
         this.COLLECTIONS.POSITION_PERMISSIONS,
         'position',
         position
       );
-      return permissions ? permissions.map(p => p.permission) : [];
+      if (exact && exact.length > 0) {
+        return exact.map(p => p.permission);
+      }
+
+      // 2) Exact eşleşme yoksa case/whitespace-insensitive tara (fallback)
+      const all = await FirebaseService.getAll(this.COLLECTIONS.POSITION_PERMISSIONS);
+      const matched = (all || []).filter(p =>
+        String(p.position || '').trim().toLocaleLowerCase('tr-TR') === target
+      );
+      return matched.map(p => p.permission);
     } catch (error) {
       console.error('Get permissions for position error:', error);
       return [];
