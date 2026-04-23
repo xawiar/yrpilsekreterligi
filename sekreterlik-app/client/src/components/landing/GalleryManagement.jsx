@@ -3,6 +3,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConfirmDialog from '../UI/ConfirmDialog';
 import ApiService from '../../utils/ApiService';
+import { resizeImageFile } from '../../utils/imageResize';
 
 /**
  * Landing Page — Galeri Yönetim Paneli
@@ -61,7 +62,7 @@ const GalleryManagement = () => {
 
   const validateFile = (file) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) return 'Sadece JPG, PNG veya WebP destekleniyor';
-    if (file.size > MAX_IMAGE_SIZE) return 'Dosya 5MB\'dan küçük olmalı';
+    if (file.size > MAX_IMAGE_SIZE) return 'Dosya 10MB\'dan küçük olmalı';
     return null;
   };
 
@@ -89,7 +90,8 @@ const GalleryManagement = () => {
     for (let i = 0; i < valid.length; i++) {
       const file = valid[i];
       try {
-        const up = await ApiService.uploadLandingGalleryImage(file);
+        const optimized = await resizeImageFile(file, { maxBytes: 2 * 1024 * 1024, maxDim: 1920 });
+        const up = await ApiService.uploadLandingGalleryImage(optimized);
         if (!up?.success || !up.url) throw new Error(up?.message || 'Yükleme hatası');
         const created = await ApiService.createLandingGalleryItem({
           url: up.url,

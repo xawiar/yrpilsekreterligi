@@ -239,22 +239,23 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Landing page içeriği — public read, admin write
+    // Landing page içeriği — public read, admin + yetkili üye write
+    // Yetki kontrolü UI'da manage_landing_page üzerinden yapılır.
     match /landing_content/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
 
-    // Landing page haberler/duyurular — public read, admin write
+    // Landing page haberler/duyurular — public read, authenticated write (UI-gated)
     match /landing_news/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
 
-    // Landing page galeri — public read, admin write
+    // Landing page galeri — public read, authenticated write (UI-gated)
     match /landing_gallery/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
 
     // Seçmen listesi (YSK CSV import) — authenticated read, admin write

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../utils/ApiService';
 import FirebaseApiService from '../utils/FirebaseApiService';
 import FirebaseStorageService from '../utils/FirebaseStorageService';
+import { resizeImageFile } from '../utils/imageResize';
 import NewsManagement from './landing/NewsManagement';
 import GalleryManagement from './landing/GalleryManagement';
 
@@ -148,20 +149,24 @@ const LandingPageSettings = () => {
       toast.error('Sadece JPG, PNG veya WebP dosyaları yükleyebilirsiniz');
       return;
     }
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
-      return;
-    }
 
     try {
       setUploading((prev) => ({ ...prev, [field]: true }));
-      const ext = getExt(file);
+      // Gerekirse otomatik küçült (hedef 2MB altı)
+      const toUpload = await resizeImageFile(file, { maxBytes: 2 * 1024 * 1024 });
+      if (toUpload.size > MAX_IMAGE_SIZE) {
+        toast.error('Görsel küçültülemedi, farklı bir dosya deneyin');
+        return;
+      }
+      const ext = getExt(toUpload);
       const path = `landing_media/${storagePrefix}_${Date.now()}.${ext}`;
-      const url = await FirebaseStorageService.uploadFile(file, path, {
-        contentType: file.type,
+      const url = await FirebaseStorageService.uploadFile(toUpload, path, {
+        contentType: toUpload.type,
         customMetadata: {
           field,
-          uploadedAt: new Date().toISOString()
+          uploadedAt: new Date().toISOString(),
+          originalSize: String(file.size),
+          resized: String(toUpload.size !== file.size)
         }
       });
       setField(field, url);

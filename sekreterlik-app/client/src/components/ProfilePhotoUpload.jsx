@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import FirebaseApiService from '../utils/FirebaseApiService';
 import { normalizePhotoUrl } from '../utils/photoUrlHelper';
+import { resizeImageFile } from '../utils/imageResize';
 import { useToast } from '../contexts/ToastContext';
 
 /**
@@ -17,7 +18,8 @@ import { useToast } from '../contexts/ToastContext';
  *   onPhotoUpdated: (url:string) => void  - Parent state güncellemesi için
  */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
-const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_SIZE = 10 * 1024 * 1024;     // 10MB giriş limiti (resize öncesi)
+const TARGET_BYTES = 1 * 1024 * 1024;  // 1MB — resize sonrası hedef
 
 const ProfilePhotoUpload = ({ memberId, currentPhotoUrl, memberName = '', onPhotoUpdated }) => {
   const toast = useToast();
@@ -48,7 +50,7 @@ const ProfilePhotoUpload = ({ memberId, currentPhotoUrl, memberName = '', onPhot
       return;
     }
     if (file.size > MAX_SIZE) {
-      toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
+      toast.error('Dosya boyutu 10MB\'dan küçük olmalıdır');
       return;
     }
     if (!memberId) {
@@ -58,7 +60,9 @@ const ProfilePhotoUpload = ({ memberId, currentPhotoUrl, memberName = '', onPhot
 
     try {
       setUploading(true);
-      const result = await FirebaseApiService.uploadProfilePhoto(memberId, file);
+      // Gerekirse otomatik küçült
+      const uploadFile = await resizeImageFile(file, { maxBytes: TARGET_BYTES, maxDim: 1024 });
+      const result = await FirebaseApiService.uploadProfilePhoto(memberId, uploadFile);
       if (result?.success && result.url) {
         setLocalPhoto(result.url);
         toast.success('Profil fotoğrafı güncellendi');

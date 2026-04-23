@@ -3,6 +3,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConfirmDialog from '../UI/ConfirmDialog';
 import ApiService from '../../utils/ApiService';
+import { resizeImageFile } from '../../utils/imageResize';
 
 /**
  * Landing Page — Duyurular Yönetim Paneli
@@ -111,7 +112,8 @@ const NewsManagement = () => {
     }
     try {
       setUploading(true);
-      const res = await ApiService.uploadLandingNewsImage(file);
+      const optimized = await resizeImageFile(file, { maxBytes: 2 * 1024 * 1024, maxDim: 1920 });
+      const res = await ApiService.uploadLandingNewsImage(optimized);
       if (res?.success && res.url) {
         setForm((prev) => ({ ...prev, image: res.url }));
         toast.success('Görsel yüklendi');
