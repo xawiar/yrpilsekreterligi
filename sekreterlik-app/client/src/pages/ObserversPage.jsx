@@ -306,6 +306,16 @@ const ObserversPage = () => {
       // Henüz ataması olmayan müşahitler
       const pending = chiefs.filter(o => !o.ballot_box_id);
 
+      // Direkt Firestore update — sadece ballot_box_id alanına dokun (encrypt/decrypt sorunlarını atlar)
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const updateBallotBoxId = async (obsId, ballotBoxId) => {
+        await updateDoc(doc(db, 'ballot_box_observers', String(obsId)), {
+          ballot_box_id: ballotBoxId,
+          updatedAt: new Date().toISOString()
+        });
+      };
+
       let assigned = 0;
       const notAssigned = [];
       const errors = [];
@@ -320,7 +330,6 @@ const ObserversPage = () => {
       };
 
       // 3-geçişli atama: mahalle/köy → ilçe → tüm sandıklar
-      // Pass 1: mahalle/köy
       const stillPending = [];
       for (const obs of pending) {
         const pool = ballotBoxes.filter(bb => {
@@ -331,7 +340,7 @@ const ObserversPage = () => {
         const chosen = pickUnassigned(pool);
         if (chosen) {
           try {
-            await ApiService.updateBallotBoxObserver(obs.id, { ...obs, ballot_box_id: chosen.id });
+            await updateBallotBoxId(obs.id, chosen.id);
             assigned++;
           } catch (e) {
             errors.push(`${obs.name}: ${e.message || 'hata'}`);
@@ -343,7 +352,6 @@ const ObserversPage = () => {
         }
       }
 
-      // Pass 2: aynı ilçe
       const stillPending2 = [];
       for (const obs of stillPending) {
         if (!obs.district_id) { stillPending2.push(obs); continue; }
@@ -351,7 +359,7 @@ const ObserversPage = () => {
         const chosen = pickUnassigned(pool);
         if (chosen) {
           try {
-            await ApiService.updateBallotBoxObserver(obs.id, { ...obs, ballot_box_id: chosen.id });
+            await updateBallotBoxId(obs.id, chosen.id);
             assigned++;
           } catch (e) {
             errors.push(`${obs.name}: ${e.message || 'hata'}`);
@@ -363,12 +371,11 @@ const ObserversPage = () => {
         }
       }
 
-      // Pass 3: tüm sandıklar (son çare)
       for (const obs of stillPending2) {
         const chosen = pickUnassigned(ballotBoxes);
         if (chosen) {
           try {
-            await ApiService.updateBallotBoxObserver(obs.id, { ...obs, ballot_box_id: chosen.id });
+            await updateBallotBoxId(obs.id, chosen.id);
             assigned++;
           } catch (e) {
             errors.push(`${obs.name}: ${e.message || 'hata'}`);
@@ -417,11 +424,14 @@ const ObserversPage = () => {
       const withAssignment = observers.filter(o => o.ballot_box_id);
       let cleared = 0;
       const errors = [];
+      // Direkt Firestore update — sadece ballot_box_id alanına dokun
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
       for (const obs of withAssignment) {
         try {
-          await ApiService.updateBallotBoxObserver(obs.id, {
-            ...obs,
-            ballot_box_id: null
+          await updateDoc(doc(db, 'ballot_box_observers', String(obs.id)), {
+            ballot_box_id: null,
+            updatedAt: new Date().toISOString()
           });
           cleared++;
         } catch (e) {
@@ -429,9 +439,15 @@ const ObserversPage = () => {
         }
       }
       await fetchData();
-      toast.success(`${cleared} müşahitin sandık ataması kaldırıldı${errors.length ? ` (${errors.length} hata)` : ''}`);
-      if (errors.length) console.warn('Clear errors:', errors.slice(0, 10));
+      const msg = `${cleared} müşahitin sandık ataması kaldırıldı${errors.length ? ` (${errors.length} hata)` : ''}`;
+      if (errors.length) {
+        toast.error(msg);
+        console.warn('Clear errors:', errors.slice(0, 10));
+      } else {
+        toast.success(msg);
+      }
     } catch (e) {
+      console.error('Atamaları kaldırma hatası:', e);
       toast.error('Atamaları kaldırma hatası: ' + e.message);
     } finally {
       setLoading(false);
