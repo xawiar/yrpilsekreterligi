@@ -377,9 +377,25 @@ const VillagesSettings = () => {
           
           if (row.length === 0 || row.every(cell => !cell)) return; // Boş satırları atla
 
-          const villageData = {
+          // Yeni format (6 kolon): İlçe | Belde | Köy | Ad | Tel | TC
+          // Eski format (5 kolon): İlçe | Köy | Ad | Tel | TC
+          const headerRow = jsonData[0] || [];
+          const hasBeldeCol = headerRow.some(h =>
+            typeof h === 'string' && /belde/i.test(h)
+          );
+
+          const villageData = hasBeldeCol ? {
             rowNumber,
             districtName: row[0] ? String(row[0]).trim() : '',
+            townName: row[1] ? String(row[1]).trim() : '',
+            villageName: row[2] ? String(row[2]).trim() : '',
+            representativeName: row[3] ? String(row[3]).trim() : '',
+            representativePhone: row[4] ? String(row[4]).trim() : '',
+            representativeTc: row[5] ? String(row[5]).trim() : ''
+          } : {
+            rowNumber,
+            districtName: row[0] ? String(row[0]).trim() : '',
+            townName: '',
             villageName: row[1] ? String(row[1]).trim() : '',
             representativeName: row[2] ? String(row[2]).trim() : '',
             representativePhone: row[3] ? String(row[3]).trim() : '',
@@ -394,14 +410,40 @@ const VillagesSettings = () => {
             errors.push(`Satır ${rowNumber}: Köy adı zorunludur`);
           }
 
-          // İlçe adını kontrol et
-          const district = districts.find(d => 
-            d.name.toLowerCase() === villageData.districtName.toLowerCase()
+          // İlçe adını kontrol et — "ELAZIĞ MERKEZ" → "MERKEZ" fallback
+          const normalizeIlce = (s) => s.toLocaleLowerCase('tr-TR')
+            .replace(/^elazığ\s+/i, '').trim();
+          const targetDist = normalizeIlce(villageData.districtName);
+          const district = districts.find(d =>
+            d.name.toLowerCase() === villageData.districtName.toLowerCase() ||
+            normalizeIlce(d.name) === targetDist
           );
           if (villageData.districtName && !district) {
             errors.push(`Satır ${rowNumber}: "${villageData.districtName}" ilçesi bulunamadı`);
           } else {
             villageData.districtId = district ? district.id : null;
+          }
+
+          // Belde (opsiyonel)
+          if (villageData.townName && villageData.districtId) {
+            const town = towns.find(t =>
+              t.name.toLowerCase() === villageData.townName.toLowerCase() &&
+              String(t.district_id) === String(villageData.districtId)
+            );
+            if (town) {
+              villageData.townId = town.id;
+            } else {
+              const anyTown = towns.find(t =>
+                t.name.toLowerCase() === villageData.townName.toLowerCase()
+              );
+              if (anyTown) {
+                villageData.townId = anyTown.id;
+              } else {
+                errors.push(`Satır ${rowNumber}: "${villageData.townName}" beldesi bulunamadı`);
+              }
+            }
+          } else {
+            villageData.townId = null;
           }
 
           processedData.push(villageData);
@@ -437,7 +479,7 @@ const VillagesSettings = () => {
           const village = await ApiService.createVillage({
             name: villageData.villageName,
             district_id: villageData.districtId,
-            town_id: null
+            town_id: villageData.townId || null
           });
 
           // Temsilci bilgilerini kaydet (varsa)
@@ -480,8 +522,9 @@ const VillagesSettings = () => {
 
   const downloadExcelTemplate = () => {
     const templateData = [
-      ['İlçe Adı', 'Köy Adı', 'Köy Temsilcisi Adı', 'Köy Temsilcisi Telefon', 'Köy Temsilcisi TC'],
-      ['MERKEZ', 'Örnek Köy', 'Ahmet Yılmaz', '05551234567', '12345678901']
+      ['İlçe Adı', 'Belde Adı (opsiyonel)', 'Köy Adı', 'Köy Temsilcisi Adı', 'Köy Temsilcisi Telefon', 'Köy Temsilcisi TC'],
+      ['MERKEZ', '', 'Örnek Köy', 'Ahmet Yılmaz', '05551234567', '12345678901'],
+      ['MERKEZ', 'AKÇAKİRAZ', 'Alataş', '', '', '']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);

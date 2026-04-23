@@ -376,9 +376,26 @@ const NeighborhoodsSettings = () => {
           
           if (row.length === 0 || row.every(cell => !cell)) return; // Boş satırları atla
 
-          const neighborhoodData = {
+          // Yeni format: İlçe | Belde (opsiyonel) | Mahalle | Temsilci Ad/TC/Tel
+          // Eski format: İlçe | Mahalle | Temsilci Ad/TC/Tel (5 kolon)
+          // Header'a göre karar ver
+          const headerRow = jsonData[0] || [];
+          const hasBeldeCol = headerRow.some(h =>
+            typeof h === 'string' && /belde/i.test(h)
+          );
+
+          const neighborhoodData = hasBeldeCol ? {
             rowNumber,
             districtName: row[0] ? String(row[0]).trim() : '',
+            townName: row[1] ? String(row[1]).trim() : '',
+            neighborhoodName: row[2] ? String(row[2]).trim() : '',
+            representativeName: row[3] ? String(row[3]).trim() : '',
+            representativeTc: row[4] ? String(row[4]).trim() : '',
+            representativePhone: row[5] ? String(row[5]).trim() : ''
+          } : {
+            rowNumber,
+            districtName: row[0] ? String(row[0]).trim() : '',
+            townName: '',
             neighborhoodName: row[1] ? String(row[1]).trim() : '',
             representativeName: row[2] ? String(row[2]).trim() : '',
             representativeTc: row[3] ? String(row[3]).trim() : '',
@@ -393,14 +410,41 @@ const NeighborhoodsSettings = () => {
             errors.push(`Satır ${rowNumber}: Mahalle adı zorunludur`);
           }
 
-          // İlçe adını kontrol et
-          const district = districts.find(d => 
-            d.name.toLowerCase() === neighborhoodData.districtName.toLowerCase()
+          // İlçe adını kontrol et — "ELAZIĞ MERKEZ" → "MERKEZ" fallback
+          const normalizeIlce = (s) => s.toLocaleLowerCase('tr-TR')
+            .replace(/^elazığ\s+/i, '').trim();
+          const targetDist = normalizeIlce(neighborhoodData.districtName);
+          const district = districts.find(d =>
+            d.name.toLowerCase() === neighborhoodData.districtName.toLowerCase() ||
+            normalizeIlce(d.name) === targetDist
           );
           if (neighborhoodData.districtName && !district) {
             errors.push(`Satır ${rowNumber}: "${neighborhoodData.districtName}" ilçesi bulunamadı`);
           } else {
             neighborhoodData.districtId = district ? district.id : null;
+          }
+
+          // Belde (opsiyonel) — district altındaki belde'yi eşleştir
+          if (neighborhoodData.townName && neighborhoodData.districtId) {
+            const town = towns.find(t =>
+              t.name.toLowerCase() === neighborhoodData.townName.toLowerCase() &&
+              String(t.district_id) === String(neighborhoodData.districtId)
+            );
+            if (town) {
+              neighborhoodData.townId = town.id;
+            } else {
+              // İlçeye bakmadan da dene
+              const anyTown = towns.find(t =>
+                t.name.toLowerCase() === neighborhoodData.townName.toLowerCase()
+              );
+              if (anyTown) {
+                neighborhoodData.townId = anyTown.id;
+              } else {
+                errors.push(`Satır ${rowNumber}: "${neighborhoodData.townName}" beldesi bulunamadı`);
+              }
+            }
+          } else {
+            neighborhoodData.townId = null;
           }
 
           processedData.push(neighborhoodData);
@@ -436,7 +480,7 @@ const NeighborhoodsSettings = () => {
           const neighborhood = await ApiService.createNeighborhood({
             name: neighborhoodData.neighborhoodName,
             district_id: neighborhoodData.districtId,
-            town_id: null
+            town_id: neighborhoodData.townId || null
           });
 
           // Temsilci bilgilerini kaydet (varsa)
@@ -479,8 +523,9 @@ const NeighborhoodsSettings = () => {
 
   const downloadExcelTemplate = () => {
     const templateData = [
-      ['İlçe Adı', 'Mahalle Adı', 'Mahalle Temsilcisi Adı', 'Mahalle Temsilcisi TC', 'Mahalle Temsilcisi Telefon'],
-      ['MERKEZ', 'Örnek Mahalle', 'Ahmet Yılmaz', '12345678901', '05551234567']
+      ['İlçe Adı', 'Belde Adı (opsiyonel)', 'Mahalle Adı', 'Mahalle Temsilcisi Adı', 'Mahalle Temsilcisi TC', 'Mahalle Temsilcisi Telefon'],
+      ['MERKEZ', '', 'Örnek Mahalle', 'Ahmet Yılmaz', '12345678901', '05551234567'],
+      ['MERKEZ', 'AKÇAKİRAZ', 'Cumhuriyet', '', '', '']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
