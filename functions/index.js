@@ -373,7 +373,7 @@ exports.onMemberUserUpdate = onDocumentUpdated(
             logger.info(`New Auth created: ${authUser.uid}`);
           } catch (createErr) {
             if (createErr.code === "auth/email-already-exists") {
-              // Email başka bir Auth hesabında kilitli, onu da sil ve tekrar dene
+              // Email başka Auth hesabında kilitli, onu da sil ve tekrar
               try {
                 const existing = await admin.auth().getUserByEmail(email);
                 await admin.auth().deleteUser(existing.uid);
