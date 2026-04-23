@@ -159,7 +159,9 @@ const rowToVoter = (row, colMap) => {
 };
 
 // ---------- Bileşen ----------
-const VoterListSettings = () => {
+const VoterListSettings = ({ mode = 'full' }) => {
+  // mode: 'full' (yükleme + arama) veya 'search-only' (sadece arama, seçim hazırlık için)
+  const isSearchOnly = mode === 'search-only';
   const toast = useToast();
   const fileInputRef = useRef(null);
 
@@ -338,18 +340,18 @@ const VoterListSettings = () => {
     setSearching(true);
     setSearchedOnce(true);
     try {
-      // TC tek kayıt hızlı yolu
-      if (searchTc && searchTc.length === 11) {
-        const v = await ApiService.searchVoterByTc(searchTc);
-        setResults(v ? [v] : []);
-        return;
-      }
       const filters = {};
+      if (searchTc.trim()) filters.tc = searchTc.trim();
       if (searchFirstName.trim()) filters.firstName = searchFirstName.trim();
       if (searchLastName.trim()) filters.lastName = searchLastName.trim();
       if (searchBallotNo.trim()) filters.ballotNumber = searchBallotNo.trim();
       if (filterDistrict) filters.district = filterDistrict;
       if (filterTown.trim()) filters.town = filterTown.trim();
+      if (Object.keys(filters).length === 0) {
+        toast.warning('En az bir arama kriteri girin');
+        setResults([]);
+        return;
+      }
       const list = await ApiService.searchVoters(filters);
       setResults(list || []);
     } catch (err) {
@@ -439,7 +441,8 @@ const VoterListSettings = () => {
         </div>
       </div>
 
-      {/* Yükleme bölümü */}
+      {/* Yükleme bölümü — sadece full mode'da */}
+      {!isSearchOnly && (
       <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg border border-gray-200 dark:border-gray-700 p-5">
         <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Dosya Yükleme</h4>
 
@@ -617,6 +620,7 @@ const VoterListSettings = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Arama bölümü */}
       <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg border border-gray-200 dark:border-gray-700 p-5">

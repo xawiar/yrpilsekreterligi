@@ -9282,7 +9282,24 @@ class FirebaseApiService {
 
       // Öncelik sırasına göre tek bir indexed query kur
       let q = null;
-      if (filters.firstName) {
+      if (filters.tc) {
+        const tcTrim = String(filters.tc).replace(/\D/g, '').trim();
+        if (tcTrim.length === 11) {
+          // Tam TC → document ID ile direkt çekim
+          const { getDoc, doc } = await import('firebase/firestore');
+          const snap = await getDoc(doc(db, 'voters', tcTrim));
+          return snap.exists() ? [{ id: snap.id, ...snap.data() }] : [];
+        } else if (tcTrim.length >= 3) {
+          // Kısmi TC → prefix search (başlangıç eşleşmesi)
+          q = query(
+            collection(db, 'voters'),
+            where('tc', '>=', tcTrim),
+            where('tc', '<=', tcTrim + '\uf8ff'),
+            limit(LIMIT)
+          );
+        }
+      }
+      if (!q && filters.firstName) {
         const p = up(filters.firstName);
         q = query(
           collection(db, 'voters'),
@@ -9290,7 +9307,8 @@ class FirebaseApiService {
           where('firstName', '<=', p + '\uf8ff'),
           limit(LIMIT)
         );
-      } else if (filters.lastName) {
+      }
+      if (!q && filters.lastName) {
         const p = up(filters.lastName);
         q = query(
           collection(db, 'voters'),
@@ -9298,20 +9316,24 @@ class FirebaseApiService {
           where('lastName', '<=', p + '\uf8ff'),
           limit(LIMIT)
         );
-      } else if (filters.ballotNumber) {
+      }
+      if (!q && filters.ballotNumber) {
         q = query(
           collection(db, 'voters'),
           where('ballotNumber', '==', String(filters.ballotNumber)),
           limit(LIMIT)
         );
-      } else if (filters.district) {
+      }
+      if (!q && filters.district) {
         q = query(
           collection(db, 'voters'),
-          where('district', '==', filters.district),
+          where('district', '==', up(filters.district)),
           limit(LIMIT)
         );
-      } else {
-        q = query(collection(db, 'voters'), limit(LIMIT));
+      }
+      if (!q) {
+        // Hiçbir filtre yok → boş dön (414k kaydı çekme)
+        return [];
       }
 
       const snap = await getDocs(q);
