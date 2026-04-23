@@ -472,25 +472,64 @@ const VillagesSettings = () => {
     let errorCount = 0;
     const errors = [];
 
+    // Mevcut temsilcileri tek seferde getir (upsert için)
+    let existingReps = [];
+    try { existingReps = await ApiService.getVillageRepresentatives() || []; } catch (_) {}
+
+    // Köy adı fuzzy normalize
+    const normName = (s) => (s || '').toLocaleLowerCase('tr-TR')
+      .replace(/\s*(köyü|köy|koyu)\s*$/i, '')
+      .replace(/\s+/g, '').trim();
+
     try {
       for (const villageData of excelData) {
         try {
-          // Köy oluştur
-          const village = await ApiService.createVillage({
-            name: villageData.villageName,
-            district_id: villageData.districtId,
-            town_id: villageData.townId || null
-          });
+          // Köy upsert: aynı isim (fuzzy) + district_id
+          const target = normName(villageData.villageName);
+          const existing = villages.find(v =>
+            normName(v.name) === target &&
+            String(v.district_id) === String(villageData.districtId) &&
+            (villageData.townId
+              ? String(v.town_id) === String(villageData.townId)
+              : (!v.town_id || v.town_id === null))
+          ) || villages.find(v =>
+            normName(v.name) === target &&
+            String(v.district_id) === String(villageData.districtId)
+          );
 
-          // Temsilci bilgilerini kaydet (varsa)
-          if (villageData.representativeName || villageData.representativePhone || villageData.representativeTc) {
-            await ApiService.createVillageRepresentative({
+          let villageId;
+          if (existing) {
+            villageId = existing.id;
+          } else {
+            const village = await ApiService.createVillage({
+              name: villageData.villageName,
+              district_id: villageData.districtId,
+              town_id: villageData.townId || null
+            });
+            villageId = village.id;
+          }
+
+          // Temsilci upsert
+          const hasRepData = villageData.representativeName ||
+                            villageData.representativePhone ||
+                            villageData.representativeTc;
+          if (hasRepData) {
+            const repPayload = {
               name: villageData.representativeName,
               phone: villageData.representativePhone,
               tc: villageData.representativeTc,
-              village_id: village.id,
+              village_id: villageId,
               member_id: null
-            });
+            };
+            const existingRep = existingReps.find(r =>
+              (villageData.representativeTc && String(r.tc) === String(villageData.representativeTc)) ||
+              (String(r.village_id) === String(villageId))
+            );
+            if (existingRep) {
+              await ApiService.updateVillageRepresentative(existingRep.id, repPayload);
+            } else {
+              await ApiService.createVillageRepresentative(repPayload);
+            }
           }
 
           successCount++;
@@ -500,7 +539,7 @@ const VillagesSettings = () => {
         }
       }
 
-      setMessage(`${successCount} köy başarıyla eklendi${errorCount > 0 ? `, ${errorCount} hata oluştu` : ''}`);
+      setMessage(`${successCount} köy işlendi (mevcut olanlar güncellendi)${errorCount > 0 ? `, ${errorCount} hata oluştu` : ''}`);
       setMessageType(errorCount > 0 ? 'error' : 'success');
       
       if (errors.length > 0) {

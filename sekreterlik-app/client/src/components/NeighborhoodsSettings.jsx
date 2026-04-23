@@ -473,25 +473,66 @@ const NeighborhoodsSettings = () => {
     let errorCount = 0;
     const errors = [];
 
+    // Mevcut temsilcileri tek seferde getir (upsert için)
+    let existingReps = [];
+    try { existingReps = await ApiService.getNeighborhoodRepresentatives() || []; } catch (_) {}
+
+    // Mahalle adı fuzzy normalize: MAHALLESİ/boşluk/tr-case
+    const normName = (s) => (s || '').toLocaleLowerCase('tr-TR')
+      .replace(/\s*(mahallesi|mah\.|mahalle)\s*$/i, '')
+      .replace(/\s+/g, '').trim();
+
     try {
       for (const neighborhoodData of excelData) {
         try {
-          // Mahalle oluştur
-          const neighborhood = await ApiService.createNeighborhood({
-            name: neighborhoodData.neighborhoodName,
-            district_id: neighborhoodData.districtId,
-            town_id: neighborhoodData.townId || null
-          });
+          // Mahalle upsert: aynı isim (fuzzy) + district_id + town_id varsa mevcutu kullan
+          const target = normName(neighborhoodData.neighborhoodName);
+          const existing = neighborhoods.find(n =>
+            normName(n.name) === target &&
+            String(n.district_id) === String(neighborhoodData.districtId) &&
+            (neighborhoodData.townId
+              ? String(n.town_id) === String(neighborhoodData.townId)
+              : (!n.town_id || n.town_id === null))
+          ) || neighborhoods.find(n =>
+            // town_id farkını görmezden gel (mevcut eski kayıtlar)
+            normName(n.name) === target &&
+            String(n.district_id) === String(neighborhoodData.districtId)
+          );
 
-          // Temsilci bilgilerini kaydet (varsa)
-          if (neighborhoodData.representativeName || neighborhoodData.representativePhone || neighborhoodData.representativeTc) {
-            await ApiService.createNeighborhoodRepresentative({
+          let neighborhoodId;
+          if (existing) {
+            neighborhoodId = existing.id;
+          } else {
+            const neighborhood = await ApiService.createNeighborhood({
+              name: neighborhoodData.neighborhoodName,
+              district_id: neighborhoodData.districtId,
+              town_id: neighborhoodData.townId || null
+            });
+            neighborhoodId = neighborhood.id;
+          }
+
+          // Temsilci upsert (TC varsa TC ile, yoksa mahalle_id ile eşleştir)
+          const hasRepData = neighborhoodData.representativeName ||
+                            neighborhoodData.representativePhone ||
+                            neighborhoodData.representativeTc;
+          if (hasRepData) {
+            const repPayload = {
               name: neighborhoodData.representativeName,
               phone: neighborhoodData.representativePhone,
               tc: neighborhoodData.representativeTc,
-              neighborhood_id: neighborhood.id,
+              neighborhood_id: neighborhoodId,
               member_id: null
-            });
+            };
+            // Aynı mahalle için mevcut temsilci var mı?
+            const existingRep = existingReps.find(r =>
+              (neighborhoodData.representativeTc && String(r.tc) === String(neighborhoodData.representativeTc)) ||
+              (String(r.neighborhood_id) === String(neighborhoodId))
+            );
+            if (existingRep) {
+              await ApiService.updateNeighborhoodRepresentative(existingRep.id, repPayload);
+            } else {
+              await ApiService.createNeighborhoodRepresentative(repPayload);
+            }
           }
 
           successCount++;
@@ -501,7 +542,7 @@ const NeighborhoodsSettings = () => {
         }
       }
 
-      setMessage(`${successCount} mahalle başarıyla eklendi${errorCount > 0 ? `, ${errorCount} hata oluştu` : ''}`);
+      setMessage(`${successCount} mahalle işlendi (mevcut olanlar güncellendi)${errorCount > 0 ? `, ${errorCount} hata oluştu` : ''}`);
       setMessageType(errorCount > 0 ? 'error' : 'success');
       
       if (errors.length > 0) {
