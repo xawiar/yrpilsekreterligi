@@ -314,6 +314,7 @@ const ElectionPreparationPage = () => {
               <Route path="villages" element={<VillagesPage />} />
               <Route path="groups" element={<GroupsPage />} />
               <Route path="coordinators/*" element={<CoordinatorsPage />} />
+              <Route path="voter-list" element={<VoterListSettings mode="search-only" />} />
             </Routes>
           ) : (
             /* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */
