@@ -321,6 +321,14 @@ const BallotBoxesPage = () => {
           const normIlce = (s) => (s || '').toLocaleLowerCase('tr-TR')
             .replace(/^elazığ\s+/i, '').trim();
 
+          // Mahalle/köy isim normalize: boşluk, MAHALLESİ/KÖYÜ suffix ve türkçe case
+          const normLoc = (s) => (s || '')
+            .toLocaleLowerCase('tr-TR')
+            .replace(/\s*(mahallesi|mah\.|mahalle)\s*$/i, '')
+            .replace(/\s*(köyü|köy|koyu)\s*$/i, '')
+            .replace(/\s+/g, '')
+            .trim();
+
           for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
             const rowNumber = i + 2;
@@ -400,45 +408,45 @@ const BallotBoxesPage = () => {
                 }
               }
 
-              // Mahalle kontrolü (district + optional town)
+              // Mahalle kontrolü (district + optional town) — fuzzy match (suffix/boşluk/case)
               let neighborhoodId = null;
-              if (newFormat ? neighborhoodName : neighborhoodName) {
-                if (newFormat && neighborhoodName) {
-                  const neighborhood = neighborhoods.find(n =>
-                    n.name.toLowerCase() === neighborhoodName.toLowerCase() &&
+              if (neighborhoodName && districtId) {
+                const target = normLoc(neighborhoodName);
+                const neighborhood =
+                  // 1) Tam eşleşme + town_id
+                  (townId ? neighborhoods.find(n =>
+                    normLoc(n.name) === target &&
                     String(n.district_id) === String(districtId) &&
-                    (townId ? String(n.town_id) === String(townId) : true)
-                  ) || neighborhoods.find(n =>
-                    n.name.toLowerCase() === neighborhoodName.toLowerCase() &&
+                    String(n.town_id) === String(townId)
+                  ) : null) ||
+                  // 2) Tam eşleşme, town_id null veya herhangi
+                  neighborhoods.find(n =>
+                    normLoc(n.name) === target &&
                     String(n.district_id) === String(districtId)
                   );
-                  if (neighborhood) neighborhoodId = neighborhood.id;
-                } else if (!newFormat && neighborhoodName && districtId) {
-                  // Eski format: locationName → önce mahalle dene
-                  const n = neighborhoods.find(n =>
-                    n.name.toLowerCase() === neighborhoodName.toLowerCase() &&
-                    String(n.district_id) === String(districtId)
-                  );
-                  if (n) neighborhoodId = n.id;
-                }
+                if (neighborhood) neighborhoodId = neighborhood.id;
               }
 
               // Köy kontrolü (district + optional town)
               let villageId = null;
-              if (newFormat && villageName) {
-                const village = villages.find(v =>
-                  v.name.toLowerCase() === villageName.toLowerCase() &&
-                  String(v.district_id) === String(districtId) &&
-                  (townId ? String(v.town_id) === String(townId) : true)
-                ) || villages.find(v =>
-                  v.name.toLowerCase() === villageName.toLowerCase() &&
-                  String(v.district_id) === String(districtId)
-                );
+              if (villageName && districtId) {
+                const target = normLoc(villageName);
+                const village =
+                  (townId ? villages.find(v =>
+                    normLoc(v.name) === target &&
+                    String(v.district_id) === String(districtId) &&
+                    String(v.town_id) === String(townId)
+                  ) : null) ||
+                  villages.find(v =>
+                    normLoc(v.name) === target &&
+                    String(v.district_id) === String(districtId)
+                  );
                 if (village) villageId = village.id;
-              } else if (!newFormat && !neighborhoodId && villageName && districtId) {
-                // Eski format mahalle bulamadıysa köy dene
+              } else if (!newFormat && !neighborhoodId && neighborhoodName && districtId) {
+                // Eski format mahalle bulamadıysa köy dene (locationName her ikisine de verildi)
+                const target = normLoc(neighborhoodName);
                 const v = villages.find(v =>
-                  v.name.toLowerCase() === villageName.toLowerCase() &&
+                  normLoc(v.name) === target &&
                   String(v.district_id) === String(districtId)
                 );
                 if (v) villageId = v.id;
@@ -456,7 +464,7 @@ const BallotBoxesPage = () => {
                 errors.push(`Satır ${rowNumber}: "${neighborhoodName}" mahalle/köyü bulunamadı (sandık yine de eklendi)`);
               }
 
-              // Sandık oluştur
+              // Sandık payload'ı
               const payload = {
                 ballot_number: ballotNumber,
                 institution_name: institutionName,
@@ -468,7 +476,16 @@ const BallotBoxesPage = () => {
                 voter_count: voterCount ? parseInt(voterCount) : null
               };
 
-              await ApiService.createBallotBox(payload);
+              // Upsert: aynı ilçe + sandık no var mı kontrol et
+              const existing = ballotBoxes.find(bb =>
+                String(bb.district_id) === String(districtId) &&
+                String(bb.ballot_number) === String(ballotNumber)
+              );
+              if (existing) {
+                await ApiService.updateBallotBox(existing.id, payload);
+              } else {
+                await ApiService.createBallotBox(payload);
+              }
               importedCount++;
             } catch (rowError) {
               errors.push(`Satır ${rowNumber}: ${rowError.message || 'Bilinmeyen hata'}`);
@@ -480,7 +497,7 @@ const BallotBoxesPage = () => {
           }
 
           if (importedCount > 0) {
-            const msg = `${importedCount} sandık başarıyla içe aktarıldı${errors.length > 0 ? `, ${errors.length} hata oluştu` : ''}`;
+            const msg = `${importedCount} sandık işlendi (mevcut olanlar güncellendi)${errors.length > 0 ? `, ${errors.length} uyarı` : ''}`;
             if (errors.length > 0) {
               toast.error(msg);
             } else {
@@ -490,7 +507,7 @@ const BallotBoxesPage = () => {
             setShowExcelImport(false);
             setExcelFile(null);
           } else {
-            setError('Hiçbir sandık içe aktarılamadı');
+            setError('Hiçbir sandık işlenemedi');
           }
         } catch (error) {
           console.error('Excel import error:', error);
