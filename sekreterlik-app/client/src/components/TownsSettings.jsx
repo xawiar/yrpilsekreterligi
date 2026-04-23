@@ -13,6 +13,8 @@ const TownsSettings = () => {
   const [districts, setDistricts] = useState([]);
   const [members, setMembers] = useState([]);
   const [townOfficials, setTownOfficials] = useState([]);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [villages, setVillages] = useState([]);
   const [deputyInspectors, setDeputyInspectors] = useState({});
   const [visitCounts, setVisitCounts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -39,16 +41,20 @@ const TownsSettings = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [townsData, districtsData, membersData, officialsData] = await Promise.all([
+      const [townsData, districtsData, membersData, officialsData, neighborhoodsData, villagesData] = await Promise.all([
         ApiService.getTowns(),
         ApiService.getDistricts(),
         ApiService.getMembers(),
-        ApiService.getTownOfficials()
+        ApiService.getTownOfficials(),
+        ApiService.getNeighborhoods().catch(() => []),
+        ApiService.getVillages().catch(() => [])
       ]);
       setTowns(townsData);
       setDistricts(districtsData);
       setMembers(membersData);
       setTownOfficials(officialsData);
+      setNeighborhoods(neighborhoodsData || []);
+      setVillages(villagesData || []);
       
       // Fetch visit counts
       await fetchVisitCounts();
@@ -632,6 +638,60 @@ const TownsSettings = () => {
           </form>
         </div>
       )}
+
+      {/* Belde özet: toplam + ilçe bazında + her belde altında mahalle/köy */}
+      {towns.length > 0 && (() => {
+        const byDist = {};
+        for (const t of towns) {
+          const name = (districts.find(d => String(d.id) === String(t.district_id))?.name) || '-';
+          byDist[name] = (byDist[name] || 0) + 1;
+        }
+        const distEntries = Object.entries(byDist).sort((a,b) => a[0].localeCompare(b[0], 'tr'));
+
+        const townStats = towns.map(t => {
+          const distName = (districts.find(d => String(d.id) === String(t.district_id))?.name) || '-';
+          const mahCount = neighborhoods.filter(n => String(n.town_id) === String(t.id)).length;
+          const koyCount = villages.filter(v => String(v.town_id) === String(t.id)).length;
+          return { id: t.id, name: t.name, distName, mahCount, koyCount };
+        }).sort((a, b) => {
+          const c = a.distName.localeCompare(b.distName, 'tr');
+          if (c !== 0) return c;
+          return a.name.localeCompare(b.name, 'tr');
+        });
+
+        return (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-3">
+            <div>
+              <div className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">
+                Toplam {towns.length} belde — İlçe bazında:
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {distEntries.map(([name, c]) => (
+                  <span key={name} className="inline-flex items-center px-2 py-1 rounded-full bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                    {name}: <strong className="ml-1">{c}</strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">
+                Her beldede mahalle / köy sayısı:
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {townStats.map(s => (
+                  <span key={s.id} className="inline-flex items-center px-2 py-1 rounded-full bg-white dark:bg-gray-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                    <span className="text-gray-500 dark:text-gray-400 mr-1">{s.distName}/</span>
+                    {s.name}: <strong className="mx-1">{s.mahCount}</strong>
+                    <span className="text-gray-400">M</span>
+                    <strong className="mx-1">•{s.koyCount}</strong>
+                    <span className="text-gray-400">K</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Towns List */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">

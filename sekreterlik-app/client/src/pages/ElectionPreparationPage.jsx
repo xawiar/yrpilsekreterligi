@@ -7,6 +7,7 @@ import ObserversPage from './ObserversPage';
 import RepresentativesPage from './RepresentativesPage';
 import NeighborhoodsPage from './NeighborhoodsPage';
 import VillagesPage from './VillagesPage';
+import TownsOverviewPage from './TownsOverviewPage';
 import GroupsPage from './GroupsPage';
 import CoordinatorsPage from './CoordinatorsPage';
 import VoterListSettings from '../components/VoterListSettings';
@@ -21,6 +22,7 @@ const ElectionPreparationPage = () => {
     if (path.includes('/ballot-boxes')) return 'ballot-boxes';
     if (path.includes('/observers')) return 'observers';
     if (path.includes('/representatives')) return 'representatives';
+    if (path.includes('/towns')) return 'towns';
     if (path.includes('/neighborhoods')) return 'neighborhoods';
     if (path.includes('/villages')) return 'villages';
     if (path.includes('/groups')) return 'groups';
@@ -69,6 +71,17 @@ const ElectionPreparationPage = () => {
       ),
       color: 'purple',
       path: '/election-preparation/representatives'
+    },
+    {
+      id: 'towns',
+      name: 'Beldeler',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      color: 'amber',
+      path: '/election-preparation/towns'
     },
     {
       id: 'neighborhoods',
@@ -232,6 +245,7 @@ const ElectionPreparationPage = () => {
                 <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
                 <Route path="observers" element={<ObserversPage />} />
                 <Route path="representatives" element={<RepresentativesPage />} />
+                <Route path="towns" element={<TownsOverviewPage />} />
                 <Route path="neighborhoods" element={<NeighborhoodsPage />} />
                 <Route path="villages" element={<VillagesPage />} />
                 <Route path="groups" element={<GroupsPage />} />
@@ -244,6 +258,7 @@ const ElectionPreparationPage = () => {
                 {activeTab === 'ballot-boxes' && <BallotBoxesPage />}
                 {activeTab === 'observers' && <ObserversPage />}
                 {activeTab === 'representatives' && <RepresentativesPage />}
+                {activeTab === 'towns' && <TownsOverviewPage />}
                 {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
                 {activeTab === 'villages' && <VillagesPage />}
                 {activeTab === 'groups' && <GroupsPage />}
@@ -310,6 +325,7 @@ const ElectionPreparationPage = () => {
               <Route path="ballot-boxes/*" element={<BallotBoxesPage />} />
               <Route path="observers" element={<ObserversPage />} />
               <Route path="representatives" element={<RepresentativesPage />} />
+              <Route path="towns" element={<TownsOverviewPage />} />
               <Route path="neighborhoods" element={<NeighborhoodsPage />} />
               <Route path="villages" element={<VillagesPage />} />
               <Route path="groups" element={<GroupsPage />} />
@@ -322,6 +338,7 @@ const ElectionPreparationPage = () => {
               {activeTab === 'ballot-boxes' && <BallotBoxesPage />}
               {activeTab === 'observers' && <ObserversPage />}
               {activeTab === 'representatives' && <RepresentativesPage />}
+              {activeTab === 'towns' && <TownsOverviewPage />}
               {activeTab === 'neighborhoods' && <NeighborhoodsPage />}
               {activeTab === 'villages' && <VillagesPage />}
               {activeTab === 'groups' && <GroupsPage />}
