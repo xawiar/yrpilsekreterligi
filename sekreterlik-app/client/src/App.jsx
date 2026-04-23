@@ -173,6 +173,14 @@ function PublicRoutesWrapper() {
     );
   }
 
+  if (pathname === '/public/landing') {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <PublicLandingPage />
+      </Suspense>
+    );
+  }
+
   if (pathname === '/privacy-policy') {
     return (
       <Suspense fallback={<LoadingSpinner />}>

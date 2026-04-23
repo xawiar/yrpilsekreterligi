@@ -198,11 +198,12 @@ const LandingPageSettings = () => {
   };
 
   // ========= ONIZLEME =========
+  // Giris yapmis kullaniciyi da dogrudan public sayfaya yonlendirir
   const handlePreview = () => {
     try {
-      window.open('/', '_blank', 'noopener,noreferrer');
+      window.open('/public/landing', '_blank', 'noopener,noreferrer');
     } catch (e) {
-      window.location.assign('/');
+      window.location.assign('/public/landing');
     }
   };
 
