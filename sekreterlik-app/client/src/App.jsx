@@ -37,6 +37,7 @@ const AdminRequestsPage = lazy(() => import('./pages/AdminRequestsPage'));
 const AdminProfileRequestsPage = lazy(() => import('./pages/AdminProfileRequestsPage'));
 const AdminApplicationsPage = lazy(() => import('./pages/AdminApplicationsPage'));
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'));
+const VoterSearchPage = lazy(() => import('./pages/VoterSearchPage'));
 const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
 const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
 const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
@@ -339,6 +340,16 @@ function AuthenticatedContent() {
             element={
               <MemberRoute>
                 <MemberRequestsPage />
+              </MemberRoute>
+            }
+          />
+
+          {/* Member Voter Search Route (seçmen sorgulama) */}
+          <Route
+            path="/voter-search"
+            element={
+              <MemberRoute>
+                <VoterSearchPage />
               </MemberRoute>
             }
           />

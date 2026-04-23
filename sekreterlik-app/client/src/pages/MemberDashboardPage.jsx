@@ -1329,6 +1329,31 @@ const MemberDashboardPage = () => {
 
           {/* Kişisel Belgeler panel olarak kaldırıldı — Profilim modal'ı içinde */}
 
+          {/* Seçmen Sorgulama — yetkisi varsa görünür */}
+          {grantedPermissions.includes('access_voter_list') && (
+            <Link
+              to="/voter-search"
+              className="block bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-xl transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Seçmen Sorgulama</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">TC, ad, soyad veya sandık no ile ara</p>
+                  </div>
+                </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+          )}
+
           {/* Taleplerim & Başvurularım — Tek Akordeon */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
