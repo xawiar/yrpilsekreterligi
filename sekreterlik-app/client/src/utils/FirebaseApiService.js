@@ -756,7 +756,10 @@ class FirebaseApiService {
       } catch (authError) {
 
         // Auth'da kullanıcı yoksa oluştur
-        if (authError.code === 'auth/user-not-found') {
+        // Yeni Firebase Auth versiyonu 'user-not-found' yerine 'invalid-credential' dönebilir
+        if (authError.code === 'auth/user-not-found' ||
+            authError.code === 'auth/invalid-credential' ||
+            authError.code === 'auth/invalid-login-credentials') {
           try {
             userCredential = await createUserWithEmailAndPassword(auth, email, password);
             user = userCredential.user;
@@ -768,8 +771,14 @@ class FirebaseApiService {
               false
             );
           } catch (createError) {
-            console.error('Failed to create Firebase Auth user:', createError);
-            throw new Error('Giriş yapılamadı');
+            // Email zaten kullanılıyorsa sessiz geç (Auth'da var ama şifre farklı olabilir)
+            if (createError.code === 'auth/email-already-in-use') {
+              // Firestore'da şifre eşleşmiş zaten, kullanıcıyı Firestore bilgileriyle kabul et
+              user = null; // userCredential yok ama member_user var
+            } else {
+              console.error('Failed to create Firebase Auth user:', createError);
+              throw new Error('Giriş yapılamadı: ' + createError.message);
+            }
           }
         } else {
           throw new Error('Giriş yapılamadı: ' + authError.message);
