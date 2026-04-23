@@ -143,12 +143,11 @@ const ElectionPreparationPage = () => {
 
   const handleTabClick = (tab) => {
     setActiveTab(tab.id);
-    // Eğer route-based navigation mümkünse navigate et, değilse sadece state'i güncelle
-    try {
-      navigate(tab.path);
-    } catch (e) {
-      // Route-based navigation çalışmıyorsa sadece state'i güncelle
-      // Route navigation not available, using state-based navigation
+    // Sadece /election-preparation altındaysak URL navigate et.
+    // Üye dashboard içinde render ediliyorsa (örn. /member-dashboard/election-preparation)
+    // /election-preparation/xxx'e gidersek üye route'undan çıkar, sayfa yenilenir.
+    if (location.pathname.startsWith('/election-preparation')) {
+      try { navigate(tab.path); } catch (_) {}
     }
   };
 
