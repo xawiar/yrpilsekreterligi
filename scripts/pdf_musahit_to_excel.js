@@ -167,79 +167,102 @@ function canonicalMahalle(raw) {
 
 function parseRecords() {
   const text = loadAllPageTexts();
-  // Satırları bul: "SIRA\s+MAHALLE..." pattern'i
-  // SIRA numaraları 1..N — her satır bir sıra numarası ile başlar
-  // Trick: all text concatenated, split by pattern "\d+\s+(MAHALLE_KEYWORD)"
+  // Full text satır sonları olmadan birleşik gelebiliyor: "7813**2** ABDULLAHPAŞA"
+  // TC-bazlı parse: TC'ler benzersiz ve sabit (11 hane). Her TC'nin önü=kaydın isim+mahalle,
+  // sonu=telefon. İki TC arası mesafeyi phoneEnd ile keserek bir sonraki kaydı ayırırız.
 
-  // Önce text'i stabilleştir: newline'ları boşluk yap, çoklu boşluğu tekle
   const flat = text.replace(/\s+/g, ' ').trim();
 
-  // Satır başlarını bul: rakam(lar) + boşluk + mahalle-keyword
-  const keywords = KNOWN_MAHALLE_KEYWORDS.sort((a,b) => b.length - a.length).join('|');
-  const rowStartRe = new RegExp('(\\b\\d+)\\s+(' + keywords + ')', 'gi');
-
-  const starts = [];
-  let m;
-  while ((m = rowStartRe.exec(flat)) !== null) {
-    starts.push({ idx: m.index, sira: m[1], keyword: m[2] });
+  // TC'leri sırayla bul
+  const tcMatches = [];
+  const tcRe = /\b(\d{11})\b/g;
+  let mt;
+  while ((mt = tcRe.exec(flat)) !== null) {
+    tcMatches.push({ tc: mt[1], start: mt.index, end: mt.index + 11 });
   }
+
+  // Keyword regex (canonical mahalle adlarını yakalar)
+  const keywords = KNOWN_MAHALLE_KEYWORDS.sort((a,b) => b.length - a.length).join('|');
+  const keywordRe = new RegExp('(' + keywords + ')', 'i');
+
+  // Telefon: TC'den hemen sonra gelen 10 hane rakam örüntüsü
+  // "0507 534 32 82", "(536) 440-7813", "05075343282", "0 532 065 4474"
+  const phoneAfterTcRe = /^\s*(?:\(?\s*0?\s*(5\d{2})\s*\)?[\s\-]*(\d{3})[\s\-]*(\d{2})[\s\-]*(\d{2}))/;
 
   const records = [];
-  for (let i = 0; i < starts.length; i++) {
-    const s = starts[i];
-    const end = i + 1 < starts.length ? starts[i + 1].idx : flat.length;
-    const chunk = flat.slice(s.idx, end).trim();
-    // chunk = "1 ABDULAHPAŞA MAH MAHMUT ARI 19810869080 (536) 440-7813"
-    // sira_str + mahalleRaw + isim + TC + telefon
+  let prevPhoneEnd = 0;
 
-    // SIRA'yı at
-    let rest = chunk.replace(/^\d+\s+/, '');
+  for (let i = 0; i < tcMatches.length; i++) {
+    const { tc, start: tcStart, end: tcEnd } = tcMatches[i];
 
-    // TC'yi bul (11 hane)
-    const tcM = rest.match(/\b(\d{11})\b/);
-    let tc = tcM ? tcM[1] : '';
-    let tcIdx = tcM ? tcM.index : -1;
+    // Prefix = önceki phoneEnd .. bu tcStart arası
+    const prefix = flat.slice(prevPhoneEnd, tcStart).trim();
+    // prefix = "<sira> <mahalleRaw> <isim>"
+    // Örn: "1 ABDULAHPAŞA MAH MAHMUT ARI"
 
-    // 10 haneli TC fallback (yazım hatası — örn. ATAŞEHİR MELEK KILINÇ 1230511092)
-    if (!tc) {
-      const tc10 = rest.match(/\b(\d{10})\b/);
-      if (tc10) { tc = tc10[1]; tcIdx = tc10.index; }
-    }
+    // Sira: başta gelen 1-4 haneli rakam
+    const siraM = prefix.match(/^(\d{1,4})\s+/);
+    const sira = siraM ? parseInt(siraM[1]) : null;
+    const afterSira = siraM ? prefix.slice(siraM[0].length) : prefix;
 
-    let beforeTc = tcIdx >= 0 ? rest.slice(0, tcIdx).trim() : rest.trim();
-    let afterTc = tcIdx >= 0 ? rest.slice(tcIdx + tc.length).trim() : '';
-
-    // Telefon: beforeTc sonunda rakam olma ihtimali (noksan TC)
-    // afterTc ile telefon — normalize
-    const phone = normPhone(afterTc);
-
-    // beforeTc = "ABDULAHPAŞA MAH MAHMUT ARI"
-    // Mahalle kısmını çıkar (KEYWORD + olası MAH/MAL/TOKİ/* ek'ler)
-    const mm = beforeTc.match(MAHALLE_RE);
+    // Mahalle keyword'u bul
+    const kwM = afterSira.match(keywordRe);
     let mahalleRaw = '';
     let name = '';
-    if (mm) {
-      mahalleRaw = mm[0];
-      name = beforeTc.slice(mm[0].length).trim();
+    if (kwM) {
+      const kwStart = kwM.index;
+      const kwEnd = kwStart + kwM[0].length;
+      // mahalle keyword + olası ekler (MAH, MAHALLE, TOKİ, MALLE, *, OKUL, OKULSOR) boşluk sonuna kadar
+      // Keyword'dan sonra gelen tüm "ek" kelimeleri ata (ad soyada giren ilk normal kelimeye kadar)
+      const rest = afterSira.slice(kwEnd);
+      // İlk kelimeden itibaren ek kelimeleri topla
+      const tokens = rest.split(/\s+/).filter(Boolean);
+      let suffixTokens = [];
+      let nameTokens = [];
+      let collectingSuffix = true;
+      for (const t of tokens) {
+        if (collectingSuffix && /^(MAH\.?|MAHALLE|MAHALLESİ|MALLE|MAL|TOKİ|TOKI|OKUL|OKULSOR|[*]+)$/i.test(t)) {
+          suffixTokens.push(t);
+        } else {
+          collectingSuffix = false;
+          nameTokens.push(t);
+        }
+      }
+      mahalleRaw = afterSira.slice(0, kwEnd) + (suffixTokens.length ? ' ' + suffixTokens.join(' ') : '');
+      name = nameTokens.join(' ').trim();
     } else {
       // fallback: ilk kelime mahalle
-      const parts = beforeTc.split(/\s+/);
-      mahalleRaw = parts[0];
-      name = parts.slice(1).join(' ');
+      const parts = afterSira.split(/\s+/).filter(Boolean);
+      mahalleRaw = parts[0] || '';
+      name = parts.slice(1).join(' ').trim();
     }
 
-    // keyword normalize (yazım hataları)
-    const canonMah = canonicalMahalle(mahalleRaw.replace(/\b(MAH\.?|MAHALLESİ|MALLE|MAL|TOKİ|OKULSOR|OKUL|[*])\b/gi, '').trim());
+    // Telefon yakalama — TC'den hemen sonra
+    const afterTc = flat.slice(tcEnd);
+    const phM = afterTc.match(phoneAfterTcRe);
+    let phone = '';
+    let phoneEnd = tcEnd;
+    if (phM) {
+      phone = '0' + phM[1] + phM[2] + phM[3] + phM[4]; // 11 hane "05XX..."
+      phoneEnd = tcEnd + phM[0].length;
+    }
+
+    const canonMah = canonicalMahalle(
+      mahalleRaw.replace(/\b(MAH\.?|MAHALLESİ|MAHALLE|MALLE|MAL|TOKİ|TOKI|OKULSOR|OKUL|[*]+)\b/gi, '').trim()
+    );
 
     records.push({
-      sira: parseInt(s.sira),
-      mahalleRaw,
+      sira,
+      mahalleRaw: mahalleRaw.trim(),
       mahalle: canonMah,
       tc,
-      name: name.trim(),
+      name,
       phone,
     });
+
+    prevPhoneEnd = phoneEnd;
   }
+
   return records;
 }
 

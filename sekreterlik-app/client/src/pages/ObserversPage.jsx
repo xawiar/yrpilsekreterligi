@@ -241,7 +241,6 @@ const ObserversPage = () => {
 
           const payload = {
             tc, name, phone,
-            ballot_box_id: null,
             region_name: regionName || null,
             district_id,
             town_id,
@@ -250,12 +249,14 @@ const ObserversPage = () => {
             is_chief_observer: chief === 'evet' || chief === 'true' || chief === '1' || chief === 'yes'
           };
 
-          // Upsert: aynı TC varsa update
+          // Upsert: aynı TC varsa update — mevcut ballot_box_id'yi KORU (atama silmesin)
           const existing = observers.find(o => String(o.tc || '').trim() === tc);
           if (existing) {
+            payload.ballot_box_id = existing.ballot_box_id || null;
             await ApiService.updateBallotBoxObserver(existing.id, payload);
             updated++;
           } else {
+            payload.ballot_box_id = null;
             await ApiService.createBallotBoxObserver(payload);
             created++;
           }
