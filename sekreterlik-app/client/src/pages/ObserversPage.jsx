@@ -402,22 +402,15 @@ const ObserversPage = () => {
 
   // ========== Sandık Atamalarını Kaldır ==========
   const handleClearAssignments = async () => {
-    const ok1 = await confirm({
+    const ok = await confirm({
       title: 'Sandık Atamalarını Kaldır',
-      message: 'Tüm müşahitlerin sandık ataması sıfırlanacak (müşahitler silinmez). Devam edilsin mi?',
-      confirmText: 'Devam',
+      message: 'Tüm müşahitlerin sandık ataması sıfırlanacak (müşahitler silinmez). Emin misin?',
+      confirmText: 'Evet, tümünü sıfırla',
       cancelText: 'Vazgeç',
       variant: 'danger'
     });
-    if (!ok1) return;
-    const ok2 = await confirm({
-      title: 'Son Onay',
-      message: 'Gerçekten tüm sandık atamalarını kaldırmak istiyor musun?',
-      confirmText: 'Evet, kaldır',
-      cancelText: 'Hayır',
-      variant: 'danger'
-    });
-    if (!ok2) return;
+    console.log('[ClearAssign] Confirm sonucu:', ok);
+    if (!ok) return;
 
     try {
       setLoading(true);
