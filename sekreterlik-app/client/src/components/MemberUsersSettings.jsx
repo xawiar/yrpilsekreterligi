@@ -403,6 +403,52 @@ const MemberUsersSettings = () => {
     }
   };
 
+  // Auth Sıfırla — Firebase Auth hesabını sil, authUid'yi null yap
+  // Kullanıcı tekrar login olunca yeni Auth hesabı oluşur, Firestore şifreyle senkron olur
+  const handleResetAuth = async (user) => {
+    const name = user.name || user.username || user.id;
+    const confirmed = await confirm({
+      title: 'Firebase Auth Sıfırla',
+      message: `"${name}" için Firebase Auth hesabı silinecek. Kullanıcı tekrar giriş yaptığında yeni bir Auth hesabı oluşturulacak (Firestore'daki şifre ile). Devam edilsin mi?`,
+      confirmText: 'Evet, sıfırla',
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+
+      // 1) Firebase Auth hesabını sil (backend ile)
+      if (user.authUid) {
+        try {
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+          const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${user.authUid}`, {
+            method: 'DELETE'
+          });
+          if (!response.ok && response.status !== 404) {
+            console.warn('Auth delete response:', response.status);
+          }
+        } catch (e) {
+          console.warn('Auth delete network error (devam ediliyor):', e.message);
+        }
+      }
+
+      // 2) Firestore'da authUid = null (kullanıcı bir sonraki login'de yeniden oluşturacak)
+      await updateDoc(doc(db, 'member_users', String(user.id)), {
+        authUid: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      toast.success(`${name} için Auth sıfırlandı. Kullanıcı tekrar giriş yapabilir.`);
+      await fetchMemberUsers();
+    } catch (e) {
+      console.error('Auth reset error:', e);
+      toast.error('Auth sıfırlama hatası: ' + (e.message || 'bilinmeyen'));
+    }
+  };
+
   // Tüm üye kullanıcılarını sil
   const handleDeleteAllMemberUsers = async () => {
     const confirmed = await confirm({
@@ -517,6 +563,7 @@ const MemberUsersSettings = () => {
         setNewPassword={setNewPassword}
         setIsResettingPassword={setIsResettingPassword}
         onDeleteUser={handleDeleteMemberUser}
+        onResetAuth={handleResetAuth}
       />
 
       {isResettingPassword && passwordResetUser && (
