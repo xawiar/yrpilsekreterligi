@@ -687,27 +687,46 @@ class FirebaseApiService {
   }
 
   // Chief Observer Login
-  static async loginChiefObserver(ballotNumber, tc) {
+  // districtId: İlçe doc ID (username prefix'ini belirler). Boş bırakılırsa
+  // geriye dönük uyum: direkt sandık no / TC ile aranır.
+  static async loginChiefObserver(ballotNumber, tc, districtId = '') {
     try {
-      // Önce sandık numarası ile dene, sonra TC ile dene
       const ballotNumberStr = String(ballotNumber).trim();
       const tcStr = String(tc).trim();
       const password = tcStr;
 
-      // Tüm kullanıcıları al — FirebaseService.getAll decrypt fail edebilir,
-      // direkt Firestore query yap
+      // İlçeKodu + SandıkNo formatında username hesapla
+      let prefixedUsername = '';
+      if (districtId) {
+        try {
+          const district = await FirebaseService.getById(this.COLLECTIONS.DISTRICTS, districtId);
+          if (district?.name) {
+            const { observerUsername } = await import('./districtCode');
+            prefixedUsername = observerUsername(district.name, ballotNumberStr);
+          }
+        } catch (e) {
+          console.warn('District fetch failed, fallback:', e);
+        }
+      }
+
       const { collection, getDocs } = await import('firebase/firestore');
       const { db } = await import('../config/firebase');
       const snap = await getDocs(collection(db, 'member_users'));
       const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Önce sandık numarası ile kullanıcı bul (userType='musahit' olmalı)
-      let memberUsers = allUsers.filter(u =>
-        u.userType === 'musahit' && u.username === ballotNumberStr
-      );
-
-      // Sandık numarası ile bulunamazsa TC ile dene
-      if (!memberUsers || memberUsers.length === 0) {
+      // Sıra: prefixed → ballotNumber (legacy) → tc
+      let memberUsers = [];
+      if (prefixedUsername) {
+        memberUsers = allUsers.filter(u =>
+          u.userType === 'musahit' && u.username === prefixedUsername
+        );
+      }
+      if (!memberUsers.length) {
+        memberUsers = allUsers.filter(u =>
+          u.userType === 'musahit' && u.username === ballotNumberStr
+        );
+      }
+      if (!memberUsers.length) {
         memberUsers = allUsers.filter(u =>
           u.userType === 'musahit' && u.username === tcStr
         );
@@ -4928,8 +4947,14 @@ class FirebaseApiService {
             if (ballotBoxId) {
               const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, ballotBoxId);
               if (ballotBox && ballotBox.ballot_number) {
-                // Sandık numarası var - Kullanıcı adı: sandık numarası, Şifre: TC
-                username = String(ballotBox.ballot_number);
+                // Farklı ilçeler aynı sandık no kullanabildiği için username = İlçeKodu + SandıkNo
+                const { observerUsername } = await import('./districtCode');
+                let districtName = '';
+                if (ballotBox.district_id) {
+                  const district = await FirebaseService.getById(this.COLLECTIONS.DISTRICTS, ballotBox.district_id);
+                  districtName = district?.name || '';
+                }
+                username = observerUsername(districtName, ballotBox.ballot_number);
                 password = tc;
               } else {
                 // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
@@ -5012,7 +5037,13 @@ class FirebaseApiService {
           if (observer.ballot_box_id) {
             const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, observer.ballot_box_id);
             if (ballotBox && ballotBox.ballot_number) {
-              username = String(ballotBox.ballot_number);
+              const { observerUsername } = await import('./districtCode');
+              let districtName = '';
+              if (ballotBox.district_id) {
+                const district = await FirebaseService.getById(this.COLLECTIONS.DISTRICTS, ballotBox.district_id);
+                districtName = district?.name || '';
+              }
+              username = observerUsername(districtName, ballotBox.ballot_number);
             }
           }
 

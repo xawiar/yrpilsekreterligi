@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
+import { observerUsername } from '../utils/districtCode';
 import { decryptData, encryptData } from '../utils/crypto';
 import FirebaseService from '../services/FirebaseService';
 import { useToast } from '../contexts/ToastContext';
@@ -232,7 +233,13 @@ const MemberUsersSettings = () => {
           let username, password;
           if (observer.ballot_box_id) {
             const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(observer.ballot_box_id));
-            username = (ballotBox && ballotBox.ballot_number) ? String(ballotBox.ballot_number) : tc;
+            if (ballotBox && ballotBox.ballot_number) {
+              // Username = İlçeKodu + SandıkNo (farklı ilçeler aynı sandık no kullanabilir)
+              const district = districts.find(d => String(d.id) === String(ballotBox.district_id));
+              username = observerUsername(district?.name || '', ballotBox.ballot_number);
+            } else {
+              username = tc;
+            }
           } else { username = tc; }
           password = tc;
           const existingUser = updatedUsers.users?.find(u => u.username === username);

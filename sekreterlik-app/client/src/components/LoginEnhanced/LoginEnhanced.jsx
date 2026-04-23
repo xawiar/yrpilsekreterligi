@@ -37,6 +37,8 @@ const LoginEnhanced = () => {
 
   const [ballotNumber, setBallotNumber] = useState('');
   const [tc, setTc] = useState('');
+  const [chiefObserverDistrictId, setChiefObserverDistrictId] = useState('');
+  const [chiefObserverDistricts, setChiefObserverDistricts] = useState([]);
   const [chiefObserverLoading, setChiefObserverLoading] = useState(false);
   const [chiefObserverError, setChiefObserverError] = useState('');
   const [rememberChiefObserver, setRememberChiefObserver] = useState(false);
@@ -68,6 +70,19 @@ const LoginEnhanced = () => {
     else if (type === 'coordinator') setActiveTab('coordinator');
     else setActiveTab('admin-member');
   }, [searchParams]);
+
+  // Başmüşahit tab'ı açıldığında ilçeleri yükle (dropdown için)
+  useEffect(() => {
+    if (activeTab !== 'chief-observer' || chiefObserverDistricts.length > 0) return;
+    (async () => {
+      try {
+        const list = await ApiService.getDistricts();
+        setChiefObserverDistricts(Array.isArray(list) ? list : (list?.districts || []));
+      } catch (e) {
+        console.warn('Districts fetch failed:', e);
+      }
+    })();
+  }, [activeTab, chiefObserverDistricts.length]);
 
   const handleAdminMemberSubmit = async (e) => {
     e.preventDefault();
@@ -110,9 +125,13 @@ const LoginEnhanced = () => {
   const handleChiefObserverSubmit = async (e) => {
     e.preventDefault();
     setChiefObserverError('');
+    if (!chiefObserverDistrictId) {
+      setChiefObserverError('Lütfen ilçe seçin');
+      return;
+    }
     setChiefObserverLoading(true);
     try {
-      const res = await ApiService.loginChiefObserver(ballotNumber, tc);
+      const res = await ApiService.loginChiefObserver(ballotNumber, tc, chiefObserverDistrictId);
       if (res?.success && res?.user) {
         setUserFromLogin(res.user);
         if (res.token) localStorage.setItem('token', res.token);
@@ -210,13 +229,27 @@ const LoginEnhanced = () => {
                 <motion.div key="chief" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                   <form onSubmit={handleChiefObserverSubmit} className="space-y-4">
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">İlçe</label>
+                      <select
+                        value={chiefObserverDistrictId}
+                        onChange={(e) => setChiefObserverDistrictId(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                      >
+                        <option value="">İlçe seçin</option>
+                        {chiefObserverDistricts.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Sandık Numarası</label>
                       <input
                         type="text"
                         value={ballotNumber}
                         onChange={(e) => setBallotNumber(e.target.value)}
                         required
-                        placeholder="Örn: 1234"
+                        placeholder="Örn: 1001"
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
                       />
                     </div>
