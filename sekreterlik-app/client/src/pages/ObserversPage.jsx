@@ -144,6 +144,253 @@ const ObserversPage = () => {
     });
   };
 
+  // ========== Excel Import (toplu müşahit yükleme) ==========
+  // Beklenen kolonlar: TC | Ad Soyad | Telefon | İl | İlçe | Belde | Mahalle | Köy | Başmüşahit
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const normLoc = (s) => (s || '')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/\s*(mahallesi|mah\.|mahalle)\s*$/i, '')
+    .replace(/\s*(köyü|köy|koyu)\s*$/i, '')
+    .replace(/\s+/g, '').trim();
+  const normIlce = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/^elazığ\s+/i, '').trim();
+
+  const handleExcelImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // reset
+    try {
+      setIsImportingExcel(true);
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(data), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+      if (!rows.length) { toast.error('Excel boş'); return; }
+      // Header'ı atla
+      const dataRows = rows.slice(1).filter(r => r && r.some(c => c != null && String(c).trim() !== ''));
+
+      let created = 0, updated = 0, errors = 0;
+      const errLog = [];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const r = dataRows[i];
+        const rowNo = i + 2;
+        try {
+          const tc = String(r[0] || '').trim();
+          const name = String(r[1] || '').trim();
+          const phone = String(r[2] || '').trim();
+          const regionName = String(r[3] || '').trim();
+          const ilceRaw = String(r[4] || '').trim();
+          const beldeRaw = String(r[5] || '').trim();
+          const mahRaw = String(r[6] || '').trim();
+          const koyRaw = String(r[7] || '').trim();
+          const chief = String(r[8] || '').trim().toLocaleLowerCase('tr-TR');
+
+          if (!tc || !name || !phone) {
+            errLog.push(`Satır ${rowNo}: TC, Ad, Telefon zorunlu`);
+            errors++; continue;
+          }
+
+          // İlçe match (fuzzy)
+          let district_id = null;
+          if (ilceRaw) {
+            const target = normIlce(ilceRaw);
+            const d = districts.find(x =>
+              x.name.toLowerCase() === ilceRaw.toLowerCase() || normIlce(x.name) === target
+            );
+            if (d) district_id = d.id;
+          }
+
+          // Belde match
+          let town_id = null;
+          if (beldeRaw && district_id) {
+            const t = towns.find(x =>
+              x.name.toLowerCase() === beldeRaw.toLowerCase() &&
+              String(x.district_id) === String(district_id)
+            ) || towns.find(x => x.name.toLowerCase() === beldeRaw.toLowerCase());
+            if (t) town_id = t.id;
+          }
+
+          // Mahalle match (fuzzy)
+          let neighborhood_id = null;
+          if (mahRaw && district_id) {
+            const target = normLoc(mahRaw);
+            const n = neighborhoods.find(x =>
+              normLoc(x.name) === target &&
+              String(x.district_id) === String(district_id) &&
+              (town_id ? String(x.town_id) === String(town_id) : true)
+            ) || neighborhoods.find(x =>
+              normLoc(x.name) === target &&
+              String(x.district_id) === String(district_id)
+            );
+            if (n) neighborhood_id = n.id;
+          }
+
+          // Köy match
+          let village_id = null;
+          if (koyRaw && district_id) {
+            const target = normLoc(koyRaw);
+            const v = villages.find(x =>
+              normLoc(x.name) === target &&
+              String(x.district_id) === String(district_id) &&
+              (town_id ? String(x.town_id) === String(town_id) : true)
+            ) || villages.find(x =>
+              normLoc(x.name) === target &&
+              String(x.district_id) === String(district_id)
+            );
+            if (v) village_id = v.id;
+          }
+
+          const payload = {
+            tc, name, phone,
+            ballot_box_id: null,
+            region_name: regionName || null,
+            district_id,
+            town_id,
+            neighborhood_id,
+            village_id,
+            is_chief_observer: chief === 'evet' || chief === 'true' || chief === '1' || chief === 'yes'
+          };
+
+          // Upsert: aynı TC varsa update
+          const existing = observers.find(o => String(o.tc || '').trim() === tc);
+          if (existing) {
+            await ApiService.updateBallotBoxObserver(existing.id, payload);
+            updated++;
+          } else {
+            await ApiService.createBallotBoxObserver(payload);
+            created++;
+          }
+        } catch (err) {
+          errors++;
+          errLog.push(`Satır ${rowNo}: ${err.message || 'hata'}`);
+        }
+      }
+
+      await fetchData();
+      const summary = `${created} eklendi, ${updated} güncellendi${errors ? `, ${errors} hata` : ''}`;
+      if (errors) {
+        toast.error(summary);
+        console.warn('Excel import errors:', errLog.slice(0, 20));
+      } else {
+        toast.success(summary);
+      }
+    } catch (err) {
+      console.error('Excel import error:', err);
+      toast.error('Excel işlenirken hata: ' + err.message);
+    } finally {
+      setIsImportingExcel(false);
+    }
+  };
+
+  // ========== Rastgele Sandık Ata ==========
+  // Her müşahiti kendi mahalle/köyü'ndeki rastgele bir sandığa atar
+  // Tercih: önce başmüşahiti olmayan sandıklar
+  const handleRandomAssign = async () => {
+    const ok = await confirm({
+      title: 'Rastgele Sandık Ata',
+      message: 'Tüm başmüşahitlere kendi mahalle/köyündeki sandıklardan biri rastgele atanacak. Devam edilsin mi?',
+      confirmText: 'Ata',
+      cancelText: 'Vazgeç'
+    });
+    if (!ok) return;
+
+    try {
+      setLoading(true);
+      const chiefs = observers.filter(o => o.is_chief_observer);
+      const currentAssignments = new Set(
+        observers.filter(o => o.ballot_box_id).map(o => String(o.ballot_box_id))
+      );
+
+      let assigned = 0, skipped = 0;
+      const errors = [];
+
+      for (const obs of chiefs) {
+        try {
+          if (obs.ballot_box_id) { skipped++; continue; } // zaten atanmış
+          // Kendi mahalle/köyündeki sandıklar
+          let pool = ballotBoxes.filter(bb => {
+            if (obs.neighborhood_id && String(bb.neighborhood_id) === String(obs.neighborhood_id)) return true;
+            if (obs.village_id && String(bb.village_id) === String(obs.village_id)) return true;
+            return false;
+          });
+          // Hiç yoksa district'teki sandıklara genişlet
+          if (pool.length === 0 && obs.district_id) {
+            pool = ballotBoxes.filter(bb => String(bb.district_id) === String(obs.district_id));
+          }
+          if (pool.length === 0) { skipped++; continue; }
+
+          // Önce atanmamış sandıklar
+          const unassigned = pool.filter(bb => !currentAssignments.has(String(bb.id)));
+          const chosen = (unassigned.length > 0 ? unassigned : pool)[
+            Math.floor(Math.random() * (unassigned.length > 0 ? unassigned.length : pool.length))
+          ];
+
+          await ApiService.updateBallotBoxObserver(obs.id, {
+            ...obs,
+            ballot_box_id: chosen.id
+          });
+          currentAssignments.add(String(chosen.id));
+          assigned++;
+        } catch (e) {
+          errors.push(`${obs.name}: ${e.message || 'hata'}`);
+        }
+      }
+
+      await fetchData();
+      const msg = `${assigned} müşahite sandık atandı, ${skipped} atlandı${errors.length ? `, ${errors.length} hata` : ''}`;
+      if (errors.length) toast.error(msg); else toast.success(msg);
+      if (errors.length) console.warn('Assign errors:', errors.slice(0, 10));
+    } catch (e) {
+      toast.error('Rastgele atama hatası: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== Sandık Atamalarını Kaldır ==========
+  const handleClearAssignments = async () => {
+    const ok1 = await confirm({
+      title: 'Sandık Atamalarını Kaldır',
+      message: 'Tüm müşahitlerin sandık ataması sıfırlanacak (müşahitler silinmez). Devam edilsin mi?',
+      confirmText: 'Devam',
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!ok1) return;
+    const ok2 = await confirm({
+      title: 'Son Onay',
+      message: 'Gerçekten tüm sandık atamalarını kaldırmak istiyor musun?',
+      confirmText: 'Evet, kaldır',
+      cancelText: 'Hayır',
+      variant: 'danger'
+    });
+    if (!ok2) return;
+
+    try {
+      setLoading(true);
+      const withAssignment = observers.filter(o => o.ballot_box_id);
+      let cleared = 0;
+      const errors = [];
+      for (const obs of withAssignment) {
+        try {
+          await ApiService.updateBallotBoxObserver(obs.id, {
+            ...obs,
+            ballot_box_id: null
+          });
+          cleared++;
+        } catch (e) {
+          errors.push(`${obs.name}: ${e.message || 'hata'}`);
+        }
+      }
+      await fetchData();
+      toast.success(`${cleared} müşahitin sandık ataması kaldırıldı${errors.length ? ` (${errors.length} hata)` : ''}`);
+      if (errors.length) console.warn('Clear errors:', errors.slice(0, 10));
+    } catch (e) {
+      toast.error('Atamaları kaldırma hatası: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -510,6 +757,41 @@ const ObserversPage = () => {
                 </svg>
                 <span className="hidden sm:inline">Excel'e Aktar</span>
                 <span className="sm:hidden">Excel</span>
+              </button>
+              {/* Excel ile Toplu Yükle */}
+              <label className={`inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white ${isImportingExcel ? 'bg-blue-400 cursor-wait' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'}`}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span className="hidden sm:inline">{isImportingExcel ? 'Yükleniyor...' : 'Excel ile Yükle'}</span>
+                <span className="sm:hidden">Yükle</span>
+                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcelImportFile} disabled={isImportingExcel} />
+              </label>
+              {/* Rastgele Sandık Ata */}
+              <button
+                onClick={handleRandomAssign}
+                disabled={loading}
+                title="Tüm başmüşahitlere rastgele sandık ata"
+                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <span className="hidden sm:inline">Rastgele Sandık Ata</span>
+                <span className="sm:hidden">Rastgele</span>
+              </button>
+              {/* Sandık Atamalarını Kaldır */}
+              <button
+                onClick={handleClearAssignments}
+                disabled={loading}
+                title="Tüm sandık atamalarını sıfırla"
+                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                </svg>
+                <span className="hidden sm:inline">Atamaları Kaldır</span>
+                <span className="sm:hidden">Sıfırla</span>
               </button>
               <button
                 onClick={() => {
