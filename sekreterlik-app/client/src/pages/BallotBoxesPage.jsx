@@ -753,25 +753,29 @@ const BallotBoxesPage = () => {
   // Filter ballot boxes based on search term and filters
   const getFilteredBallotBoxes = () => {
     return ballotBoxes.filter(ballotBox => {
-      const matchesSearch = searchTerm === '' || 
-        ballotBox.ballot_number.toString().includes(searchTerm) ||
-        ballotBox.institution_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = searchTerm === '' ||
+        String(ballotBox.ballot_number || '').includes(searchTerm) ||
+        String(ballotBox.institution_name || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Get observers for this ballot box
-      const ballotBoxObservers = observers.filter(observer => observer.ballot_box_id === ballotBox.id);
+      // Müşahit durumu
+      const ballotBoxObservers = observers.filter(o => String(o.ballot_box_id) === String(ballotBox.id));
       const hasObservers = ballotBoxObservers.length > 0;
 
-      const matchesDistrict = filters.district_id === '' || 
-        ballotBoxObservers.some(observer => observer.observer_district_id === parseInt(filters.district_id));
-      const matchesNeighborhood = filters.neighborhood_id === '' || 
-        ballotBoxObservers.some(observer => observer.observer_neighborhood_id === parseInt(filters.neighborhood_id));
-      const matchesVillage = filters.village_id === '' || 
-        ballotBoxObservers.some(observer => observer.observer_village_id === parseInt(filters.village_id));
-      const matchesObserverStatus = filters.has_observer === '' || 
+      // Sandığın kendi bölge bilgileri üzerinden filtrele (string karşılaştırma — Firebase ID)
+      const matchesDistrict = filters.district_id === '' ||
+        String(ballotBox.district_id || '') === String(filters.district_id);
+      const matchesTown = !filters.town_id || filters.town_id === '' ||
+        String(ballotBox.town_id || '') === String(filters.town_id);
+      const matchesNeighborhood = filters.neighborhood_id === '' ||
+        String(ballotBox.neighborhood_id || '') === String(filters.neighborhood_id);
+      const matchesVillage = filters.village_id === '' ||
+        String(ballotBox.village_id || '') === String(filters.village_id);
+      const matchesObserverStatus = filters.has_observer === '' ||
         (filters.has_observer === 'true' && hasObservers) ||
         (filters.has_observer === 'false' && !hasObservers);
 
-      return matchesSearch && matchesDistrict && matchesNeighborhood && matchesVillage && matchesObserverStatus;
+      return matchesSearch && matchesDistrict && matchesTown &&
+             matchesNeighborhood && matchesVillage && matchesObserverStatus;
     });
   };
 
