@@ -10,7 +10,7 @@ const PERMISSION_MAP = {
   'positions': { requires: 'add_position' },
   'member-users': { requires: 'manage_member_users' },
   'membership-applications': { adminOnly: true },
-  'landing-page': { adminOnly: true },
+  'landing-page': { requires: 'manage_landing_page', adminAlso: true },
   'districts': { requires: 'add_district' },
   'towns': { requires: 'add_town' },
   'neighborhoods': { requires: 'add_neighborhood' },

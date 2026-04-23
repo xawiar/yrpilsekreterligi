@@ -44,6 +44,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'access_villages_page', label: 'Köyler Sayfası Erişimi' },
   { key: 'access_groups_page', label: 'Gruplar Sayfası Erişimi' },
   { key: 'access_voter_list', label: 'Seçmen Listesi Arama Erişimi', description: 'TC/Ad/Soyad/Sandık ile seçmen sorgulayabilir (yükleme yapamaz)' },
+  { key: 'manage_landing_page', label: 'Tanıtım Sayfası Yönetimi', description: 'Halka açık landing sayfasının içeriğini düzenleyebilir (Ayarlar → Tanıtım Sayfası)' },
 ];
 
 const AuthorizationSettings = () => {
