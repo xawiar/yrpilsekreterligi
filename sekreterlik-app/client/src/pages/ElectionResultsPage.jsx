@@ -1543,6 +1543,21 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
             </div>
             {!readOnly && (
               <div className="flex flex-wrap gap-2 items-center">
+                {/* Halka Açık Sayfa — yeni sekme + URL'i panoya */}
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/public/election-results/${electionId}`;
+                    window.open(url, '_blank', 'noopener');
+                    try { navigator.clipboard?.writeText(url); } catch (_) {}
+                  }}
+                  className="px-4 py-2 text-white rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  title="Halka açık sonuç sayfasını yeni sekmede aç + linki panoya kopyala"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 015.656 0l1.414 1.414a4 4 0 010 5.656l-2.828 2.828a4 4 0 01-5.656 0M10.172 13.828a4 4 0 01-5.656 0L3.1 12.414a4 4 0 010-5.656l2.828-2.828a4 4 0 015.656 0" />
+                  </svg>
+                  Halka Açık Sayfa
+                </button>
                 {/* Sonuclari Yayinla butonu */}
                 <button
                   onClick={handlePublishResults}

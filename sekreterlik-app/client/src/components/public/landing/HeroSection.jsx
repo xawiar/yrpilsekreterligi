@@ -96,10 +96,12 @@ const HeroSection = ({
               {title}
             </h1>
 
-            {/* CTA */}
+            {/* CTA — magnetic effect */}
             <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
               <a
                 href={ctaLink}
+                data-magnetic
+                data-magnetic-strength="0.3"
                 className="inline-flex items-center justify-center min-h-[48px] px-6 py-3 rounded-md bg-white text-primary-800 font-semibold text-sm sm:text-base shadow-lg hover:bg-amber-50 active:scale-[0.98] transition-all"
               >
                 {ctaText}
@@ -109,6 +111,8 @@ const HeroSection = ({
               </a>
               <a
                 href="#about"
+                data-magnetic
+                data-magnetic-strength="0.2"
                 className="inline-flex items-center justify-center min-h-[48px] px-6 py-3 rounded-md border border-white/40 text-white text-sm sm:text-base font-medium hover:bg-white/10 active:scale-[0.98] transition-all"
               >
                 Bizi Tanıyın

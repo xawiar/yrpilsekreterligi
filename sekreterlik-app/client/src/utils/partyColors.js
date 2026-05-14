@@ -30,6 +30,24 @@ export const PARTY_COLORS = {
   'Zafer Partisi': { border: '#000080', bg: '#F0F0FF', text: '#000066' },
   'BAGIMSIZ': { border: '#808080', bg: '#F5F5F5', text: '#555555' },
   'Bagimsiz': { border: '#808080', bg: '#F5F5F5', text: '#555555' },
+  // Tam Türkçe + büyük harf — API'nin döndürdüğü tam parti adları
+  'ADALET VE KALKINMA PARTİSİ': { border: '#FFA500', bg: '#FFF8F0', text: '#CC8400' },
+  'CUMHURİYET HALK PARTİSİ': { border: '#ED1C24', bg: '#FFF0F0', text: '#B01030' },
+  'MİLLİYETÇİ HAREKET PARTİSİ': { border: '#CC0000', bg: '#FFF0F0', text: '#990000' },
+  'YENİDEN REFAH PARTİSİ': { border: '#00843D', bg: '#F0FFF4', text: '#006430' },
+  'YEŞİLLER VE SOL GELECEK PARTİSİ': { border: '#8B00FF', bg: '#F5F0FF', text: '#6A00CC' },
+  'İYİ PARTİ': { border: '#0066B3', bg: '#F0F8FF', text: '#004C8A' },
+  'HALKLARIN DEMOKRATİK PARTİSİ': { border: '#8B00FF', bg: '#F5F0FF', text: '#6A00CC' },
+  'DEM PARTİ': { border: '#8B00FF', bg: '#F5F0FF', text: '#6A00CC' },
+  'DEVA PARTİSİ': { border: '#00A0E3', bg: '#F0FAFF', text: '#007AB8' },
+  'GELECEK PARTİSİ': { border: '#FF1493', bg: '#FFF0F5', text: '#CC1166' },
+  'SAADET PARTİSİ': { border: '#D4001E', bg: '#FFF0F2', text: '#A80018' },
+  'BÜYÜK BİRLİK PARTİSİ': { border: '#C41E3A', bg: '#FFF0F3', text: '#9C1830' },
+  'TÜRKİYE İŞÇİ PARTİSİ': { border: '#FF0000', bg: '#FFF0F0', text: '#CC0000' },
+  'ZAFER PARTİSİ': { border: '#000080', bg: '#F0F0FF', text: '#000066' },
+  // Diğer (aggregate) — nötr gri
+  'Diğer': { border: '#9CA3AF', bg: '#F9FAFB', text: '#4B5563' },
+  'DİĞER': { border: '#9CA3AF', bg: '#F9FAFB', text: '#4B5563' },
 };
 
 // Grafik/chart icin tek renk mapping (pie chart, bar chart, vb.)

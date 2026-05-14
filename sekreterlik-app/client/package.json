@@ -36,6 +36,7 @@
     "@capacitor/status-bar": "^7.0.3",
     "@sentry/react": "^10.22.0",
     "crypto-js": "^4.2.0",
+    "d3-geo": "^3.1.1",
     "firebase": "^10.13.2",
     "framer-motion": "^12.23.22",
     "html2canvas": "^1.4.1",

@@ -1,0 +1,182 @@
+/* ====================================================
+   Landing Page Animations — Light kurumsal tema
+   Mevcut indigo primary + amber accent ile uyumlu.
+   Tüm section'lara scroll reveal, magnetic CTA, 3D tilt,
+   counter, parallax, smooth snap eklenir.
+   ==================================================== */
+
+/* ---------- SMOOTH SCROLL + SNAP ---------- */
+html {
+  scroll-behavior: smooth;
+}
+.landing-snap {
+  scroll-snap-type: y proximity;
+}
+.landing-snap > section {
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
+}
+@media (max-width: 768px) {
+  .landing-snap { scroll-snap-type: none; }
+}
+
+/* ---------- SCROLL PROGRESS BAR ---------- */
+.landing-progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 60;
+  background: transparent;
+  pointer-events: none;
+}
+.landing-progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, rgb(99,102,241) 0%, rgb(251,191,36) 50%, rgb(99,102,241) 100%);
+  box-shadow: 0 0 12px rgba(99,102,241,0.45);
+  transition: width 0.05s linear;
+}
+
+/* ---------- REVEAL STAGGER ---------- */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger nested children — section in olduğunda çocukları sırayla */
+[data-stagger] > * {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-stagger].is-visible > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
+[data-stagger].is-visible > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.15s; }
+[data-stagger].is-visible > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.25s; }
+[data-stagger].is-visible > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 0.35s; }
+[data-stagger].is-visible > *:nth-child(5) { opacity: 1; transform: translateY(0); transition-delay: 0.45s; }
+[data-stagger].is-visible > *:nth-child(6) { opacity: 1; transform: translateY(0); transition-delay: 0.55s; }
+[data-stagger].is-visible > *:nth-child(7) { opacity: 1; transform: translateY(0); transition-delay: 0.65s; }
+[data-stagger].is-visible > *:nth-child(8) { opacity: 1; transform: translateY(0); transition-delay: 0.75s; }
+[data-stagger].is-visible > *:nth-child(n+9) { opacity: 1; transform: translateY(0); transition-delay: 0.85s; }
+
+/* Section'larda otomatik reveal — landing wrapper içindeki tüm section'lar */
+.landing-animated > main > section,
+.landing-animated > main > * {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.landing-animated > main > section.is-visible,
+.landing-animated > main > .is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- SECTION BRIDGES ---------- */
+/* Section'lar arası dekoratif geçiş bantları — düz çizgi olmasın */
+.landing-bridge {
+  position: relative;
+  height: 100px;
+  margin-top: -2px;
+  margin-bottom: -2px;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+.landing-bridge svg { display: block; width: 100%; height: 100%; }
+.landing-bridge-glow {
+  position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(99,102,241,0.65) 20%,
+    rgba(251,191,36,0.85) 50%,
+    rgba(99,102,241,0.65) 80%,
+    transparent 100%);
+  box-shadow: 0 0 20px rgba(99,102,241,0.50), 0 0 40px rgba(251,191,36,0.30);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: opacity 1.2s 0.3s, transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-bridge.is-visible .landing-bridge-glow {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.landing-bridge-dot {
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgb(99,102,241);
+  box-shadow: 0 0 10px rgba(99,102,241,0.65);
+  opacity: 0;
+  transition: opacity 0.8s, transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-bridge.is-visible .landing-bridge-dot { opacity: 0.85; }
+.landing-bridge .landing-bridge-dot:nth-child(2) { left: 22%; top: 35%; transition-delay: 0.10s; }
+.landing-bridge .landing-bridge-dot:nth-child(3) { left: 78%; top: 65%; transition-delay: 0.20s; }
+.landing-bridge .landing-bridge-dot:nth-child(4) { left: 38%; top: 60%; transition-delay: 0.30s; }
+.landing-bridge .landing-bridge-dot:nth-child(5) { left: 62%; top: 28%; transition-delay: 0.40s; background: rgb(251,191,36); box-shadow: 0 0 10px rgba(251,191,36,0.65); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(2) { transform: translateY(-12px); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(3) { transform: translateY(-18px); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(4) { transform: translateY(-10px); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(5) { transform: translateY(-15px); }
+
+/* ---------- MAGNETIC BUTTON ---------- */
+.magnetic-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* ---------- 3D TILT CARD ---------- */
+.tilt-card {
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ---------- PARALLAX ---------- */
+[data-parallax] {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+/* ---------- COUNTER FONT VARIANT ---------- */
+[data-counter] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- HOVER STATE UPGRADES ---------- */
+/* Butonlara global hover lift — Tailwind classes hover:translate-y-... ile çakışmaz */
+.landing-animated a[href*="/apply"]:not(.no-animate),
+.landing-animated button:not(.no-animate) {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, background-color 0.2s;
+}
+
+/* News + Leaders kartları için subtle hover */
+.landing-animated article:hover,
+.landing-animated .card:hover {
+  transform: translateY(-3px);
+}
+
+/* ---------- REDUCED MOTION ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+  .landing-snap { scroll-snap-type: none; }
+  [data-reveal] { opacity: 1; transform: none; }
+  .landing-animated > main > section { opacity: 1; transform: none; }
+}

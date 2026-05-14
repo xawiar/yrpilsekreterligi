@@ -58,6 +58,8 @@ const ApplyCTASection = ({
             <div className="shrink-0">
               <a
                 href={buttonLink}
+                data-magnetic
+                data-magnetic-strength="0.35"
                 className="group inline-flex items-center justify-center min-h-[60px] px-8 py-4 rounded-md bg-white text-primary-800 font-bold text-base md:text-lg shadow-2xl hover:bg-amber-50 hover:shadow-amber-400/30 active:scale-95 transition-all"
               >
                 {buttonText}

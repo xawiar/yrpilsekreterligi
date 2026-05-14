@@ -36,8 +36,10 @@ const LeaderCard = ({ member, size = 'md', onOpen }) => {
       role="button"
       tabIndex={0}
       onClick={handleClick}
+      data-tilt
+      data-tilt-max="8"
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
-      className={`group relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500`}>
+      className={`group relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500`}>
       {/* Avatar */}
       <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-primary-100 via-primary-50 to-white dark:from-primary-900/60 dark:via-gray-800 dark:to-gray-900">
         {photo ? (

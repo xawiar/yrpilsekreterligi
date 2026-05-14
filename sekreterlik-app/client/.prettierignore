@@ -1,0 +1,9 @@
+dist
+node_modules
+_archived_files
+android
+ios
+public/sw.js
+public/firebase-messaging-sw.js
+*.lock
+package-lock.json

@@ -14,6 +14,10 @@ import ElectionSummarySection from '../components/public/landing/ElectionSummary
 import ApplyCTASection from '../components/public/landing/ApplyCTASection';
 import ContactSection from '../components/public/landing/ContactSection';
 import TrainingSection from '../components/public/landing/TrainingSection';
+import LandingBridge from '../components/public/landing/LandingBridge';
+
+import '../styles/landing-animations.css';
+import { initLandingAnimations } from '../utils/landingAnimations';
 
 /**
  * PublicLandingPage
@@ -634,6 +638,21 @@ const PublicLandingPage = () => {
     };
   }, [content?.featuredElectionId]);
 
+  // ===== Landing animasyonları — scroll reveal, magnetic, tilt, counter, parallax =====
+  useEffect(() => {
+    // Sayfa render olduktan sonra observer'ları init et (timeout ile DOM hazır olsun)
+    const t = setTimeout(() => {
+      window.__landingAnimationsCleanup = initLandingAnimations(document);
+    }, 100);
+    return () => {
+      clearTimeout(t);
+      if (typeof window.__landingAnimationsCleanup === 'function') {
+        window.__landingAnimationsCleanup();
+        window.__landingAnimationsCleanup = null;
+      }
+    };
+  }, []);
+
   // Anonim push akışı app-shell'e (AnonymousPushBanner) taşındı
 
   // Loading bloğu kaldırıldı — içerik DEFAULTS ile anında render, fetch geldikçe güncellenir
@@ -654,7 +673,12 @@ const PublicLandingPage = () => {
   const s = content.sections || {};
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
+    <div className="landing-animated landing-snap min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
+      {/* Scroll progress bar */}
+      <div className="landing-progress" aria-hidden="true">
+        <div className="landing-progress-fill" />
+      </div>
+
       <PublicHeader appName={content.appName} />
 
       <main className="flex-1">
@@ -732,6 +756,8 @@ const PublicLandingPage = () => {
           />
         )}
 
+        {/* Hero alt dalgası HeroSection içinde var; Hero → About arası ek bridge gerekmez */}
+
         {s.about !== false && (
           <AboutSection
             title={content.aboutTitle || DEFAULTS.aboutTitle}
@@ -740,13 +766,22 @@ const PublicLandingPage = () => {
           />
         )}
 
+        {/* About (bg-white) → News (bg-gray-50) bridge */}
+        <LandingBridge fillColor="#f9fafb" variant={2} height={80} />
+
         {s.news !== false && (
           <NewsSection news={news} />
         )}
 
+        {/* News (gray-50) → Gallery (bg-white) bridge */}
+        <LandingBridge fillColor="#ffffff" variant={3} height={80} />
+
         {s.gallery !== false && (
           <GallerySection gallery={gallery} />
         )}
+
+        {/* Gallery (white) → Training bridge */}
+        <LandingBridge fillColor="#f9fafb" variant={4} height={80} />
 
         {/* Eğitim ve Bilgilendirme — admin public materyal yüklediyse görünür */}
         <TrainingSection />
@@ -755,8 +790,26 @@ const PublicLandingPage = () => {
         {/* Seçim özeti yalnızca admin Settings'te featuredElectionId
             seçtiyse VE veri yüklendiyse görünür. Aksi halde tamamen gizli. */}
         {s.electionSummary !== false && election && content.featuredElectionId && (
-          <ElectionSummarySection electionResult={election} />
+          <>
+            <ElectionSummarySection electionResult={election} />
+            {/* Detaylı sonuçlar sayfasına CTA — sandık bazlı kırılım, filtreler */}
+            <section className="px-4 sm:px-6 lg:px-8 -mt-4 mb-12">
+              <div className="max-w-6xl mx-auto">
+                <a
+                  href={`/public/election-results/${content.featuredElectionId}`}
+                  className="block w-full sm:w-auto sm:inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white text-base sm:text-lg font-bold rounded-xl shadow-lg active:scale-95 transition"
+                >
+                  <span>📊</span>
+                  <span>Detaylı Seçim Sonuçları</span>
+                  <span aria-hidden>→</span>
+                </a>
+              </div>
+            </section>
+          </>
         )}
+
+        {/* Training → ApplyCTA bridge */}
+        <LandingBridge fillColor="#f9fafb" variant={5} height={80} />
 
         {s.applyCta !== false && (
           <ApplyCTASection
@@ -767,12 +820,18 @@ const PublicLandingPage = () => {
           />
         )}
 
+        {/* ApplyCTA → Leaders bridge */}
+        <LandingBridge fillColor="#ffffff" variant={6} height={80} />
+
         {s.leaders !== false && (
           <LeadersSection
             members={leaders}
             title={content.leadersTitle || DEFAULTS.leadersTitle}
           />
         )}
+
+        {/* Leaders → Contact bridge */}
+        <LandingBridge fillColor="#f9fafb" variant={7} height={80} />
 
         {s.contact !== false && (
           <ContactSection
