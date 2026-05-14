@@ -756,7 +756,13 @@ const PublicLandingPage = () => {
           />
         )}
 
-        {/* Hero alt dalgası HeroSection içinde var; Hero → About arası ek bridge gerekmez */}
+        {/* Hero alt dalgası HeroSection içinde var. Altına marquee strip — dramatic */}
+        <div className="landing-marquee" aria-hidden="true">
+          <div className="landing-marquee-track">
+            <span>HALKIN İRADESİ <span className="star">★</span> YEREL ÇÖZÜM <span className="star">★</span> ŞEFFAF SİYASET <span className="star">★</span> SAHADA HİZMET <span className="star">★</span> ELAZIĞ İÇİN, ELAZIĞ'DAN <span className="star">★</span> </span>
+            <span>HALKIN İRADESİ <span className="star">★</span> YEREL ÇÖZÜM <span className="star">★</span> ŞEFFAF SİYASET <span className="star">★</span> SAHADA HİZMET <span className="star">★</span> ELAZIĞ İÇİN, ELAZIĞ'DAN <span className="star">★</span> </span>
+          </div>
+        </div>
 
         {s.about !== false && (
           <AboutSection

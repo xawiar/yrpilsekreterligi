@@ -39,14 +39,45 @@ html {
 /* ---------- REVEAL STAGGER ---------- */
 [data-reveal] {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(70px);
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 1s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 [data-reveal].is-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* SplitText kaldırıldı — başlık her zaman görünür kalsın. */
+
+/* Hero mesh kaldırıldı — sade hero kalsın. */
+
+/* ---------- MARQUEE strip (hero altına gömülür) ---------- */
+.landing-marquee {
+  background: linear-gradient(90deg, rgb(99,102,241), rgb(67,56,202), rgb(99,102,241));
+  color: white;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  padding: 16px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  z-index: 4;
+}
+.landing-marquee-track {
+  display: inline-flex; gap: 60px;
+  animation: marquee-scroll 40s linear infinite;
+  font-size: 18px; font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.landing-marquee-track .star {
+  color: rgb(251,191,36);
+  font-size: 22px;
+  vertical-align: middle;
+}
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 /* Stagger nested children — section in olduğunda çocukları sırayla */
@@ -66,26 +97,15 @@ html {
 [data-stagger].is-visible > *:nth-child(8) { opacity: 1; transform: translateY(0); transition-delay: 0.75s; }
 [data-stagger].is-visible > *:nth-child(n+9) { opacity: 1; transform: translateY(0); transition-delay: 0.85s; }
 
-/* Section'larda otomatik reveal — landing wrapper içindeki tüm section'lar */
-.landing-animated > main > section,
-.landing-animated > main > * {
-  opacity: 0;
-  transform: translateY(50px);
-  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 1s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-}
-.landing-animated > main > section.is-visible,
-.landing-animated > main > .is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
+/* Auto-reveal KAPALI — section'lar her zaman görünür kalsın.
+   Sadece opt-in [data-reveal] / [data-stagger] çalışır.
+   IntersectionObserver gecikir veya çakışırsa sayfa BLANK kalmasın diye. */
 
 /* ---------- SECTION BRIDGES ---------- */
 /* Section'lar arası dekoratif geçiş bantları — düz çizgi olmasın */
 .landing-bridge {
   position: relative;
-  height: 100px;
+  height: 140px;
   margin-top: -2px;
   margin-bottom: -2px;
   pointer-events: none;
@@ -96,18 +116,18 @@ html {
 .landing-bridge-glow {
   position: absolute;
   top: 50%; left: 0; right: 0;
-  height: 1px;
+  height: 2px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(99,102,241,0.65) 20%,
-    rgba(251,191,36,0.85) 50%,
-    rgba(99,102,241,0.65) 80%,
+    rgba(99,102,241,0.85) 18%,
+    rgba(251,191,36,1) 50%,
+    rgba(99,102,241,0.85) 82%,
     transparent 100%);
-  box-shadow: 0 0 20px rgba(99,102,241,0.50), 0 0 40px rgba(251,191,36,0.30);
+  box-shadow: 0 0 28px rgba(99,102,241,0.65), 0 0 60px rgba(251,191,36,0.50), 0 0 100px rgba(251,191,36,0.25);
   opacity: 0;
   transform: scaleX(0);
   transform-origin: center;
-  transition: opacity 1.2s 0.3s, transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 1.2s 0.3s, transform 1.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .landing-bridge.is-visible .landing-bridge-glow {
   opacity: 1;
@@ -115,22 +135,22 @@ html {
 }
 .landing-bridge-dot {
   position: absolute;
-  width: 5px; height: 5px;
+  width: 8px; height: 8px;
   border-radius: 50%;
   background: rgb(99,102,241);
-  box-shadow: 0 0 10px rgba(99,102,241,0.65);
+  box-shadow: 0 0 16px rgba(99,102,241,0.85), 0 0 30px rgba(99,102,241,0.45);
   opacity: 0;
-  transition: opacity 0.8s, transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.8s, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .landing-bridge.is-visible .landing-bridge-dot { opacity: 0.85; }
 .landing-bridge .landing-bridge-dot:nth-child(2) { left: 22%; top: 35%; transition-delay: 0.10s; }
 .landing-bridge .landing-bridge-dot:nth-child(3) { left: 78%; top: 65%; transition-delay: 0.20s; }
 .landing-bridge .landing-bridge-dot:nth-child(4) { left: 38%; top: 60%; transition-delay: 0.30s; }
-.landing-bridge .landing-bridge-dot:nth-child(5) { left: 62%; top: 28%; transition-delay: 0.40s; background: rgb(251,191,36); box-shadow: 0 0 10px rgba(251,191,36,0.65); }
-.landing-bridge.is-visible .landing-bridge-dot:nth-child(2) { transform: translateY(-12px); }
-.landing-bridge.is-visible .landing-bridge-dot:nth-child(3) { transform: translateY(-18px); }
-.landing-bridge.is-visible .landing-bridge-dot:nth-child(4) { transform: translateY(-10px); }
-.landing-bridge.is-visible .landing-bridge-dot:nth-child(5) { transform: translateY(-15px); }
+.landing-bridge .landing-bridge-dot:nth-child(5) { left: 62%; top: 28%; transition-delay: 0.40s; background: rgb(251,191,36); box-shadow: 0 0 16px rgba(251,191,36,0.85), 0 0 30px rgba(251,191,36,0.45); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(2) { transform: translateY(-22px); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(3) { transform: translateY(-30px); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(4) { transform: translateY(-18px); }
+.landing-bridge.is-visible .landing-bridge-dot:nth-child(5) { transform: translateY(-26px); }
 
 /* ---------- MAGNETIC BUTTON ---------- */
 .magnetic-hover {
