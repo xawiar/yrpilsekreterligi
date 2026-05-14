@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getBrandingSettings } from '../../utils/brandingLoader';
+import { getBrandingSettings, getThemeSettingsCached } from '../../utils/brandingLoader';
 
 /**
  * PublicHeader — Kurumsal, sticky, scroll ile transparan -> solid gecisi.
@@ -22,11 +22,14 @@ const PublicHeader = ({ appName: appNameProp }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [branding, setBranding] = useState(null);
+  const [theme, setTheme] = useState(null);
 
   useEffect(() => {
     try {
       const b = getBrandingSettings();
       if (b) setBranding(b);
+      const t = getThemeSettingsCached();
+      if (t) setTheme(t);
     } catch {
       // ignore
     }
@@ -47,7 +50,7 @@ const PublicHeader = ({ appName: appNameProp }) => {
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen]);
 
-  const appName = appNameProp || branding?.appName || 'Yeniden Refah Partisi';
+  const appName = appNameProp || theme?.publicHeaderTitle || branding?.appName || 'Yeniden Refah Partisi';
   const logoUrl = branding?.logoUrl || '';
 
   const scrollTo = (id) => {
@@ -73,7 +76,7 @@ const PublicHeader = ({ appName: appNameProp }) => {
     : 'text-white';
 
   return (
-    <header className={`fixed top-0 inset-x-0 z-40 w-full transition-colors duration-300 ${headerBg}`}>
+    <header className={`fixed top-0 inset-x-0 z-50 w-full transition-colors duration-300 ${headerBg}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo + isim */}
@@ -94,8 +97,8 @@ const PublicHeader = ({ appName: appNameProp }) => {
               </div>
             )}
             <div className="hidden sm:flex flex-col leading-tight text-left">
-              <span className={`text-[11px] font-semibold uppercase tracking-widest ${scrolled ? 'text-primary-700 dark:text-primary-400' : 'text-white/70'}`}>
-                YRP
+              <span className={`text-[10px] font-semibold uppercase tracking-wider ${scrolled ? 'text-primary-700 dark:text-primary-400' : 'text-white/70'}`}>
+                Yeniden Refah Partisi
               </span>
               <span className={`text-sm md:text-base font-semibold truncate max-w-[220px] ${brandText}`}>
                 {appName}
@@ -116,6 +119,7 @@ const PublicHeader = ({ appName: appNameProp }) => {
             ))}
             <a
               href="/login"
+              onClick={(e) => { e.preventDefault(); setMenuOpen(false); window.location.assign('/login'); }}
               className={`ml-3 px-5 py-2.5 min-h-[44px] inline-flex items-center rounded-md text-sm font-semibold border-2 transition-colors ${
                 scrolled
                   ? 'border-primary-600 text-primary-700 hover:bg-primary-600 hover:text-white dark:border-primary-500 dark:text-primary-400 dark:hover:bg-primary-500 dark:hover:text-white'
@@ -128,13 +132,14 @@ const PublicHeader = ({ appName: appNameProp }) => {
 
           {/* Hamburger mobil */}
           <button
-            onClick={() => setMenuOpen(v => !v)}
-            className={`lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-md transition-colors ${
-              scrolled
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen(v => !v); }}
+            className={`lg:hidden relative z-10 inline-flex items-center justify-center w-11 h-11 rounded-md transition-colors ${
+              scrolled || menuOpen
                 ? 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                 : 'text-white hover:bg-white/10'
             }`}
-            aria-label="Menüyü aç"
+            aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
             aria-expanded={menuOpen}
           >
             {menuOpen ? (
@@ -166,6 +171,7 @@ const PublicHeader = ({ appName: appNameProp }) => {
             ))}
             <a
               href="/login"
+              onClick={(e) => { e.preventDefault(); setMenuOpen(false); window.location.assign('/login'); }}
               className="mt-6 px-5 py-4 min-h-[56px] inline-flex items-center justify-center rounded-lg bg-primary-700 hover:bg-primary-800 active:scale-95 text-white text-lg font-semibold transition-all shadow-lg"
             >
               Giriş Yap

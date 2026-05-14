@@ -996,8 +996,8 @@ class ApiService {
     const firebaseCheck = {
       id,
       USE_FIREBASE,
-      VITE_USE_FIREBASE: VITE_USE_FIREBASE_ENV,
-      VITE_USE_FIREBASE_TYPE: typeof VITE_USE_FIREBASE_ENV,
+      VITE_USE_FIREBASE: import.meta.env.VITE_USE_FIREBASE,
+      VITE_USE_FIREBASE_TYPE: typeof import.meta.env.VITE_USE_FIREBASE,
       API_BASE_URL,
       MODE: import.meta.env.MODE,
       HOSTNAME: typeof window !== 'undefined' ? window.location.hostname : 'server'
@@ -2130,14 +2130,16 @@ class ApiService {
     return data;
   }
 
-  // Approve election result (chief observer only)
-  static async approveElectionResult(id) {
+  // Approve election result — kategori-bazlı (genel seçimde 'cb'/'mv' ayrı onay)
+  // options.auto_approve_reason: sorumlu auto-approve sebebi (örn 'no_observer')
+  static async approveElectionResult(id, category = null, options = {}) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.approveElectionResult(id);
+      return FirebaseApiService.approveElectionResult(id, category, options);
     }
     const response = await fetch(`${API_BASE_URL}/election-results/${id}/approve`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
+      body: JSON.stringify({ category, ...options }),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -2146,15 +2148,31 @@ class ApiService {
     return data;
   }
 
-  // Reject election result (chief observer only)
-  static async rejectElectionResult(id, rejectionReason = '') {
+  // Bir seçim sonucuna ait audit log kayıtlarını getir
+  static async getElectionResultAuditLogs(electionResultId) {
     if (USE_FIREBASE) {
-      return FirebaseApiService.rejectElectionResult(id, rejectionReason);
+      return FirebaseApiService.getElectionResultAuditLogs(electionResultId);
+    }
+    const response = await fetch(
+      `${API_BASE_URL}/election-results/${electionResultId}/audit-logs`,
+      { method: 'GET', headers: this.getAuthHeaders() }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Denetim kayıtları alınamadı');
+    }
+    return data;
+  }
+
+  // Reject election result — kategori-bazlı
+  static async rejectElectionResult(id, rejectionReason = '', category = null) {
+    if (USE_FIREBASE) {
+      return FirebaseApiService.rejectElectionResult(id, rejectionReason, category);
     }
     const response = await fetch(`${API_BASE_URL}/election-results/${id}/reject`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ rejection_reason: rejectionReason }),
+      body: JSON.stringify({ rejection_reason: rejectionReason, category }),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -4235,6 +4253,72 @@ class ApiService {
   static async deleteLandingStorageFile(path) {
     if (USE_FIREBASE) return FirebaseApiService.deleteLandingStorageFile(path);
     throw new Error('Galeri yalnızca Firebase modunda desteklenir');
+  }
+
+  // ===== Training Materials (Eğitim Materyalleri) =====
+  static async getTrainingMaterials(audience, onlyActive) {
+    if (USE_FIREBASE) return FirebaseApiService.getTrainingMaterials(audience, onlyActive);
+    return [];
+  }
+  static async createTrainingMaterial(data) {
+    if (USE_FIREBASE) return FirebaseApiService.createTrainingMaterial(data);
+    throw new Error('Eğitim materyali yalnızca Firebase modunda desteklenir');
+  }
+  static async updateTrainingMaterial(id, data) {
+    if (USE_FIREBASE) return FirebaseApiService.updateTrainingMaterial(id, data);
+    throw new Error('Eğitim materyali yalnızca Firebase modunda desteklenir');
+  }
+  static async deleteTrainingMaterial(id) {
+    if (USE_FIREBASE) return FirebaseApiService.deleteTrainingMaterial(id);
+    throw new Error('Eğitim materyali yalnızca Firebase modunda desteklenir');
+  }
+  static async uploadTrainingFile(file, kind) {
+    if (USE_FIREBASE) return FirebaseApiService.uploadTrainingFile(file, kind);
+    throw new Error('Dosya yükleme yalnızca Firebase modunda desteklenir');
+  }
+  // Training Completions (İzleme Takibi)
+  static async markTrainingOpened(userId, materialId, userInfo) {
+    if (USE_FIREBASE) return FirebaseApiService.markTrainingOpened(userId, materialId, userInfo);
+  }
+  static async updateTrainingProgress(userId, materialId, watchedSeconds, totalSeconds) {
+    if (USE_FIREBASE) return FirebaseApiService.updateTrainingProgress(userId, materialId, watchedSeconds, totalSeconds);
+  }
+  static async markTrainingCompleted(userId, materialId) {
+    if (USE_FIREBASE) return FirebaseApiService.markTrainingCompleted(userId, materialId);
+  }
+  static async getUserTrainingProgress(userId, materialId) {
+    if (USE_FIREBASE) return FirebaseApiService.getUserTrainingProgress(userId, materialId);
+    return null;
+  }
+  static async getTrainingCompletions(materialId) {
+    if (USE_FIREBASE) return FirebaseApiService.getTrainingCompletions(materialId);
+    return [];
+  }
+  static async getAllTrainingCompletions() {
+    if (USE_FIREBASE) return FirebaseApiService.getAllTrainingCompletions();
+    return [];
+  }
+
+  // ===== Ballot Box Documents (Yüklenen Evraklar) =====
+  static async uploadBallotBoxDocument(ballotBoxId, file, opts) {
+    if (USE_FIREBASE) return FirebaseApiService.uploadBallotBoxDocument(ballotBoxId, file, opts);
+    throw new Error('Sandık evrak yükleme yalnızca Firebase modunda desteklenir');
+  }
+  static async getBallotBoxDocuments(ballotBoxId) {
+    if (USE_FIREBASE) return FirebaseApiService.getBallotBoxDocuments(ballotBoxId);
+    return [];
+  }
+  static async getBallotBoxDocumentsForBoxes(ballotBoxIds) {
+    if (USE_FIREBASE) return FirebaseApiService.getBallotBoxDocumentsForBoxes(ballotBoxIds);
+    return [];
+  }
+  static async updateBallotBoxDocument(docId, data) {
+    if (USE_FIREBASE) return FirebaseApiService.updateBallotBoxDocument(docId, data);
+    throw new Error('Sandık evrak güncelleme yalnızca Firebase modunda desteklenir');
+  }
+  static async deleteBallotBoxDocument(docId) {
+    if (USE_FIREBASE) return FirebaseApiService.deleteBallotBoxDocument(docId);
+    throw new Error('Sandık evrak silme yalnızca Firebase modunda desteklenir');
   }
 }
 

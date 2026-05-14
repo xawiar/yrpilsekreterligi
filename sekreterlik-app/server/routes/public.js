@@ -3,8 +3,8 @@ const router = express.Router();
 const { cache } = require('../middleware/cache');
 const { calculateDHondtDetailed } = require('../utils/dhondt');
 
-// Cache for external API calls (5 minutes)
-const externalApiCache = cache(300);
+// Cache for external API calls (30 seconds — secim sonuclari real-time guncellensin)
+const externalApiCache = cache(30);
 
 /**
  * Public Information Page

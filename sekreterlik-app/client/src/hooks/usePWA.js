@@ -22,14 +22,8 @@ export const usePWA = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Service Worker registration - only in production
-    if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-        })
-        .catch((registrationError) => {
-        });
-    }
+    // Service Worker register'ı main.jsx'e taşındı (tek nokta).
+    // Burada sadece online/offline + install prompt event'leri dinlenir.
 
     return () => {
       window.removeEventListener('online', handleOnline);

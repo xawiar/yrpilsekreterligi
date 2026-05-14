@@ -11,6 +11,8 @@ import TownsOverviewPage from './TownsOverviewPage';
 import GroupsPage from './GroupsPage';
 import CoordinatorsPage from './CoordinatorsPage';
 import VoterListSettings from '../components/VoterListSettings';
+import UploadedDocumentsPage from './UploadedDocumentsPage';
+import TrainingManagementPage from './TrainingManagementPage';
 
 const ElectionPreparationPage = () => {
   const location = useLocation();
@@ -28,6 +30,8 @@ const ElectionPreparationPage = () => {
     if (path.includes('/groups')) return 'groups';
     if (path.includes('/coordinators')) return 'coordinators';
     if (path.includes('/voter-list')) return 'voter-list';
+    if (path.includes('/uploaded-documents')) return 'uploaded-documents';
+    if (path.includes('/training')) return 'training';
     return 'ballot-boxes'; // Default
   };
 
@@ -138,6 +142,28 @@ const ElectionPreparationPage = () => {
       ),
       color: 'indigo',
       path: '/election-preparation/voter-list'
+    },
+    {
+      id: 'uploaded-documents',
+      name: 'Yüklenen Evraklar',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      ),
+      color: 'amber',
+      path: '/election-preparation/uploaded-documents'
+    },
+    {
+      id: 'training',
+      name: 'Eğitim',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+        </svg>
+      ),
+      color: 'green',
+      path: '/election-preparation/training'
     }
   ];
 
@@ -187,6 +213,11 @@ const ElectionPreparationPage = () => {
         bg: isActive ? 'bg-blue-600' : 'bg-blue-100 hover:bg-blue-200',
         text: isActive ? 'text-white' : 'text-blue-700',
         border: isActive ? 'border-blue-600' : 'border-blue-200'
+      },
+      amber: {
+        bg: isActive ? 'bg-amber-600' : 'bg-amber-100 hover:bg-amber-200',
+        text: isActive ? 'text-white' : 'text-amber-700',
+        border: isActive ? 'border-amber-600' : 'border-amber-200'
       }
     };
     return colors[color] || colors.indigo;
@@ -250,6 +281,8 @@ const ElectionPreparationPage = () => {
                 <Route path="groups" element={<GroupsPage />} />
                 <Route path="coordinators/*" element={<CoordinatorsPage />} />
                 <Route path="voter-list" element={<VoterListSettings mode="search-only" />} />
+                <Route path="uploaded-documents" element={<UploadedDocumentsPage />} />
+                <Route path="training" element={<TrainingManagementPage />} />
               </Routes>
             ) : (
               /* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */
@@ -267,6 +300,8 @@ const ElectionPreparationPage = () => {
                   </div>
                 )}
                 {activeTab === 'voter-list' && <VoterListSettings mode="search-only" />}
+                {activeTab === 'uploaded-documents' && <UploadedDocumentsPage />}
+                {activeTab === 'training' && <TrainingManagementPage />}
               </>
             )}
           </div>
@@ -330,6 +365,8 @@ const ElectionPreparationPage = () => {
               <Route path="groups" element={<GroupsPage />} />
               <Route path="coordinators/*" element={<CoordinatorsPage />} />
               <Route path="voter-list" element={<VoterListSettings mode="search-only" />} />
+              <Route path="uploaded-documents" element={<UploadedDocumentsPage />} />
+              <Route path="training" element={<TrainingManagementPage />} />
             </Routes>
           ) : (
             /* State-based navigation - MemberDashboardPage içinde render edildiğinde çalışır */
@@ -347,6 +384,8 @@ const ElectionPreparationPage = () => {
                 </div>
               )}
               {activeTab === 'voter-list' && <VoterListSettings mode="search-only" />}
+              {activeTab === 'uploaded-documents' && <UploadedDocumentsPage />}
+              {activeTab === 'training' && <TrainingManagementPage />}
             </>
           )}
         </div>

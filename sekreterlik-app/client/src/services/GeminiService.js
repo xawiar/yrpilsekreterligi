@@ -8,8 +8,9 @@ import { buildSystemPrompt } from '../utils/aiPrompts';
 import { TOOL_DECLARATIONS, executeToolCall } from '../utils/aiTools';
 
 class GeminiService {
-  static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-  static STREAM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent';
+  // gemini-2.0-flash yeni GCP projelerinde mevcut değil (404) — 2.5-flash
+  static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  static STREAM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent';
   static apiKey = null;
   static rateLimitCounter = { count: 0, resetTime: 0 };
   static _siteData = null;

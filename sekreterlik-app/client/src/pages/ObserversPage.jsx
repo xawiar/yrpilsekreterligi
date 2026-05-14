@@ -36,6 +36,8 @@ const ObserversPage = () => {
     is_chief_observer: true // Varsayılan olarak true
   });
   const [searchTerm, setSearchTerm] = useState('');
+  // Tablo sütun sıralama: key + asc/desc. Boş key = orijinal sıra.
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [filters, setFilters] = useState({
     district_id: '',
     town_id: '',
@@ -492,10 +494,28 @@ const ObserversPage = () => {
       const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
       
       // ballot_box_id değerini doğru formata çevir
-      const ballotBoxId = formData.ballot_box_id 
+      const ballotBoxId = formData.ballot_box_id
         ? (USE_FIREBASE ? String(formData.ballot_box_id) : parseInt(formData.ballot_box_id))
         : null;
-      
+
+      // Sandık seçildiyse, müşahitin konum alanlarını sandığın kayıtlı bilgileriyle
+      // ZORLA senkronize et — kullanıcı manuel olarak farklı ilçe/mahalle seçmiş olsa
+      // bile sandığın gerçek konumu öncelikli (aynı sandık no farklı ilçelerde
+      // olabildiği için tutarsız kayıtları önler).
+      let syncedDistrictId = formData.district_id || null;
+      let syncedTownId = formData.town_id || null;
+      let syncedNeighborhoodId = formData.neighborhood_id || null;
+      let syncedVillageId = formData.village_id || null;
+      if (ballotBoxId) {
+        const selectedBallotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
+        if (selectedBallotBox) {
+          syncedDistrictId = selectedBallotBox.district_id || null;
+          syncedTownId = selectedBallotBox.town_id || null;
+          syncedNeighborhoodId = selectedBallotBox.neighborhood_id || null;
+          syncedVillageId = selectedBallotBox.village_id || null;
+        }
+      }
+
       const observerData = {
         ...formData,
         tc: String(formData.tc || '').trim(),
@@ -504,10 +524,10 @@ const ObserversPage = () => {
         // Firebase'de ID'ler string, backend'de integer olarak saklanıyor
         ballot_box_id: ballotBoxId,
         region_name: formData.region_name || null,
-        district_id: formData.district_id ? (USE_FIREBASE ? String(formData.district_id) : parseInt(formData.district_id)) : null,
-        town_id: formData.town_id ? (USE_FIREBASE ? String(formData.town_id) : parseInt(formData.town_id)) : null,
-        neighborhood_id: formData.neighborhood_id ? (USE_FIREBASE ? String(formData.neighborhood_id) : parseInt(formData.neighborhood_id)) : null,
-        village_id: formData.village_id ? (USE_FIREBASE ? String(formData.village_id) : parseInt(formData.village_id)) : null,
+        district_id: syncedDistrictId ? (USE_FIREBASE ? String(syncedDistrictId) : parseInt(syncedDistrictId)) : null,
+        town_id: syncedTownId ? (USE_FIREBASE ? String(syncedTownId) : parseInt(syncedTownId)) : null,
+        neighborhood_id: syncedNeighborhoodId ? (USE_FIREBASE ? String(syncedNeighborhoodId) : parseInt(syncedNeighborhoodId)) : null,
+        village_id: syncedVillageId ? (USE_FIREBASE ? String(syncedVillageId) : parseInt(syncedVillageId)) : null,
         is_chief_observer: formData.is_chief_observer || false
       };
       
@@ -605,6 +625,83 @@ const ObserversPage = () => {
     }
   };
 
+  // TÜM müşahitleri sil — geri alınamaz. İki aşamalı onay.
+  const handleDeleteAllObservers = async () => {
+    const total = observers.length;
+    if (total === 0) {
+      setError('Silinecek müşahit yok');
+      return;
+    }
+
+    const ok = await confirm({
+      title: 'TÜM Müşahitleri Sil',
+      message: `${total} müşahit ve müşahit giriş hesapları KALICI olarak silinecek.\n\n⚠️ Bu işlem GERİ ALINAMAZ.\n\nDevam etmek için onaylayın.`,
+      confirmText: 'EVET, TÜMÜNÜ SİL',
+      variant: 'danger'
+    });
+    if (!ok) return;
+
+    // Native window.confirm ile son barriere — yanlışlıkla tıklamayı önler
+    if (!window.confirm(`SON UYARI: ${total} müşahit ve giriş hesabı silinecek. Devam?`)) return;
+
+    try {
+      setLoading(true);
+      setError('');
+      console.log('[Tümünü Sil] başladı, hedef:', total);
+      const { collection, getDocs, writeBatch, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+
+      // 1) ballot_box_observers koleksiyonunu temizle (chunk'lı batch)
+      console.log('[Tümünü Sil] ballot_box_observers okunuyor...');
+      const obsSnap = await getDocs(collection(db, 'ballot_box_observers'));
+      const obsDocs = obsSnap.docs;
+      console.log('[Tümünü Sil] silinecek müşahit:', obsDocs.length);
+      const CHUNK = 400;
+      let deletedObs = 0;
+      for (let i = 0; i < obsDocs.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        for (const d of obsDocs.slice(i, i + CHUNK)) batch.delete(d.ref);
+        await batch.commit();
+        deletedObs += Math.min(CHUNK, obsDocs.length - i);
+      }
+
+      // 2) member_users tarafı:
+      //    - Saf müşahit kullanıcıları (userType='musahit', member_id yok) → sil
+      //    - Hibrit (üye+müşahit) → sadece observerId temizle, kullanıcı kalır
+      const muSnap = await getDocs(collection(db, 'member_users'));
+      const pureMusahitDocs = muSnap.docs.filter(d => {
+        const data = d.data();
+        return data.userType === 'musahit' && !data.member_id && !data.memberId;
+      });
+      const hybridDocs = muSnap.docs.filter(d => {
+        const data = d.data();
+        return !!data.observerId && (data.member_id || data.memberId);
+      });
+      let deletedUsers = 0;
+      for (let i = 0; i < pureMusahitDocs.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        for (const d of pureMusahitDocs.slice(i, i + CHUNK)) batch.delete(d.ref);
+        await batch.commit();
+        deletedUsers += Math.min(CHUNK, pureMusahitDocs.length - i);
+      }
+      let cleanedHybrid = 0;
+      for (let i = 0; i < hybridDocs.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        for (const d of hybridDocs.slice(i, i + CHUNK)) batch.update(d.ref, { observerId: null });
+        await batch.commit();
+        cleanedHybrid += Math.min(CHUNK, hybridDocs.length - i);
+      }
+
+      await fetchData();
+      alert(`Silindi:\n• ${deletedObs} müşahit kaydı\n• ${deletedUsers} giriş hesabı\n• ${cleanedHybrid} üye kullanıcısının müşahit yetkisi kaldırıldı\n\nNot: Firebase Auth hesapları Cloud Function trigger ile arka planda silinir.`);
+    } catch (err) {
+      console.error('Delete all observers error:', err);
+      setError('Toplu silme hatası: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCancel = () => {
     // Reset form but keep region_name from localStorage and is_chief_observer as true
     const savedRegionName = localStorage.getItem('admin_region_name') || '';
@@ -694,17 +791,20 @@ const ObserversPage = () => {
   // Filter observers based on search term and filters
   const getFilteredObservers = () => {
     return observers.filter(observer => {
-      const matchesSearch = searchTerm === '' || 
-        observer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        observer.tc.includes(searchTerm) ||
-        observer.phone.includes(searchTerm) ||
-        getBallotBoxName(observer.ballot_box_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getLocationInfo(observer).toLowerCase().includes(searchTerm.toLowerCase());
+      const q = searchTerm.toLowerCase();
+      const matchesSearch = searchTerm === '' ||
+        (observer.name || '').toLowerCase().includes(q) ||
+        (observer.tc || '').includes(searchTerm) ||
+        (observer.phone || '').includes(searchTerm) ||
+        getBallotBoxName(observer.ballot_box_id).toLowerCase().includes(q) ||
+        getLocationInfo(observer).toLowerCase().includes(q);
 
-      const matchesDistrict = filters.district_id === '' || observer.observer_district_id === parseInt(filters.district_id);
-      const matchesTown = filters.town_id === '' || observer.observer_town_id === parseInt(filters.town_id);
-      const matchesNeighborhood = filters.neighborhood_id === '' || observer.observer_neighborhood_id === parseInt(filters.neighborhood_id);
-      const matchesVillage = filters.village_id === '' || observer.observer_village_id === parseInt(filters.village_id);
+      // Firestore'da ID'ler string, filtreler de string — string karşılaştırma
+      // güvenli (number/string her tipi yakalar). Field adı: district_id (observer_ prefix'siz).
+      const matchesDistrict = filters.district_id === '' || String(observer.district_id ?? '') === String(filters.district_id);
+      const matchesTown = filters.town_id === '' || String(observer.town_id ?? '') === String(filters.town_id);
+      const matchesNeighborhood = filters.neighborhood_id === '' || String(observer.neighborhood_id ?? '') === String(filters.neighborhood_id);
+      const matchesVillage = filters.village_id === '' || String(observer.village_id ?? '') === String(filters.village_id);
       const matchesChiefObserver = filters.is_chief_observer === '' || 
         (filters.is_chief_observer === 'true' && observer.is_chief_observer) ||
         (filters.is_chief_observer === 'false' && !observer.is_chief_observer);
@@ -713,9 +813,40 @@ const ObserversPage = () => {
     });
   };
 
+  // Sütun başlığına tıkla → asc/desc toggle, farklı kolon → asc'den başlar
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const sortObservers = (list) => {
+    if (!sortConfig.key) return list;
+    const getValue = (obs) => {
+      switch (sortConfig.key) {
+        case 'tc': return obs.tc || '';
+        case 'name': return obs.name || '';
+        case 'phone': return obs.phone || '';
+        case 'sandik': return getBallotBoxName(obs.ballot_box_id) || '';
+        case 'konum': return getLocationInfo(obs) || '';
+        default: return '';
+      }
+    };
+    const sorted = [...list].sort((a, b) =>
+      String(getValue(a)).localeCompare(String(getValue(b)), 'tr', { numeric: true, sensitivity: 'base' })
+    );
+    return sortConfig.direction === 'desc' ? sorted.reverse() : sorted;
+  };
+
+  const sortIndicator = (key) => {
+    if (sortConfig.key !== key) return ' ↕';
+    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+  };
+
   const filteredObservers = getFilteredObservers();
-  const chiefObservers = filteredObservers.filter(observer => observer.is_chief_observer);
-  const regularObservers = filteredObservers.filter(observer => !observer.is_chief_observer);
+  const chiefObservers = sortObservers(filteredObservers.filter(observer => observer.is_chief_observer));
+  const regularObservers = sortObservers(filteredObservers.filter(observer => !observer.is_chief_observer));
 
   // Calculate statistics
   const getStatistics = () => {
@@ -852,6 +983,19 @@ const ObserversPage = () => {
                 <span className="sm:hidden">Yükle</span>
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcelImportFile} disabled={isImportingExcel} />
               </label>
+              {/* Tümünü Sil */}
+              <button
+                onClick={handleDeleteAllObservers}
+                disabled={loading || observers.length === 0}
+                title="TÜM müşahitleri ve giriş hesaplarını sil (geri alınamaz)"
+                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="hidden sm:inline">Tümünü Sil</span>
+                <span className="sm:hidden">Sil</span>
+              </button>
               {/* Rastgele Sandık Ata */}
               <button
                 onClick={handleRandomAssign}
@@ -1243,11 +1387,31 @@ const ObserversPage = () => {
                         className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">Sandık seçin (opsiyonel)</option>
-                        {ballotBoxes.map(ballotBox => (
-                          <option key={ballotBox.id} value={ballotBox.id}>
-                            {ballotBox.ballot_number} - {ballotBox.institution_name}
-                          </option>
-                        ))}
+                        {(() => {
+                          // Aynı sandık no farklı ilçelerde olabildiği için
+                          // (örn. MERKEZ-1001 ve AĞIN-1001) ilçe adını label'a ekliyoruz.
+                          // İlçe seçiliyse o ilçenin sandıklarını öne al.
+                          const districtNameById = {};
+                          (districts || []).forEach(d => { districtNameById[String(d.id)] = d.name; });
+                          const selectedDistrictId = formData.district_id ? String(formData.district_id) : null;
+                          const sortedBallotBoxes = [...ballotBoxes].sort((a, b) => {
+                            const aMatch = selectedDistrictId && String(a.district_id) === selectedDistrictId ? 0 : 1;
+                            const bMatch = selectedDistrictId && String(b.district_id) === selectedDistrictId ? 0 : 1;
+                            if (aMatch !== bMatch) return aMatch - bMatch;
+                            const aName = districtNameById[String(a.district_id)] || 'ZZZ';
+                            const bName = districtNameById[String(b.district_id)] || 'ZZZ';
+                            if (aName !== bName) return aName.localeCompare(bName, 'tr');
+                            return String(a.ballot_number || '').localeCompare(String(b.ballot_number || ''), 'tr', { numeric: true });
+                          });
+                          return sortedBallotBoxes.map(ballotBox => {
+                            const dName = districtNameById[String(ballotBox.district_id)] || '—';
+                            return (
+                              <option key={ballotBox.id} value={ballotBox.id}>
+                                [{dName}] {ballotBox.ballot_number} - {ballotBox.institution_name}
+                              </option>
+                            );
+                          });
+                        })()}
                       </select>
                     </div>
                     <div>
@@ -1405,9 +1569,9 @@ const ObserversPage = () => {
                 {chiefObservers.length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Başmüşahitler</h3>
-                    
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-4">
+
+                    {/* Card Grid (tüm ekranlarda) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {chiefObservers.map((observer) => (
                         <div key={observer.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                           <div className="space-y-3">
@@ -1451,78 +1615,15 @@ const ObserversPage = () => {
                         </div>
                       ))}
                     </div>
-
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-900">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              TC
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Ad Soyad
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Telefon
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Sandık
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Konum
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              İşlemler
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                          {chiefObservers.map((observer) => (
-                            <tr key={observer.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {maskTC(observer.tc)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {observer.name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {observer.phone}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {getBallotBoxName(observer.ballot_box_id)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {getLocationInfo(observer)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button
-                                  onClick={() => handleEdit(observer)}
-                                  className="text-indigo-600 hover:text-indigo-900 mr-3"
-                                >
-                                  Düzenle
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(observer.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  Sil
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   </div>
                 )}
 
                 {regularObservers.length > 0 && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Müşahitler</h3>
-                    
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-4">
+
+                    {/* Card Grid (tüm ekranlarda) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {regularObservers.map((observer) => (
                         <div key={observer.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                           <div className="space-y-3">
@@ -1567,68 +1668,6 @@ const ObserversPage = () => {
                       ))}
                     </div>
 
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-900">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              TC
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Ad Soyad
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Telefon
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Sandık
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Konum
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              İşlemler
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                          {regularObservers.map((observer) => (
-                            <tr key={observer.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {maskTC(observer.tc)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {observer.name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {observer.phone}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {getBallotBoxName(observer.ballot_box_id)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                {getLocationInfo(observer)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button
-                                  onClick={() => handleEdit(observer)}
-                                  className="text-indigo-600 hover:text-indigo-900 mr-3"
-                                >
-                                  Düzenle
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(observer.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  Sil
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   </div>
                 )}
 

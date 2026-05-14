@@ -21,12 +21,24 @@ const AdminNotificationPanel = () => {
   const [url, setUrl] = useState('');
   const [sending, setSending] = useState(false);
 
+  // FAZ 3.3: Anket bildirimi (POLL_INVITE tipi seçildiğinde)
+  const [polls, setPolls] = useState([]);
+  const [selectedPollId, setSelectedPollId] = useState('');
+  const [pollOptions, setPollOptions] = useState([]); // seçilen poll'un options'ı (gösterim için)
+
   // Hedef secimi verileri (Madde 7)
   const [regions, setRegions] = useState([]);
   const [positions, setPositions] = useState([]);
   const [members, setMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [loadingData, setLoadingData] = useState(true);
+  // FAZ 3.2: Hiyerarşik hedefleme (ilçe/mahalle/köy cascade)
+  const [districts, setDistricts] = useState([]);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [villages, setVillages] = useState([]);
+  const [selectedDistrictId, setSelectedDistrictId] = useState('');
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState('');
+  const [selectedVillageId, setSelectedVillageId] = useState('');
 
   // Onizleme (Madde 8)
   const [targetCount, setTargetCount] = useState(0);
@@ -48,14 +60,23 @@ const AdminNotificationPanel = () => {
     const loadData = async () => {
       setLoadingData(true);
       try {
-        const [regionsData, positionsData, membersData] = await Promise.all([
+        const [regionsData, positionsData, membersData, districtsData, neighborhoodsData, villagesData, pollsData] = await Promise.all([
           ApiService.getRegions(),
           ApiService.getPositions(),
           ApiService.getMembers(),
+          ApiService.getDistricts ? ApiService.getDistricts() : Promise.resolve([]),
+          ApiService.getNeighborhoods ? ApiService.getNeighborhoods() : Promise.resolve([]),
+          ApiService.getVillages ? ApiService.getVillages() : Promise.resolve([]),
+          ApiService.getPolls ? ApiService.getPolls() : Promise.resolve([]),
         ]);
         setRegions(Array.isArray(regionsData) ? regionsData : []);
         setPositions(Array.isArray(positionsData) ? positionsData : []);
         setMembers(Array.isArray(membersData) ? membersData : []);
+        setDistricts(Array.isArray(districtsData) ? districtsData : []);
+        setNeighborhoods(Array.isArray(neighborhoodsData) ? neighborhoodsData : []);
+        setVillages(Array.isArray(villagesData) ? villagesData : []);
+        // Sadece aktif anketleri göster
+        setPolls(Array.isArray(pollsData) ? pollsData.filter(p => p.status === 'active') : []);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -64,6 +85,37 @@ const AdminNotificationPanel = () => {
     };
     loadData();
   }, []);
+
+  // Seçilen poll değişince options'ı güncelle (UI'da göstermek için)
+  useEffect(() => {
+    if (!selectedPollId) {
+      setPollOptions([]);
+      return;
+    }
+    const p = polls.find(x => String(x.id) === String(selectedPollId));
+    if (p) {
+      const opts = Array.isArray(p.options) ? p.options : [];
+      setPollOptions(opts);
+      // Otomatik başlık doldur
+      if (!title) setTitle(`🗳️ Anket: ${p.title}`);
+      if (!body) setBody(p.description || 'Görüşünüzü bildirin');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPollId, polls]);
+
+  // İlçe seçimi değişince mahalle/köy seçimini sıfırla (cascade)
+  useEffect(() => {
+    setSelectedNeighborhoodId('');
+    setSelectedVillageId('');
+  }, [selectedDistrictId]);
+
+  // Seçilen ilçeye göre mahalle/köy filtrele
+  const filteredNeighborhoods = selectedDistrictId
+    ? neighborhoods.filter(n => String(n.district_id || n.districtId) === String(selectedDistrictId))
+    : [];
+  const filteredVillages = selectedDistrictId
+    ? villages.filter(v => String(v.district_id || v.districtId) === String(selectedDistrictId))
+    : [];
 
   // Hedef sayisi hesapla (Madde 8)
   useEffect(() => {
@@ -82,7 +134,7 @@ const AdminNotificationPanel = () => {
 
     const debounce = setTimeout(calculateCount, 300);
     return () => clearTimeout(debounce);
-  }, [targetType, targetValue, members.length]);
+  }, [targetType, targetValue, members.length, selectedDistrictId, selectedNeighborhoodId, selectedVillageId]);
 
   // Gecmis yukle
   const loadHistory = useCallback(async () => {
@@ -116,6 +168,16 @@ const AdminNotificationPanel = () => {
     if (targetType === TARGET_TYPES.REGION) return { type: TARGET_TYPES.REGION, value: targetValue };
     if (targetType === TARGET_TYPES.ROLE) return { type: TARGET_TYPES.ROLE, value: targetValue };
     if (targetType === TARGET_TYPES.SINGLE) return { type: TARGET_TYPES.SINGLE, value: targetValue };
+    if (targetType === TARGET_TYPES.CHIEF_OBSERVERS) return { type: TARGET_TYPES.CHIEF_OBSERVERS };
+    if (targetType === TARGET_TYPES.NEIGHBORHOOD_REPS) return { type: TARGET_TYPES.NEIGHBORHOOD_REPS };
+    // FAZ 3.2: Hiyerarşik hedefleme — köy/mahalle seçilmişse onu kullan, yoksa ilçe
+    if (targetType === TARGET_TYPES.DISTRICT) {
+      if (selectedVillageId) return { type: TARGET_TYPES.VILLAGE, value: selectedVillageId };
+      if (selectedNeighborhoodId) return { type: TARGET_TYPES.NEIGHBORHOOD, value: selectedNeighborhoodId };
+      if (selectedDistrictId) return { type: TARGET_TYPES.DISTRICT, value: selectedDistrictId };
+      return { type: TARGET_TYPES.ALL };
+    }
+    if (targetType === TARGET_TYPES.ANONYMOUS_ONLY) return { type: TARGET_TYPES.ANONYMOUS_ONLY };
     return { type: TARGET_TYPES.ALL };
   };
 
@@ -129,8 +191,24 @@ const AdminNotificationPanel = () => {
       toast?.error?.('Mesaj zorunludur');
       return;
     }
-    if (targetType !== TARGET_TYPES.ALL && !targetValue) {
-      toast?.error?.('Hedef secimi yapiniz');
+
+    // Anket bildirimi seçildi ama poll seçilmedi
+    if (type === NOTIFICATION_TYPES.POLL_INVITE && !selectedPollId) {
+      toast?.error?.('Lütfen bir anket seçin (önce Anketler sayfasından oluşturmanız gerek)');
+      return;
+    }
+
+    const noValueNeeded = targetType === TARGET_TYPES.ALL ||
+      targetType === TARGET_TYPES.CHIEF_OBSERVERS ||
+      targetType === TARGET_TYPES.NEIGHBORHOOD_REPS ||
+      targetType === TARGET_TYPES.ANONYMOUS_ONLY;
+    if (targetType === TARGET_TYPES.DISTRICT) {
+      if (!selectedDistrictId) {
+        toast?.error?.('Lütfen ilçe seçin');
+        return;
+      }
+    } else if (!noValueNeeded && !targetValue) {
+      toast?.error?.('Hedef seçimi yapınız');
       return;
     }
 
@@ -141,19 +219,26 @@ const AdminNotificationPanel = () => {
         scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
       }
 
+      // Anket bildirimi için poll alanları
+      const isPoll = type === NOTIFICATION_TYPES.POLL_INVITE && selectedPollId;
+      const pollExtras = isPoll
+        ? { pollId: String(selectedPollId), pollOptions }
+        : {};
+
       const result = await NotificationService.createNotification({
         title: title.trim(),
         body: body.trim(),
         type,
         target: buildTarget(),
-        url: url.trim() || null,
+        url: url.trim() || (isPoll ? `/polls/${selectedPollId}` : null),
         scheduledAt,
+        ...pollExtras,
       });
 
       if (result.success) {
         const statusMsg = result.status === 'scheduled'
           ? 'Bildirim zamanlanarak kaydedildi'
-          : `Bildirim ${result.targetCount} kisiye gonderildi`;
+          : `Bildirim ${result.targetCount} kişiye gönderildi`;
         toast?.success?.(statusMsg);
         // Formu sifirla
         setTitle('');
@@ -162,6 +247,11 @@ const AdminNotificationPanel = () => {
         setTargetType(TARGET_TYPES.ALL);
         setTargetValue('');
         setUrl('');
+        setSelectedDistrictId('');
+        setSelectedNeighborhoodId('');
+        setSelectedVillageId('');
+        setSelectedPollId('');
+        setPollOptions([]);
         setIsScheduled(false);
         setScheduledDate('');
         setScheduledTime('');
@@ -216,6 +306,8 @@ const AdminNotificationPanel = () => {
       case TARGET_TYPES.REGION: return `Bolge: ${target.value}`;
       case TARGET_TYPES.ROLE: return `Gorev: ${target.value}`;
       case TARGET_TYPES.SINGLE: return `Tek kisi`;
+      case TARGET_TYPES.CHIEF_OBSERVERS: return `Tum Basmusahitler`;
+      case TARGET_TYPES.NEIGHBORHOOD_REPS: return `Tum Mahalle Temsilcileri`;
       default: return '-';
     }
   };
@@ -323,6 +415,71 @@ const AdminNotificationPanel = () => {
             </select>
           </div>
 
+          {/* FAZ 3.3: Anket bildirimi için poll seçimi */}
+          {type === NOTIFICATION_TYPES.POLL_INVITE && (
+            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800 space-y-3">
+              <div className="flex items-start gap-2">
+                <span className="text-2xl">🗳️</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                    Anket Bildirimi (Soapbox Pattern)
+                  </div>
+                  <p className="text-xs text-purple-800 dark:text-purple-200 mt-1">
+                    Bildirim üzerinde kullanıcı tek tıkla oy verebilir. 2 seçenekli anketlerde
+                    bildirim üzerinde butonlar görünür; 3+ seçenekli anketlerde tıklayınca uygulama açılır.
+                    iOS'ta tüm anketler için uygulama açılır (Apple kısıtı).
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Anket seçin
+                </label>
+                <select
+                  value={selectedPollId}
+                  onChange={(e) => setSelectedPollId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">— Aktif anket seçin —</option>
+                  {polls.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({Array.isArray(p.options) ? p.options.length : 0} seçenek)
+                    </option>
+                  ))}
+                </select>
+                {polls.length === 0 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    ⚠️ Aktif anket yok. Önce <strong>Anketler</strong> sayfasından oluşturun.
+                  </p>
+                )}
+              </div>
+
+              {pollOptions.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                    Seçenekler ({pollOptions.length})
+                    {pollOptions.length > 2 && (
+                      <span className="ml-2 text-amber-600 dark:text-amber-400">
+                        — bildirim üzerinde buton gözükmez (mobile sınırı 2)
+                      </span>
+                    )}
+                  </div>
+                  <ul className="space-y-1">
+                    {pollOptions.map((opt, idx) => (
+                      <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded ${idx < 2 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                          {idx < 2 ? `Buton ${idx + 1}` : 'Sadece deep link'}
+                        </span>
+                        {opt}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Hedef Secimi (Madde 6, 7) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -330,10 +487,14 @@ const AdminNotificationPanel = () => {
             </label>
             <div className="flex flex-wrap gap-3 mb-3">
               {[
-                { value: TARGET_TYPES.ALL, label: 'Tum Uyeler' },
-                { value: TARGET_TYPES.REGION, label: 'Bolge' },
-                { value: TARGET_TYPES.ROLE, label: 'Gorev' },
-                { value: TARGET_TYPES.SINGLE, label: 'Tek Kisi' },
+                { value: TARGET_TYPES.ALL, label: '🌍 Herkes (Üye + Anonim)' },
+                { value: TARGET_TYPES.ANONYMOUS_ONLY, label: '🌐 Sadece Uygulamayı İndirenler' },
+                { value: TARGET_TYPES.DISTRICT, label: '📍 Bölge Bazlı (İlçe/Mahalle/Köy)' },
+                { value: TARGET_TYPES.ROLE, label: '👔 Görev' },
+                { value: TARGET_TYPES.REGION, label: '🗺️ Bölge (eski)' },
+                { value: TARGET_TYPES.SINGLE, label: '👤 Tek Kişi' },
+                { value: TARGET_TYPES.CHIEF_OBSERVERS, label: '🗳️ Tüm Başmüşahitler' },
+                { value: TARGET_TYPES.NEIGHBORHOOD_REPS, label: '🏘️ Tüm Mahalle Temsilcileri' },
               ].map(opt => (
                 <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -341,13 +502,94 @@ const AdminNotificationPanel = () => {
                     name="targetType"
                     value={opt.value}
                     checked={targetType === opt.value}
-                    onChange={() => { setTargetType(opt.value); setTargetValue(''); setMemberSearch(''); }}
+                    onChange={() => {
+                      setTargetType(opt.value);
+                      setTargetValue('');
+                      setMemberSearch('');
+                      setSelectedDistrictId('');
+                      setSelectedNeighborhoodId('');
+                      setSelectedVillageId('');
+                    }}
                     className="text-indigo-600 focus:ring-indigo-500"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
                 </label>
               ))}
             </div>
+
+            {/* FAZ 3.2: Hiyerarşik bölge cascade — İlçe → Mahalle/Köy */}
+            {targetType === TARGET_TYPES.DISTRICT && (
+              <div className="space-y-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                <div className="text-sm font-medium text-indigo-900 dark:text-indigo-100 mb-2">
+                  📍 Bölge bazlı hedefleme — önce ilçe seçin, sonra mahalle/köy daraltabilirsiniz
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    1. İlçe
+                  </label>
+                  <select
+                    value={selectedDistrictId}
+                    onChange={(e) => setSelectedDistrictId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">— İlçe seçin (zorunlu) —</option>
+                    {districts.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedDistrictId && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        2a. Mahalle (opsiyonel — tüm ilçe için boş bırakın)
+                      </label>
+                      <select
+                        value={selectedNeighborhoodId}
+                        onChange={(e) => {
+                          setSelectedNeighborhoodId(e.target.value);
+                          if (e.target.value) setSelectedVillageId('');
+                        }}
+                        disabled={!!selectedVillageId}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                      >
+                        <option value="">— Tüm mahalleler —</option>
+                        {filteredNeighborhoods.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        2b. Köy (opsiyonel — mahalle veya köy birinden seç)
+                      </label>
+                      <select
+                        value={selectedVillageId}
+                        onChange={(e) => {
+                          setSelectedVillageId(e.target.value);
+                          if (e.target.value) setSelectedNeighborhoodId('');
+                        }}
+                        disabled={!!selectedNeighborhoodId}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                      >
+                        <option value="">— Tüm köyler —</option>
+                        {filteredVillages.map(v => (
+                          <option key={v.id} value={v.id}>{v.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="text-xs text-gray-600 dark:text-gray-400 italic mt-2">
+                      💡 İlçe + mahalle/köy alanları kombinasyonu kullanılarak hedef daraltılır.
+                      Sadece ilçe seçilirse tüm ilçedeki üyelere gönderilir.
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Bolge dropdown (Madde 7) */}
             {targetType === TARGET_TYPES.REGION && (
@@ -571,6 +813,39 @@ const AdminNotificationPanel = () => {
                       <span>{formatDate(item.createdAt)}</span>
                       <span>{getTargetLabel(item.target)}</span>
                     </div>
+                    {/* FAZ 4.2: Push delivery istatistikleri (master_notifications doc'undan) */}
+                    {(item.userDelivery || item.anonymousDelivery) && (
+                      <div className="flex items-center gap-2 mt-1.5 text-xs flex-wrap">
+                        {item.userDelivery && (
+                          <span
+                            title={`Üye gönderim — ${item.userDelivery.sent}/${item.userDelivery.total} başarılı, ${item.userDelivery.failed} hatalı, ${item.userDelivery.cleaned} temizlendi`}
+                            className={`px-2 py-0.5 rounded-md font-medium ${
+                              item.userDelivery.successRate >= 90
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : item.userDelivery.successRate >= 50
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                            }`}
+                          >
+                            👤 Üye: {item.userDelivery.sent}/{item.userDelivery.total} (%{item.userDelivery.successRate})
+                          </span>
+                        )}
+                        {item.anonymousDelivery && (
+                          <span
+                            title={`Anonim gönderim — ${item.anonymousDelivery.sent}/${item.anonymousDelivery.total} başarılı`}
+                            className={`px-2 py-0.5 rounded-md font-medium ${
+                              item.anonymousDelivery.successRate >= 90
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : item.anonymousDelivery.successRate >= 50
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                            }`}
+                          >
+                            🌐 Anonim: {item.anonymousDelivery.sent}/{item.anonymousDelivery.total} (%{item.anonymousDelivery.successRate})
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

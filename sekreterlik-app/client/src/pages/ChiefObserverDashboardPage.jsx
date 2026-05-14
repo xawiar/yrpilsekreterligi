@@ -1,965 +1,750 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import ElectionResultForm from '../components/ElectionResultForm';
+import ChiefObserverQuickForm from '../components/ChiefObserverQuickForm';
+import BallotBoxDocumentsPanel from '../components/BallotBoxDocumentsPanel';
+import TrainingMaterialList from '../components/TrainingMaterialList';
+import NotificationBell from '../components/NotificationBell';
+import NotificationFeed from '../components/NotificationFeed';
 import { useAuth } from '../contexts/AuthContext';
-import { isMobile } from '../utils/capacitorUtils';
-import NativeChiefObserverDashboard from '../components/mobile/NativeChiefObserverDashboard';
 import OfflineIndicator from '../components/OfflineIndicator';
 
-/**
- * Başmüşahit Dashboard Sayfası - Modern, Animasyonlu, Mobile Uyumlu
- * 
- * NOT: Authentication kontrolü bu sayfada yapılıyor - route guard kullanılmıyor.
- * Sonsuz döngü önlemek için useRef ile bir kez kontrol ediliyor.
- */
+/* =====================================================================
+ * Başmüşahit Dashboard — sıfırdan tasarım, gerçek desktop layout
+ * Header (kompakt) + 4 Stat (kompakt) + Sol(2fr)/Sağ(1fr) flex layout
+ * Inline CSS (Tailwind responsive class'ı kullanmadan, %100 garantili)
+ * ===================================================================*/
+
+const COLORS = {
+  primary: '#dc2626',
+  primaryDark: '#b91c1c',
+  primaryLight: '#fef2f2',
+  text: '#111827',
+  textMuted: '#6b7280',
+  bg: '#f3f4f6',
+  card: '#ffffff',
+  border: '#e5e7eb',
+};
+
+const STATUS_META = {
+  not_entered: { label: 'Henüz Girilmedi', icon: '⏳', bg: '#e5e7eb', text: '#1f2937' },
+  pending: { label: 'Onay Bekliyor', icon: '🟡', bg: '#fef3c7', text: '#78350f' },
+  approved: { label: 'Onaylandı', icon: '✅', bg: '#d1fae5', text: '#065f46' },
+  rejected: { label: 'Reddedildi — Tekrar Gir', icon: '🔴', bg: '#fee2e2', text: '#7f1d1d' },
+};
+
+const StatusBadge = ({ status, prefix, reason }) => {
+  const meta = STATUS_META[status] || STATUS_META.not_entered;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      background: meta.bg, color: meta.text,
+      padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+    }}>
+      <span>{meta.icon}</span>
+      {prefix && <span style={{ opacity: 0.8 }}>{prefix}:</span>}
+      <span>{meta.label}</span>
+      {status === 'rejected' && reason && (
+        <span style={{ marginLeft: 6, fontWeight: 400, opacity: 0.85, fontSize: 11 }}>· {reason}</span>
+      )}
+    </span>
+  );
+};
+
+const StatCard = ({ label, value, color, onClick }) => (
+  <div
+    onClick={onClick}
+    style={{
+      background: COLORS.card, border: `1px solid ${COLORS.border}`,
+      borderRadius: 8, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow .2s',
+    }}
+    onMouseEnter={(e) => onClick && (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.08)')}
+    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+  >
+    <div>
+      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+    </div>
+    <div style={{ width: 36, height: 36, borderRadius: 8, background: color, opacity: 0.15 }} />
+  </div>
+);
+
+const Card = ({ title, icon, children, padding = 16 }) => (
+  <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 8 }}>
+    {title && (
+      <div style={{
+        padding: '12px 16px', borderBottom: `1px solid ${COLORS.border}`,
+        fontWeight: 700, fontSize: 14, color: COLORS.text,
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        {icon}<span>{title}</span>
+      </div>
+    )}
+    <div style={{ padding }}>{children}</div>
+  </div>
+);
+
 const ChiefObserverDashboardPage = () => {
   const navigate = useNavigate();
   const { isLoggedIn, userRole, user, logout, loading: authLoading } = useAuth();
-  
-  // State management
+
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedElection, setSelectedElection] = useState(null);
   const [showResultForm, setShowResultForm] = useState(false);
-  const [electionResults, setElectionResults] = useState({}); // electionId -> result
+  // Quick form (sadeleştirilmiş) varsayılan; "detaylı moda geç" linkiyle eski forma çıkış
+  const [useAdvancedForm, setUseAdvancedForm] = useState(false);
+  const [electionResults, setElectionResults] = useState({});
   const [institutionSupervisor, setInstitutionSupervisor] = useState(null);
   const [regionSupervisor, setRegionSupervisor] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
+  const recentlyHandledRef = useRef(new Map());
   const [loadingApprovals, setLoadingApprovals] = useState(false);
-  const [activeTab, setActiveTab] = useState('elections'); // 'elections' or 'approvals'
+  const [activeTab, setActiveTab] = useState('elections');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
 
-  // Authentication kontrolü - AuthContext'ten gelen değerleri kullan
+  // Auth
   useEffect(() => {
-    // Loading tamamlanmadan yönlendirme yapma
     if (authLoading) return;
-    
-    if (!isLoggedIn || userRole !== 'chief_observer' || !user) {
+    if (!isLoggedIn || !user || (userRole !== 'chief_observer' && userRole !== 'musahit' && !user?.observerId)) {
       navigate('/login?type=chief-observer', { replace: true });
     }
   }, [isLoggedIn, userRole, user, navigate, authLoading]);
 
-  // Bekleyen onayları yükle
   const loadPendingApprovals = useCallback(async () => {
-    if (!isLoggedIn || userRole !== 'chief_observer' || !user) return;
-    
+    if (!isLoggedIn || !user || (userRole !== 'chief_observer' && userRole !== 'musahit' && !user?.observerId)) return;
     try {
       setLoadingApprovals(true);
-      // Sandık izolasyonu: Sadece kullanıcının sandığına ait sonuçları göster
       const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
       const data = await ApiService.getPendingElectionResults(ballotBoxId);
       if (data && data.results) {
-        setPendingApprovals(data.results);
+        const now = Date.now();
+        const filtered = data.results.filter((r) => {
+          const key = `${String(r.id)}_${r.category || ''}`;
+          const ts = recentlyHandledRef.current.get(key);
+          if (ts && now - ts < 5000) return false;
+          if (ts) recentlyHandledRef.current.delete(key);
+          return true;
+        });
+        setPendingApprovals(filtered);
       }
-    } catch (error) {
-      console.error('Error loading pending approvals:', error);
+    } catch (e) {
+      console.error('Error loading pending approvals:', e);
     } finally {
       setLoadingApprovals(false);
     }
   }, [isLoggedIn, userRole, user]);
 
-  // Seçimleri ve sonuçları yükle
+  // Data load
   useEffect(() => {
-    if (!isLoggedIn || !user || userRole !== 'chief_observer') return;
-
-    let isMounted = true;
-
-    const loadData = async () => {
+    if (!isLoggedIn || !user || (userRole !== 'chief_observer' && userRole !== 'musahit' && !user?.observerId)) return;
+    let mounted = true;
+    (async () => {
       try {
         setLoading(true);
         setError(null);
-
-        const allElections = await ApiService.getElections();
-
-        if (!isMounted) return;
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const activeElections = allElections
-          .filter(election => {
-            if (!election.date) return false;
-            const electionDate = new Date(election.date);
-            electionDate.setHours(0, 0, 0, 0);
-            return electionDate >= today;
+        const all = await ApiService.getElections();
+        if (!mounted) return;
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30); cutoff.setHours(0, 0, 0, 0);
+        const active = all
+          .filter(e => {
+            if (e.status === 'closed') return false;
+            if (!e.date) return true;
+            const d = new Date(e.date); d.setHours(0, 0, 0, 0);
+            return d >= cutoff;
           })
-          .sort((a, b) => {
-            const dateA = new Date(a.date || 0);
-            const dateB = new Date(b.date || 0);
-            return dateA - dateB;
-          });
+          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        setElections(active);
 
-        setElections(activeElections);
-
-        // Her seçim için sonuç kontrolü yap
         const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
-        const resultPromises = activeElections.map(election =>
-          ApiService.getElectionResults(election.id, ballotBoxId)
-            .then(results => ({ election, results }))
-            .catch(() => ({ election, results: [] }))
+        const allRes = await Promise.all(
+          active.map(e => ApiService.getElectionResults(e.id, ballotBoxId).then(r => ({ e, r })).catch(() => ({ e, r: [] })))
         );
-        const allResults = await Promise.all(resultPromises);
-        const resultsMap = {};
-        for (const { election, results } of allResults) {
-          if (results && results.length > 0) {
-            resultsMap[election.id] = results[0];
-          }
-        }
-        setElectionResults(resultsMap);
-        
-        // Üst sorumluları bul (kurum sorumlusu ve bölge sorumlusu)
-        if (user.ballotBoxId || user.ballot_box_id) {
+        const map = {};
+        allRes.forEach(({ e, r }) => { if (r && r.length > 0) map[e.id] = r[0]; });
+        setElectionResults(map);
+
+        // Üst sorumlular
+        if (ballotBoxId) {
           try {
-            const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
-            const [ballotBoxes, coordinators, regions] = await Promise.all([
+            const [boxes, coords, regions] = await Promise.all([
               ApiService.getBallotBoxes(),
               ApiService.getElectionCoordinators(),
-              ApiService.getElectionRegions()
+              ApiService.getElectionRegions(),
             ]);
-            
-            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(ballotBoxId));
-            if (ballotBox) {
-              // Kurum sorumlusunu bul
-              if (ballotBox.institution_name) {
-                const instSupervisor = coordinators.find(c => 
-                  c.role === 'institution_supervisor' && 
-                  c.institution_name === ballotBox.institution_name
+            const bb = boxes.find(b => String(b.id) === String(ballotBoxId));
+            if (bb) {
+              if (bb.institution_name) {
+                const ins = coords.find(c =>
+                  c.role === 'institution_supervisor' &&
+                  c.institution_name === bb.institution_name &&
+                  (bb.district_id && c.district_id ? String(c.district_id) === String(bb.district_id) : true)
                 );
-                if (instSupervisor) {
-                  setInstitutionSupervisor(instSupervisor);
-                }
+                if (ins) setInstitutionSupervisor(ins);
               }
-              
-              // Bölge sorumlusunu bul
-              const neighborhoodId = ballotBox.neighborhood_id;
-              const villageId = ballotBox.village_id;
-              
+              const nb = bb.neighborhood_id, vl = bb.village_id;
               for (const region of regions) {
-                const regionNeighborhoodIds = Array.isArray(region.neighborhood_ids)
-                  ? region.neighborhood_ids
-                  : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
-                const regionVillageIds = Array.isArray(region.village_ids)
-                  ? region.village_ids
-                  : (region.village_ids ? JSON.parse(region.village_ids) : []);
-                
-                if ((neighborhoodId && regionNeighborhoodIds.includes(neighborhoodId)) ||
-                    (villageId && regionVillageIds.includes(villageId))) {
+                const nbIds = Array.isArray(region.neighborhood_ids) ? region.neighborhood_ids : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+                const vlIds = Array.isArray(region.village_ids) ? region.village_ids : (region.village_ids ? JSON.parse(region.village_ids) : []);
+                if ((nb && nbIds.includes(nb)) || (vl && vlIds.includes(vl))) {
                   if (region.supervisor_id) {
-                    const regSupervisor = coordinators.find(c => 
-                      String(c.id) === String(region.supervisor_id)
-                    );
-                    if (regSupervisor) {
-                      setRegionSupervisor(regSupervisor);
-                    }
+                    const reg = coords.find(c => String(c.id) === String(region.supervisor_id));
+                    if (reg) setRegionSupervisor(reg);
                   }
                   break;
                 }
               }
             }
-          } catch (err) {
-            console.error('Error fetching supervisor data:', err);
-          }
+          } catch (e) { console.error('Supervisor fetch error:', e); }
         }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        if (isMounted) {
-          setError('Veriler yüklenirken hata oluştu');
-        }
+      } catch (e) {
+        console.error(e);
+        if (mounted) setError('Veriler yüklenirken hata oluştu');
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
-    };
-
-    loadData();
-    loadPendingApprovals(); // Bekleyen onayları da yükle
-
-    return () => {
-      isMounted = false;
-    };
+    })();
+    loadPendingApprovals();
+    return () => { mounted = false; };
   }, [user, isLoggedIn, userRole, loadPendingApprovals]);
 
-  // Event handlers
-  const handleElectionClick = useCallback((election) => {
-    setSelectedElection(election);
-    setShowResultForm(true);
-  }, []);
+  // Real-time listener
+  useEffect(() => {
+    const ballotBoxId = user?.ballotBoxId || user?.ballot_box_id;
+    if (!isLoggedIn || !ballotBoxId) return;
+    let unsubscribe = null;
+    (async () => {
+      try {
+        const { collection, query, where, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        if (!db) return;
+        const q = query(collection(db, 'election_results'), where('ballot_box_id', '==', String(ballotBoxId)));
+        unsubscribe = onSnapshot(q, (snap) => {
+          loadPendingApprovals();
+          const m = {};
+          snap.docs.forEach(d => { const data = d.data(); if (data.election_id) m[data.election_id] = { id: d.id, ...data }; });
+          setElectionResults(m);
+        }, (err) => console.error('Real-time error:', err));
+      } catch (e) { console.error('Subscription failed:', e); }
+    })();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [isLoggedIn, user?.ballotBoxId, user?.ballot_box_id, loadPendingApprovals]);
 
+  // Handlers
+  const handleElectionClick = useCallback((e) => {
+    setSelectedElection(e);
+    setShowResultForm(true);
+    setUseAdvancedForm(false); // her açılışta sade moda dön
+  }, []);
   const handleCloseForm = useCallback(() => {
     setShowResultForm(false);
     setSelectedElection(null);
+    setUseAdvancedForm(false);
   }, []);
-
   const handleFormSuccess = useCallback(() => {
-    // Sonuçları yeniden yükle
     if (selectedElection && user) {
       ApiService.getElectionResults(selectedElection.id, user.ballotBoxId || user.ballot_box_id)
-        .then(results => {
-          if (results && results.length > 0) {
-            setElectionResults(prev => ({
-              ...prev,
-              [selectedElection.id]: results[0]
-            }));
-          }
-        })
+        .then(r => { if (r && r.length > 0) setElectionResults(prev => ({ ...prev, [selectedElection.id]: r[0] })); })
         .catch(console.error);
     }
-    setShowResultForm(false);
-    setSelectedElection(null);
+    setShowResultForm(false); setSelectedElection(null);
   }, [selectedElection, user]);
+  const handleLogout = useCallback(() => { logout(); navigate('/login?type=chief-observer', { replace: true }); }, [navigate, logout]);
 
-  const handleLogout = useCallback(() => {
-    logout(); // AuthContext'ten logout fonksiyonu
-    navigate('/login?type=chief-observer', { replace: true });
-  }, [navigate, logout]);
-
-  const getTypeLabel = useCallback((type) => {
-    const labels = {
-      'yerel': 'Yerel Seçim',
-      'genel': 'Genel Seçim',
-      'cb': 'Cumhurbaşkanlığı Seçimi'
-    };
-    return labels[type] || type;
-  }, []);
-
-  const getTypeColor = useCallback((type) => {
-    const colors = {
-      'yerel': 'from-blue-500 to-blue-600',
-      'genel': 'from-purple-500 to-purple-600',
-      'cb': 'from-indigo-500 to-indigo-600'
-    };
-    return colors[type] || 'from-gray-500 to-gray-600';
-  }, []);
-
-  const formatDate = useCallback((dateString) => {
-    if (!dateString) return '-';
+  const handleApprove = useCallback(async (resultId, category = null) => {
+    const k = `${String(resultId)}_${category || ''}`;
+    recentlyHandledRef.current.set(k, Date.now());
+    setTimeout(() => recentlyHandledRef.current.delete(k), 6000);
+    setPendingApprovals(prev => prev.filter(p => !(String(p.id) === String(resultId) && ((p.category || '') === (category || '')))));
+    const label = category === 'cb' ? 'CB sonucu' : (category === 'mv' ? 'MV sonucu' : 'Sonuç');
     try {
-      return new Date(dateString).toLocaleDateString('tr-TR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch {
-      return '-';
-    }
-  }, []);
-
-  const getDaysUntil = useCallback((dateString) => {
-    if (!dateString) return null;
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const electionDate = new Date(dateString);
-      electionDate.setHours(0, 0, 0, 0);
-      const diffTime = electionDate - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  // Onayla
-  const handleApprove = useCallback(async (resultId) => {
-    try {
-      await ApiService.approveElectionResult(resultId);
-      setMessage('Sonuç başarıyla onaylandı');
-      setMessageType('success');
-      await loadPendingApprovals(); // Listeyi yenile
-    } catch (error) {
-      console.error('Error approving result:', error);
-      setMessage(error.message || 'Onaylama sırasında hata oluştu');
-      setMessageType('error');
+      await ApiService.approveElectionResult(resultId, category);
+      setMessage(`${label} başarıyla onaylandı`); setMessageType('success');
+    } catch (err) {
+      console.error(err); setMessage(err.message || 'Onaylama hatası'); setMessageType('error');
+      await loadPendingApprovals();
     }
   }, [loadPendingApprovals]);
 
-  // Reddet
-  const handleReject = useCallback(async (resultId, reason) => {
+  const handleReject = useCallback(async (resultId, reason, category = null) => {
+    const k = `${String(resultId)}_${category || ''}`;
+    recentlyHandledRef.current.set(k, Date.now());
+    setTimeout(() => recentlyHandledRef.current.delete(k), 6000);
+    setPendingApprovals(prev => prev.filter(p => !(String(p.id) === String(resultId) && ((p.category || '') === (category || '')))));
+    const label = category === 'cb' ? 'CB sonucu' : (category === 'mv' ? 'MV sonucu' : 'Sonuç');
     try {
-      await ApiService.rejectElectionResult(resultId, reason);
-      setMessage('Sonuç reddedildi');
-      setMessageType('success');
-      await loadPendingApprovals(); // Listeyi yenile
-    } catch (error) {
-      console.error('Error rejecting result:', error);
-      setMessage(error.message || 'Reddetme sırasında hata oluştu');
-      setMessageType('error');
+      await ApiService.rejectElectionResult(resultId, reason, category);
+      setMessage(`${label} silindi. Müşahit yeniden girebilir.`); setMessageType('success');
+    } catch (err) {
+      console.error(err); setMessage(err.message || 'Silme hatası'); setMessageType('error');
+      await loadPendingApprovals();
     }
   }, [loadPendingApprovals]);
 
-  // Auth kontrolü tamamlanmamışsa loading göster
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-400 animate-spin" style={{ animationDuration: '1.5s' }}></div>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Kontrol ediliyor...</p>
-        </div>
-      </div>
-    );
-  }
+  // Helpers
+  const getTypeLabel = (t) => ({ yerel: 'Yerel', genel: 'Genel', cb: 'Cumhurbaşkanlığı' }[t] || t);
+  const formatDate = (s) => { try { return s ? new Date(s).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'; } catch { return '-'; } };
+  const getDaysUntil = (s) => { if (!s) return null; const t = new Date(); t.setHours(0,0,0,0); const d = new Date(s); d.setHours(0,0,0,0); return Math.ceil((d-t)/86400000); };
 
-  if (!user || !isLoggedIn || userRole !== 'chief_observer') {
-    return null;
-  }
+  const getCategoryStatus = (r, category) => {
+    if (!r) return { status: 'not_entered' };
+    if (category === 'cb') {
+      if (r.cb_status === 'rejected') return { status: 'rejected', reason: r.cb_rejection_reason };
+      const has = (r.cb_votes && Object.keys(r.cb_votes).length > 0) || !!r.signed_protocol_photo;
+      if (!has) return { status: 'not_entered' };
+      if (r.cb_status === 'approved') return { status: 'approved' };
+      return { status: 'pending' };
+    }
+    if (category === 'mv') {
+      if (r.mv_status === 'rejected') return { status: 'rejected', reason: r.mv_rejection_reason };
+      const has = (r.mv_votes && Object.keys(r.mv_votes).length > 0) || !!r.signed_mv_protocol_photo;
+      if (!has) return { status: 'not_entered' };
+      if (r.mv_status === 'approved') return { status: 'approved' };
+      return { status: 'pending' };
+    }
+    if (r.approval_status === 'rejected') return { status: 'rejected', reason: r.rejection_reason };
+    const any =
+      (r.mayor_votes && Object.keys(r.mayor_votes).length > 0) ||
+      (r.provincial_assembly_votes && Object.keys(r.provincial_assembly_votes).length > 0) ||
+      (r.municipal_council_votes && Object.keys(r.municipal_council_votes).length > 0) ||
+      (r.referendum_votes && Object.values(r.referendum_votes || {}).some(v => v > 0)) ||
+      (r.cb_votes && Object.keys(r.cb_votes).length > 0) ||
+      (r.mv_votes && Object.keys(r.mv_votes).length > 0) ||
+      !!r.signed_protocol_photo || !!r.signed_mv_protocol_photo;
+    if (!any) return { status: 'not_entered' };
+    if (r.approval_status === 'approved') return { status: 'approved' };
+    return { status: 'pending' };
+  };
 
-  // Loading state
-  if (loading && elections.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-4 sm:py-8 px-4">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Shimmer loading cards */}
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 animate-pulse">
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const getElectionStatus = (e) => {
+    const r = electionResults[e.id];
+    if (e?.type === 'genel') return { type: 'multi', cb: getCategoryStatus(r, 'cb'), mv: getCategoryStatus(r, 'mv') };
+    return { type: 'single', overall: getCategoryStatus(r, null) };
+  };
 
-  const hasResult = (electionId) => {
-    return electionResults[electionId] !== undefined;
+  const hasResult = (id) => {
+    const r = electionResults[id]; if (!r) return false;
+    const e = elections.find(x => String(x.id) === String(id)); if (!e) return false;
+    if (e.type === 'genel') {
+      const cb = getCategoryStatus(r, 'cb').status, mv = getCategoryStatus(r, 'mv').status;
+      return ['pending', 'approved'].includes(cb) && ['pending', 'approved'].includes(mv);
+    }
+    return ['pending', 'approved'].includes(getCategoryStatus(r, null).status);
   };
 
   const completedCount = elections.filter(e => hasResult(e.id)).length;
   const pendingCount = elections.length - completedCount;
 
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: COLORS.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 50, height: 50, border: `4px solid ${COLORS.border}`, borderTopColor: COLORS.primary, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: COLORS.textMuted }}>Kontrol ediliyor...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!user || !isLoggedIn || (userRole !== 'chief_observer' && userRole !== 'musahit' && !user?.observerId)) return null;
+
+  const ballotBoxId = user.ballotBoxId || user.ballot_box_id;
+  const ballotNumber = user.ballotNumber || user.ballot_number || '';
+  const userId = user.uid || user.id || user.observerId;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-4 sm:py-8 px-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Modern Header with Gradient */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-2xl p-6 sm:p-8 text-white">
-          {/* Animated background pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full blur-3xl animate-blob"></div>
-            <div className="absolute top-0 right-0 w-72 h-72 bg-purple-300 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-            <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-pink-300 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-          </div>
-          
-          <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold">Başmüşahit Dashboard</h1>
-                    <p className="text-indigo-100 text-sm sm:text-base mt-1">Seçim sonuçlarınızı girin ve yönetin</p>
-                  </div>
-                </div>
-                
-                {user && (
-                  <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span className="font-medium">{user.name || 'Bilinmiyor'}</span>
-                    </div>
-                    {user.ballot_number && (
-                      <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span className="font-medium">Sandık: {user.ballot_number}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Üst Sorumlular Bilgilendirmesi */}
-                {(institutionSupervisor || regionSupervisor) && (
-                  <div className="mt-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-                    <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Üst Sorumlular
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      {institutionSupervisor && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-indigo-200">Kurum Sorumlusu:</span>
-                          <span className="font-medium text-white">{institutionSupervisor.name}</span>
-                          {institutionSupervisor.phone && (
-                            <span className="text-indigo-200">({institutionSupervisor.phone})</span>
-                          )}
-                        </div>
-                      )}
-                      {regionSupervisor && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-indigo-200">Bölge Sorumlusu:</span>
-                          <span className="font-medium text-white">{regionSupervisor.name}</span>
-                          {regionSupervisor.phone && (
-                            <span className="text-indigo-200">({regionSupervisor.phone})</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="w-full sm:w-auto px-5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Çıkış Yap
-              </button>
+    <div style={{ minHeight: '100vh', background: COLORS.bg }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px' }}>
+
+        {/* HEADER — kompakt yatay bar */}
+        <header style={{
+          background: `linear-gradient(135deg, ${COLORS.primaryDark} 0%, ${COLORS.primary} 100%)`,
+          borderRadius: 8, padding: '14px 20px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, color: 'white',
+          boxShadow: '0 2px 8px rgba(220,38,38,.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <div style={{ width: 38, height: 38, background: 'rgba(255,255,255,.2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>Başmüşahit Dashboard</h1>
+              <p style={{ fontSize: 12, opacity: 0.9, margin: '2px 0 0' }}>
+                {user.name || 'Kullanıcı'}{ballotNumber && <> &middot; Sandık <strong>{ballotNumber}</strong></>}
+              </p>
             </div>
           </div>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Toplam Seçim</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{elections.length}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <NotificationBell
+              className="notification-bell-header"
+              iconClassName=""
+            />
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '8px 14px', background: 'rgba(255,255,255,.2)', color: 'white',
+                border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              Çıkış
+            </button>
           </div>
+        </header>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tamamlanan</p>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{completedCount}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Bekleyen</p>
-                <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{pendingCount}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer" onClick={() => setActiveTab('approvals')}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Onay Bekleyen</p>
-                <p className="text-3xl font-bold text-red-600 dark:text-red-400">{pendingApprovals.length}</p>
-              </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Message Alert */}
+        {/* MESAJ */}
         {message && (
-          <div 
-            className={`p-4 rounded-lg border-l-4 shadow-md ${
-              messageType === 'success' 
-                ? 'bg-green-50 border-green-500 text-green-800' 
-                : 'bg-red-50 border-red-500 text-red-800'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              {messageType === 'success' ? (
-                <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <p className="text-sm font-medium flex-1">{message}</p>
-              <button
-                onClick={() => setMessage('')}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+          <div style={{
+            padding: '12px 16px', marginBottom: 16, borderRadius: 8,
+            background: messageType === 'success' ? '#d1fae5' : '#fee2e2',
+            color: messageType === 'success' ? '#065f46' : '#7f1d1d',
+            borderLeft: `4px solid ${messageType === 'success' ? '#10b981' : '#ef4444'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>{message}</span>
+            <button onClick={() => setMessage('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <div className="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-6">
-            <button
-              onClick={() => setActiveTab('elections')}
-              className={`px-6 py-3 font-medium text-sm transition-colors ${
-                activeTab === 'elections'
-                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              Seçimler
-            </button>
-            <button
-              onClick={() => setActiveTab('approvals')}
-              className={`px-6 py-3 font-medium text-sm transition-colors relative ${
-                activeTab === 'approvals'
-                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              Bekleyen Onaylar
-              {pendingApprovals.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full">
-                  {pendingApprovals.length}
-                </span>
-              )}
-            </button>
-          </div>
+        {/* STATS — 4 kompakt kart */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+          <StatCard label="Toplam Seçim" value={elections.length} color="#2563eb" />
+          <StatCard label="Tamamlanan" value={completedCount} color="#10b981" />
+          <StatCard label="Bekleyen" value={pendingCount} color="#f97316" />
+          <StatCard label="Onay Bekleyen" value={pendingApprovals.length} color="#dc2626" onClick={() => setActiveTab('approvals')} />
+        </div>
 
-          {/* Elections Tab */}
-          {activeTab === 'elections' && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-                  <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
-                  Güncel Seçimler
-                </h2>
-                {loading && (
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-200 border-t-indigo-600"></div>
-                )}
+        {/* MAIN LAYOUT — flex 2/1 (sol içerik / sağ panel) */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+
+          {/* SOL */}
+          <main style={{ flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Tabs */}
+            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 8 }}>
+              <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.border}` }}>
+                <button
+                  onClick={() => setActiveTab('elections')}
+                  style={{
+                    padding: '12px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 600,
+                    color: activeTab === 'elections' ? COLORS.primary : COLORS.textMuted,
+                    borderBottom: activeTab === 'elections' ? `2px solid ${COLORS.primary}` : '2px solid transparent',
+                    marginBottom: -1,
+                  }}
+                >
+                  Güncel Seçimler ({elections.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('approvals')}
+                  style={{
+                    padding: '12px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 600,
+                    color: activeTab === 'approvals' ? COLORS.primary : COLORS.textMuted,
+                    borderBottom: activeTab === 'approvals' ? `2px solid ${COLORS.primary}` : '2px solid transparent',
+                    marginBottom: -1, display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  Bekleyen Onaylar
+                  {pendingApprovals.length > 0 && (
+                    <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>
+                      {pendingApprovals.length}
+                    </span>
+                  )}
+                </button>
               </div>
 
-              {error && elections.length === 0 && (
-                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 mb-6 animate-fade-in">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              {!loading && elections.length === 0 && (
-                <div className="text-center py-16 animate-fade-in">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Henüz aktif seçim bulunmuyor</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Yeni seçimler eklendiğinde burada görünecek</p>
-                </div>
-              )}
-
-              {!loading && elections.length > 0 && (
-                <div className="grid gap-4 sm:gap-6">
-                  {elections.map((election, index) => {
-                    const daysUntil = getDaysUntil(election.date);
-                    const isCompleted = hasResult(election.id);
-                    const isToday = daysUntil === 0;
-                    const isPast = daysUntil !== null && daysUntil < 0;
-
-                    return (
-                      <div
-                        key={election.id}
-                        className={`group relative overflow-hidden bg-gradient-to-r ${getTypeColor(election.type)} rounded-xl shadow-lg transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl cursor-pointer ${
-                          isCompleted ? 'ring-2 ring-green-400 ring-offset-2' : ''
-                        }`}
-                        style={{
-                          animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
-                        }}
-                        onClick={() => handleElectionClick(election)}
-                      >
-                        {/* Background pattern */}
-                        <div className="absolute inset-0 opacity-10">
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-2xl"></div>
-                          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-xl"></div>
-                        </div>
-
-                        <div className="relative p-6 sm:p-8 text-white">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <h3 className="text-xl sm:text-2xl font-bold mb-1">
-                                    {election.name || 'İsimsiz Seçim'}
-                                  </h3>
-                                  <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium">
+              {/* Elections Tab */}
+              {activeTab === 'elections' && (
+                <div style={{ padding: 16 }}>
+                  {loading ? (
+                    <div style={{ padding: 32, textAlign: 'center', color: COLORS.textMuted }}>Yükleniyor...</div>
+                  ) : error ? (
+                    <div style={{ padding: 16, background: '#fee2e2', color: '#7f1d1d', borderRadius: 6 }}>{error}</div>
+                  ) : elections.length === 0 ? (
+                    <div style={{ padding: 32, textAlign: 'center', color: COLORS.textMuted }}>
+                      <p style={{ fontSize: 16, fontWeight: 600 }}>Aktif seçim yok</p>
+                      <p style={{ fontSize: 13, marginTop: 8 }}>Yeni seçim eklendiğinde burada görünecek.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {elections.map((election) => {
+                        const days = getDaysUntil(election.date);
+                        const status = getElectionStatus(election);
+                        const isCompleted = hasResult(election.id);
+                        return (
+                          <div
+                            key={election.id}
+                            onClick={() => handleElectionClick(election)}
+                            style={{
+                              padding: 14, borderRadius: 8, cursor: 'pointer',
+                              background: COLORS.primaryLight,
+                              border: `1px solid ${isCompleted ? '#10b981' : COLORS.border}`,
+                              transition: 'all .15s',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.06)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, margin: '0 0 4px' }}>{election.name || 'İsimsiz Seçim'}</h3>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
+                                  <span style={{ background: 'rgba(220,38,38,.1)', color: COLORS.primary, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
                                     {getTypeLabel(election.type)}
                                   </span>
-                                  {election.type === 'cb' && election.round && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
-                                      {election.round === 1 ? '1. Tur' : '2. Tur'}
-                                    </span>
+                                  <span>{formatDate(election.date)}</span>
+                                  {days !== null && days >= 0 && <span>· {days === 0 ? 'Bugün' : `${days} gün kaldı`}</span>}
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                  {status.type === 'multi' ? (
+                                    <>
+                                      <StatusBadge status={status.cb.status} prefix="CB" reason={status.cb.reason} />
+                                      <StatusBadge status={status.mv.status} prefix="MV" reason={status.mv.reason} />
+                                    </>
+                                  ) : (
+                                    <StatusBadge status={status.overall.status} reason={status.overall.reason} />
                                   )}
                                 </div>
                               </div>
-
-                              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
-                                <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  <span className="font-medium">{formatDate(election.date)}</span>
-                                </div>
-
-                                {daysUntil !== null && !isPast && (
-                                  <div className={`flex items-center gap-2 backdrop-blur-sm px-3 py-1.5 rounded-lg font-medium ${
-                                    isToday 
-                                      ? 'bg-yellow-500/30 text-yellow-100' 
-                                      : daysUntil <= 7 
-                                        ? 'bg-orange-500/30 text-orange-100'
-                                        : 'bg-white/20 text-white'
-                                  }`}>
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {isToday ? 'Bugün' : `${daysUntil} gün kaldı`}
-                                  </div>
-                                )}
-
-                                {isCompleted && (
-                                  <div className="flex items-center gap-2 bg-green-500/30 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span className="font-medium">Tamamlandı</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex-shrink-0">
-                              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                                <svg className="w-7 h-7 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                              </div>
+                              <div style={{ color: COLORS.primary, fontSize: 20 }}>›</div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Approvals Tab */}
-          {activeTab === 'approvals' && (
-            <div>
-              {loadingApprovals ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
-                </div>
-              ) : pendingApprovals.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bekleyen onay bulunmuyor</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {pendingApprovals.map((result, index) => (
-                    <div
-                      key={result.id}
-                      className="bg-white dark:bg-gray-800 border-2 border-orange-200 dark:border-orange-800 rounded-xl shadow-lg p-6"
-                      style={{ animation: `fadeInUp 0.3s ease-out ${index * 0.1}s both` }}
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="px-3 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded-lg text-sm font-semibold">
-                              AI ile Dolduruldu
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                              {result.election_name || 'Seçim'}
-                            </h3>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-400">Sandık:</span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.ballot_number || '-'}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-400">Kullanılan Oy:</span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.used_votes || 0}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-400">Geçerli Oy:</span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.valid_votes || 0}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-400">Giriş Yapan:</span>
-                              <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{result.creator_name || '-'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Tutanak ve Oylar - Yan Yana */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                        {/* Sol: Tutanak Fotoğrafı */}
-                        <div>
-                          {result.signed_protocol_photo && (
-                            <div>
-                              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                📄 Tutanak Fotoğrafı
-                              </label>
-                              <img
-                                src={result.signed_protocol_photo}
-                                alt="Tutanak"
-                                className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity shadow-md"
-                                loading="lazy"
-                                onClick={() => window.open(result.signed_protocol_photo, '_blank')}
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Sağ: Girilen Oylar (Parti/Aday Bazında) */}
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Girilen Oylar (Tutanak ile Karşılaştırın)
-                          </h4>
-                          
-                          {/* Genel Seçim: CB ve MV Oyları */}
-                          {(result.election_type === 'genel' || result.election_type === 'mv' || result.election_type === 'cb') && (
-                            <div className="space-y-3">
-                              {/* CB Oyları */}
-                              {(result.election_type === 'genel' || result.election_type === 'cb') && result.cb_votes && (
-                                <div>
-                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Cumhurbaşkanı Seçimi:</div>
-                                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                                    {Object.entries(result.cb_votes).map(([candidate, votes]) => (
-                                      <div key={candidate} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
-                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{candidate}</span>
-                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* MV Oyları */}
-                              {(result.election_type === 'genel' || result.election_type === 'mv') && result.mv_votes && (
-                                <div>
-                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Milletvekili Seçimi:</div>
-                                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                                    {Object.entries(result.mv_votes).map(([party, votes]) => (
-                                      <div key={party} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
-                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
-                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi */}
-                          {result.election_type === 'yerel' && (
-                            <div className="space-y-3">
-                              {/* Belediye Başkanı */}
-                              {result.mayor_votes && Object.keys(result.mayor_votes).length > 0 && (
-                                <div>
-                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Belediye Başkanı:</div>
-                                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                                    {Object.entries(result.mayor_votes).map(([candidate, votes]) => (
-                                      <div key={candidate} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
-                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{candidate}</span>
-                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* İl Genel Meclisi */}
-                              {result.provincial_assembly_votes && Object.keys(result.provincial_assembly_votes).length > 0 && (
-                                <div>
-                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">İl Genel Meclisi:</div>
-                                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                                    {Object.entries(result.provincial_assembly_votes).map(([party, votes]) => (
-                                      <div key={party} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
-                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
-                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Belediye Meclisi */}
-                              {result.municipal_council_votes && Object.keys(result.municipal_council_votes).length > 0 && (
-                                <div>
-                                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Belediye Meclisi:</div>
-                                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                                    {Object.entries(result.municipal_council_votes).map(([party, votes]) => (
-                                      <div key={party} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
-                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{party}</span>
-                                        <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Referandum */}
-                          {result.election_type === 'referandum' && result.referendum_votes && (
-                            <div className="space-y-1.5">
-                              {Object.entries(result.referendum_votes).map(([option, votes]) => (
-                                <div key={option} className="flex justify-between items-center text-xs py-1 px-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
-                                  <span className="text-gray-700 dark:text-gray-300 font-medium">{option}</span>
-                                  <span className="text-blue-600 dark:text-blue-400 font-bold">{parseInt(votes) || 0} oy</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Özet Bilgiler */}
-                          <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700 space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Toplam Seçmen:</span>
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{result.total_voters || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Kullanılan Oy:</span>
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{result.used_votes || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Geçerli Oy:</span>
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{result.valid_votes || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Geçersiz Oy:</span>
-                              <span className="font-medium text-red-600 dark:text-red-400">{result.invalid_votes || 0}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Onay/Red Butonları */}
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => handleApprove(result.id)}
-                          className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Onayla
-                        </button>
-                        <button
-                          onClick={() => {
-                            const reason = prompt('Reddetme nedeni:');
-                            if (reason) {
-                              handleReject(result.id, reason);
-                            }
-                          }}
-                          className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Reddet
-                        </button>
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
+                </div>
+              )}
+
+              {/* Approvals Tab */}
+              {activeTab === 'approvals' && (
+                <div style={{ padding: 16 }}>
+                  {loadingApprovals ? (
+                    <div style={{ padding: 32, textAlign: 'center', color: COLORS.textMuted }}>Yükleniyor...</div>
+                  ) : pendingApprovals.length === 0 ? (
+                    <div style={{ padding: 32, textAlign: 'center', color: COLORS.textMuted }}>
+                      <p style={{ fontSize: 16, fontWeight: 600 }}>Bekleyen onay yok</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {pendingApprovals.map((r) => (
+                        <div key={`${r.id}_${r.category || 'a'}`} style={{ border: '2px solid #fb923c', borderRadius: 8, padding: 14, background: '#fff7ed' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                            {r.category === 'cb' && <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>🗳️ CB</span>}
+                            {r.category === 'mv' && <span style={{ background: '#ede9fe', color: '#5b21b6', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>🏛️ MV</span>}
+                            <span style={{ fontWeight: 700, fontSize: 14 }}>{r.election_name || 'Seçim'}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: 12, color: COLORS.textMuted }}>Sandık {r.ballot_number}</span>
+                          </div>
+                          {(() => {
+                            // Genel seçimde CB/MV ayrı tutanak; kategori bazlı oy alanları
+                            // r.cb_used_votes / r.mv_used_votes. Fallback: paylaşılan alanlar.
+                            const used = r.category === 'cb'
+                              ? (r.cb_used_votes ?? r.used_votes ?? 0)
+                              : r.category === 'mv'
+                              ? (r.mv_used_votes ?? r.used_votes ?? 0)
+                              : (r.used_votes ?? 0);
+                            const valid = r.category === 'cb'
+                              ? (r.cb_valid_votes ?? r.valid_votes ?? 0)
+                              : r.category === 'mv'
+                              ? (r.mv_valid_votes ?? r.valid_votes ?? 0)
+                              : (r.valid_votes ?? 0);
+                            const invalid = r.category === 'cb'
+                              ? (r.cb_invalid_votes ?? r.invalid_votes ?? 0)
+                              : r.category === 'mv'
+                              ? (r.mv_invalid_votes ?? r.invalid_votes ?? 0)
+                              : (r.invalid_votes ?? 0);
+                            return (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 12, marginBottom: 12 }}>
+                                <div><span style={{ color: COLORS.textMuted }}>Kullanılan:</span> <strong>{used || 0}</strong></div>
+                                <div><span style={{ color: COLORS.textMuted }}>Geçerli:</span> <strong>{valid || 0}</strong></div>
+                                <div><span style={{ color: COLORS.textMuted }}>Geçersiz:</span> <strong>{invalid || 0}</strong></div>
+                              </div>
+                            );
+                          })()}
+                          {(() => {
+                            // Genel seçimde MV kategorisi ise MV tutanak fotoğrafı, değilse signed
+                            const photo = r.category === 'mv' && r.signed_mv_protocol_photo
+                              ? r.signed_mv_protocol_photo
+                              : r.signed_protocol_photo;
+
+                            // Kategoriye göre hangi parti/aday listeleri gösterilecek
+                            const voteGroups = [];
+                            if (r.category === 'cb' || !r.category) {
+                              if (r.cb_votes && Object.keys(r.cb_votes).length > 0)
+                                voteGroups.push({ label: 'Cumhurbaşkanı', votes: r.cb_votes, color: '#1e40af', bg: '#dbeafe' });
+                              if (r.independent_cb_votes && Object.keys(r.independent_cb_votes).length > 0)
+                                voteGroups.push({ label: 'Bağımsız CB', votes: r.independent_cb_votes, color: '#3730a3', bg: '#e0e7ff' });
+                            }
+                            if (r.category === 'mv' || !r.category) {
+                              if (r.mv_votes && Object.keys(r.mv_votes).length > 0)
+                                voteGroups.push({ label: 'Milletvekili (Parti)', votes: r.mv_votes, color: '#5b21b6', bg: '#ede9fe' });
+                              if (r.independent_mv_votes && Object.keys(r.independent_mv_votes).length > 0)
+                                voteGroups.push({ label: 'Bağımsız MV', votes: r.independent_mv_votes, color: '#3730a3', bg: '#e0e7ff' });
+                            }
+                            if (!r.category) {
+                              if (r.mayor_votes && Object.keys(r.mayor_votes).length > 0)
+                                voteGroups.push({ label: 'Belediye Başkanı', votes: r.mayor_votes, color: '#065f46', bg: '#d1fae5' });
+                              if (r.provincial_assembly_votes && Object.keys(r.provincial_assembly_votes).length > 0)
+                                voteGroups.push({ label: 'İl Genel Meclisi', votes: r.provincial_assembly_votes, color: '#92400e', bg: '#fef3c7' });
+                              if (r.municipal_council_votes && Object.keys(r.municipal_council_votes).length > 0)
+                                voteGroups.push({ label: 'Belediye Meclisi', votes: r.municipal_council_votes, color: '#9a3412', bg: '#ffedd5' });
+                              if (r.referendum_votes && Object.keys(r.referendum_votes).length > 0)
+                                voteGroups.push({ label: 'Referandum', votes: r.referendum_votes, color: '#9f1239', bg: '#ffe4e6' });
+                            }
+                            const hasVotes = voteGroups.length > 0;
+
+                            return (
+                              <div style={{ display: 'grid', gridTemplateColumns: hasVotes ? 'minmax(0,1fr) minmax(0,1fr)' : '1fr', gap: 10, marginBottom: 10 }}>
+                                {photo && (
+                                  <img src={photo} alt="Tutanak" style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 6, border: `1px solid ${COLORS.border}`, cursor: 'pointer', background: '#fff' }} onClick={() => window.open(photo, '_blank')} />
+                                )}
+                                {hasVotes && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto', padding: 4 }}>
+                                    {voteGroups.map((g, gi) => {
+                                      const entries = Object.entries(g.votes).filter(([, v]) => v !== null && v !== undefined);
+                                      const total = entries.reduce((s, [, v]) => s + (parseInt(v) || 0), 0);
+                                      return (
+                                        <div key={gi} style={{ background: g.bg, borderRadius: 6, padding: 8, border: `1px solid ${g.color}33` }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                            <strong style={{ color: g.color, fontSize: 11 }}>{g.label}</strong>
+                                            <span style={{ fontSize: 10, color: COLORS.textMuted }}>Toplam: <strong>{total}</strong></span>
+                                          </div>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                            {entries.map(([key, v]) => (
+                                              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, padding: '3px 6px', background: '#fff', borderRadius: 4 }}>
+                                                <span style={{ color: '#374151', flex: 1, marginRight: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{key}</span>
+                                                <strong style={{ color: g.color, whiteSpace: 'nowrap' }}>{parseInt(v) || 0} oy</strong>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => handleApprove(r.id, r.category)} style={{ flex: 1, padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>Onayla</button>
+                            <button onClick={() => { const reason = prompt('Reddetme nedeni (opsiyonel):') || ''; if (window.confirm('Sonuç silinecek. Devam?')) handleReject(r.id, reason, r.category); }} style={{ flex: 1, padding: '8px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>Reddet</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+
+            {/* Yüklenen Evraklar */}
+            {ballotBoxId ? (
+              <div id="yuklenen-evraklar">
+                <BallotBoxDocumentsPanel
+                  ballotBoxId={ballotBoxId}
+                  ballotNumber={ballotNumber}
+                  canUpload
+                  canDelete
+                  uploaderName={user.name || ''}
+                  uploaderRole="chief_observer"
+                />
+              </div>
+            ) : (
+              <div style={{ padding: 16, background: '#fef3c7', borderLeft: '4px solid #f59e0b', borderRadius: 8 }}>
+                <strong>Sandığa atanmadınız.</strong>
+                <p style={{ margin: '4px 0 0', fontSize: 13 }}>Üst sorumlunuzla iletişime geçin — sandık atanınca evrak yükleme alanı görünür.</p>
+              </div>
+            )}
+          </main>
+
+          {/* SAĞ PANEL */}
+          <aside style={{
+            flex: '1 1 0', minWidth: 0,
+            display: 'flex', flexDirection: 'column', gap: 16,
+            position: 'sticky', top: 16, alignSelf: 'flex-start',
+          }}>
+
+            {/* Hızlı İletişim */}
+            {(institutionSupervisor || regionSupervisor) && (
+              <Card title="Hızlı İletişim" icon={<span style={{ fontSize: 14 }}>📞</span>}>
+                {institutionSupervisor && (
+                  <a href={institutionSupervisor.phone ? `tel:${institutionSupervisor.phone}` : '#'} style={{ display: 'block', padding: 10, background: COLORS.primaryLight, borderRadius: 6, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 0.5 }}>Kurum Sorumlusu</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{institutionSupervisor.name}</div>
+                    {institutionSupervisor.phone && <div style={{ fontSize: 12, color: COLORS.textMuted }}>📞 {institutionSupervisor.phone}</div>}
+                  </a>
+                )}
+                {regionSupervisor && (
+                  <a href={regionSupervisor.phone ? `tel:${regionSupervisor.phone}` : '#'} style={{ display: 'block', padding: 10, background: '#fffbeb', borderRadius: 6, textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5 }}>Bölge Sorumlusu</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{regionSupervisor.name}</div>
+                    {regionSupervisor.phone && <div style={{ fontSize: 12, color: COLORS.textMuted }}>📞 {regionSupervisor.phone}</div>}
+                  </a>
+                )}
+              </Card>
+            )}
+
+            {/* Hızlı Aksiyonlar */}
+            <Card title="Hızlı Aksiyonlar" icon={<span style={{ fontSize: 14 }}>⚡</span>}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={() => { const e = elections[0]; if (e) handleElectionClick(e); }}
+                  disabled={elections.length === 0}
+                  style={{ padding: '10px 12px', background: COLORS.primary, color: 'white', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: elections.length === 0 ? 'not-allowed' : 'pointer', opacity: elections.length === 0 ? 0.5 : 1, textAlign: 'left' }}
+                >
+                  📝 Sonuç Gir / Düzenle
+                </button>
+                <button
+                  onClick={() => setActiveTab('approvals')}
+                  style={{ padding: '10px 12px', background: '#fef3c7', color: '#78350f', border: '1px solid #fcd34d', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>⏳ Onay Bekleyenler</span>
+                  {pendingApprovals.length > 0 && <span style={{ background: '#d97706', color: 'white', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{pendingApprovals.length}</span>}
+                </button>
+                <a href="#yuklenen-evraklar" style={{ padding: '10px 12px', background: '#f3f4f6', color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 6, fontWeight: 600, fontSize: 13, textAlign: 'left', textDecoration: 'none', display: 'block' }}>
+                  📤 Evrak Yükle
+                </a>
+              </div>
+            </Card>
+
+            {/* Bildirim Feed */}
+            <NotificationFeed userId={userId} />
+
+            {/* Eğitim */}
+            <TrainingMaterialList audience="chief_observer" title="Eğitim Materyalleri" />
+          </aside>
+
         </div>
       </div>
 
-      {/* Election Result Form Modal */}
-      {showResultForm && selectedElection && user && user.ballotBoxId && (
-        <ElectionResultForm
-          election={selectedElection}
-          ballotBoxId={user.ballotBoxId || user.ballot_box_id}
-          ballotNumber={user.ballotNumber || user.ballot_number}
-          onClose={handleCloseForm}
-          onSuccess={handleFormSuccess}
-        />
+      {/* Result Form Modal */}
+      {showResultForm && selectedElection && user && ballotBoxId && (
+        useAdvancedForm ? (
+          <ElectionResultForm
+            election={selectedElection}
+            ballotBoxId={ballotBoxId}
+            ballotNumber={ballotNumber}
+            onClose={handleCloseForm}
+            onSuccess={handleFormSuccess}
+          />
+        ) : (
+          <ChiefObserverQuickForm
+            election={selectedElection}
+            ballotBoxId={ballotBoxId}
+            ballotNumber={ballotNumber}
+            onClose={handleCloseForm}
+            onSuccess={handleFormSuccess}
+            onSwitchToAdvanced={() => setUseAdvancedForm(true)}
+          />
+        )
       )}
 
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-out;
-        }
-      `}</style>
       <OfflineIndicator />
     </div>
   );

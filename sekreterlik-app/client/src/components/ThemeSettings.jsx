@@ -64,6 +64,7 @@ function generatePalette(hexColor) {
 
 // ---- Parti renk preset'leri ----
 const THEME_PRESETS = [
+  { id: 'yrp-resmi-kirmizi', name: 'YRP Resmi (Kırmızı)', color: '#E30613' },
   { id: 'yrp-yesil',       name: 'YRP Yesil',        color: '#00843D' },
   { id: 'akp-turuncu',     name: 'AKP Turuncu',      color: '#FFA500' },
   { id: 'chp-kirmizi',     name: 'CHP Kirmizi',      color: '#ED1C24' },
@@ -99,7 +100,8 @@ const ThemeSettings = () => {
     footerCompanyName: '',
     footerCompanyUrl: '',
     loginSlogan: '',
-    loginTitle: ''
+    loginTitle: '',
+    publicHeaderTitle: ''
   });
   const [previewActive, setPreviewActive] = useState(false);
   const [originalTheme, setOriginalTheme] = useState(null);
@@ -145,7 +147,8 @@ const ThemeSettings = () => {
           footerCompanyName: data.footerCompanyName || '',
           footerCompanyUrl: data.footerCompanyUrl || '',
           loginSlogan: data.loginSlogan || '',
-          loginTitle: data.loginTitle || ''
+          loginTitle: data.loginTitle || '',
+          publicHeaderTitle: data.publicHeaderTitle || ''
         };
         setThemeSettings(settings);
         setSelectedTemplate(settings.templateId);
@@ -283,7 +286,8 @@ const ThemeSettings = () => {
       footerCompanyName: '',
       footerCompanyUrl: '',
       loginSlogan: '',
-      loginTitle: ''
+      loginTitle: '',
+      publicHeaderTitle: ''
     });
 
     applyThemeColors(template.colors);
@@ -533,6 +537,20 @@ const ThemeSettings = () => {
           Login Sayfasi
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="setting-public-header" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Public Sayfa Basligi
+            </label>
+            <input
+              id="setting-public-header"
+              type="text"
+              value={themeSettings.publicHeaderTitle}
+              onChange={(e) => setThemeSettings(prev => ({ ...prev, publicHeaderTitle: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+              placeholder="Orn: Elazig Il Baskanligi"
+            />
+            <p className="mt-1 text-xs text-gray-500">Public sayfanin header'inda gorunecek baslik</p>
+          </div>
           <div>
             <label htmlFor="setting-login-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Login Basligi

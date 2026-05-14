@@ -5,9 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:staging": "vite build --mode staging",
-    "build:render": "vite build && node scripts/fix-spa-routing.js",
+    "build": "vite build && node scripts/stamp-sw.js",
+    "build:staging": "vite build --mode staging && node scripts/stamp-sw.js",
     "preview": "vite preview",
     "cap:init": "npx cap init",
     "cap:add:ios": "npx cap add ios",
@@ -18,7 +17,11 @@
     "cap:copy": "npx cap copy",
     "cap:update": "npx cap update",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,json,css}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,json,css}\""
   },
   "keywords": [],
   "author": "",
@@ -57,7 +60,12 @@
     "autoprefixer": "^10.4.21",
     "browserslist": "^4.27.0",
     "caniuse-lite": "^1.0.30001541",
+    "eslint": "^8.57.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
     "postcss": "^8.4.21",
+    "prettier": "^3.8.3",
     "tailwindcss": "^3.2.4",
     "vite": "^4.1.1",
     "vitest": "^0.34.0"

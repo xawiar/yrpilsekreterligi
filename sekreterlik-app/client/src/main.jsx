@@ -23,7 +23,59 @@ import('./utils/fcmTokenManager').then(({ listenToFcmMessages }) => {
   });
 }).catch(() => {});
 
+// =====================================================
+// SERVICE WORKER REGISTER — TEK NOKTA
+// =====================================================
+// Daha önce 4 farklı yerde (usePWA, NotificationService, usePushNotifications,
+// AppBrandingSettings) /sw.js register ediliyordu. Aynı scope'ta yarışıyorlardı.
+// Şimdi sadece burada register, diğer yerler navigator.serviceWorker.ready
+// ile mevcut registration'ı alır.
+// Production-only: dev'de VitePWA devOptions.enabled=false + manuel kapalı.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => { /* sessizce yut, kritik degil */ });
+  });
+}
+
 // Push setup moved to AuthContext.jsx login flow
+
+// Yeni deploy sonrası eski sekme stale chunk ister → Firebase SPA fallback HTML döner → MIME hatası.
+// Tek seferlik otomatik recovery: cache temizle, SW unregister, reload.
+if (typeof window !== 'undefined') {
+  const isStaleChunkError = (msg = '') =>
+    msg.includes('Failed to load module script') ||
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Loading chunk') ||
+    msg.includes('Importing a module script failed');
+
+  const recoverFromStaleChunk = async () => {
+    if (sessionStorage.getItem('__chunk_recovery__')) return;
+    sessionStorage.setItem('__chunk_recovery__', '1');
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (_) { /* ignore */ }
+    window.location.reload();
+  };
+
+  window.addEventListener('error', (e) => {
+    if (isStaleChunkError(e?.message || '') || isStaleChunkError(e?.error?.message || '')) {
+      recoverFromStaleChunk();
+    }
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    if (isStaleChunkError(e?.reason?.message || '')) {
+      recoverFromStaleChunk();
+    }
+  });
+}
 
 // Firebase kullanımı kontrolü
 const USE_FIREBASE = 
@@ -40,12 +92,12 @@ const originalConsoleLog = console.log;
 // Filter console.error - AGGRESSIVE filtering for localhost:5000 errors
 console.error = (...args) => {
   const message = args.join(' ');
-  
+
   // Don't log connection refused errors to localhost:5182 (dev server)
   if (message.includes('ERR_CONNECTION_REFUSED') && message.includes('localhost:5182')) {
     return; // Silently ignore
   }
-  
+
   // Don't log connection refused errors to localhost:5000 if Firebase is enabled
   if (USE_FIREBASE) {
     if (
@@ -65,7 +117,7 @@ console.error = (...args) => {
       return; // Silently ignore ALL localhost:5000 related errors
     }
   }
-  
+
   originalConsoleError.apply(console, args);
 };
 
@@ -89,7 +141,7 @@ console.warn = (...args) => {
 console.log = (...args) => {
   const message = args.join(' ');
   
-  // Notification debug log'larını her zaman göster (🔔, 📬, ✅, ❌, 📝, 🔍, 📊 gibi emoji'lerle başlayanlar)
+  // Notification debug log'larını her zaman göster (emoji ile başlayanlar)
   const isNotificationDebug = /^[🔔📬✅❌📝🔍📊⚠️]/.test(message);
   if (isNotificationDebug) {
     originalConsoleLog.apply(console, args);
@@ -111,13 +163,10 @@ console.log = (...args) => {
   originalConsoleLog.apply(console, args);
 };
 
-// Production'da console.warn ve console.info'yu da kaldır
-if (import.meta.env.PROD) {
-  console.warn = () => {}; // Production'da warn'ları kaldır
-  console.info = () => {}; // Production'da info'ları kaldır
-  console.debug = () => {}; // Production'da debug'ları kaldır
-  // console.error tutuluyor - Sentry için gerekli
-}
+// NOT: Eskiden production'da console.warn/info/debug no-op yapılıyordu.
+// Sonuç: Sentry breadcrumb'a hiç warn gitmiyordu, geliştirici sahada
+// yaşanan hataları öğrenemiyordu. Üstteki localhost:5000/5182 filter'ları
+// zaten noise'u süzüyor — production'da diğer log'lar görünür kalsın.
 
 // Filter window error events for localhost connection errors
 const originalErrorHandler = window.onerror;

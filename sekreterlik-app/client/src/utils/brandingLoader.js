@@ -2,48 +2,21 @@
  * PWA manifest'ini dinamik olarak guncelle (blob URL ile)
  * @param {Object} manifestData - Manifest icerigi (name, short_name, icons, vb.)
  */
-export function updateManifest(manifestData) {
+/**
+ * NO-OP: Manifest artık server-side dinamik (Cloud Function `manifest`).
+ * Hosting rewrite üzerinden /manifest.json → Firestore'dan branding okuyup
+ * dinamik response döner. Browser her seferinde gerçek HTTP fetch yapar,
+ * blob URL hilesi gerekmez → PWA install kriteri sağlanır.
+ */
+export function updateManifest(_manifestData) {
   try {
-    let manifestLink = document.querySelector('link[rel="manifest"]');
-
-    const manifest = {
-      name: manifestData.name || 'Sekreterlik Yonetim Sistemi',
-      short_name: manifestData.short_name || 'Sekreterlik',
-      description: manifestData.description || 'Parti sekreterlik yonetim sistemi',
-      theme_color: manifestData.theme_color || '#3b82f6',
-      background_color: manifestData.background_color || '#ffffff',
-      display: manifestData.display || 'standalone',
-      start_url: '.',
-      orientation: manifestData.orientation || 'portrait-primary',
-      scope: '.',
-      lang: 'tr',
-      dir: 'ltr',
-      categories: ['productivity', 'business'],
-      icons: manifestData.icons || [
-        { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-        { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-      ]
-    };
-
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-    const blobUrl = URL.createObjectURL(blob);
-
-    if (manifestLink) {
-      // Eski blob URL'i temizle
-      if (manifestLink.href && manifestLink.href.startsWith('blob:')) {
-        URL.revokeObjectURL(manifestLink.href);
-      }
-      manifestLink.href = blobUrl;
-    } else {
-      // Manifest link yoksa olustur
-      manifestLink = document.createElement('link');
-      manifestLink.rel = 'manifest';
-      manifestLink.href = blobUrl;
-      document.head.appendChild(manifestLink);
+    const link = document.querySelector('link[rel="manifest"]');
+    // Eski sürümlerden kalan blob link'leri /manifest.json'a geri çevir
+    if (link && link.href && link.href.startsWith('blob:')) {
+      URL.revokeObjectURL(link.href);
+      link.href = '/manifest.json';
     }
-  } catch (error) {
-    console.warn('Error updating manifest link:', error);
-  }
+  } catch (_) { /* ignore */ }
 }
 
 /**
@@ -80,6 +53,10 @@ export const loadBrandingSettings = async () => {
             icon512Url: brandingSettings.icon512Url || '',
             badgeUrl: brandingSettings.badgeUrl || '',
             notificationIconUrl: brandingSettings.notificationIconUrl || '',
+            // FAZ 4.1: yeni branding alanları (önceden mapping eksikti,
+            // app start'ta localStorage üzerine yazılırken kaybolurdu)
+            notificationImageUrl: brandingSettings.notificationImageUrl || '',
+            notificationTitlePrefix: brandingSettings.notificationTitlePrefix || '',
             faviconUrl: brandingSettings.faviconUrl || '',
             headerInfoText: brandingSettings.headerInfoText || '',
             footerText: brandingSettings.footerText || ''
@@ -259,26 +236,22 @@ export const loadThemeSettings = async () => {
   try {
     const { applyThemeColors, updateFavicon } = await import('./themeUtils');
 
-    // Oncelikle localStorage'dan hizli yukle
+    // 1) Önce localStorage'dan HIZLI render — kullanıcı boş ekran görmesin
     const cached = localStorage.getItem('themeSettings');
+    let cachedData = null;
     if (cached) {
       try {
-        const parsed = JSON.parse(cached);
-        const colors = resolveColors(parsed);
-        if (colors) {
-          applyThemeColors(colors);
-        }
-        // Favicon guncelle
-        if (parsed.faviconUrl) {
-          updateFavicon(parsed.faviconUrl);
-        }
-        return parsed;
+        cachedData = JSON.parse(cached);
+        const colors = resolveColors(cachedData);
+        if (colors) applyThemeColors(colors);
+        if (cachedData.faviconUrl) updateFavicon(cachedData.faviconUrl);
       } catch (e) {
         console.warn('Error parsing cached theme:', e);
       }
     }
 
-    // Firebase'den yukle
+    // 2) HER DURUMDA Firestore'dan revalidate et — başka cihazdaki/admin
+    //    güncellemesi gelsin (stale-while-revalidate pattern).
     const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
     if (USE_FIREBASE) {
       try {
@@ -288,15 +261,17 @@ export const loadThemeSettings = async () => {
 
         if (themeDoc.exists()) {
           const data = themeDoc.data();
-          const colors = resolveColors(data);
-          if (colors) {
-            applyThemeColors(colors);
+          // Cache ile farklı mı? (updatedAt veya değer karşılaştırması)
+          const remoteStr = JSON.stringify(data);
+          const cachedStr = cached || '';
+          if (remoteStr !== cachedStr) {
+            const colors = resolveColors(data);
+            if (colors) applyThemeColors(colors);
+            if (data.faviconUrl) updateFavicon(data.faviconUrl);
+            localStorage.setItem('themeSettings', JSON.stringify(data));
+            // İçerikten event tetikle (canlı güncelleme için)
+            try { window.dispatchEvent(new Event('themeUpdated')); } catch (_) {}
           }
-          // Favicon guncelle
-          if (data.faviconUrl) {
-            updateFavicon(data.faviconUrl);
-          }
-          localStorage.setItem('themeSettings', JSON.stringify(data));
           return data;
         }
       } catch (error) {
@@ -304,7 +279,7 @@ export const loadThemeSettings = async () => {
       }
     }
 
-    return null;
+    return cachedData;
   } catch (error) {
     console.warn('Error loading theme settings:', error);
     return null;

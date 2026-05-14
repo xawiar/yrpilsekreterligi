@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 const RATE_KEY = 'application_submissions';
+const SUBMITTED_TCS_KEY = 'application_submitted_tcs';
 const MAX_DAILY = 3;
+
+// Kademeler
+const LEVELS_REQUIRING_DISTRICT = [
+  'ilce_yonetimi',
+  'kadin_kollari',
+  'genclik_kollari',
+  'mahalle_temsilcisi',
+  'basmusahit'
+];
 
 const PublicApplicationPage = () => {
   const [formData, setFormData] = useState({
@@ -11,11 +21,18 @@ const PublicApplicationPage = () => {
     tc: '',
     phone: '',
     district_id: '',
+    town_id: '',
+    neighborhood_id: '',
+    village_id: '',
+    ballot_number: '',
     application_level: '',
     reason: '',
     kvkk_consent: false,
   });
   const [districts, setDistricts] = useState([]);
+  const [towns, setTowns] = useState([]);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [villages, setVillages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -31,31 +48,111 @@ const PublicApplicationPage = () => {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Fetch districts from Firestore
+  // Fetch districts/towns/neighborhoods/villages from Firestore
   useEffect(() => {
-    const fetchDistricts = async () => {
+    const fetchAll = async () => {
       try {
         if (!db) return;
-        const snapshot = await getDocs(collection(db, 'districts'));
-        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Sort by name
-        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
-        setDistricts(list);
+        const [dSnap, tSnap, nSnap, vSnap] = await Promise.all([
+          getDocs(collection(db, 'districts')),
+          getDocs(collection(db, 'towns')).catch(() => null),
+          getDocs(collection(db, 'neighborhoods')).catch(() => null),
+          getDocs(collection(db, 'villages')).catch(() => null),
+        ]);
+        const sortByName = (list) =>
+          list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
+
+        const dList = dSnap ? dSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+        sortByName(dList);
+        setDistricts(dList);
+
+        if (tSnap) {
+          const tList = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          sortByName(tList);
+          setTowns(tList);
+        }
+        if (nSnap) {
+          const nList = nSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          sortByName(nList);
+          setNeighborhoods(nList);
+        }
+        if (vSnap) {
+          const vList = vSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          sortByName(vList);
+          setVillages(vList);
+        }
       } catch (err) {
-        console.warn('Could not fetch districts:', err.message);
+        console.warn('Lokasyon verileri yuklenemedi:', err.message);
       }
     };
-    fetchDistricts();
+    fetchAll();
   }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
+
+      // Cascade reset: kademe değişince ilçe/belde/mahalle/köy/sandık sıfırla
+      if (name === 'application_level') {
+        next.town_id = '';
+        next.neighborhood_id = '';
+        next.village_id = '';
+        next.ballot_number = '';
+      }
+      // İlçe değişince alt seçimleri sıfırla
+      if (name === 'district_id') {
+        next.town_id = '';
+        next.neighborhood_id = '';
+        next.village_id = '';
+      }
+      // Belde değişince mahalle/köy sıfırla
+      if (name === 'town_id') {
+        next.neighborhood_id = '';
+        next.village_id = '';
+      }
+      // Mahalle seçildiğinde köyü, köy seçildiğinde mahalleyi temizle (XOR)
+      if (name === 'neighborhood_id' && value) {
+        next.village_id = '';
+      }
+      if (name === 'village_id' && value) {
+        next.neighborhood_id = '';
+      }
+      return next;
+    });
     if (error) setError('');
   };
+
+  // Cascade filtreler
+  const filteredTowns = useMemo(() => {
+    if (!formData.district_id) return [];
+    return towns.filter(t => String(t.district_id) === String(formData.district_id));
+  }, [towns, formData.district_id]);
+
+  const filteredNeighborhoods = useMemo(() => {
+    if (!formData.district_id) return [];
+    return neighborhoods.filter(n => {
+      const districtMatch = String(n.district_id) === String(formData.district_id);
+      if (!districtMatch) return false;
+      if (formData.town_id) {
+        return String(n.town_id) === String(formData.town_id);
+      }
+      // Belde seçilmemişse: town_id'si boş/null olanlar (merkez mahalleleri)
+      return !n.town_id;
+    });
+  }, [neighborhoods, formData.district_id, formData.town_id]);
+
+  const filteredVillages = useMemo(() => {
+    if (!formData.district_id) return [];
+    return villages.filter(v => {
+      const districtMatch = String(v.district_id) === String(formData.district_id);
+      if (!districtMatch) return false;
+      if (formData.town_id) {
+        return String(v.town_id) === String(formData.town_id);
+      }
+      return !v.town_id;
+    });
+  }, [villages, formData.district_id, formData.town_id]);
 
   const validateTC = (tc) => {
     if (!tc || tc.length !== 11) return false;
@@ -90,6 +187,34 @@ const PublicApplicationPage = () => {
     }
   };
 
+  // TC daha önce bu cihazdan başvurmuş mu?
+  const hasSubmittedBefore = (tc) => {
+    if (!tc) return false;
+    try {
+      const list = JSON.parse(localStorage.getItem(SUBMITTED_TCS_KEY) || '[]');
+      return Array.isArray(list) && list.includes(String(tc).trim());
+    } catch {
+      return false;
+    }
+  };
+
+  const recordSubmittedTC = (tc) => {
+    if (!tc) return;
+    try {
+      const list = JSON.parse(localStorage.getItem(SUBMITTED_TCS_KEY) || '[]');
+      const arr = Array.isArray(list) ? list : [];
+      const t = String(tc).trim();
+      if (!arr.includes(t)) arr.push(t);
+      localStorage.setItem(SUBMITTED_TCS_KEY, JSON.stringify(arr));
+    } catch {
+      // ignore
+    }
+  };
+
+  const isBasmusahit = formData.application_level === 'basmusahit';
+  const isMahalleTemsilcisi = formData.application_level === 'mahalle_temsilcisi';
+  const requiresDistrict = LEVELS_REQUIRING_DISTRICT.includes(formData.application_level);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -111,6 +236,25 @@ const PublicApplicationPage = () => {
       setError('Lutfen basvurmak istediginiz kademeyi seciniz.');
       return;
     }
+
+    // Kademe-spesifik zorunluluklar
+    if (requiresDistrict && !formData.district_id) {
+      setError('Bu kademe icin Ilce secimi zorunludur.');
+      return;
+    }
+    if (isBasmusahit) {
+      if (!formData.neighborhood_id && !formData.village_id) {
+        setError('Basmusahit basvurusu icin Mahalle veya Koy secimi zorunludur.');
+        return;
+      }
+    }
+    if (isMahalleTemsilcisi) {
+      if (!formData.neighborhood_id) {
+        setError('Mahalle Temsilcisi basvurusu icin Mahalle secimi zorunludur.');
+        return;
+      }
+    }
+
     if (!formData.kvkk_consent) {
       setError('KVKK metnini onaylamaniz gerekmektedir.');
       return;
@@ -120,6 +264,18 @@ const PublicApplicationPage = () => {
     if (!checkRateLimit()) {
       setError('Gunluk basvuru limitine ulastiniz (3/gun). Lutfen yarin tekrar deneyiniz.');
       return;
+    }
+
+    // Aynı TC ile önceki başvuru kontrolü (cihaz bazlı, localStorage)
+    if (hasSubmittedBefore(formData.tc)) {
+      const proceed = window.confirm(
+        `Bu T.C. Kimlik Numarası (${formData.tc}) ile daha önce başvuru yaptınız.\n\n` +
+        'Yeniden başvurmak ister misiniz? (Önceki başvurunuz işleme alınmış olabilir)'
+      );
+      if (!proceed) {
+        setError('Başvuru iptal edildi. Daha önce yaptığınız başvuru işleme alınmaktadır.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -134,6 +290,10 @@ const PublicApplicationPage = () => {
         tc: formData.tc.trim(),
         phone: formData.phone.trim(),
         district_id: formData.district_id || '',
+        town_id: formData.town_id || '',
+        neighborhood_id: formData.neighborhood_id || '',
+        village_id: formData.village_id || '',
+        ballot_number: formData.ballot_number ? formData.ballot_number.trim() : '',
         application_level: formData.application_level,
         reason: formData.reason.trim(),
         kvkk_consent: true,
@@ -150,7 +310,9 @@ const PublicApplicationPage = () => {
           'il_yonetimi': 'İl Yönetimi',
           'ilce_yonetimi': 'İlçe Yönetimi',
           'kadin_kollari': 'Kadın Kolları',
-          'genclik_kollari': 'Gençlik Kolları'
+          'genclik_kollari': 'Gençlik Kolları',
+          'mahalle_temsilcisi': 'Mahalle Temsilcisi',
+          'basmusahit': 'Başmüşahit'
         };
         const levelLabel = levelLabels[formData.application_level] || formData.application_level;
         await NotificationService.createNotification({
@@ -168,6 +330,7 @@ const PublicApplicationPage = () => {
       }
 
       recordSubmission();
+      recordSubmittedTC(formData.tc);
       setSubmitted(true);
     } catch (err) {
       console.error('Basvuru hatasi:', err);
@@ -307,26 +470,125 @@ const PublicApplicationPage = () => {
               <option value="ilce_yonetimi">İlçe Yönetimi</option>
               <option value="kadin_kollari">Kadın Kolları</option>
               <option value="genclik_kollari">Gençlik Kolları</option>
+              <option value="mahalle_temsilcisi">Mahalle Temsilcisi</option>
+              <option value="basmusahit">Başmüşahit</option>
             </select>
           </div>
 
           {/* Ilce Dropdown */}
           <div>
             <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
-              İlçe
+              İlçe {requiresDistrict && <span className="text-red-500">*</span>}
             </label>
             <select
               name="district_id"
               value={formData.district_id}
               onChange={handleChange}
+              required={requiresDistrict}
               className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass}`}
             >
-              <option value="">İlçe seçiniz (ilçe başvurusu için zorunlu)</option>
+              <option value="">İlçe seçiniz...</option>
               {districts.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
           </div>
+
+          {/* Belde — sadece basmusahit veya mahalle_temsilcisi'nde göster */}
+          {(isBasmusahit || isMahalleTemsilcisi) && (
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
+                Belde <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>(opsiyonel)</span>
+              </label>
+              <select
+                name="town_id"
+                value={formData.town_id}
+                onChange={handleChange}
+                disabled={!formData.district_id}
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass} ${!formData.district_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <option value="">Merkez (belde yok)</option>
+                {filteredTowns.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              {!formData.district_id && (
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Önce ilçe seçiniz.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Mahalle — basmusahit (mahalle VEYA köy zorunlu) ve mahalle_temsilcisi (zorunlu) */}
+          {(isBasmusahit || isMahalleTemsilcisi) && (
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
+                Mahalle {isMahalleTemsilcisi && <span className="text-red-500">*</span>}
+                {isBasmusahit && (
+                  <span className={`text-xs ml-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    (Mahalle veya Köy biri zorunlu)
+                  </span>
+                )}
+              </label>
+              <select
+                name="neighborhood_id"
+                value={formData.neighborhood_id}
+                onChange={handleChange}
+                disabled={!formData.district_id}
+                required={isMahalleTemsilcisi}
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass} ${!formData.district_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <option value="">Mahalle seçiniz...</option>
+                {filteredNeighborhoods.map(n => (
+                  <option key={n.id} value={n.id}>{n.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Köy — sadece basmusahit'te */}
+          {isBasmusahit && (
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
+                Köy <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>(Mahalle yerine seçilebilir)</span>
+              </label>
+              <select
+                name="village_id"
+                value={formData.village_id}
+                onChange={handleChange}
+                disabled={!formData.district_id}
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass} ${!formData.district_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <option value="">Köy seçiniz...</option>
+                {filteredVillages.map(v => (
+                  <option key={v.id} value={v.id}>{v.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Sandık No — sadece basmusahit, opsiyonel */}
+          {isBasmusahit && (
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${labelClass}`}>
+                Sandık No <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>(opsiyonel)</span>
+              </label>
+              <input
+                type="text"
+                name="ballot_number"
+                value={formData.ballot_number}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setFormData(prev => ({ ...prev, ballot_number: val }));
+                  if (error) setError('');
+                }}
+                placeholder="Örn: 1042"
+                inputMode="numeric"
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${inputClass}`}
+              />
+            </div>
+          )}
 
           {/* Basvuru Nedeni */}
           <div>

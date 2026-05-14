@@ -202,20 +202,28 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
     }
   ).length;
 
+  // Türkçe karakter güvenli lowercase (İ→i, I→ı)
+  const trLower = (s) => (s == null ? '' : String(s)).toLocaleLowerCase('tr-TR');
+  const searchLower = trLower(searchTerm);
+  const filterDistrictLower = trLower(filterDistrict);
+
   const filteredItems = items.filter(item => {
-    const matchesSearch = !searchTerm ||
-      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.district_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.town_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchLower ||
+      trLower(item.name).includes(searchLower) ||
+      trLower(item.district_name).includes(searchLower) ||
+      trLower(item.town_name).includes(searchLower);
 
     const matchesGroup = filterGroupNo
       ? String(item.group_no || '') === String(filterGroupNo)
       : true;
 
-    const matchesDistrict = filterDistrict
-      ? String(item.district_id || '') === String(filterDistrict) ||
-        (item.district_name || '').toLowerCase() === filterDistrict.toLowerCase()
-      : true;
+    // filterDistrict dropdown value = district_name; ID veya isim ile karşılaştır
+    const matchesDistrict = !filterDistrict
+      ? true
+      : (
+          String(item.district_id || '') === String(filterDistrict) ||
+          trLower(item.district_name) === filterDistrictLower
+        );
 
     return matchesSearch && matchesGroup && matchesDistrict;
   }).sort((a, b) => {
@@ -419,10 +427,10 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
         </div>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
+      {/* Card Grid (tüm ekranlarda) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredItems.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="col-span-full text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
             <p className="text-gray-500">
               {searchTerm ? 'Arama sonucu bulunamadı' : cfg.emptyMessage}
             </p>
@@ -533,149 +541,6 @@ const LocationsPage = ({ type = 'neighborhood' }) => {
         )}
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm ? 'Arama sonucu bulunamadı' : cfg.emptyMessage}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {cfg.headerLabel}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İlçe
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Belde
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grup
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Temsilci
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Müfettiş
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ziyaret Sayısı
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Temsilci Durumu
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredItems.map((item) => {
-                  const representative = findRepresentative(item);
-                  const supervisor = findSupervisor(item);
-                  const hasRepresentative = !!representative;
-                  const isEditing = editingGroup === item.id;
-
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {item.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.district_name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.town_name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {isEditing ? (
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="number"
-                              value={groupNoInput}
-                              onChange={(e) => setGroupNoInput(e.target.value)}
-                              className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Grup"
-                              min="1"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleGroupNoChange(item.id, groupNoInput)}
-                              className="text-green-600 hover:text-green-800 text-sm"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingGroup(null);
-                                setGroupNoInput('');
-                              }}
-                              className="text-red-600 hover:text-red-800 text-sm"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            {item.group_no ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                Grup {item.group_no}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">-</span>
-                            )}
-                            <button
-                              onClick={() => {
-                                setEditingGroup(item.id);
-                                setGroupNoInput(item.group_no || '');
-                              }}
-                              className="text-indigo-600 hover:text-indigo-800 text-xs"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {representative?.name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {supervisor?.name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button
-                          onClick={() => handleVisitCountClick(item)}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors cursor-pointer"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          {visitCounts[item.id] || 0} ziyaret
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {hasRepresentative ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Temsilci Atanmış
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            Temsilci Atanmamış
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* Visit Details Modal */}
       <Modal

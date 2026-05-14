@@ -4,8 +4,10 @@
  * Google Gemini Vision API kullanır
  */
 
+import GeminiKeyPool from './GeminiKeyPool';
+
 class ProtocolOCRService {
-  static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  static API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
   /**
    * Gemini API key'ini al
@@ -77,8 +79,14 @@ class ProtocolOCRService {
           
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
+            reader.onload = () => {
+              if (typeof reader.result !== 'string') {
+                reject(new Error('Dosya okunamadı'));
+                return;
+              }
+              resolve(reader.result);
+            };
+            reader.onerror = () => reject(reader.error || new Error('Dosya okuma hatası'));
             reader.readAsDataURL(blob);
           });
         } catch (proxyError) {
@@ -114,8 +122,14 @@ class ProtocolOCRService {
       
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
+        reader.onload = () => {
+          if (typeof reader.result !== 'string') {
+            reject(new Error('Dosya okunamadı'));
+            return;
+          }
+          resolve(reader.result);
+        };
+        reader.onerror = () => reject(reader.error || new Error('Dosya okuma hatası'));
         reader.readAsDataURL(blob);
       });
     } catch (error) {
@@ -132,8 +146,6 @@ class ProtocolOCRService {
    */
   static async readProtocol(imageUrl, electionInfo = {}) {
     try {
-      const apiKey = await this.getApiKey();
-      
       // Base64 yöntemi (proxy veya direkt) - Gemini API file_uri desteklemiyor, sadece base64 kullan
       const base64Image = await this.imageToBase64(imageUrl);
       
@@ -146,6 +158,38 @@ class ProtocolOCRService {
       const electionType = electionInfo.type || 'genel';
       let prompt = this.buildPromptForElectionType(electionType, electionInfo);
 
+      // ÖNEMLİ: Genel seçimde focus parametresi (cb/mv) AI'a SÖYLENMEZ.
+      // Çünkü AI'a "bu CB tutanağı" dersek, gerçekte MV olsa bile itaat eder
+      // ve tutanak_tipi='cb' döner — yanlış tutanak tespitini bozardık.
+      // AI tarafsız tip belirlemeli; focus'a göre filter client-side yapılır.
+
+      // Tutanak tipi tespiti — kullanıcı yanlış tutanak yüklerse uyarmak için.
+      prompt += `
+
+══════════════════════════════════════════════════════════
+TUTANAK TİPİ TESPİTİ (KESİNLİKLE ZORUNLU — JSON İLK ALAN)
+══════════════════════════════════════════════════════════
+
+Yanıt JSON'unun İLK alanı "tutanak_tipi" OLMALI. Bu alanı atlamak YASAK.
+
+Olası değerler:
+- "cb" → Cumhurbaşkanı Seçimi tutanağı (başlığında "CUMHURBAŞKANI SEÇİMİ" veya cumhurbaşkanı adayları listesi)
+- "mv" → Milletvekili Seçimi tutanağı (başlığında "MİLLETVEKİLİ SEÇİMİ" veya parti adları listeli tablo - AKP, CHP, MHP, YRP gibi)
+- "mayor" → Belediye Başkanı tutanağı
+- "provincial_assembly" → İl Genel Meclisi tutanağı
+- "municipal_council" → Belediye Meclisi tutanağı
+- "muhtar" → Muhtarlık tutanağı
+- "referandum" → Halk Oylaması tutanağı
+- "other" → Yukarıdakilerden hiçbiri (kimlik fotokopisi, hatalı görsel, başka belge)
+
+KARAR KURALLARI:
+1. Tutanağın BAŞLIĞINA bak — hangi seçim yazıyor?
+2. Aday/parti TABLOSUNA bak — kişi isimleri (CB) veya parti isimleri (MV)?
+3. Tutanak hiç değilse → "other"
+4. Şüpheliysen → "other" (asla rastgele tahmin etme)
+
+ÖRNEK çıktı: { "tutanak_tipi": "cb", ... }`;
+
       prompt += `
 
 ÖNEMLİ:
@@ -154,41 +198,36 @@ class ProtocolOCRService {
 3. SADECE JSON döndür, başka metin ekleme
 4. JSON formatı şöyle olmalı:
 {
+  "tutanak_tipi": "cb",
   "sandik_numarasi": "1234",
   "kullanilan_oy": 450,
   "gecersiz_oy": 10,
   "gecerli_oy": 440,
   ... (seçim türüne göre diğer alanlar)
 }
-5. NOT: "toplam_secmen" alanını okuma, bu bilgi zaten sandık eklerken ekleniyor`;
+5. "toplam_secmen": Tutanaktaki "Sandık Seçmen Listesinde Yazılı Olan Seçmenlerin Sayısı" alanını MUTLAKA OKU. Bu, sandığın gerçek kayıtlı seçmen sayısıdır. Sistemde girilen değil, tutanaktaki esastır.`;
 
-      // Gemini Vision API çağrısı
-      const response = await fetch(`${this.API_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                text: prompt
-              },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: base64Data
-                }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 2048,
-            responseMimeType: 'application/json'
-          }
-        })
+      // Gemini Vision API çağrısı (key pool — 429/401/403 alındığında otomatik retry)
+      const requestBody = JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: 'image/jpeg', data: base64Data } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json'
+        }
       });
+      const response = await GeminiKeyPool.fetchWithFallback((apiKey) =>
+        fetch(`${this.API_URL}?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: requestBody
+        })
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -243,11 +282,10 @@ class ProtocolOCRService {
 
 MANUEL GİRİLMESİ GEREKEN BİLGİLER (Tutanak üst kısmı):
 - sandik_numarasi: Sandık numarası
+- toplam_secmen: "Sandık Seçmen Listesinde Yazılı Olan Seçmenlerin Sayısı" - MUTLAKA OKU (tutanaktaki gerçek kayıtlı seçmen sayısı)
 - kullanilan_oy: Oy kullanan seçmenlerin toplam sayısı (kullanılan zarf sayısı) - MUTLAKA OKU
 - gecerli_oy: Geçerli oy pusulası toplamı - MUTLAKA OKU
 - gecersiz_oy: Geçersiz sayılan veya hesaba katılmayan oy sayısı - MUTLAKA OKU
-
-NOT: "toplam_secmen" alanını OKUMA, bu bilgi zaten sandık eklerken ekleniyor.
 
 `;
 
@@ -258,41 +296,29 @@ NOT: "toplam_secmen" alanını OKUMA, bu bilgi zaten sandık eklerken ekleniyor.
       const independentCbCandidates = electionInfo.independent_cb_candidates || [];
       const allCbCandidates = [...cbCandidates, ...independentCbCandidates];
       
-      if (allCbCandidates.length > 0) {
-        prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
+      prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
 - cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  
-  KRİTİK: SADECE AŞAĞIDAKİ ADAMLARI OKU! TUTANAKTA BAŞKA ADAMLAR VARSA GÖRMEZDEN GEL!
-  Formda tanımlı adaylar: ${allCbCandidates.map(c => `"${c}"`).join(', ')}
-  
-  Tutanakta sadece bu adayları ara ve oylarını oku. Formda olmayan adayları görmezden gel.
-  Örnek: ${JSON.stringify(Object.fromEntries(allCbCandidates.map(c => [c, 0])))}`;
-      } else {
-        prompt += `CUMHURBAŞKANI SEÇİMİ TUTANAĞI:
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})
-  Tutanakta "Cumhurbaşkanı Adayı" veya "Başkan Adayı" bölümündeki adayları ve aldıkları oyları oku.`;
-      }
+
+  KRİTİK: Tutanaktaki TÜM Cumhurbaşkanı adaylarını ve oylarını oku.
+  ${allCbCandidates.length > 0 ? `Sistemde tanımlı adaylar: ${allCbCandidates.map(c => `"${c}"`).join(', ')}.\n  NOT: Bu listede olmayan adayları da OKU — sistem onları "Diğer" alanına otomatik toplar.` : 'Tutanakta "Cumhurbaşkanı Adayı" bölümündeki tüm adayları oku.'}
+  Aday adlarını tutanaktaki tam haliyle yaz.`;
     } else if (electionType === 'mv') {
-      // Sadece Milletvekili Genel Seçimi
       const parties = electionInfo.parties || [];
       const independentMvCandidates = electionInfo.independent_mv_candidates || [];
       const allParties = parties.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
       const allMvCandidates = [...allParties, ...independentMvCandidates];
-      
-      if (allMvCandidates.length > 0) {
-        prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  
-  KRİTİK: SADECE AŞAĞIDAKİ PARTİLERİ OKU! TUTANAKTA BAŞKA PARTİLER VARSA GÖRMEZDEN GEL!
-  Formda tanımlı partiler: ${allMvCandidates.map(p => `"${p}"`).join(', ')}
-  
-  Tutanakta sadece bu partileri ara ve oylarını oku. Formda olmayan partileri görmezden gel.
-  Örnek: ${JSON.stringify(Object.fromEntries(allMvCandidates.map(p => [p, 0])))}`;
-      } else {
-        prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})
-  Tutanakta "Siyasi Partinin Adı" veya "Parti Adı" bölümündeki partileri ve aldıkları oyları oku.`;
-      }
+
+      prompt += `MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI:
+- mv_oylari: Tüm partiler, ittifak ortak oyları ve bağımsız adaylar — hepsi tek JSON object
+  ({"Parti/İttifak/Bağımsız Adı": oy_sayısı})
+
+  KRİTİK: Tutanaktaki AŞAĞIDAKİ TÜM bölümleri tek mv_oylari içine ekle:
+  1) "SİYASİ PARTİNİN ADI" sütunu — TÜM partileri (genelde 20+ parti) oyları ile oku
+  2) "İTTİFAK ORTAK OYLARI" sütunu — Cumhur İttifakı, Millet İttifakı, Emek ve Özgürlük İttifakı, ATA İttifakı, Sosyalist Güç Birliği İttifakı vb. — varsa hepsini oku
+  3) "BAĞIMSIZ ADAYIN ADI VE SOYADI" sütunu — bağımsız adayları isim soyisim ile oku
+
+  ${allMvCandidates.length > 0 ? `Sistemde tanımlı partiler/bağımsızlar: ${allMvCandidates.map(p => `"${p}"`).join(', ')}.\n  NOT: Bu listede olmayanları da OKU — sistem onları "Diğer" alanına otomatik toplar. Listede yok diye atlama.` : 'Tutanaktaki bütün bu üç bölümü oku.'}
+  Adları tutanaktaki tam haliyle yaz, kısaltma yapma.`;
     } else if (electionType === 'genel') {
       // Genel seçim: CB ve MV birlikte
       const cbCandidates = electionInfo.cb_candidates || [];
@@ -305,22 +331,17 @@ NOT: "toplam_secmen" alanını OKUMA, bu bilgi zaten sandık eklerken ekleniyor.
       const allMvCandidates = [...allParties, ...independentMvCandidates];
       
       prompt += `CUMHURBAŞKANI SEÇİMİ VE MİLLETVEKİLİ GENEL SEÇİMİ TUTANAĞI (BİRLEŞİK):
-- cb_oylari: Cumhurbaşkanı adayları ve oyları (JSON object: {"Aday Adı Soyadı": oy_sayısı})`;
-      
-      if (allCbCandidates.length > 0) {
-        prompt += `
-  
-  KRİTİK CB: SADECE AŞAĞIDAKİ CB ADAMLARINI OKU! Formda tanımlı CB adayları: ${allCbCandidates.map(c => `"${c}"`).join(', ')}`;
-      }
-      
-      prompt += `
-- mv_oylari: Milletvekili partiler ve oyları (JSON object: {"Parti Adı": oy_sayısı})`;
-      
-      if (allMvCandidates.length > 0) {
-        prompt += `
-  
-  KRİTİK MV: SADECE AŞAĞIDAKİ PARTİLERİ OKU! Formda tanımlı partiler: ${allMvCandidates.map(p => `"${p}"`).join(', ')}`;
-      }
+
+- cb_oylari: Cumhurbaşkanı tutanağındaki TÜM adaylar ve oyları (JSON object)
+  ${allCbCandidates.length > 0 ? `Sistemde tanımlı CB adayları: ${allCbCandidates.map(c => `"${c}"`).join(', ')}.\n  NOT: Tutanakta listelenen TÜM adayları oku — sistemde olmayanları "Diğer" alanına otomatik toplar.` : ''}
+
+- mv_oylari: Milletvekili tutanağındaki TÜM partiler + ittifak ortak oyları + bağımsız adaylar — hepsi tek JSON object
+  KRİTİK: Şu üç bölümü tek mv_oylari içine ekle:
+  1) "SİYASİ PARTİNİN ADI" sütunundaki TÜM partiler (tutanakta 20+ parti olabilir)
+  2) "İTTİFAK ORTAK OYLARI" sütunu (Cumhur, Millet, Emek ve Özgürlük, ATA, Sosyalist Güç Birliği vb. — varsa)
+  3) "BAĞIMSIZ ADAYIN ADI VE SOYADI" sütunundaki bağımsız adaylar
+  ${allMvCandidates.length > 0 ? `Sistemde tanımlı: ${allMvCandidates.map(p => `"${p}"`).join(', ')}.\n  NOT: Listede olmayanları da MUTLAKA OKU — sistem onları "Diğer" alanına otomatik toplar.` : ''}
+  Adları tutanaktaki tam haliyle yaz, kısaltma yapma.`;
     } else if (electionType === 'yerel_metropolitan_mayor') {
       // Büyükşehir Belediye Başkanı
       const mayorParties = electionInfo.mayor_parties || [];
@@ -467,14 +488,16 @@ NOT: "toplam_secmen" alanını OKUMA, bu bilgi zaten sandık eklerken ekleniyor.
 KRİTİK KURALLAR:
 1. Tüm sayıları tam olarak oku, tahmin yapma veya yuvarlama yapma
 2. Tutanak üst kısmındaki MANUEL GİRİLMESİ GEREKEN bilgileri mutlaka oku:
+   - toplam_secmen: "Sandık Seçmen Listesinde Yazılı Olan Seçmenlerin Sayısı" (MUTLAKA OKU - tutanaktaki gerçek kayıtlı seçmen sayısı)
    - kullanilan_oy: Oy kullanan seçmenlerin toplam sayısı (MUTLAKA OKU)
    - gecerli_oy: Geçerli oy pusulası toplamı (MUTLAKA OKU)
    - gecersiz_oy: Geçersiz sayılan oy sayısı (MUTLAKA OKU)
    - sandik_numarasi: Sandık numarası (varsa oku)
-3. "toplam_secmen" alanını OKUMA! Bu bilgi zaten sandık eklerken ekleniyor.
+3. Seçmen sayısı için TUTANAKTAKİ değer esastır, sistemdekini değil tutanaktan oku.
 4. Tutanak alt kısmındaki seçim türüne özel bilgileri (adaylar, partiler, oylar) oku:
-   - SADECE FORMA TANIMLI OLAN ADAMLARI/PARTİLERİ OKU!
-   - Formda olmayan adayları/partileri görmezden gel, JSON'a ekleme
+   - Tutanaktaki TÜM adayları/partileri oku (sistemde tanımlı olmayanları da)
+   - MV tutanağında ittifak ortak oylarını ve bağımsız adayları da oku
+   - Sistem, tanımlı olmayan oyları "Diğer" alanına otomatik toplar — sen ATLAMA
 5. Eğer bir bilgi okunamıyorsa null veya 0 yaz
 6. Parti adlarını ve aday adlarını tam olarak yaz (kısaltma yapma)
 7. SADECE JSON döndür, başka metin ekleme
@@ -701,13 +724,47 @@ KRİTİK KURALLAR:
    * AI'dan gelen veriyi sistem formatına çevir
    */
   static convertToSystemFormat(data, electionType, electionInfo = {}) {
+    // Seçmen ve oy sayıları tutanaktan okunur. Genel seçimde CB ve MV tutanakları
+    // FARKLI sayılara sahip olabilir (örn. CB valid=315, MV valid=309) — bu yüzden
+    // focus'a göre cb_* veya mv_* alanlarına ayrı yazılır. Validation ve save de
+    // kategori-bazlı bu alanları kullanır.
+    const focus = electionInfo.focus || null;
+    const totalVoters = parseInt(data.toplam_secmen);
+    const usedVotes = parseInt(data.kullanilan_oy) || 0;
+    const invalidVotes = parseInt(data.gecersiz_oy) || 0;
+    const validVotes = parseInt(data.gecerli_oy) || 0;
+
     const result = {
-      // total_voters: OKUMA! Zaten sandık eklerken ekleniyor
-      used_votes: parseInt(data.kullanilan_oy) || 0,
-      invalid_votes: parseInt(data.gecersiz_oy) || 0,
-      valid_votes: parseInt(data.gecerli_oy) || 0,
-      ballot_number: data.sandik_numarasi || null
+      ballot_number: data.sandik_numarasi || null,
     };
+
+    if (electionType === 'genel' && focus === 'cb') {
+      // Sadece CB tutanağı okundu — cb_* alanlarına yaz, ortak alanlara dokunma
+      result.cb_used_votes = usedVotes;
+      result.cb_invalid_votes = invalidVotes;
+      result.cb_valid_votes = validVotes;
+      if (!isNaN(totalVoters) && totalVoters > 0) {
+        result.cb_total_voters = totalVoters;
+        result.total_voters = totalVoters; // Sandık seçmen sayısı ortak alana da yaz
+      }
+    } else if (electionType === 'genel' && focus === 'mv') {
+      // Sadece MV tutanağı okundu — mv_* alanlarına yaz
+      result.mv_used_votes = usedVotes;
+      result.mv_invalid_votes = invalidVotes;
+      result.mv_valid_votes = validVotes;
+      if (!isNaN(totalVoters) && totalVoters > 0) {
+        result.mv_total_voters = totalVoters;
+        result.total_voters = totalVoters;
+      }
+    } else {
+      // Tek tutanaklı seçim (cb, mv tek başına, yerel, vb.) — eski davranış
+      result.used_votes = usedVotes;
+      result.invalid_votes = invalidVotes;
+      result.valid_votes = validVotes;
+      if (!isNaN(totalVoters) && totalVoters > 0) {
+        result.total_voters = totalVoters;
+      }
+    }
 
     if (electionType === 'cb') {
       result.cb_votes = data.cb_oylari || {};

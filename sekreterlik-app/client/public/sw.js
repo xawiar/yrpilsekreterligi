@@ -1,15 +1,27 @@
-const CACHE_NAME = 'sekreterlik-v8-fcm-20260403';
-// Vite geliştirme ortamında sabit bundle yolları yok; yalnızca güvenli, mevcut dosyaları önbelleğe al
+const CACHE_NAME = 'sekreterlik-v9-yrp-20260426';
+
+// Workbox runtime caching'i import et — fonts, images, navigation
+// (workbox-sw.js Vite tarafından üretilir, runtime caching stratejilerini içerir).
+// Hata olursa custom SW yine çalışır, sadece runtime cache devre dışı kalır.
+try {
+  importScripts('/workbox-sw.js');
+} catch (e) {
+  console.warn('[SW] workbox-sw.js import edilemedi (runtime cache devre dışı):', e?.message || e);
+}
+
+// manifest.json precache YOK — server-side dynamic (Cloud Function),
+// her seferinde fresh çekilmeli
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png'
 ];
 
 // Install event
 self.addEventListener('install', (event) => {
+  // Yeni SW yüklenir yüklenmez aktif ol — eski SW'i bekleme
+  self.skipWaiting();
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
     try {
@@ -77,18 +89,15 @@ self.addEventListener('fetch', (event) => {
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
+  event.waitUntil((async () => {
+    // Eski cache'leri temizle
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames.map((name) => name !== CACHE_NAME ? caches.delete(name) : null)
+    );
+    // Mevcut tab'ları hemen yeni SW kontrolüne al
+    await self.clients.claim();
+  })());
 });
 
 // Background sync
@@ -98,43 +107,62 @@ self.addEventListener('sync', (event) => {
   }
 });
 
+// iOS Safari userAgent kontrolü — action butonlarını ve image'ı atlatmak için.
+// iOS PWA push 16.4+'da çalışıyor ama actions/image/badge UI'da gözükmüyor;
+// bandwidth tasarrufu + tutarlı UX için bu alanları iOS'ta kaldırıyoruz.
+function isIOSAgent() {
+  const ua = (self.navigator && self.navigator.userAgent) || '';
+  return /iPhone|iPad|iPod/i.test(ua) && !/CriOS|FxiOS/i.test(ua);
+}
+
 // Push notification event
 self.addEventListener('push', (event) => {
   console.log('Push event received:', event);
-  
+
   let data = {};
   if (event.data) {
     data = event.data.json();
   }
-  
+
+  const isIOS = isIOSAgent();
+  // tag: notificationId varsa unique kullan; yoksa fallback type/general
+  // Unique tag → bildirimler birbirini ezmez (Soapbox pattern).
+  const tagValue = data.tag
+    || (data.data && (data.data.notificationId || data.data.id))
+    || data.notificationId
+    || data.id
+    || (data.data && data.data.type)
+    || 'general';
+
   const options = {
     body: data.body || 'Yeni bildirim',
-    icon: data.icon || '/icon-192x192.png',
-    badge: '/badge-72x72.png',
+    icon: data.icon || (data.data && data.data.icon) || '/icon-192x192.png',
+    badge: data.badge || (data.data && data.data.badge) || '/badge-72x72.png',
+    // iOS'ta image gösterilmiyor → bandwidth tasarrufu için strip
+    image: !isIOS ? (data.image || (data.data && data.data.image) || undefined) : undefined,
     data: {
       ...(data.data || {}),
       timestamp: data.timestamp || Date.now()
     },
-    actions: data.actions || [
-      {
-        action: 'view',
-        title: 'Görüntüle'
-      },
-      {
-        action: 'close',
-        title: 'Kapat'
-      }
-    ],
-    requireInteraction: data.requireInteraction !== undefined ? data.requireInteraction : true,
+    // iOS'ta actions UI'da yok → strip; diğer platformlarda admin payload'ı veya default
+    actions: !isIOS ? (data.actions || [
+      { action: 'view', title: 'Görüntüle' },
+      { action: 'close', title: 'Kapat' }
+    ]) : [],
+    // requireInteraction: default false → masaüstünde sinir bozucu kalıcılığı önler.
+    // Anket gibi özel bildirimler payload'da true gönderebilir.
+    requireInteraction: data.requireInteraction === true,
     silent: data.silent || false,
-    vibrate: data.vibrate || [200, 100, 200], // Vibrate pattern
-    sound: data.sound || undefined, // Sound (browser may ignore)
-    tag: data.tag || data.data?.type || 'general', // Tag for grouping
-    renotify: data.renotify !== undefined ? data.renotify : true,
+    vibrate: data.vibrate || [200, 100, 200],
+    sound: data.sound || undefined,
+    tag: tagValue,
+    // Unique tag varsa renotify'a gerek yok; type-bazlı tag'lerde true mantıklı
+    renotify: data.renotify !== undefined ? data.renotify : false,
     timestamp: data.timestamp || Date.now()
   };
   
-  // Update badge count if available
+  // Update badge count if available (push payload'da varsa, yoksa skip)
+  const badgeCount = (data.data && typeof data.data.badgeCount === 'number') ? data.data.badgeCount : null;
   if (badgeCount !== null && 'setAppBadge' in navigator) {
     navigator.setAppBadge(badgeCount).catch(err => {
       console.warn('Could not set app badge:', err);
@@ -160,6 +188,77 @@ self.addEventListener('notificationclick', (event) => {
 
   // Bildirim verisinden hedef URL belirle
   const data = event.notification.data || {};
+
+  // FAZ 3.3: Anket oyu (vote_0, vote_1, vote_2 ...)
+  // Soapbox pattern — uygulama açmadan oy kaydet.
+  if (event.action && event.action.startsWith('vote_') && data.voteToken && data.pollId) {
+    const optionIndex = parseInt(event.action.slice(5), 10);
+    if (!isNaN(optionIndex)) {
+      event.waitUntil(
+        fetch('https://recordpollvote-bsrvxijkia-ew.a.run.app', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voteToken: data.voteToken,
+            optionIndex,
+          }),
+        })
+          .then(async (res) => {
+            if (res.ok) {
+              // Başarı feedback bildirimi
+              const optionText = (Array.isArray(data.pollOptions) && data.pollOptions[optionIndex])
+                || `Seçenek ${optionIndex + 1}`;
+              return self.registration.showNotification('✅ Oyunuz alındı', {
+                body: `Seçiminiz: ${optionText}`,
+                icon: data.icon || '/icon-192x192.png',
+                badge: data.badge || '/badge-72x72.png',
+                tag: `poll_vote_${data.pollId}`,
+                requireInteraction: false,
+                silent: true,
+              });
+            } else {
+              const err = await res.json().catch(() => ({}));
+              return self.registration.showNotification('⚠️ Oy kaydedilemedi', {
+                body: err.error || 'Lütfen anket sayfasından tekrar deneyin.',
+                icon: '/icon-192x192.png',
+                tag: `poll_vote_error_${data.pollId}`,
+                requireInteraction: false,
+              });
+            }
+          })
+          .catch((err) => {
+            console.error('[SW] recordPollVote error:', err);
+          })
+      );
+      return;
+    }
+  }
+
+  // ÖZEL: Uygulama güncelleme bildirimi → SW skipWaiting + force reload
+  if (data.action === 'app-update' || data.type === 'update') {
+    event.waitUntil(
+      (async () => {
+        try {
+          // Yeni asset'leri cache'e indir, eski cache'i temizle
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+          // Açık tüm tab'leri yenile
+          const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+          for (const client of clientList) {
+            try { client.navigate(client.url); client.focus(); } catch (_) { /* ignore */ }
+          }
+          // Tab yoksa yeni pencere aç
+          if (clientList.length === 0) {
+            await self.clients.openWindow('/');
+          }
+        } catch (e) {
+          console.warn('App update reload error:', e);
+        }
+      })()
+    );
+    return;
+  }
+
   let targetUrl = '/';
 
   if (data.url) {

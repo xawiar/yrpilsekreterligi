@@ -118,10 +118,18 @@ class FirebaseService {
       
       // Son retry'de de başarısız olduysa
       if (retries === 0 && lastError) {
-        // QUIC hatası ise uyarı ver ama devam et (işlem başarılı olabilir)
+        // QUIC hatası ise: doğrula, yazılmış mı kontrol et
         if (lastError.message && lastError.message.includes('QUIC')) {
-          console.warn('⚠️ QUIC protokol hatası, ancak doküman kaydedilmiş olabilir');
-          // Hata fırlatma, işlem devam etsin
+          try {
+            const verifySnap = await getDoc(docRef);
+            if (!verifySnap.exists()) {
+              throw new Error('QUIC protokol hatası nedeniyle kayıt yapılamadı. Lütfen tekrar deneyin.');
+            }
+            console.warn('⚠️ QUIC hatasına rağmen doküman kaydedilmiş, devam ediliyor');
+          } catch (verifyErr) {
+            console.error('❌ QUIC sonrası doğrulama başarısız:', verifyErr);
+            throw new Error('QUIC protokol hatası nedeniyle kayıt yapılamadı. Lütfen tekrar deneyin.');
+          }
         } else {
           throw lastError;
         }

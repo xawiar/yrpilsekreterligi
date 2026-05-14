@@ -88,13 +88,8 @@ export const usePushNotifications = (userId = null) => {
     setError(null);
 
     try {
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/'
-      });
-
-      // Wait for service worker to be ready
-      await navigator.serviceWorker.ready;
+      // SW main.jsx'te tek noktada register ediliyor — burada sadece hazır olmasını bekle.
+      const registration = await navigator.serviceWorker.ready;
 
       // Get existing subscription
       let existingSubscription = await registration.pushManager.getSubscription();
@@ -166,21 +161,14 @@ export const usePushNotifications = (userId = null) => {
       setIsSubscribed(true);
       setError(null);
 
-      if (true) {
-
-        // FCM token'i de kaydet (arka plan push icin)
-        try {
-          await registerFcmToken(resolvedId);
-        } catch (fcmErr) {
-          console.warn('FCM token registration skipped:', fcmErr.message);
-        }
-
-        return true;
-      } else {
-        const errorMessage = response?.message || 'Subscription failed';
-        console.error('Subscription failed:', errorMessage, response);
-        throw new Error(errorMessage);
+      // FCM token'i de kaydet (arka plan push için)
+      try {
+        await registerFcmToken(resolvedId);
+      } catch (fcmErr) {
+        console.warn('FCM token registration skipped:', fcmErr.message);
       }
+
+      return true;
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
       

@@ -30,14 +30,16 @@ const NativeCoordinatorDashboard = ({
 }) => {
   const navigate = useNavigate();
 
-  // Tüm sandıkları ve sonuçlarını gruplandır
+  // Tüm sandıkları ve sonuçlarını gruplandır.
+  // Bucket key = ballot_box.id (doc id). ballot_number unique DEĞİL —
+  // aynı no farklı ilçelerde olabilir (örn. MERKEZ 1001 ve AĞIN 1001).
   const allBallotBoxesWithResults = {};
-  
+
   // Önce tüm sandıkları ekle
   ballotBoxes.forEach((ballotBox) => {
-    const ballotNumber = ballotBox.ballot_number || ballotBox.id;
-    if (!allBallotBoxesWithResults[ballotNumber]) {
-      allBallotBoxesWithResults[ballotNumber] = {
+    const key = String(ballotBox.id);
+    if (!allBallotBoxesWithResults[key]) {
+      allBallotBoxesWithResults[key] = {
         ballotBox,
         result: null,
         hasData: false,
@@ -46,35 +48,35 @@ const NativeCoordinatorDashboard = ({
       };
     }
   });
-  
+
   // Sonuçları ekle
   electionResults.forEach((result) => {
     const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(result.ballot_box_id));
-    const ballotNumber = ballotBox?.ballot_number || result.ballot_box_id;
-    
+    const key = String(result.ballot_box_id);
+
     const hasDataResult = hasData(result);
     const hasProtocolResult = hasProtocol(result);
     const hasObjectionResult = result.has_objection === true || result.has_objection === 1;
-    
-    if (!allBallotBoxesWithResults[ballotNumber]) {
-      allBallotBoxesWithResults[ballotNumber] = {
-        ballotBox: ballotBox || { id: result.ballot_box_id, ballot_number: ballotNumber },
+
+    if (!allBallotBoxesWithResults[key]) {
+      allBallotBoxesWithResults[key] = {
+        ballotBox: ballotBox || { id: result.ballot_box_id, ballot_number: result.ballot_number },
         result: null,
         hasData: false,
         hasProtocol: false,
         hasObjection: false
       };
     }
-    
+
     // Daha yeni sonuç varsa güncelle
-    if (!allBallotBoxesWithResults[ballotNumber].result || 
-        (result.created_at && allBallotBoxesWithResults[ballotNumber].result?.created_at && 
-         new Date(result.created_at) > new Date(allBallotBoxesWithResults[ballotNumber].result.created_at)) ||
-        (result.id > allBallotBoxesWithResults[ballotNumber].result?.id)) {
-      allBallotBoxesWithResults[ballotNumber].result = result;
-      allBallotBoxesWithResults[ballotNumber].hasData = hasDataResult;
-      allBallotBoxesWithResults[ballotNumber].hasProtocol = hasProtocolResult;
-      allBallotBoxesWithResults[ballotNumber].hasObjection = hasObjectionResult;
+    if (!allBallotBoxesWithResults[key].result ||
+        (result.created_at && allBallotBoxesWithResults[key].result?.created_at &&
+         new Date(result.created_at) > new Date(allBallotBoxesWithResults[key].result.created_at)) ||
+        (result.id > allBallotBoxesWithResults[key].result?.id)) {
+      allBallotBoxesWithResults[key].result = result;
+      allBallotBoxesWithResults[key].hasData = hasDataResult;
+      allBallotBoxesWithResults[key].hasProtocol = hasProtocolResult;
+      allBallotBoxesWithResults[key].hasObjection = hasObjectionResult;
     }
   });
   

@@ -70,6 +70,8 @@ const PublicFooter = ({
 
   const appName = appNameProp || branding?.appName || 'Yeniden Refah Partisi';
   const footerText = branding?.footerText || theme?.footerText || '';
+  const footerCompanyName = theme?.footerCompanyName || '';
+  const footerCompanyUrl = theme?.footerCompanyUrl || '';
   const logoUrl = branding?.logoUrl || '';
   const year = new Date().getFullYear();
 
@@ -106,8 +108,8 @@ const PublicFooter = ({
                 </div>
               )}
               <div className="leading-tight">
-                <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-primary-400">
-                  YRP
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary-400">
+                  Yeniden Refah Partisi
                 </p>
                 <p className="text-base font-semibold text-white truncate max-w-[240px]">
                   {appName}
@@ -174,6 +176,7 @@ const PublicFooter = ({
               </a>
               <a
                 href="/login"
+                onClick={(e) => { e.preventDefault(); window.location.assign('/login'); }}
                 className="text-sm text-gray-400 hover:text-white transition-colors"
               >
                 Giriş Yap
@@ -247,9 +250,21 @@ const PublicFooter = ({
 
         {/* Alt serit */}
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <p className="text-xs md:text-sm text-gray-500">
-            &copy; {year} {appName}. Tüm hakları saklıdır.
-          </p>
+          <div className="text-xs md:text-sm text-gray-500">
+            <p>&copy; {year} {appName}. Tüm hakları saklıdır.</p>
+            {footerCompanyName && (
+              <p className="mt-1">
+                Hizmet sağlayıcı:{' '}
+                {footerCompanyUrl ? (
+                  <a href={footerCompanyUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white underline">
+                    {footerCompanyName}
+                  </a>
+                ) : (
+                  <span className="text-gray-400">{footerCompanyName}</span>
+                )}
+              </p>
+            )}
+          </div>
           {footerText && (
             <p className="text-xs text-gray-500 max-w-xl md:text-right">
               {footerText}

@@ -108,6 +108,8 @@ const NativeMemberDashboard = ({
       'access_neighborhoods_page': 'Mahalleler',
       'access_villages_page': 'Köyler',
       'access_groups_page': 'Gruplar',
+      'view_member_list': 'Üye Listesi',
+      'access_member_form_ocr': 'Üye Formu OCR',
     };
 
     return labels[permission] || permission;
@@ -137,6 +139,8 @@ const NativeMemberDashboard = ({
       'access_neighborhoods_page': 'neighborhoods-page',
       'access_villages_page': 'villages-page',
       'access_groups_page': 'groups-page',
+      'view_member_list': 'member-list-page',
+      'access_member_form_ocr': 'member-form-ocr-page',
     };
 
     return viewMap[permission] || null;
@@ -151,7 +155,7 @@ const NativeMemberDashboard = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       ),
-      permissions: ['add_member', 'access_members_page', 'add_stk', 'manage_stk', 'add_public_institution', 'access_districts_page', 'access_representatives_page', 'access_neighborhoods_page', 'access_villages_page', 'access_groups_page'],
+      permissions: ['add_member', 'access_members_page', 'view_member_list', 'access_member_form_ocr', 'add_stk', 'manage_stk', 'add_public_institution', 'access_districts_page', 'access_representatives_page', 'access_neighborhoods_page', 'access_villages_page', 'access_groups_page'],
       color: 'from-teal-500 to-emerald-500',
     },
     {

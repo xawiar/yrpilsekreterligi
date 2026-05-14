@@ -3,18 +3,184 @@ import FirebaseService from '../services/FirebaseService';
 import { decryptData, encryptData } from '../utils/crypto';
 import ApiService from '../utils/ApiService';
 
+const POOL_SLOT_COUNT = 5;
+
 const GeminiApiSettings = () => {
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [ocrApiKey, setOcrApiKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingOcr, setSavingOcr] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showOcrKey, setShowOcrKey] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [ocrAdminPassword, setOcrAdminPassword] = useState('');
+
+  // Pool: 5 yedek key slotu (round-robin + 429 cooldown)
+  const [poolKeys, setPoolKeys] = useState(Array(POOL_SLOT_COUNT).fill(''));
+  const [poolAdminPassword, setPoolAdminPassword] = useState('');
+  const [savingPool, setSavingPool] = useState(false);
+  const [showPoolKeys, setShowPoolKeys] = useState(false);
 
   useEffect(() => {
     loadApiKey();
+    loadOcrApiKey();
+    loadPoolKeys();
   }, []);
+
+  const loadPoolKeys = async () => {
+    try {
+      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      if (!USE_FIREBASE) return;
+      const cfg = await FirebaseService.getById('gemini_api_config', 'pool');
+      if (cfg && Array.isArray(cfg.keys)) {
+        const decoded = cfg.keys.slice(0, POOL_SLOT_COUNT).map((enc) => {
+          if (!enc) return '';
+          try {
+            return enc.startsWith('U2FsdGVkX1') ? decryptData(enc) : enc;
+          } catch (_) {
+            return '';
+          }
+        });
+        const padded = [...decoded, ...Array(POOL_SLOT_COUNT - decoded.length).fill('')];
+        setPoolKeys(padded);
+      }
+    } catch (err) {
+      console.warn('Pool keys load error:', err.message);
+    }
+  };
+
+  const handlePoolKeyChange = (idx, value) => {
+    setPoolKeys((prev) => {
+      const next = [...prev];
+      next[idx] = value;
+      return next;
+    });
+  };
+
+  const handleSavePool = async () => {
+    try {
+      setSavingPool(true);
+      setMessage('');
+
+      const cleanKeys = poolKeys.map((k) => k.trim()).filter(Boolean);
+      const invalid = cleanKeys.find((k) => !k.startsWith('AIzaSy'));
+      if (invalid) {
+        setMessage('Geçersiz key formatı (her key "AIzaSy" ile başlamalı)');
+        setMessageType('error');
+        return;
+      }
+      if (!poolAdminPassword.trim()) {
+        setMessage('Admin şifresi gerekli');
+        setMessageType('error');
+        return;
+      }
+
+      const v = await ApiService.verifyAdminPassword(poolAdminPassword.trim());
+      if (!v.success) {
+        setMessage(v.message || 'Admin şifresi yanlış');
+        setMessageType('error');
+        setPoolAdminPassword('');
+        return;
+      }
+
+      const encryptedKeys = cleanKeys.map((k) => encryptData(k));
+
+      await FirebaseService.create('gemini_api_config', 'pool', {
+        keys: encryptedKeys,
+        updated_at: new Date().toISOString()
+      }, false);
+
+      // Live pool'a refresh sinyali (sayfa yenilenmeden devreye girer)
+      try {
+        const { default: GeminiKeyPool } = await import('../services/GeminiKeyPool');
+        await GeminiKeyPool.refresh();
+      } catch (_) { /* ignore */ }
+
+      setMessage(`${cleanKeys.length} yedek key kaydedildi ✅`);
+      setMessageType('success');
+      setPoolAdminPassword('');
+    } catch (err) {
+      console.error('Pool save error:', err);
+      setMessage('Pool kayıt hatası: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setSavingPool(false);
+    }
+  };
+
+  const loadOcrApiKey = async () => {
+    try {
+      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      if (USE_FIREBASE) {
+        try {
+          const cfg = await FirebaseService.getById('gemini_api_config', 'ocr');
+          if (cfg && cfg.api_key) {
+            const decrypted = cfg.api_key.startsWith('U2FsdGVkX1')
+              ? decryptData(cfg.api_key)
+              : cfg.api_key;
+            setOcrApiKey(decrypted);
+            return;
+          }
+        } catch (_) { /* ignore */ }
+      }
+      const envKey = import.meta.env.VITE_GEMINI_OCR_API_KEY;
+      if (envKey) setOcrApiKey(envKey);
+    } catch (err) {
+      console.error('OCR key load error:', err);
+    }
+  };
+
+  const handleSaveOcr = async () => {
+    try {
+      setSavingOcr(true);
+      setMessage('');
+      if (!ocrApiKey.trim()) {
+        setMessage('Lütfen OCR API anahtarını girin');
+        setMessageType('error');
+        return;
+      }
+      if (!ocrApiKey.trim().startsWith('AIzaSy')) {
+        setMessage('Geçersiz Gemini API anahtarı formatı ("AIzaSy" ile başlamalı)');
+        setMessageType('error');
+        return;
+      }
+      if (!ocrAdminPassword.trim()) {
+        setMessage('Lütfen admin şifresini girin');
+        setMessageType('error');
+        return;
+      }
+      const v = await ApiService.verifyAdminPassword(ocrAdminPassword.trim());
+      if (!v.success) {
+        setMessage(v.message || 'Admin şifresi yanlış');
+        setMessageType('error');
+        setOcrAdminPassword('');
+        return;
+      }
+      const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true';
+      if (USE_FIREBASE) {
+        await FirebaseService.create('gemini_api_config', 'ocr', {
+          api_key: encryptData(ocrApiKey.trim()),
+          updated_at: new Date().toISOString()
+        }, false);
+        setMessage('OCR API anahtarı kaydedildi ✅');
+        setMessageType('success');
+        setOcrAdminPassword('');
+      } else {
+        setMessage('Firebase kullanılmıyor.');
+        setMessageType('error');
+      }
+    } catch (err) {
+      console.error('OCR key save error:', err);
+      setMessage('Kayıt hatası: ' + err.message);
+      setMessageType('error');
+      setOcrAdminPassword('');
+    } finally {
+      setSavingOcr(false);
+    }
+  };
 
   const loadApiKey = async () => {
     try {
@@ -130,7 +296,7 @@ const GeminiApiSettings = () => {
       }
 
       const testResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey.trim()}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey.trim()}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -265,6 +431,117 @@ const GeminiApiSettings = () => {
               Test Et
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* === ÜYE FORMU OCR İÇİN AYRI API KEY === */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-700">
+        <h3 className="text-base font-semibold text-amber-900 dark:text-amber-100 mb-1">
+          Üye Formu OCR için Ayrı API Key
+        </h3>
+        <p className="text-xs text-amber-800 dark:text-amber-200 mb-3">
+          Chatbot ile kota paylaşmamak için OCR özelliği ayrı bir Gemini API key kullanır. Boş bırakırsanız yukarıdaki genel key kullanılır.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              OCR API Anahtarı
+            </label>
+            <div className="flex items-center space-x-2">
+              <input
+                type={showOcrKey ? 'text' : 'password'}
+                value={ocrApiKey}
+                onChange={(e) => setOcrApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-800 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowOcrKey(!showOcrKey)}
+                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {showOcrKey ? 'Gizle' : 'Göster'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Admin Şifresi <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={ocrAdminPassword}
+              onChange={(e) => setOcrAdminPassword(e.target.value)}
+              placeholder="Admin şifreniz"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+          <button
+            onClick={handleSaveOcr}
+            disabled={savingOcr || !ocrApiKey.trim() || !ocrAdminPassword.trim()}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+          >
+            {savingOcr ? 'Kaydediliyor...' : 'OCR Key Kaydet'}
+          </button>
+        </div>
+      </div>
+
+      {/* === YEDEK KEY HAVUZU (POOL) === */}
+      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-base font-semibold text-purple-900 dark:text-purple-100">
+            Yedek API Key Havuzu (Round-Robin)
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShowPoolKeys(!showPoolKeys)}
+            className="text-xs px-2 py-1 border border-purple-300 dark:border-purple-600 rounded text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-800/30"
+          >
+            {showPoolKeys ? 'Gizle' : 'Göster'}
+          </button>
+        </div>
+        <p className="text-xs text-purple-800 dark:text-purple-200 mb-3">
+          Seçim günü gibi yüksek yükte tek key kotaya takılınca otomatik bir
+          sonrakine geçilir. 429 alan key 60 sn cooldown'a girer. 5 farklı
+          Google hesabıyla key alıp buraya ekleyin (5 × 1000 RPM = 5000 RPM
+          kapasite).
+        </p>
+        <div className="space-y-2">
+          {poolKeys.map((k, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <span className="text-xs font-mono text-purple-700 dark:text-purple-300 w-6">#{idx + 1}</span>
+              <input
+                type={showPoolKeys ? 'text' : 'password'}
+                value={k}
+                onChange={(e) => handlePoolKeyChange(idx, e.target.value)}
+                placeholder={`Yedek key ${idx + 1} (AIzaSy...) — boş bırakılabilir`}
+                className="flex-1 px-3 py-1.5 text-sm border border-purple-300 dark:border-purple-600 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white"
+              />
+            </div>
+          ))}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-3 mb-1">
+              Admin Şifresi <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={poolAdminPassword}
+              onChange={(e) => setPoolAdminPassword(e.target.value)}
+              placeholder="Admin şifreniz"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+          <button
+            onClick={handleSavePool}
+            disabled={savingPool || !poolAdminPassword.trim()}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+          >
+            {savingPool ? 'Kaydediliyor...' : 'Havuzu Kaydet'}
+          </button>
+        </div>
+        <div className="mt-3 text-xs text-purple-700 dark:text-purple-300">
+          ℹ️ Boş slotlar yok sayılır. Ana key (üstteki) ve OCR key de havuza
+          otomatik dahil edilir — burada onları tekrar girmenize gerek yok.
         </div>
       </div>
 

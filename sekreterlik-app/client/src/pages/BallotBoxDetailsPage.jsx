@@ -2,13 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import { maskTC } from '../utils/maskingUtils';
+import BallotBoxDocumentsPanel from '../components/BallotBoxDocumentsPanel';
+import { useAuth } from '../contexts/AuthContext';
 
 const BallotBoxDetailsPage = () => {
   const { id } = useParams();
+  const { user, userRole } = useAuth();
   const [ballotBox, setBallotBox] = useState(null);
   const [observers, setObservers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isAdmin = userRole === 'admin' || user?.role === 'admin';
+  const isCoordinator = ['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(userRole);
+  const canManageDocs = isAdmin || isCoordinator;
 
   useEffect(() => {
     if (id) {
@@ -223,6 +230,20 @@ const BallotBoxDetailsPage = () => {
               )}
             </div>
           </div>
+
+          {/* Yüklenen Evraklar */}
+          {ballotBox && (
+            <div className="mt-6">
+              <BallotBoxDocumentsPanel
+                ballotBoxId={ballotBox.id}
+                ballotNumber={ballotBox.ballot_number}
+                canUpload={canManageDocs}
+                canDelete={isAdmin}
+                uploaderName={user?.name || ''}
+                uploaderRole={userRole || ''}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -24,6 +24,7 @@ const RepresentativesPage = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('neighborhood'); // 'neighborhood' or 'village'
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [filterDistrict, setFilterDistrict] = useState('');
   const [showSmsModal, setShowSmsModal] = useState(false);
   const [smsMessage, setSmsMessage] = useState('');
@@ -262,12 +263,49 @@ const RepresentativesPage = () => {
     return (rep.district_name || '').toLowerCase() === filterDistrict.toLowerCase();
   };
 
-  const filteredNeighborhoodReps = neighborhoodRepresentatives.filter(rep =>
-    matchesBasicSearch(rep, rep.neighborhood_name) && matchesDistrict(rep)
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const sortReps = (list, isNeighborhood) => {
+    if (!sortConfig.key) return list;
+    const getValue = (r) => {
+      switch (sortConfig.key) {
+        case 'name': return r.name || '';
+        case 'tc': return r.tc || '';
+        case 'phone': return r.phone || '';
+        case 'location': return (isNeighborhood ? r.neighborhood_name : r.village_name) || '';
+        case 'district': return r.district_name || '';
+        case 'town': return r.town_name || '';
+        default: return '';
+      }
+    };
+    const sorted = [...list].sort((a, b) =>
+      String(getValue(a)).localeCompare(String(getValue(b)), 'tr', { numeric: true, sensitivity: 'base' })
+    );
+    return sortConfig.direction === 'desc' ? sorted.reverse() : sorted;
+  };
+
+  const sortIndicator = (key) => {
+    if (sortConfig.key !== key) return ' ↕';
+    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+  };
+
+  const filteredNeighborhoodReps = sortReps(
+    neighborhoodRepresentatives.filter(rep =>
+      matchesBasicSearch(rep, rep.neighborhood_name) && matchesDistrict(rep)
+    ),
+    true
   );
 
-  const filteredVillageReps = villageRepresentatives.filter(rep =>
-    matchesBasicSearch(rep, rep.village_name) && matchesDistrict(rep)
+  const filteredVillageReps = sortReps(
+    villageRepresentatives.filter(rep =>
+      matchesBasicSearch(rep, rep.village_name) && matchesDistrict(rep)
+    ),
+    false
   );
 
   // İlçe listesi (dropdown için)
@@ -488,8 +526,8 @@ const RepresentativesPage = () => {
                 />
               ) : (
                 <>
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-4">
+                  {/* Card Grid (tüm ekranlarda) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {filteredNeighborhoodReps.map((rep) => {
                       const attendanceStats = getAttendanceStats(rep, true);
                       return (
@@ -532,68 +570,6 @@ const RepresentativesPage = () => {
                     })}
                   </div>
 
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Ad Soyad
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          TC
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Telefon
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Mahalle
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          İlçe
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Belde
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Katılım
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredNeighborhoodReps.map((rep) => {
-                        const attendanceStats = getAttendanceStats(rep, true);
-                        return (
-                          <tr key={rep.id} className="hover:bg-gray-50 dark:bg-gray-900">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {rep.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {maskTC(rep.tc)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.phone || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.neighborhood_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.district_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.town_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {attendanceStats.attended}/{attendanceStats.required}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  </div>
                 </>
               )}
             </>
@@ -612,8 +588,8 @@ const RepresentativesPage = () => {
                 />
               ) : (
                 <>
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-4">
+                  {/* Card Grid (tüm ekranlarda) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {filteredVillageReps.map((rep) => {
                       const attendanceStats = getAttendanceStats(rep, false);
                       return (
@@ -656,68 +632,6 @@ const RepresentativesPage = () => {
                     })}
                   </div>
 
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Ad Soyad
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          TC
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Telefon
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Köy
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          İlçe
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Belde
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Katılım
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredVillageReps.map((rep) => {
-                        const attendanceStats = getAttendanceStats(rep, false);
-                        return (
-                          <tr key={rep.id} className="hover:bg-gray-50 dark:bg-gray-900">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {rep.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {maskTC(rep.tc)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.phone || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.village_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.district_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {rep.town_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {attendanceStats.attended}/{attendanceStats.required}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  </div>
                 </>
               )}
             </>

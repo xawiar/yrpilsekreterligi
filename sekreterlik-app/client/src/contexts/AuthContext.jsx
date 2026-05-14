@@ -186,8 +186,58 @@ export const AuthProvider = ({ children }) => {
         saveToLocalStorage(response.user, true);
 
         // Login sonrasi otomatik push subscription (maliisler pattern)
+        // + Anonim push aboneliği user'a "claim" edilir (account linking)
         setTimeout(async () => {
           try {
+            const userId = response.user.id || response.user.uid || '';
+
+            // ADIM 1: Anonim push aboneliği varsa user'a bağla
+            // (Login öncesi banner'dan abone olmuş ziyaretçi → şimdi user oldu)
+            if (userId) {
+              try {
+                const anonId = localStorage.getItem('anon_push_id');
+                if (anonId) {
+                  const { doc, getDoc, setDoc, updateDoc } = await import('firebase/firestore');
+                  const { db } = await import('../config/firebase');
+                  if (db) {
+                    const anonDocRef = doc(db, 'push_tokens', anonId);
+                    const anonSnap = await getDoc(anonDocRef);
+                    if (anonSnap.exists()) {
+                      const anonData = anonSnap.data();
+                      // User doc'u oluştur (anonim subscription'la)
+                      if (anonData.subscription) {
+                        await setDoc(doc(db, 'push_tokens', userId), {
+                          subscription: anonData.subscription,
+                          userId: userId,
+                          linkedFromAnonId: anonId,
+                          linkedAt: new Date().toISOString(),
+                          isActive: true,
+                          isAnonymous: false,
+                          updatedAt: new Date().toISOString(),
+                        }, { merge: true });
+                      }
+                      // Anonim doc'u deaktive et — anonim sorgusundan düşsün
+                      // (Delete yerine update; rules permission konusu olmasın)
+                      try {
+                        await updateDoc(anonDocRef, {
+                          isActive: false,
+                          isAnonymous: false,
+                          linkedToUid: userId,
+                          linkedAt: new Date().toISOString(),
+                        });
+                      } catch (_) { /* update başarısızsa zarar yok */ }
+                    }
+                  }
+                  // Anonim ID'yi temizle — artık user'a bağlı
+                  try { localStorage.removeItem('anon_push_id'); } catch (_) {}
+                  try { localStorage.removeItem('anon_push_dismissed'); } catch (_) {}
+                }
+              } catch (claimErr) {
+                console.warn('[PUSH] Anonim claim hatası:', claimErr);
+              }
+            }
+
+            // ADIM 2: Normal push subscription akışı
             if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
               const perm = await Notification.requestPermission();
               if (perm === 'granted' && 'serviceWorker' in navigator) {
@@ -198,8 +248,24 @@ export const AuthProvider = ({ children }) => {
                 const raw = window.atob(b64);
                 const arr = new Uint8Array(raw.length);
                 for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+                // Mevcut subscription farklı applicationServerKey ile kayıtlıysa unsubscribe et
+                // (VAPID key değiştiğinde InvalidStateError alınmaması için)
+                try {
+                  const existing = await reg.pushManager.getSubscription();
+                  if (existing) {
+                    const existingKey = existing.options?.applicationServerKey;
+                    let mismatch = true;
+                    if (existingKey) {
+                      const existingArr = new Uint8Array(existingKey);
+                      mismatch = existingArr.length !== arr.length ||
+                        !existingArr.every((v, i) => v === arr[i]);
+                    }
+                    if (mismatch) await existing.unsubscribe();
+                  }
+                } catch (unsubErr) {
+                  console.warn('[PUSH] Old subscription cleanup skipped:', unsubErr);
+                }
                 const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr.buffer });
-                const userId = response.user.id || response.user.uid || '';
                 if (userId) {
                   const { doc, setDoc } = await import('firebase/firestore');
                   const { db } = await import('../config/firebase');
@@ -208,13 +274,12 @@ export const AuthProvider = ({ children }) => {
                       subscription: JSON.stringify(sub),
                       userId: userId,
                       updatedAt: new Date().toISOString(),
-                      isActive: true
-                    });
+                      isActive: true,
+                      isAnonymous: false,
+                    }, { merge: true });
                   }
                 }
-              } else {
               }
-            } else {
             }
           } catch (pushErr) {
             console.error('[PUSH DEBUG] Push subscription error:', pushErr);
@@ -265,12 +330,102 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Önceki user ID'yi sakla (logout sonrası push doc'unu deaktive etmek için)
+    const previousUserId = user?.id || user?.uid || null;
+
     setUser(null);
     setIsLoggedIn(false);
     setError(null);
     // localStorage'dan kullanıcı bilgilerini temizle (centralized)
     localStorage.removeItem('token');
     saveToLocalStorage(null, false);
+
+    // FAZ 2.4 fix v4: Logout sonrası
+    //   1) push_tokens/{userId} ZORLA isActive:true yenile (eski deaktivasyonları düzelt)
+    //      → Üye-bazlı (SINGLE/Tüm Üyeler) bildirim cihaza gelmeye devam eder
+    //   2) push_tokens/{anonId} oluştur (isAnonymous:true)
+    //      → Anonim bildirim de cihaza gelir
+    // Çift kayıt — aynı endpoint için iki doc, her iki türden bildirim ulaşır.
+    (async () => {
+      console.log('[LOGOUT-PUSH] Logout fix v4 başlıyor...', { previousUserId });
+      try {
+        const { doc, setDoc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        if (!db) {
+          console.warn('[LOGOUT-PUSH] Firestore db yok');
+          return;
+        }
+
+        // Push permission + service worker kontrolü
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+          console.warn('[LOGOUT-PUSH] Bildirim izni yok, atlanıyor');
+          return;
+        }
+        if (!('serviceWorker' in navigator)) return;
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          console.warn('[LOGOUT-PUSH] Subscription yok — subscribeAnonymousPush çağrılıyor');
+          const { subscribeAnonymousPush } = await import('../services/NotificationService');
+          const r = await subscribeAnonymousPush();
+          console.log('[LOGOUT-PUSH] subscribeAnonymousPush sonucu:', r);
+          return;
+        }
+        const subJson = JSON.parse(JSON.stringify(subscription));
+
+        // 1) USER DOC YENİLE — isActive: true zorla
+        //    Önceki logout fix'lerinin kalıntısı: bazı user doc'lar isActive:false
+        //    → SINGLE target / Tüm Üyeler hedefi bildirim göndermiyor.
+        //    Burada zorla true ile setDoc merge:true → düzeltiyoruz.
+        if (previousUserId) {
+          try {
+            const userDocRef = doc(db, 'push_tokens', String(previousUserId));
+            const existing = await getDoc(userDocRef);
+            const baseData = existing.exists() ? existing.data() : {};
+            await setDoc(userDocRef, {
+              ...baseData,
+              subscription: subJson,
+              userId: String(previousUserId),
+              isActive: true,             // ← KRİTİK: deaktif olmuş olsa bile aktive et
+              isAnonymous: false,
+              updatedAt: new Date().toISOString(),
+              loggedOutAt: new Date().toISOString(),
+              userLoggedIn: false,        // bilgilendirme — bildirim gönderimini engellemez
+            }, { merge: true });
+            console.log('[LOGOUT-PUSH] User doc isActive:true ile yenilendi:', previousUserId);
+          } catch (e) {
+            console.warn('[LOGOUT-PUSH] User doc yenileme hatası:', e.message);
+          }
+        }
+
+        // 2) ANONIM DOC OLUŞTUR
+        const ANON_KEY = 'anon_push_id';
+        let anonId = null;
+        try { anonId = localStorage.getItem(ANON_KEY); } catch (_) {}
+        if (!anonId) {
+          const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          anonId = `anon_${uuid}`;
+          try { localStorage.setItem(ANON_KEY, anonId); } catch (_) {}
+        }
+
+        await setDoc(doc(db, 'push_tokens', anonId), {
+          subscription: subJson,
+          isActive: true,
+          isAnonymous: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdFrom: 'logout',
+          previousUserId: previousUserId || null,
+          userAgent: navigator.userAgent || '',
+        });
+        console.log('[LOGOUT-PUSH] Anonim doc oluşturuldu:', anonId,
+          '— ÇİFT KAYIT: user doc + anon doc, her iki türden bildirim de gelir');
+      } catch (anonErr) {
+        console.error('[LOGOUT-PUSH] HATA:', anonErr);
+      }
+    })();
   };
 
   // Set user directly (for loginChiefObserver and similar cases)

@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
+import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -36,16 +37,15 @@ const MemberRequestsPage = lazy(() => import('./pages/MemberRequestsPage'));
 const AdminRequestsPage = lazy(() => import('./pages/AdminRequestsPage'));
 const AdminProfileRequestsPage = lazy(() => import('./pages/AdminProfileRequestsPage'));
 const AdminApplicationsPage = lazy(() => import('./pages/AdminApplicationsPage'));
+const LiveOpsStatusPage = lazy(() => import('./pages/LiveOpsStatusPage'));
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'));
 const VoterSearchPage = lazy(() => import('./pages/VoterSearchPage'));
 const DistrictsPage = lazy(() => import('./pages/DistrictsPage'));
 const TeşkilatPage = lazy(() => import('./pages/TeşkilatPage'));
-const KadınKollarıPage = lazy(() => import('./pages/KadınKollarıPage'));
-const GenclikKollarıPage = lazy(() => import('./pages/GenclikKollarıPage'));
+// KadınKollarıPage, GenclikKollarıPage, DistrictMembersPage, TownMembersPage
+// route'a bağlı değildi → BranchPage ve ManagementMembersPage onların yerine geçti.
 const BranchPage = lazy(() => import('./pages/BranchPage'));
-const DistrictMembersPage = lazy(() => import('./pages/DistrictMembersPage'));
 const DistrictDetailsPage = lazy(() => import('./pages/DistrictDetailsPage'));
-const TownMembersPage = lazy(() => import('./pages/TownMembersPage'));
 const ManagementMembersPage = lazy(() => import('./pages/ManagementMembersPage'));
 const TownDetailsPage = lazy(() => import('./pages/TownDetailsPage'));
 const ElectionPreparationPage = lazy(() => import('./pages/ElectionPreparationPage'));
@@ -65,11 +65,12 @@ const PublicElectionResultsPage = lazy(() => import('./pages/PublicElectionResul
 const BulkSmsPage = lazy(() => import('./pages/BulkSmsPage'));
 const DistrictPresidentDashboardPage = lazy(() => import('./pages/DistrictPresidentDashboardPage'));
 const TownPresidentDashboardPage = lazy(() => import('./pages/TownPresidentDashboardPage'));
-const ChiefObserverLoginPage = lazy(() => import('./pages/ChiefObserverLoginPage'));
 const ChiefObserverDashboardPage = lazy(() => import('./pages/ChiefObserverDashboardPage'));
 const CoordinatorLoginPage = lazy(() => import('./pages/CoordinatorLoginPage'));
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage'));
+const UploadedDocumentsPage = lazy(() => import('./pages/UploadedDocumentsPage'));
 const MemberListPage = lazy(() => import('./pages/MemberListPage'));
+const MemberFormOCRPage = lazy(() => import('./pages/MemberFormOCRPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const PublicApplicationPage = lazy(() => import('./pages/PublicApplicationPage'));
@@ -90,6 +91,7 @@ const Footer = lazy(() => import('./components/Footer'));
 const PWANotification = lazy(() => import('./components/PWANotification'));
 const AppInstallBanner = lazy(() => import('./components/AppInstallBanner'));
 const OfflineIndicator = lazy(() => import('./components/OfflineIndicator'));
+const AnonymousPushBanner = lazy(() => import('./components/AnonymousPushBanner'));
 const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
 const Chatbot = lazy(() => import('./components/Chatbot'));
 const CookieConsent = lazy(() => import('./components/CookieConsent'));
@@ -189,6 +191,19 @@ function PublicRoutesWrapper() {
     );
   }
 
+  if (pathname === '/login') {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <LoginPage />
+      </Suspense>
+    );
+  }
+
+  if (pathname === '/chief-observer-login') {
+    // Eski URL → ana login'e (?type=chief-observer ile başmüşahit sekmesi açılır)
+    return <Navigate to="/login?type=chief-observer" replace />;
+  }
+
   // Bilinmeyen public route → login'e yonlendir
   return <Navigate to="/login" replace />;
 }
@@ -198,7 +213,11 @@ function RouterContent() {
   const location = useLocation();
 
   // Public route'ları auth gerektirmeden render et (useAuth cagrilmaz)
-  const isPublicRoute = location.pathname.startsWith('/public/') || location.pathname === '/privacy-policy';
+  // /login da public sayılır — auth guard yönlendirme zincirine düşmesin
+  const isPublicRoute = location.pathname.startsWith('/public/') ||
+    location.pathname === '/privacy-policy' ||
+    location.pathname === '/login' ||
+    location.pathname === '/chief-observer-login';
   if (isPublicRoute) {
     return <PublicRoutesWrapper />;
   }
@@ -261,6 +280,25 @@ function AuthenticatedContent() {
       window.removeEventListener('quickAction', handleQuickAction);
     };
   }, [navigate]);
+
+  // Service Worker postMessage listener — bildirim tıklanınca otomatik markAsRead
+  React.useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const handler = async (event) => {
+      if (event.data?.type !== 'NOTIFICATION_CLICKED') return;
+      const notifId = event.data.notificationId;
+      if (!notifId) return;
+      try {
+        const NotificationService = (await import('./services/NotificationService')).default;
+        const userId = user?.memberId || user?.id || user?.uid;
+        if (userId) await NotificationService.markAsRead(userId, notifId);
+      } catch (err) {
+        console.warn('Auto markAsRead error:', err);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -387,16 +425,6 @@ function AuthenticatedContent() {
             }
           />
 
-          {/* Chief Observer Login - Artık /login?type=chief-observer olarak yönlendirilecek */}
-          <Route
-            path="/chief-observer-login"
-            element={
-              <PublicRoute>
-                <Navigate to="/login?type=chief-observer" replace />
-              </PublicRoute>
-            }
-          />
-
           {/* Coordinator Routes */}
           <Route
             path="/coordinator-dashboard"
@@ -404,6 +432,18 @@ function AuthenticatedContent() {
               <CoordinatorRoute>
                 <CoordinatorDashboardPage />
               </CoordinatorRoute>
+            }
+          />
+
+          {/* Yüklenen Evraklar — admin + coordinator için standalone */}
+          <Route
+            path="/uploaded-documents"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <UploadedDocumentsPage />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
 
@@ -514,6 +554,7 @@ function AuthenticatedContent() {
                           <Routes key={location.pathname}>
                             <Route path="/members" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MembersPage /></Suspense></PageTransition>} />
                             <Route path="/member-list" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MemberListPage /></Suspense></PageTransition>} />
+                            <Route path="/member-form-ocr" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><MemberFormOCRPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><TeşkilatPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat/ilçeler" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><DistrictsPage /></Suspense></PageTransition>} />
                             <Route path="/teşkilat/kadın-kolları" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><BranchPage type="women" /></Suspense></PageTransition>} />
@@ -542,6 +583,7 @@ function AuthenticatedContent() {
                             <Route path="/admin/requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminRequestsPage /></Suspense></PageTransition>} />
                             <Route path="/admin/profile-requests" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminProfileRequestsPage /></Suspense></PageTransition>} />
                             <Route path="/admin/applications" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><AdminApplicationsPage /></Suspense></PageTransition>} />
+                            <Route path="/admin/live-status" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><LiveOpsStatusPage /></Suspense></PageTransition>} />
                             <Route path="/remove-duplicate-meetings" element={<PageTransition><Suspense fallback={<LoadingSpinner />}><RemoveDuplicateMeetingsPage /></Suspense></PageTransition>} />
 
                             {/* STK Manager Routes */}
@@ -587,6 +629,12 @@ function AuthenticatedContent() {
         {isLoggedIn && user?.role === 'admin' && (
           <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
         )}
+
+        {/* App-shell anonim push banner — tüm route'larda görünür,
+            iOS standalone değilse "Add to Home Screen" yönergesi gösterir */}
+        <Suspense fallback={null}>
+          <AnonymousPushBanner />
+        </Suspense>
       </Suspense>
     </div>
   );

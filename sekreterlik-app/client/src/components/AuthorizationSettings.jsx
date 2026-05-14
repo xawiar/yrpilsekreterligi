@@ -20,6 +20,7 @@ const AVAILABLE_PERMISSIONS = [
   // Sayfa Erişim Yetkileri (Tüm sayfalar - settings hariç)
   { key: 'access_members_page', label: 'Üyeler Sayfası Erişimi' },
   { key: 'view_member_list', label: 'Üye Listesi Sayfası Erişimi' },
+  { key: 'access_member_form_ocr', label: 'Üye Formu OCR Erişimi', description: 'Elle doldurulmuş üye formlarını AI ile okutup Excel\'e aktarabilir' },
   { key: 'access_meetings_page', label: 'Toplantılar Sayfası Erişimi' },
   { key: 'access_events_page', label: 'Etkinlikler Sayfası Erişimi' },
   { key: 'access_calendar_page', label: 'Takvim Sayfası Erişimi' },

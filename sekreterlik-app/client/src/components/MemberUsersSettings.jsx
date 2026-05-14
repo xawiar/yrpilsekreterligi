@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../utils/ApiService';
-import { observerUsername } from '../utils/districtCode';
 import { decryptData, encryptData } from '../utils/crypto';
 import FirebaseService from '../services/FirebaseService';
 import { useToast } from '../contexts/ToastContext';
@@ -28,6 +27,7 @@ const MemberUsersSettings = () => {
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [isProcessingAll, setIsProcessingAll] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isResettingAllAuth, setIsResettingAllAuth] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ username: '', password: '' });
   const [searchTerm, setSearchTerm] = useState('');
@@ -198,71 +198,178 @@ const MemberUsersSettings = () => {
     finally { setIsUpdating(false); }
   };
 
-  // Başmüşahitler için kullanıcı oluştur
+  // Başmüşahitler için kullanıcı oluştur (Capabilities Model).
+  // Yeni mantık:
+  //  - username = TC, password = telefon (telefon yoksa fallback: TC)
+  //  - Aynı TC'li üye kullanıcısı varsa o kayda observerId eklenir
+  //    (üye + müşahit hibrit kişi için tek kullanıcı)
+  //  - Üye değilse TC ile yeni kullanıcı oluşturulur (userType='musahit')
+  //  - Eski "İlçeKodu+SandıkNo" formatlı kayıtlar tespit edilip silinir
   const handleCreateObserverUsers = async () => {
     try {
       setIsUpdating(true); setMessage('');
       const observers = await ApiService.getBallotBoxObservers();
       const chiefObservers = observers.filter(obs => obs.is_chief_observer === true || obs.is_chief_observer === 1);
       const existingUsers = await ApiService.getMemberUsers();
-      const musahitUsers = (existingUsers.users || []).filter(u => u.userType === 'musahit' && u.observerId);
+      const allUsers = existingUsers.users || [];
+
+      const decryptIfNeeded = (v) => {
+        if (!v || typeof v !== 'string') return v || '';
+        try { return v.startsWith('U2FsdGVkX1') ? decryptData(v) : v; } catch { return v; }
+      };
+
+      // TC'ye göre üye haritası (decrypt edilmiş)
+      const memberByTc = new Map();
+      for (const m of members) {
+        const mTc = decryptIfNeeded(m.tc || '').toString().replace(/\D/g, '');
+        if (mTc) memberByTc.set(mTc, m);
+      }
+
+      // Aktif başmüşahit observerId set'i (silinmiş başmüşahitlerin kullanıcılarını temizlemek için)
       const currentObserverIds = new Set(chiefObservers.map(obs => String(obs.id)));
-      let deletedCount = 0;
-      const deletedErrors = [];
-      for (const musahitUser of musahitUsers) {
-        const observerId = String(musahitUser.observerId);
-        if (!currentObserverIds.has(observerId)) {
-          try { await ApiService.deleteMemberUser(musahitUser.id); deletedCount++; }
-          catch (deleteError) { deletedErrors.push(`${musahitUser.username || 'Bilinmeyen'}: ${deleteError.message || 'Silme hatası'}`); }
+
+      // 1) Temizlik: eski format ve artık başmüşahit olmayan kayıtları sil/sıfırla
+      let cleanedCount = 0;
+      const cleanErrors = [];
+      for (const u of allUsers) {
+        const isLegacyMusahitOnly = u.userType === 'musahit' && !u.member_id && !u.memberId;
+        const isOrphanObserverId = u.observerId && !currentObserverIds.has(String(u.observerId));
+        if (isLegacyMusahitOnly) {
+          // Saf müşahit kayıt → tamamen sil (yeni döngüde TC ile yeniden açılacak)
+          try { await ApiService.deleteMemberUser(u.id); cleanedCount++; }
+          catch (e) { cleanErrors.push(`${u.username || u.id}: ${e.message || 'silinmedi'}`); }
+        } else if (isOrphanObserverId) {
+          // Üye+müşahit hibridde başmüşahit kaydı silinmiş → observerId'yi temizle
+          try { await FirebaseService.update('member_users', u.id, { observerId: null }, false); }
+          catch (e) { /* sessiz */ }
         }
       }
+
       if (chiefObservers.length === 0) {
-        let message = deletedCount > 0 ? `Silinen başmüşahit kullanıcıları temizlendi!\n• Silinen: ${deletedCount}\n` : 'Başmüşahit bulunamadı';
-        if (deletedErrors.length > 0) { message += `\nSilme hataları:\n${deletedErrors.slice(0, 5).join('\n')}`; setMessageType('warning'); }
-        else { setMessageType(deletedCount > 0 ? 'success' : 'error'); }
-        setMessage(message); await fetchMemberUsers(); return;
+        let msg = cleanedCount > 0 ? `Eski müşahit kayıtları temizlendi (${cleanedCount}).\n` : 'Başmüşahit bulunamadı.';
+        if (cleanErrors.length > 0) { msg += `\nHatalar:\n${cleanErrors.slice(0,5).join('\n')}`; setMessageType('warning'); }
+        else { setMessageType(cleanedCount > 0 ? 'success' : 'error'); }
+        setMessage(msg); await fetchMemberUsers(); return;
       }
-      const updatedUsers = await ApiService.getMemberUsers();
+
+      // Temizlik sonrası kullanıcı listesini yenile
+      const refreshed = await ApiService.getMemberUsers();
+      const usersList = refreshed.users || [];
+
+      // BallotBox haritası — sandık ID → ballot_number (login sırasında ek query yapmamak için
+      // member_users kaydında doğrudan tutulur; Firestore izin sorunlarını da önler)
       const ballotBoxes = await ApiService.getBallotBoxes();
+      const ballotBoxById = new Map();
+      for (const bb of (ballotBoxes || [])) {
+        ballotBoxById.set(String(bb.id), bb);
+      }
+
+      // 2) Her başmüşahit için kullanıcı oluştur veya mevcut üye kaydına observerId ekle
       let createdCount = 0, updatedCount = 0, errorCount = 0;
       const errors = [];
       for (const observer of chiefObservers) {
         try {
-          let tc = observer.tc || '';
-          try { if (tc && tc.startsWith('U2FsdGVkX1')) tc = decryptData(tc); } catch (e) { console.error('TC decrypt hatası:', e); }
-          let username, password;
-          if (observer.ballot_box_id) {
-            const ballotBox = ballotBoxes.find(bb => String(bb.id) === String(observer.ballot_box_id));
-            if (ballotBox && ballotBox.ballot_number) {
-              // Username = İlçeKodu + SandıkNo (farklı ilçeler aynı sandık no kullanabilir)
-              const district = districts.find(d => String(d.id) === String(ballotBox.district_id));
-              username = observerUsername(district?.name || '', ballotBox.ballot_number);
-            } else {
-              username = tc;
-            }
-          } else { username = tc; }
-          password = tc;
-          const existingUser = updatedUsers.users?.find(u => u.username === username);
-          if (!existingUser) {
-            await FirebaseService.create('member_users', null, { username, password: encryptData(password), userType: 'musahit', observerId: observer.id, isActive: true, name: observer.name, tc: observer.tc, authUid: null }, false);
-            createdCount++;
-          } else {
-            const updateData = { userType: 'musahit', observerId: observer.id, name: observer.name };
-            if (existingUser.password !== password) updateData.password = encryptData(password);
-            await FirebaseService.update('member_users', existingUser.id, updateData, false);
-            updatedCount++;
+          const tc = decryptIfNeeded(observer.tc || '').toString().replace(/\D/g, '');
+          if (!tc || tc.length < 11) {
+            errors.push(`${observer.name || 'Bilinmeyen'}: Geçerli TC yok`);
+            errorCount++;
+            continue;
           }
-        } catch (error) { errorCount++; errors.push(`${observer.name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`); console.error('Başmüşahit kullanıcısı oluşturma hatası:', error); }
+
+          // Telefon: önce eşleşen üyeden, yoksa observer kaydından
+          const matchingMember = memberByTc.get(tc) || null;
+          let phoneRaw = '';
+          if (matchingMember && matchingMember.phone) phoneRaw = matchingMember.phone;
+          else if (observer.phone) phoneRaw = observer.phone;
+          const phone = decryptIfNeeded(phoneRaw).toString().replace(/\D/g, '');
+
+          // Şifre: telefon ≥6 hane ise telefon, yoksa fallback TC
+          const username = tc;
+          const password = (phone && phone.length >= 6) ? phone : tc;
+
+          // Sandık metaverisi (login sırasında ek query yapılmasın diye doğrudan kayda yazılıyor)
+          const ballotBoxId = observer.ballot_box_id || null;
+          const ballotBox = ballotBoxId ? ballotBoxById.get(String(ballotBoxId)) : null;
+          const ballotNumber = ballotBox?.ballot_number || null;
+
+          // Mevcut kullanıcıyı bul (TC ile)
+          const existing = usersList.find(u => u.username === username
+            || (matchingMember && (u.member_id === matchingMember.id || u.memberId === matchingMember.id)));
+
+          if (existing) {
+            // Mevcut kayda observerId ekle, gerekirse member bağını ve şifreyi güncelle
+            const updateData = {
+              observerId: observer.id,
+              name: existing.name || observer.name || matchingMember?.name,
+              ballotBoxId: ballotBoxId,
+              ballot_box_id: ballotBoxId,
+              ballotNumber: ballotNumber,
+              ballot_number: ballotNumber,
+            };
+            if (matchingMember) {
+              updateData.member_id = matchingMember.id;
+              updateData.memberId = matchingMember.id;
+              if (existing.userType !== 'member') updateData.userType = 'member';
+            } else if (!existing.userType || existing.userType === 'musahit') {
+              updateData.userType = 'musahit';
+            }
+            // Şifre senkronu (decrypt edip karşılaştır)
+            const decryptedExisting = decryptIfNeeded(existing.password || '');
+            if (decryptedExisting !== password) {
+              updateData.password = encryptData(password);
+            }
+            // Username TC olmalı (eski format kayıt güncellenirse)
+            if (existing.username !== username) updateData.username = username;
+            await FirebaseService.update('member_users', existing.id, updateData, false);
+            updatedCount++;
+          } else {
+            // Yeni kullanıcı: TC + telefon
+            const userData = {
+              username,
+              password: encryptData(password),
+              userType: matchingMember ? 'member' : 'musahit',
+              observerId: observer.id,
+              ballotBoxId: ballotBoxId,
+              ballot_box_id: ballotBoxId,
+              ballotNumber: ballotNumber,
+              ballot_number: ballotNumber,
+              isActive: true,
+              name: observer.name || matchingMember?.name || '',
+              tc: observer.tc,
+              authUid: null,
+            };
+            if (matchingMember) {
+              userData.member_id = matchingMember.id;
+              userData.memberId = matchingMember.id;
+            }
+            await FirebaseService.create('member_users', null, userData, false);
+            createdCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${observer.name || 'Bilinmeyen'}: ${error.message || 'Bilinmeyen hata'}`);
+          console.error('Başmüşahit kullanıcısı oluşturma hatası:', error);
+        }
       }
-      let message = `Müşahit şifreleri oluşturuldu!\n`;
-      if (deletedCount > 0) message += `• Silinen: ${deletedCount}\n`;
-      message += `• Yeni oluşturulan: ${createdCount}\n• Güncellenen: ${updatedCount}\n`;
-      const allErrors = [...deletedErrors, ...errors];
-      if (errorCount > 0 || deletedErrors.length > 0) { message += `• Hata: ${errorCount + deletedErrors.length}\n`; if (allErrors.length > 0) message += `\nHatalar:\n${allErrors.slice(0, 5).join('\n')}`; setMessageType('warning'); }
-      else { setMessageType('success'); }
-      setMessage(message); await fetchMemberUsers();
-    } catch (error) { console.error('Error creating observer users:', error); setMessage('Müşahit şifreleri oluşturulurken hata oluştu: ' + error.message); setMessageType('error'); }
-    finally { setIsUpdating(false); }
+
+      let msg = 'Müşahit kullanıcıları senkronize edildi!\n';
+      if (cleanedCount > 0) msg += `• Eski format temizlendi: ${cleanedCount}\n`;
+      msg += `• Yeni: ${createdCount}\n• Güncellenen: ${updatedCount}\n`;
+      const allErrors = [...cleanErrors, ...errors];
+      if (errorCount > 0 || cleanErrors.length > 0) {
+        msg += `• Hata: ${errorCount + cleanErrors.length}\n`;
+        if (allErrors.length > 0) msg += `\nHatalar:\n${allErrors.slice(0, 5).join('\n')}`;
+        setMessageType('warning');
+      } else {
+        setMessageType('success');
+      }
+      setMessage(msg);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error creating observer users:', error);
+      setMessage('Müşahit kullanıcıları senkronize edilirken hata oluştu: ' + error.message);
+      setMessageType('error');
+    } finally { setIsUpdating(false); }
   };
 
   // Üyeler için kullanıcı oluştur (sonuç döndürür)
@@ -435,9 +542,11 @@ const MemberUsersSettings = () => {
         }
       }
 
-      // 2) Firestore'da authUid = null (kullanıcı bir sonraki login'de yeniden oluşturacak)
+      // 2) Firestore'da authUid = null + authResetRequested flag
+      //    Cloud Function bu flag'i görünce Firestore şifresiyle yeni Auth oluşturur
       await updateDoc(doc(db, 'member_users', String(user.id)), {
         authUid: null,
+        authResetRequested: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
 
@@ -446,6 +555,77 @@ const MemberUsersSettings = () => {
     } catch (e) {
       console.error('Auth reset error:', e);
       toast.error('Auth sıfırlama hatası: ' + (e.message || 'bilinmeyen'));
+    }
+  };
+
+  // Tüm üye kullanıcıların Auth hesabını sıfırla (toplu)
+  // Her kullanıcıya authUid=null + authResetRequested flag yaz → Cloud Function
+  // her birine yeni Auth oluşturur (Firestore şifresiyle senkron).
+  const handleResetAllAuth = async () => {
+    const confirmed = await confirm({
+      title: 'TÜM Üyelerin Auth Hesabını Sıfırla',
+      message: 'Tüm üye kullanıcılarının Firebase Auth hesapları silinip Firestore\'daki şifreleriyle yeniden oluşturulacak. Bu işlem:\n\n• Giriş yapamayan tüm kullanıcıları düzeltir\n• Cloud Function ile arka planda yürütülür\n• Birkaç dakika sürebilir\n\nDevam edilsin mi?',
+      confirmText: 'Evet, tümünü sıfırla',
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      setIsResettingAllAuth(true);
+      setMessage(''); setMessageType('info');
+      const { doc, updateDoc, writeBatch } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+
+      const allMemberUsers = await ApiService.getMemberUsers();
+      const memberUsersList = allMemberUsers.users || allMemberUsers || [];
+      if (memberUsersList.length === 0) {
+        setMessage('Sıfırlanacak kullanıcı bulunamadı.');
+        setMessageType('info');
+        return;
+      }
+
+      setMessage(`${memberUsersList.length} kullanıcı sıfırlanıyor...`);
+      const nowIso = new Date().toISOString();
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Firestore writeBatch 500 doc limit — chunk'la
+      const CHUNK = 400;
+      for (let i = 0; i < memberUsersList.length; i += CHUNK) {
+        const slice = memberUsersList.slice(i, i + CHUNK);
+        const batch = writeBatch(db);
+        for (const u of slice) {
+          const ref = doc(db, 'member_users', String(u.id));
+          batch.update(ref, {
+            authUid: null,
+            authResetRequested: nowIso,
+            updatedAt: nowIso
+          });
+        }
+        try {
+          await batch.commit();
+          successCount += slice.length;
+          setMessage(`${successCount}/${memberUsersList.length} kullanıcı sıfırlandı (Cloud Function arka planda Auth oluşturuyor)...`);
+        } catch (err) {
+          errorCount += slice.length;
+          console.error('Batch reset error:', err);
+        }
+      }
+
+      setMessage(
+        `Toplu Auth sıfırlama tetiklendi!\n\n• Toplam: ${memberUsersList.length}\n• Başarılı: ${successCount}\n• Hata: ${errorCount}\n\nCloud Function her kullanıcı için yeni Auth hesabı oluşturuyor. Birkaç dakika içinde tüm kullanıcılar giriş yapabilecek.`
+      );
+      setMessageType(errorCount > 0 ? 'warning' : 'success');
+      toast.success(`${successCount} kullanıcı için Auth sıfırlama başlatıldı`);
+      await fetchMemberUsers();
+    } catch (error) {
+      console.error('Error resetting all auth:', error);
+      setMessage('Toplu Auth sıfırlama hatası: ' + error.message);
+      setMessageType('error');
+      toast.error('Toplu sıfırlama hatası');
+    } finally {
+      setIsResettingAllAuth(false);
     }
   };
 
@@ -498,9 +678,11 @@ const MemberUsersSettings = () => {
         setShowCreateForm={setShowCreateForm}
         handleProcessAllUsers={handleProcessAllUsers}
         handleDeleteAllMemberUsers={handleDeleteAllMemberUsers}
+        handleResetAllAuth={handleResetAllAuth}
         isProcessingAll={isProcessingAll}
         isUpdating={isUpdating}
         isDeletingAll={isDeletingAll}
+        isResettingAllAuth={isResettingAllAuth}
       />
 
       {showCreateForm && (

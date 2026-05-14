@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { analyzeSentiment, getResponseTone } from '../utils/sentimentAnalysis';
 import { predictMeetingAttendance, detectAnomalies, generateRecommendations, analyzeTrend } from '../utils/advancedAnalysis';
 import { BREAKPOINTS } from '../utils/constants';
+import { getKnowledgeContext, loadKnowledgeBase } from '../utils/knowledgeBase';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Chatbot = ({ isOpen, onClose }) => {
@@ -55,7 +56,8 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Load data asynchronously without blocking UI
       Promise.all([
         loadSiteData(),
-        loadBylaws()
+        loadBylaws(),
+        loadKnowledgeBase()  // RAG bilgi tabanı (parti tüzüğü, programı, kitaplar)
       ]).catch(error => {
         if (!cancelled) console.error('Error loading chatbot data:', error);
       });
@@ -71,25 +73,8 @@ const Chatbot = ({ isOpen, onClose }) => {
     return () => { cancelled = true; };
   }, [isOpen, siteData]);
 
-  // Proactive suggestions and alerts
-  useEffect(() => {
-    if (isOpen && siteData && messages.length <= 1) {
-      // Wait a bit before showing proactive suggestions
-      const timer = setTimeout(() => {
-        const proactiveMessage = getProactiveSuggestions(siteData, userRole);
-        if (proactiveMessage) {
-          setMessages(prev => [...prev, {
-            id: Date.now() + 1000,
-            role: 'assistant',
-            content: proactiveMessage,
-            isProactive: true
-          }]);
-        }
-      }, 2000); // Show after 2 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, siteData, messages.length, userRole]);
+  // Proaktif öneriler kullanıcı isteği üzerine devre dışı bırakıldı.
+  // Welcome mesajı sade tutuluyor; anomali/öneri kartları cevap altında render edilmiyor.
 
   const loadSiteData = async () => {
     try {
@@ -473,6 +458,17 @@ const Chatbot = ({ isOpen, onClose }) => {
       // Build context from site data
       const context = [];
 
+      // RAG: BİLGİ TABANI (parti tüzüğü, programı, kitaplar, projeler)
+      // public/knowledge-base.json — keyword tabanlı top-K retrieval
+      try {
+        const kbLines = await getKnowledgeContext(userMessage, 6);
+        if (kbLines.length > 0) {
+          context.push(...kbLines);
+        }
+      } catch (kbErr) {
+        console.warn('Knowledge base RAG hatası:', kbErr?.message);
+      }
+
       // RAG: SEÇMEN SORGULAMA (Firestore voters koleksiyonundan)
       // Sadece TC (11 hane) veya ad/soyad içeren sorularda dene
       if (userMessage.length >= 2) {
@@ -835,9 +831,9 @@ const Chatbot = ({ isOpen, onClose }) => {
       const sentimentResult = analyzeSentiment(userMessage);
       const responseTone = getResponseTone(sentimentResult);
 
-      // Gelişmiş analiz (anomali tespiti ve öneriler)
-      const anomalies = siteData ? detectAnomalies(siteData) : [];
-      const recommendations = siteData ? generateRecommendations(siteData, userRole) : [];
+      // Anomali/öneri sistemi kullanıcı isteği üzerine kapatıldı.
+      const anomalies = [];
+      const recommendations = [];
 
       // Enhanced AI prompt with better context understanding and training
       const conversationSummary = conversationHistory.length > 0
@@ -859,13 +855,9 @@ Kullanıcının mesajından tespit edilen duygu:
 
 ÖNEMLİ: Kullanıcı ${sentimentResult.sentiment === 'negative' ? 'olumsuz' : sentimentResult.sentiment === 'positive' ? 'olumlu' : 'nötr'} bir duygu durumunda. Yanıtını ${responseTone} bir tonla ver.`;
 
-      // Gelişmiş analiz context'i
-      const analysisContext = anomalies.length > 0 || recommendations.length > 0
-        ? `\n=== GELİŞMİŞ ANALİZ ===
-${anomalies.length > 0 ? `Tespit edilen anomaliler (${anomalies.length} adet):\n${anomalies.slice(0, 3).map(a => `- ${a.message}`).join('\n')}\n` : ''}
-${recommendations.length > 0 ? `Öneriler (${recommendations.length} adet):\n${recommendations.slice(0, 3).map(r => `- ${r.title}: ${r.description}`).join('\n')}\n` : ''}
-Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
-        : '';
+      // GELİŞMİŞ ANALİZ context'i kapatıldı — Gemini'nin cevaplarında otomatik
+      // "düşük katılımlı toplantılar / eksik veri" gibi proaktif önerilere dönüşmesini engellemek için.
+      const analysisContext = '';
 
       const enhancedContext = [
         ...context,
@@ -1030,8 +1022,8 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
               isStreaming: false,
               sentiment: sentimentResult,
               visualization: visualizationData,
-              anomalies: anomalies.length > 0 ? anomalies.slice(0, 3) : null,
-              recommendations: recommendations.length > 0 ? recommendations.slice(0, 3) : null
+              anomalies: null,
+              recommendations: null
             }
           : msg
       ));
@@ -1078,19 +1070,6 @@ Bu bilgileri kullanarak kullanıcıya proaktif öneriler sunabilirsin.`
     } else if (['provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor'].includes(role)) {
       baseMessage = 'Merhaba sorumlu! Ben Yeniden Refah Partisi Elazığ Sekreteri. Size nasıl yardımcı olabilirim?';
     }
-
-    // Page context
-    if (pathname.includes('/meetings')) {
-      baseMessage += ' Şu anda toplantılar sayfasındasınız. Toplantılar hakkında sorular sorabilirsiniz.';
-    } else if (pathname.includes('/members')) {
-      baseMessage += ' Şu anda üyeler sayfasındasınız. Üyeler hakkında sorular sorabilirsiniz.';
-    } else if (pathname.includes('/events')) {
-      baseMessage += ' Şu anda etkinlikler sayfasındasınız. Etkinlikler hakkında sorular sorabilirsiniz.';
-    } else if (pathname.includes('/reports')) {
-      baseMessage += ' Şu anda raporlar sayfasındasınız. Raporlar hakkında sorular sorabilirsiniz.';
-    }
-
-    baseMessage += '\n\n💡 Hızlı erişim butonlarını kullanarak hızlıca bilgi alabilir veya doğrudan soru sorabilirsiniz.';
 
     return baseMessage;
   };

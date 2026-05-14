@@ -1,5 +1,17 @@
 import React from 'react';
 import { getMemberId, compareIds } from '../utils/normalizeId';
+import { decryptData } from '../utils/crypto';
+
+// Şifreyi decrypt edilmiş, okunabilir şekilde döndür (admin görünümü için).
+// Şifreler encryptData ile saklanır, prefix 'U2FsdGVkX1' ile başlar.
+const getPlainPassword = (user) => {
+  const raw = user?.password;
+  if (!raw || typeof raw !== 'string') return '-';
+  if (raw.startsWith('U2FsdGVkX1')) {
+    try { return decryptData(raw); } catch { return '(çözülemedi)'; }
+  }
+  return raw;
+};
 
 // Shared table row for password reset action
 const PasswordResetButton = ({ user, setPasswordResetUser, setNewPassword, setIsResettingPassword }) => (
@@ -101,7 +113,7 @@ const DistrictPresidentsTable = ({ users, districts, searchTerm, setPasswordRese
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100">{user.username}</div></td>
-                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">••••••••</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{getPlainPassword(user)}</div></td>
                   <td className="px-6 py-4 whitespace-nowrap"><StatusBadge user={user} /></td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
@@ -159,7 +171,7 @@ const TownPresidentsTable = ({ users, towns, searchTerm, setPasswordResetUser, s
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100">{user.username}</div></td>
-                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">••••••••</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{getPlainPassword(user)}</div></td>
                   <td className="px-6 py-4 whitespace-nowrap"><StatusBadge user={user} /></td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
@@ -263,7 +275,7 @@ const MemberTypeUsersTable = ({ users, members, towns, districts, searchTerm, se
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100">{user.username}</div></td>
-                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">••••••••</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{getPlainPassword(user)}</div></td>
                   <td className="px-6 py-4 whitespace-nowrap"><StatusBadge user={user} /></td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
@@ -318,7 +330,7 @@ const ObserverUsersTable = ({ users, searchTerm, setPasswordResetUser, setNewPas
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{user.username}</div></td>
-                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">••••••••</div></td>
+                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{getPlainPassword(user)}</div></td>
                 <td className="px-6 py-4 whitespace-nowrap"><StatusBadge user={user} /></td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
@@ -372,7 +384,7 @@ const CoordinatorUsersTable = ({ users, searchTerm, setPasswordResetUser, setNew
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{user.username}</div></td>
-                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">••••••••</div></td>
+                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-gray-100 font-mono">{getPlainPassword(user)}</div></td>
                 <td className="px-6 py-4 whitespace-nowrap"><StatusBadge user={user} /></td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
@@ -401,13 +413,15 @@ const MemberUsersList = ({
   onDeleteUser,
   onResetAuth,
 }) => {
-  // Kullanıcıları tipine göre ayır
+  // Capabilities Model: bir kullanıcı birden fazla rolde olabilir
+  // (örn üye + müşahit). İlgili tablolarda her rolüyle gözükür.
   const memberTypeUsers = memberUsers.filter(u =>
     !u.userType || u.userType === 'member' || (u.userType !== 'musahit' && u.userType !== 'district_president' && u.userType !== 'town_president' && u.userType !== 'coordinator')
   );
   const districtPresidentUsers = memberUsers.filter(u => u.userType === 'district_president');
   const townPresidentUsers = memberUsers.filter(u => u.userType === 'town_president');
-  const observerTypeUsers = memberUsers.filter(u => u.userType === 'musahit');
+  // Müşahit yetkisi: userType='musahit' VEYA observerId dolu (hibrit kullanıcı)
+  const observerTypeUsers = memberUsers.filter(u => u.userType === 'musahit' || !!u.observerId);
   const coordinatorUsers = memberUsers.filter(u => u.userType === 'coordinator');
 
   const commonProps = { searchTerm, setPasswordResetUser, setNewPassword, setIsResettingPassword, onDeleteUser, onResetAuth };

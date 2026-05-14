@@ -11,27 +11,6 @@ import { queueOfflineResult } from '../utils/offlineQueue';
 
 const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSuccess }) => {
   const { userRole, user } = useAuth();
-  
-  // Safety check: if election is missing, show error and return early
-  if (!election) {
-    return (
-      <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6">
-          <div className="text-center">
-            <div className="text-red-500 text-4xl mb-4">⚠️</div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Hata</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">Seçim bilgisi bulunamadı. Lütfen tekrar deneyin.</p>
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Kapat
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,11 +31,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     town_name: '',
     neighborhood_name: '',
     village_name: '',
-    // Vote counts
-    total_voters: '', // From ballot box voter_count
+    // Vote counts (paylaşılan — tek tutanaklı seçimler için)
+    total_voters: '',
     used_votes: '',
     invalid_votes: '',
     valid_votes: '',
+    // Genel seçim için CB tutanağına özel sayılar
+    cb_total_voters: '',
+    cb_used_votes: '',
+    cb_invalid_votes: '',
+    cb_valid_votes: '',
+    // Genel seçim için MV tutanağına özel sayılar
+    mv_total_voters: '',
+    mv_used_votes: '',
+    mv_invalid_votes: '',
+    mv_valid_votes: '',
     // Votes by election type
     cb_votes: {}, // For general election: CB candidate votes
     mv_votes: {}, // For general election: MV votes by party and independent
@@ -68,15 +57,22 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     party_votes: {},
     candidate_votes: {},
     // Photos and notes
-    signed_protocol_photo: null,
+    signed_protocol_photo: null,      // Tek tutanak (veya genel seçimde CB)
+    signed_mv_protocol_photo: null,   // Genel seçim için ayrı MV tutanağı
     objection_protocol_photo: null,
     has_objection: false,
     objection_reason: '',
     notes: ''
   });
 
+  // AI OCR için fotoğrafın data URL'i (Storage'dan geri indirmek yerine
+  // doğrudan burada tutulur; CORS'tan kaçınmak için)
+  const [signedPhotoDataUrl, setSignedPhotoDataUrl] = useState(null);
+  const [signedMvPhotoDataUrl, setSignedMvPhotoDataUrl] = useState(null);
+
   const [uploadingPhotos, setUploadingPhotos] = useState({
     signed: false,
+    mv_signed: false,
     objection: false
   });
   const [uploadProgress, setUploadProgress] = useState({
@@ -84,6 +80,34 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     objection: 0
   });
   const [fillingWithAI, setFillingWithAI] = useState(false);
+
+  // OCR/AI butonları offline iken disabled — Gemini API'ya internet gerek.
+  // Form submit zaten offlineQueue ile çalışıyor, ona dokunmuyoruz.
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+
+  // Inline validation onay dialog'u — window.confirm() yerine.
+  // Pending olduğunda { warnings, onConfirm, onCancel } setter'a yazılır,
+  // form altında modal görünür. Köylü kullanıcı için açıklayıcı dilde mesajlar.
+  const [pendingValidation, setPendingValidation] = useState(null);
+
+  const confirmWarningsInline = (warnings) =>
+    new Promise((resolve) => {
+      setPendingValidation({
+        warnings,
+        onConfirm: () => { setPendingValidation(null); resolve(true); },
+        onCancel:  () => { setPendingValidation(null); resolve(false); },
+      });
+    });
 
   // Fetch ballot box information
   useEffect(() => {
@@ -176,10 +200,20 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           neighborhood_name: result.neighborhood_name || prev.neighborhood_name || '',
           village_name: result.village_name || prev.village_name || '',
           total_voters: result.total_voters || prev.total_voters || '',
-          // Vote counts
+          // Vote counts (paylaşılan)
           used_votes: result.used_votes || '',
           invalid_votes: result.invalid_votes || '',
           valid_votes: result.valid_votes || '',
+          // CB-specific (genel seçim)
+          cb_total_voters: result.cb_total_voters || '',
+          cb_used_votes: result.cb_used_votes || '',
+          cb_invalid_votes: result.cb_invalid_votes || '',
+          cb_valid_votes: result.cb_valid_votes || '',
+          // MV-specific (genel seçim)
+          mv_total_voters: result.mv_total_voters || '',
+          mv_used_votes: result.mv_used_votes || '',
+          mv_invalid_votes: result.mv_invalid_votes || '',
+          mv_valid_votes: result.mv_valid_votes || '',
           // New election system votes
           cb_votes: result.cb_votes || {},
           mv_votes: result.mv_votes || {},
@@ -192,6 +226,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           candidate_votes: result.candidate_votes || {},
           // Photos and notes
           signed_protocol_photo: result.signed_protocol_photo || null,
+          signed_mv_protocol_photo: result.signed_mv_protocol_photo || null,
           objection_protocol_photo: result.objection_protocol_photo || null,
           has_objection: result.has_objection || false,
           objection_reason: result.objection_reason || '',
@@ -321,8 +356,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             
             const memberUsersResponse = await ApiService.getMemberUsers();
             const memberUsers = memberUsersResponse.users || memberUsersResponse || [];
-            const memberUser = memberUsers.find(u => 
-              u.userType === 'musahit' && (u.username === username || u.username === userData.ballotNumber)
+            const memberUser = memberUsers.find(u =>
+              (u.userType === 'musahit' || !!u.observerId) &&
+              (u.username === username || u.username === userData.ballotNumber || u.username === userData.tc)
             );
             
             if (memberUser) {
@@ -357,13 +393,43 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         }
       }
       
-      // Optimize image before upload (max 2MB, quality 0.85)
-      const optimizedFile = await optimizeImage(file, {
+      // Tutanak fotoğrafı için agresif sıkıştırma — 2000 sandık × 500KB = 1GB,
+      // 1280×1280 + q=0.75 ile ~200KB → toplam ~400MB (%60 trafik tasarrufu).
+      // OCR doğruluğu için 1280px hala yeterli (yazı netliği korunur).
+      const isProtocolPhoto = type === 'signed' || type === 'mv_signed' || type === 'objection';
+      const optimizedFile = await optimizeImage(file, isProtocolPhoto ? {
+        maxWidth: 1280,
+        maxHeight: 1280,
+        quality: 0.75,
+        maxSizeMB: 0.4
+      } : {
         maxWidth: 1920,
         maxHeight: 1920,
         quality: 0.85,
         maxSizeMB: 2
       });
+
+      // AI OCR için data URL'i hafızada tut (CORS'tan kaçınmak için).
+      // Auto-AI için aşağıda da kullanılır → handle scope'una çıkarıyoruz.
+      let capturedDataUrl = null;
+      if (type === 'signed' || type === 'mv_signed') {
+        try {
+          capturedDataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (typeof reader.result !== 'string') {
+                reject(new Error('Dosya okunamadı'));
+                return;
+              }
+              resolve(reader.result);
+            };
+            reader.onerror = () => reject(reader.error || new Error('Dosya okuma hatası'));
+            reader.readAsDataURL(optimizedFile);
+          });
+          if (type === 'signed') setSignedPhotoDataUrl(capturedDataUrl);
+          else setSignedMvPhotoDataUrl(capturedDataUrl);
+        } catch (_) { /* ignore */ }
+      }
       
       const timestamp = Date.now();
       const fileName = `election_results/${election.id}/${ballotBoxId}/${type}_${timestamp}_${optimizedFile.name}`;
@@ -390,16 +456,36 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         5 // maxRetries: 5
       );
       
-      setFormData(prev => ({
-        ...prev,
-        [type === 'signed' ? 'signed_protocol_photo' : 'objection_protocol_photo']: downloadURL
-      }));
-      
+      const fieldName =
+        type === 'signed' ? 'signed_protocol_photo' :
+        type === 'mv_signed' ? 'signed_mv_protocol_photo' :
+        'objection_protocol_photo';
+      setFormData(prev => ({ ...prev, [fieldName]: downloadURL }));
+
       setMessage('Fotoğraf başarıyla yüklendi');
       setMessageType('success');
-      
+
       // Progress'i sıfırla
       setUploadProgress(prev => ({ ...prev, [type]: 0 }));
+
+      // Auto-AI: tutanak fotoğrafı yüklenir yüklenmez OCR otomatik başlasın.
+      // Müşahit "AI butonu nerede?" sorusuyla uğraşmasın.
+      // - signed: genel seçimde CB tutanağı, diğerlerinde tek tutanak
+      // - mv_signed: genel seçimde MV tutanağı
+      // - objection: AI tetiklenmez
+      if ((type === 'signed' || type === 'mv_signed') && navigator.onLine) {
+        const focus =
+          type === 'mv_signed' ? 'mv' :
+          (election?.type === 'genel' ? 'cb' : undefined);
+        // Promise'i bekleme — paralel başlasın, kullanıcı bu sırada manuel girebilsin
+        handleAIFill(focus, { photoUrl: downloadURL, photoDataUrl: capturedDataUrl })
+          .catch(err => {
+            console.warn('Auto-AI failed, manuel girişe devam edebilirsiniz:', err);
+          });
+      } else if ((type === 'signed' || type === 'mv_signed') && !navigator.onLine) {
+        setMessage('Fotoğraf kaydedildi. Çevrimdışı olduğunuz için AI okuma yapılmadı — manuel doldurun, internet gelince otomatik gönderilir.');
+        setMessageType('warning');
+      }
     } catch (error) {
       console.error('Photo upload error:', error);
       
@@ -491,9 +577,21 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     return warnings;
   };
 
-  const handleAIFill = async () => {
-    if (!formData.signed_protocol_photo) {
-      setMessage('Lütfen önce tutanak fotoğrafı yükleyin');
+  // focus: 'cb' | 'mv' | undefined (hepsini oku). Genel seçimde CB ve MV
+  // ayrı tutanak olduğu için 'cb' veya 'mv' ile çağrılır.
+  // opts.photoUrl / opts.photoDataUrl: state'in async güncellenmesini beklemeden
+  // doğrudan değer geçilebilir (auto-AI handleFileUpload sonunda kullanır).
+  const handleAIFill = async (focus, opts = {}) => {
+    const isMv = focus === 'mv';
+    const photoUrl = opts.photoUrl !== undefined
+      ? opts.photoUrl
+      : (isMv ? formData.signed_mv_protocol_photo : formData.signed_protocol_photo);
+    const photoDataUrl = opts.photoDataUrl !== undefined
+      ? opts.photoDataUrl
+      : (isMv ? signedMvPhotoDataUrl : signedPhotoDataUrl);
+
+    if (!photoUrl) {
+      setMessage(`Lütfen önce ${isMv ? 'MV' : 'CB'} tutanak fotoğrafını yükleyin`);
       setMessageType('error');
       return;
     }
@@ -518,19 +616,74 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         municipal_council_parties: election.municipal_council_parties || [],
         // Konum bilgisi (köy/büyükşehir kontrolü için)
         is_village: isVillage(),
-        is_metropolitan: election.is_metropolitan || false // Bu bilgi election objesinden gelmeli veya ballot box'tan çıkarılmalı
+        is_metropolitan: election.is_metropolitan || false, // Bu bilgi election objesinden gelmeli veya ballot box'tan çıkarılmalı
+        // Tutanak odağı: 'cb' → sadece cumhurbaşkanı oyları, 'mv' → sadece
+        // milletvekili/parti oyları. Genel seçimde iki ayrı tutanak için.
+        focus: focus || null
       };
-      
+
+      // Önce bellekteki data URL'i kullan (CORS'tan kaçınmak için)
+      const photoSource = photoDataUrl || photoUrl;
       const extractedData = await ProtocolOCRService.readProtocol(
-        formData.signed_protocol_photo,
+        photoSource,
         electionInfo
       );
 
-      // Formu doldur
+      // Tutanak tipi mismatch kontrolü — kullanıcı yanlış tutanak yüklemiş olabilir
+      // (ör. CB alanına MV tutanağı). AI tipi tespit edip "tutanak_tipi" döndürür.
+      const detectedType = (extractedData?.tutanak_tipi || '').toLowerCase().trim();
+
+      const expectedTypeMap = {
+        cb: ['cb'],
+        mv: ['mv'],
+      };
+      const expected = expectedTypeMap[focus];
+      const labelMap = {
+        cb: 'Cumhurbaşkanı', mv: 'Milletvekili', mayor: 'Belediye Başkanı',
+        provincial_assembly: 'İl Genel Meclisi', municipal_council: 'Belediye Meclisi',
+        muhtar: 'Muhtarlık', referandum: 'Halk Oylaması', other: 'tanımsız'
+      };
+
+      if (expected && detectedType && !expected.includes(detectedType)) {
+        // AI tip tespit etti AMA beklenenle uyuşmuyor → güçlü uyarı
+        const detected = labelMap[detectedType] || detectedType;
+        const expectedLabel = focus === 'cb' ? 'Cumhurbaşkanı' : 'Milletvekili';
+        const ok = await confirmWarningsInline([
+          `⚠️ Yanlış tutanak yüklemiş olabilirsiniz!`,
+          `Bu alana ${expectedLabel} tutanağı yüklenmesi gerekiyor.`,
+          `AI bu fotoğrafı "${detected}" tutanağı olarak tespit etti.`,
+          `Yine de bu tutanağı bu alana yüklemek istiyor musunuz?`
+        ]);
+        if (!ok) {
+          setFillingWithAI(false);
+          setMessage('AI okuma iptal edildi — doğru tutanağı yükleyin.');
+          setMessageType('warning');
+          return;
+        }
+      } else if (expected && !detectedType) {
+        // AI tip tespit edemedi → bilgilendirici uyarı (block etme)
+        setMessage(
+          `Bilgi: AI tutanak tipini tespit edemedi. ` +
+          `Lütfen yüklediğiniz fotoğrafın doğru tutanak (${focus === 'cb' ? 'Cumhurbaşkanı' : 'Milletvekili'}) ` +
+          `olduğundan emin olun.`
+        );
+        setMessageType('warning');
+      }
+
+      // Formu doldur — Genel seçimde focus tek tutanağa odaklı (CB veya MV).
+      // Diğer alanın oylarını AI okumadığı için boş object dönüyor; spread sırasında
+      // önceki dolu veriyi silmesin diye odaklanılmayan alanı extracted'tan çıkarıyoruz.
+      const safeExtracted = { ...extractedData };
+      delete safeExtracted.tutanak_tipi; // Firestore'a yazma
+      if (election?.type === 'genel' && focus === 'cb') {
+        delete safeExtracted.mv_votes;
+      } else if (election?.type === 'genel' && focus === 'mv') {
+        delete safeExtracted.cb_votes;
+      }
       setFormData(prev => ({
         ...prev,
-        ...extractedData,
-        filled_by_ai: true // AI ile doldurulduğunu işaretle
+        ...safeExtracted,
+        filled_by_ai: true
       }));
 
       // OCR sonuc dogrulama
@@ -610,14 +763,19 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     return Object.values(byCategory).reduce((sum, val) => sum + val, 0);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  // category: 'cb' | 'mv' | null
+  // - 'cb' → sadece CB tarafı yazılır, MV alanları Firestore'da olduğu gibi kalır
+  // - 'mv' → tersi
+  // - null → tüm form (eski davranış)
+  // Genel seçimde CB/MV ayrı kaydetme isteği için kategori-bazlı save.
+  const handleSubmit = async (e, category = null) => {
+    if (e && e.preventDefault) e.preventDefault();
+
     // Prevent double submission
     if (saving) {
       return;
     }
-    
+
     setSaving(true);
     setMessage('');
 
@@ -656,113 +814,77 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     const enteredValidVotes = parseInt(formData.valid_votes) || 0;
     const totalCalculatedValidVotes = calculateTotalValidVotes();
     
+    // Uyarı toplama: kaydetmeyi engellemeyen, kullanıcı onayıyla geçilen uyuşmazlıklar
+    const warnings = [];
+
+    // Köylü Türkçesi: hangi alana bakacağı ve hangi sayıların tutmadığı net.
+    const mismatchMsg = (label, sum, valid) =>
+      `${label} adaylarına/partilerine verdiğiniz oyları topladığımızda ${sum} ediyor, ` +
+      `ama "Geçerli Oy" alanına ${valid} yazmışsınız. Bu iki sayı tutmalı — birini kontrol edin.`;
+
     if (election.type === 'cb') {
-      // Sadece Cumhurbaşkanı Seçimi
       const cbTotal = validVotesByCategory.cb || 0;
       if (cbTotal !== enteredValidVotes) {
-        setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+        warnings.push(mismatchMsg('Cumhurbaşkanı', cbTotal, enteredValidVotes));
       }
     } else if (election.type === 'mv') {
-      // Sadece Milletvekili Genel Seçimi
       const mvTotal = validVotesByCategory.mv || 0;
       if (mvTotal !== enteredValidVotes) {
-        setMessage(`Milletvekili oyları toplamı (${mvTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+        warnings.push(mismatchMsg('Milletvekili', mvTotal, enteredValidVotes));
       }
     } else if (election.type === 'genel') {
-      // Genel seçim: CB ve MV oyları ayrı ayrı kontrol edilir
-      // Her seçmen hem CB hem MV için oy kullanır, bu yüzden her ikisi de geçerli oy sayısına eşit olmalı
+      // Genel seçimde CB ve MV tutanakları farklı valid_votes değerlerine sahip olabilir.
+      const cbValid = parseInt(formData.cb_valid_votes) || enteredValidVotes;
+      const mvValid = parseInt(formData.mv_valid_votes) || enteredValidVotes;
       const cbTotal = validVotesByCategory.cb || 0;
       const mvTotal = validVotesByCategory.mv || 0;
-      
-      if (cbTotal !== enteredValidVotes) {
-        setMessage(`Cumhurbaşkanı oyları toplamı (${cbTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+      if (cbValid > 0 && cbTotal > 0 && cbTotal !== cbValid) {
+        warnings.push(mismatchMsg('CB tutanağında Cumhurbaşkanı', cbTotal, cbValid));
       }
-      
-      if (mvTotal !== enteredValidVotes) {
-        setMessage(`Milletvekili oyları toplamı (${mvTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+      if (mvValid > 0 && mvTotal > 0 && mvTotal !== mvValid) {
+        warnings.push(mismatchMsg('MV tutanağında parti', mvTotal, mvValid));
       }
     } else if (election.type === 'yerel_metropolitan_mayor' || election.type === 'yerel_city_mayor' || election.type === 'yerel_district_mayor') {
-      // Belediye Başkanı seçimleri (Büyükşehir, İl, İlçe)
       const mayorTotal = validVotesByCategory.mayor || 0;
       if (mayorTotal !== enteredValidVotes) {
-        setMessage(`Belediye Başkanı oyları toplamı (${mayorTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+        warnings.push(mismatchMsg('Belediye Başkanı', mayorTotal, enteredValidVotes));
       }
     } else if (election.type === 'yerel_provincial_assembly') {
-      // İl Genel Meclisi Üyesi Seçimi
       const provincialAssemblyTotal = validVotesByCategory.provincial_assembly || 0;
       if (provincialAssemblyTotal !== enteredValidVotes) {
-        setMessage(`İl Genel Meclisi oyları toplamı (${provincialAssemblyTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+        warnings.push(mismatchMsg('İl Genel Meclisi', provincialAssemblyTotal, enteredValidVotes));
       }
     } else if (election.type === 'yerel_municipal_council') {
-      // Belediye Meclisi Üyesi Seçimi
       const municipalCouncilTotal = validVotesByCategory.municipal_council || 0;
       if (municipalCouncilTotal !== enteredValidVotes) {
-        setMessage(`Belediye Meclisi oyları toplamı (${municipalCouncilTotal}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+        warnings.push(mismatchMsg('Belediye Meclisi', municipalCouncilTotal, enteredValidVotes));
       }
     } else if (election.type === 'yerel') {
-      // Yerel seçim: Her kategori için ayrı ayrı kontrol
       const isVil = isVillage();
-      const errors = [];
-      
       if (!isVil) {
-        // Köyde değil: Belediye Başkanı + Belediye Meclisi + İl Genel Meclisi
         if (validVotesByCategory.mayor !== enteredValidVotes) {
-          errors.push(`Belediye Başkanı oyları (${validVotesByCategory.mayor}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+          warnings.push(mismatchMsg('Belediye Başkanı', validVotesByCategory.mayor, enteredValidVotes));
         }
         if (validVotesByCategory.municipal_council !== enteredValidVotes) {
-          errors.push(`Belediye Meclisi oyları (${validVotesByCategory.municipal_council}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+          warnings.push(mismatchMsg('Belediye Meclisi', validVotesByCategory.municipal_council, enteredValidVotes));
         }
         if (validVotesByCategory.provincial_assembly !== enteredValidVotes) {
-          errors.push(`İl Genel Meclisi oyları (${validVotesByCategory.provincial_assembly}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+          warnings.push(mismatchMsg('İl Genel Meclisi', validVotesByCategory.provincial_assembly, enteredValidVotes));
         }
       } else {
-        // Köyde: Sadece İl Genel Meclisi
         if (validVotesByCategory.provincial_assembly !== enteredValidVotes) {
-          errors.push(`İl Genel Meclisi oyları (${validVotesByCategory.provincial_assembly}) geçerli oy sayısı (${enteredValidVotes}) ile eşleşmiyor`);
+          warnings.push(mismatchMsg('İl Genel Meclisi', validVotesByCategory.provincial_assembly, enteredValidVotes));
         }
-        // Köyde Belediye Başkanı ve Belediye Meclisi oyları olmamalı
         if (validVotesByCategory.mayor > 0) {
-          errors.push(`Köyde Belediye Başkanı oyu verilemez. Girilen oy: ${validVotesByCategory.mayor}`);
+          warnings.push(`Köyde Belediye Başkanı seçimi yapılmaz. Belediye Başkanı oyu kutusunu sıfırlayın.`);
         }
         if (validVotesByCategory.municipal_council > 0) {
-          errors.push(`Köyde Belediye Meclisi oyu verilemez. Girilen oy: ${validVotesByCategory.municipal_council}`);
+          warnings.push(`Köyde Belediye Meclisi seçimi yapılmaz. Belediye Meclisi oyu kutusunu sıfırlayın.`);
         }
       }
-      
-      if (errors.length > 0) {
-        setMessage(errors.join('; '));
-        setMessageType('error');
-        setSaving(false);
-        return;
-      }
     } else if (election.type === 'referandum') {
-      // Referandum: Normal validasyon
       if (totalCalculatedValidVotes !== enteredValidVotes) {
-        setMessage(`Geçerli oy sayısı (${enteredValidVotes}) aday oyları toplamı (${totalCalculatedValidVotes}) ile eşleşmiyor`);
-        setMessageType('error');
-        setSaving(false);
-        return;
+        warnings.push(`"Evet" ve "Hayır" oylarının toplamı ${totalCalculatedValidVotes}, ama "Geçerli Oy" alanına ${enteredValidVotes} yazmışsınız. İki sayı tutmalı.`);
       }
     }
 
@@ -771,19 +893,36 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     const validVotes = parseInt(formData.valid_votes) || 0;
     const totalVoters = parseInt(formData.total_voters) || 0;
 
-    // Seçmen sayısından fazla oy kontrolü
+    // HARD hata: hesap fiziken bozuluyor (kullanılan oy > toplam seçmen)
+    // Test seçiminde bile engellenir — çünkü bu mantıksal olarak imkansız.
     if (totalVoters > 0 && usedVotes > totalVoters) {
-      setMessage(`Oy kullanan seçmen sayısı (${usedVotes}) toplam seçmen sayısından (${totalVoters}) fazla olamaz`);
+      setMessage(`HATA: Oy kullanan seçmen sayısı (${usedVotes}) toplam seçmen sayısından (${totalVoters}) fazla olamaz. Seçmen sayısını veya kullanılan oy sayısını düzeltin.`);
       setMessageType('error');
       setSaving(false);
       return;
     }
 
+    // SOFT uyarı: kullanılan ≠ geçerli + geçersiz
     if (usedVotes !== (invalidVotes + validVotes)) {
-      setMessage(`Kullanılan oy (${usedVotes}) geçersiz oy (${invalidVotes}) + geçerli oy (${validVotes}) toplamı ile eşleşmiyor`);
-      setMessageType('error');
-      setSaving(false);
-      return;
+      warnings.push(
+        `"Kullanılan Oy" ${usedVotes} yazıyor, ama "Geçerli (${validVotes}) + Geçersiz (${invalidVotes})" toplamı ${invalidVotes + validVotes}. ` +
+        `Bu üç sayı tutmalı.`
+      );
+    }
+
+    // Uyarılar varsa inline modal ile onay al — köylü dostu, açıklayıcı.
+    // Kullanıcı "Yine de kaydet" derse, sonuç has_inconsistency=true flag'i
+    // ile yazılır → trigger sorumluya yüksek-öncelikli bildirim gönderir.
+    let hasInconsistency = false;
+    let inconsistencyWarnings = [];
+    if (warnings.length > 0) {
+      const ok = await confirmWarningsInline(warnings);
+      if (!ok) {
+        setSaving(false);
+        return;
+      }
+      hasInconsistency = true;
+      inconsistencyWarnings = warnings.slice(0, 5);
     }
 
     // Check election date - allow result entry only on election day or after (with 7 days grace period)
@@ -847,38 +986,107 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
         ...formData,
         ballot_box_id: ballotBoxId,
         ballot_number: ballotNumber || formData.ballot_number,
-        filled_by_ai: formData.filled_by_ai || false // AI ile dolduruldu mu?
+        filled_by_ai: formData.filled_by_ai || false, // AI ile dolduruldu mu?
+        // Tutarsızlık flag'i — toplam tutmuyor ama kullanıcı yine de kaydetti.
+        // Trigger function bunu görüp sorumluya yüksek öncelikli bildirim atar.
+        has_inconsistency: hasInconsistency,
+        inconsistency_warnings: inconsistencyWarnings,
       };
+
+      // Kategori-bazlı save: genel seçimde CB ve MV ayrı tutanak, ayrı sayı,
+      // ayrı save. Firestore updateDoc sadece gönderilen alanları günceller.
+      // ÖNEMLİ: Paylaşılan alanlar (used_votes/valid_votes/invalid_votes/total_voters)
+      // admin görünümünde kullanılıyor; kategori save'de bunları SİLMEK yerine
+      // kategorinin değeriyle DOLDURuyoruz — admin "girilmemiş" görmesin.
+      if (category === 'cb') {
+        delete submitData.mv_votes;
+        delete submitData.signed_mv_protocol_photo;
+        delete submitData.mv_total_voters;
+        delete submitData.mv_used_votes;
+        delete submitData.mv_valid_votes;
+        delete submitData.mv_invalid_votes;
+        // Paylaşılan alanları CB değerleriyle doldur
+        submitData.used_votes = parseInt(formData.cb_used_votes) || parseInt(formData.used_votes) || 0;
+        submitData.valid_votes = parseInt(formData.cb_valid_votes) || parseInt(formData.valid_votes) || 0;
+        submitData.invalid_votes = parseInt(formData.cb_invalid_votes) || parseInt(formData.invalid_votes) || 0;
+        submitData.total_voters = parseInt(formData.cb_total_voters) || parseInt(formData.total_voters) || 0;
+        submitData.cb_status = 'pending';
+        submitData.cb_submitted_at = new Date().toISOString();
+        // Eski reddedilmiş kaydın approval_status='rejected' kalıntısını temizle
+        // (Cloud Function publicElectionResults filter bunu reject olarak sayar)
+        submitData.approval_status = null;
+        submitData._category = 'cb';
+      } else if (category === 'mv') {
+        delete submitData.cb_votes;
+        delete submitData.signed_protocol_photo;
+        delete submitData.cb_total_voters;
+        delete submitData.cb_used_votes;
+        delete submitData.cb_valid_votes;
+        delete submitData.cb_invalid_votes;
+        // Paylaşılan alanları MV değerleriyle doldur
+        submitData.used_votes = parseInt(formData.mv_used_votes) || parseInt(formData.used_votes) || 0;
+        submitData.valid_votes = parseInt(formData.mv_valid_votes) || parseInt(formData.valid_votes) || 0;
+        submitData.invalid_votes = parseInt(formData.mv_invalid_votes) || parseInt(formData.invalid_votes) || 0;
+        submitData.total_voters = parseInt(formData.mv_total_voters) || parseInt(formData.total_voters) || 0;
+        submitData.mv_status = 'pending';
+        submitData.mv_submitted_at = new Date().toISOString();
+        submitData.approval_status = null;
+        submitData._category = 'mv';
+      } else if (election?.type === 'genel') {
+        submitData.cb_status = 'pending';
+        submitData.mv_status = 'pending';
+        submitData.approval_status = null;
+      }
       
       // Check if protocol photo is missing
       const hasProtocolPhoto = !!(submitData.signed_protocol_photo || submitData.signedProtocolPhoto);
       
+      const labelPrefix = category === 'cb' ? 'CB sonucu' : (category === 'mv' ? 'MV sonucu' : 'Seçim sonucu');
+      let saveResult;
       if (existingResult) {
-        await ApiService.updateElectionResult(existingResult.id, submitData);
-        // Anlık uyarı göster
-        if (!hasProtocolPhoto) {
-          setMessage('Seçim sonucu başarıyla güncellendi. ⚠️ Seçim tutanağını yükleyiniz.');
-          setMessageType('warning');
-        } else {
-        setMessage('Seçim sonucu başarıyla güncellendi');
-          setMessageType('success');
-        }
+        saveResult = await ApiService.updateElectionResult(existingResult.id, submitData);
       } else {
-        await ApiService.createElectionResult(submitData);
-        // Anlık uyarı göster
-        if (!hasProtocolPhoto) {
-          setMessage('Seçim sonucu başarıyla kaydedildi. ⚠️ Seçim tutanağını yükleyiniz.');
-          setMessageType('warning');
-        } else {
-        setMessage('Seçim sonucu başarıyla kaydedildi');
-          setMessageType('success');
+        saveResult = await ApiService.createElectionResult(submitData);
+      }
+
+      // Validation/save hatası kontrolü — eskiden başarılı sanılıp veri kayboluyordu
+      if (saveResult && saveResult.success === false) {
+        const errMsg = saveResult.message || (saveResult.errors || []).join(', ') || 'Kayıt başarısız';
+        setMessage(`${labelPrefix} kaydedilemedi: ${errMsg}`);
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
+
+      // Başarılı: state ve mesaj
+      // _category Firestore'a yazılmaz, ama submitData'dan da temizleyelim
+      const cleanSubmit = { ...submitData };
+      delete cleanSubmit._category;
+
+      if (existingResult) {
+        setExistingResult(prev => ({ ...(prev || {}), ...cleanSubmit, id: prev?.id || existingResult.id }));
+      } else {
+        const newId = saveResult?.id || saveResult?.docId;
+        if (newId && typeof newId === 'string') {
+          setExistingResult({ id: newId, ...cleanSubmit });
         }
       }
+
+      if (!hasProtocolPhoto && !category) {
+        setMessage(`${labelPrefix} başarıyla ${existingResult ? 'güncellendi' : 'kaydedildi'}. ⚠️ Tutanak fotoğrafını yüklemeyi unutmayın.`);
+        setMessageType('warning');
+      } else {
+        setMessage(`${labelPrefix} başarıyla ${existingResult ? 'güncellendi' : 'kaydedildi'}.`);
+        setMessageType('success');
+      }
       
-      // Mesaj gösterildikten sonra kısa bir süre bekle ve sonra onSuccess çağır
-      setTimeout(() => {
-        if (onSuccess) onSuccess();
-      }, hasProtocolPhoto ? 1500 : 2500);
+      // Mesaj gösterildikten sonra kısa bir süre bekle ve sonra onSuccess çağır.
+      // Kategori-bazlı save'de modal kapanmasın — kullanıcı diğer kategoriye devam edebilsin.
+      if (!category) {
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, hasProtocolPhoto ? 1500 : 2500);
+      }
     } catch (error) {
       console.error('Error saving election result:', error);
       setMessage(error.message || 'Seçim sonucu kaydedilirken hata oluştu');
@@ -918,6 +1126,28 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
     };
     return colors[election.type] || 'from-gray-500 to-gray-600';
   };
+
+  // Safety check: hooks above her render'da aynı sırada çalışsın diye burada (early
+  // return değil). Election yoksa hata UI'ı dön.
+  if (!election) {
+    return (
+      <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6">
+          <div className="text-center">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Hata</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Seçim bilgisi bulunamadı. Lütfen tekrar deneyin.</p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ height: '100vh', overflow: 'hidden' }}>
@@ -1055,7 +1285,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </div>
             </div>
 
-            {/* Oy Sayıları */}
+            {/* Oy Sayıları — Genel seçim DEĞİLSE göster (cb/mv tek başına, yerel, vb.).
+                Genel seçimde CB ve MV tutanakları farklı sayılara sahip olabildiği için
+                oy sayıları her tutanak kartının kendi içinde toplanır. */}
+            {election?.type !== 'genel' && (
             <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                 Oy Sayıları
@@ -1181,6 +1414,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                 </div>
               </div>
             </div>
+            )}
 
             {/* Cumhurbaşkanı Seçimi: Sadece CB Oyları */}
             {election?.type === 'cb' && (
@@ -1783,13 +2017,14 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
             {/* Yerel Seçim: Belediye Başkanı, İl Genel Meclisi, Belediye Meclisi (Tüm Alt Türler - Eski Sistem Uyumluluğu) */}
             {election?.type === 'yerel' && (
               <div className="space-y-5">
-                {/* Köy kontrolü bilgilendirmesi */}
+                {/* Köy bilgilendirmesi — köyde sadece İl Genel Meclisi seçimi olur,
+                    Belediye Başkanı ve Belediye Meclisi kartları DOM'dan tamamen kaldırılır. */}
                 {isVillage() && (
-                  <div className="bg-amber-50 border-2 border-amber-300 rounded p-4">
-                    <p className="text-sm font-semibold text-amber-800">
-                      ⚠️ Köy: Bu sandık köyde bulunmaktadır. Sadece İl Genel Meclisi için oy kullanılabilir.
-                  </p>
-                </div>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700 rounded p-4">
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                      📍 Köy sandığı: Aşağıda yalnızca İl Genel Meclisi için oy giriniz. Köyde Belediye Başkanı ve Belediye Meclisi seçimi yapılmaz.
+                    </p>
+                  </div>
                 )}
 
                 {/* Debug: Show if no local election data */}
@@ -1804,12 +2039,11 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               </div>
                 )}
 
-                {/* Belediye Başkanı Parti Oyları - Köyde devre dışı */}
-                {election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
-                  <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
+                {/* Belediye Başkanı Parti Oyları — Köyde HİÇ render edilmez (DOM'dan kaldırılır) */}
+                {!isVillage() && election.mayor_parties && Array.isArray(election.mayor_parties) && election.mayor_parties.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Belediye Başkanı Parti Oyları
-                      {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_parties.map((party) => {
@@ -1852,12 +2086,11 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* Bağımsız Belediye Başkanı Adayları - Köyde devre dışı */}
-                {election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
-                  <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
+                {/* Bağımsız Belediye Başkanı Adayları — Köyde HİÇ render edilmez */}
+                {!isVillage() && election.mayor_candidates && Array.isArray(election.mayor_candidates) && election.mayor_candidates.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Bağımsız Belediye Başkanı Adayları ve Aldıkları Oy Sayıları
-                      {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.mayor_candidates.map((candidate) => (
@@ -1926,12 +2159,11 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </div>
                 )}
 
-                {/* Belediye Meclis Üyesi Oyları (Parti Bazlı) - Köyde devre dışı */}
-                {election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
-                  <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5 ${isVillage() ? 'opacity-50' : ''}`}>
+                {/* Belediye Meclis Üyesi Oyları — Köyde HİÇ render edilmez */}
+                {!isVillage() && election.municipal_council_parties && Array.isArray(election.municipal_council_parties) && election.municipal_council_parties.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-5">
                     <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">
                       Belediye Meclis Parti Oyları
-                      {isVillage() && <span className="ml-2 text-xs font-normal text-amber-600">(Köyde kullanılmaz)</span>}
                     </h2>
                     <div className="space-y-2">
                       {election.municipal_council_parties.map((party) => {
@@ -2084,7 +2316,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    İmzalı Tutanak Fotoğrafı
+                    {election?.type === 'genel'
+                      ? 'Cumhurbaşkanı (CB) İmzalı Tutanak'
+                      : 'İmzalı Tutanak Fotoğrafı'}
                 </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:bg-gray-700 transition-colors">
                     {uploadingPhotos.signed ? (
@@ -2137,16 +2371,137 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   </label>
                   {/* AI ile Doldur Butonu */}
                   {formData.signed_protocol_photo && !fillingWithAI && (
-                    <button
-                      type="button"
-                      onClick={handleAIFill}
-                      className="mt-2 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      AI ile Otomatik Doldur
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleAIFill(election?.type === 'genel' ? 'cb' : undefined)}
+                        disabled={!isOnline}
+                        className="mt-2 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        {election?.type === 'genel' ? 'AI — CB Tutanağını Oku' : 'AI ile Otomatik Doldur'}
+                      </button>
+                      {!isOnline && (
+                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                          ⚠️ Çevrimdışıyken AI okuma kapalı. Manuel doldurabilirsiniz; internet gelince form otomatik gönderilecek.
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {/* Genel seçimde CB tutanağına özel oy sayıları (MV ile bağımsız) */}
+                  {election?.type === 'genel' && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CB Toplam Seçmen</label>
+                        <input type="number" name="cb_total_voters" value={formData.cb_total_voters} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CB Kullanılan</label>
+                        <input type="number" name="cb_used_votes" value={formData.cb_used_votes} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CB Geçerli</label>
+                        <input type="number" name="cb_valid_votes" value={formData.cb_valid_votes} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CB Geçersiz</label>
+                        <input type="number" name="cb_invalid_votes" value={formData.cb_invalid_votes} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500" placeholder="0" />
+                      </div>
+                    </div>
+                  )}
+                  {/* "CB Sonucunu Kaydet" butonu kaldırıldı — üstteki tek "Kaydet"
+                      butonu yeterli. Kullanıcı kafa karışıklığı yaşıyordu. */}
+
+                  {/* MV Tutanağı — Sadece genel seçim için */}
+                  {election?.type === 'genel' && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Milletvekili (MV) İmzalı Tutanak
+                      </label>
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 transition-colors">
+                        {uploadingPhotos.mv_signed ? (
+                          <div className="flex flex-col items-center justify-center w-full">
+                            <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 dark:border-gray-600 border-t-indigo-600 mb-2"></div>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              {uploadProgress.mv_signed > 0 ? `Yükleniyor... %${uploadProgress.mv_signed}` : 'Yükleniyor...'}
+                            </span>
+                          </div>
+                        ) : formData.signed_mv_protocol_photo ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={formData.signed_mv_protocol_photo}
+                              alt="MV İmzalı Tutanak"
+                              className="w-full h-full object-cover rounded"
+                              loading="lazy"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                              <span className="text-white text-xs font-medium">Yeniden Yükle</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center">
+                            <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">MV Tutanağı Yükle</span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) handlePhotoUpload(file, 'mv_signed');
+                          }}
+                          className="hidden"
+                          disabled={uploadingPhotos.mv_signed}
+                        />
+                      </label>
+                      {formData.signed_mv_protocol_photo && !fillingWithAI && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleAIFill('mv')}
+                            disabled={!isOnline}
+                            className="mt-2 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            AI — MV Tutanağını Oku
+                          </button>
+                          {!isOnline && (
+                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                              ⚠️ Çevrimdışıyken AI okuma kapalı. Manuel doldurabilirsiniz.
+                            </p>
+                          )}
+                        </>
+                      )}
+                      {/* MV tutanağına özel oy sayıları (CB ile bağımsız) */}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MV Toplam Seçmen</label>
+                          <input type="number" name="mv_total_voters" value={formData.mv_total_voters} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500" placeholder="0" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MV Kullanılan</label>
+                          <input type="number" name="mv_used_votes" value={formData.mv_used_votes} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500" placeholder="0" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MV Geçerli</label>
+                          <input type="number" name="mv_valid_votes" value={formData.mv_valid_votes} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500" placeholder="0" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">MV Geçersiz</label>
+                          <input type="number" name="mv_invalid_votes" value={formData.mv_invalid_votes} onChange={handleInputChange} min="0" className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500" placeholder="0" />
+                        </div>
+                      </div>
+                      {/* "MV Sonucunu Kaydet" kaldırıldı — üst Kaydet yeterli */}
+                    </div>
                   )}
                   {fillingWithAI && (
                     <div className="mt-2 w-full px-4 py-2 bg-purple-100 text-purple-700 font-medium rounded-lg flex items-center justify-center gap-2">
@@ -2156,9 +2511,10 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                   )}
               </div>
 
+                {formData.has_objection && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  İtiraz Tutanağı (Varsa)
+                  İtiraz Tutanağı
                 </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:bg-gray-700 transition-colors">
                     {uploadingPhotos.objection ? (
@@ -2210,6 +2566,7 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
                     />
                   </label>
                 </div>
+                )}
               </div>
             </div>
 
@@ -2332,6 +2689,53 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
           animation: slideDown 0.3s ease-out;
         }
       `}</style>
+
+      {/* Validation onay dialog'u — window.confirm() yerine.
+          Köylü dostu mesajlar, "Düzelt" / "Yine de Kaydet" ayrımı net. */}
+      {pendingValidation && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6 animate-scale-in">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Sayılarda uyuşmazlık var</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                  Aşağıdaki sayıları kontrol etmenizi öneriyoruz. Tutanaktaki sayıları yeniden kontrol edip düzeltebilirsiniz, ya da emin iseniz yine de kaydedebilirsiniz.
+                </p>
+              </div>
+            </div>
+
+            <ul className="space-y-2.5 mb-6 max-h-64 overflow-y-auto">
+              {pendingValidation.warnings.map((w, i) => (
+                <li key={i} className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 px-3 py-2 rounded text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                  {w}
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={pendingValidation.onCancel}
+                className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Düzeltmeye Geri Dön
+              </button>
+              <button
+                type="button"
+                onClick={pendingValidation.onConfirm}
+                className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-lg transition-colors"
+              >
+                Yine de Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

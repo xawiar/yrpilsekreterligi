@@ -12,84 +12,58 @@ export default defineConfig({
     // Production'da console.log/warn/info esbuild tarafından kaldırılır (aşağıda esbuild.drop)
     // PWA Plugin - Tam aktif
     //
-    // MULTI-SW ARCHITECTURE:
-    // This project uses THREE service workers that coexist without conflict:
-    //   1. vite-plugin-pwa (generateSW) -- handles precaching of build assets and
-    //      runtime caching (fonts, images, API). Registered automatically by the plugin.
-    //   2. public/sw.js -- legacy manual SW for offline navigation fallback and
-    //      push notification display. Registered by the app at runtime.
-    //   3. public/firebase-messaging-sw.js -- dedicated FCM background message handler.
-    //      Registered at /firebase-messaging-sw.js scope by fcmTokenManager.js.
+    // MULTI-SW ARCHITECTURE (her biri farklı dosya adı + scope çakışmasız):
+    //   1. vite-plugin-pwa (generateSW) -- /workbox-sw.js
+    //      Precaching + runtime caching (fonts, images, API).
+    //      Manuel register (main.jsx) — injectRegister: false.
+    //      NOT: Şu an main.jsx workbox-sw.js'i register ETMİYOR — sadece /sw.js register ediliyor.
+    //      Workbox cache faydası lazım olursa main.jsx'te ek register eklenebilir.
+    //   2. public/sw.js -- ANA SW (push handler + offline navigation fallback).
+    //      main.jsx içinde tek noktada register edilir, scope '/'.
+    //   3. public/firebase-messaging-sw.js -- FCM background message handler.
+    //      fcmTokenManager.js içinde register edilir, scope '/firebase-messaging-sw.js'.
     //
-    // To prevent conflicts:
-    //   - firebase-messaging-sw.js is excluded from precaching via globIgnores
-    //   - sw.js is also excluded from precaching (it registers itself separately)
-    //   - navigateFallbackDenylist prevents the workbox SW from intercepting the
-    //     firebase-messaging-sw.js registration request
+    // Çakışma engelleme:
+    //   - filename: 'workbox-sw.js' — default 'sw.js' public/sw.js'i override etmesin
+    //   - injectRegister: false — VitePWA otomatik register YAPMASIN
+    //   - globIgnores ile sw.js + firebase-messaging-sw.js precache dışı
+    //   - navigateFallbackDenylist ile workbox SW navigation interception engellenir
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
-      manifest: {
-        name: 'Sekreterlik Yönetim Sistemi',
-        short_name: 'Sekreterlik',
-        description: 'Parti sekreterlik yönetim sistemi',
-        theme_color: '#3b82f6',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        lang: 'tr',
-        dir: 'ltr',
-        categories: ['productivity', 'business'],
-        icons: [
-          {
-            src: '/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ],
-        shortcuts: [
-          {
-            name: 'Üyeler',
-            short_name: 'Üyeler',
-            description: 'Üye listesini görüntüle',
-            url: '/members',
-            icons: [{ src: '/icon-192x192.png', sizes: '192x192' }]
-          },
-          {
-            name: 'Etkinlikler',
-            short_name: 'Etkinlikler',
-            description: 'Etkinlikleri görüntüle',
-            url: '/events',
-            icons: [{ src: '/icon-192x192.png', sizes: '192x192' }]
-          },
-          {
-            name: 'Toplantılar',
-            short_name: 'Toplantılar',
-            description: 'Toplantıları görüntüle',
-            url: '/meetings',
-            icons: [{ src: '/icon-192x192.png', sizes: '192x192' }]
-          }
-        ]
-      },
+      // CRITICAL: Workbox SW dosya adını değiştir — public/sw.js'i override etmesin.
+      // Default 'sw.js' olduğu için public/sw.js (custom push handler) build sırasında
+      // workbox tarafından override ediliyordu. 'workbox-sw.js' ile çakışma çözüldü.
+      filename: 'workbox-sw.js',
+      // CRITICAL: VitePWA kendi register script'ini inject ETMESİN.
+      // Tek register noktası: src/main.jsx → navigator.serviceWorker.register('/sw.js')
+      injectRegister: false,
+      // VitePWA'nın kendi manifest'ini DEVRE DIŞI bırak — static /public/manifest.json
+      // (admin tarafından dinamik olarak Cloud Function üzerinden de override edilebilir)
+      // tek manifest kaynağı için.
+      manifest: false,
       workbox: {
+        // manifest.json/webmanifest precache'e DAHIL ETME — dynamic Cloud Function'a yönlendirilir
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        navigateFallbackDenylist: [/^\/manifest\.json$/, /^\/manifest\.webmanifest$/, /^\/firebase-messaging-sw\.js$/, /^\/sw\.js$/, /^\/workbox-sw\.js$/],
         // Exclude manual service workers from precaching — they register themselves
         globIgnores: ['**/firebase-messaging-sw.js', '**/sw.js'],
-        // Prevent workbox from intercepting SW registration requests
-        navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/, /^\/sw\.js$/],
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB - large bundle support
         runtimeCaching: [
+          {
+            // index.html (navigation) — her zaman güncel, cache fallback
+            // Deploy sonrası eski chunk isimlerini aramamak için kritik.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
           {
             // Static assets - Cache First
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,

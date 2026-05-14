@@ -6,6 +6,63 @@ import React from 'react';
 import NativeCard from './NativeCard';
 import NativeButton from './NativeButton';
 
+// Kategori-bazlı durum hesabı (web ile birebir aynı mantık)
+// Durum: 'not_entered' | 'pending' | 'approved' | 'rejected'
+const getCategoryStatus = (r, category) => {
+  if (!r) return { status: 'not_entered', reason: null };
+  if (category === 'cb') {
+    if (r.cb_status === 'rejected') return { status: 'rejected', reason: r.cb_rejection_reason || null };
+    const has = (r.cb_votes && Object.keys(r.cb_votes).length > 0) || !!r.signed_protocol_photo;
+    if (!has) return { status: 'not_entered', reason: null };
+    if (r.cb_status === 'approved') return { status: 'approved', reason: null };
+    return { status: 'pending', reason: null };
+  }
+  if (category === 'mv') {
+    if (r.mv_status === 'rejected') return { status: 'rejected', reason: r.mv_rejection_reason || null };
+    const has = (r.mv_votes && Object.keys(r.mv_votes).length > 0) || !!r.signed_mv_protocol_photo;
+    if (!has) return { status: 'not_entered', reason: null };
+    if (r.mv_status === 'approved') return { status: 'approved', reason: null };
+    return { status: 'pending', reason: null };
+  }
+  if (r.approval_status === 'rejected') return { status: 'rejected', reason: r.rejection_reason || null };
+  const mayorHas = r.mayor_votes && Object.keys(r.mayor_votes).length > 0;
+  const provincialHas = r.provincial_assembly_votes && Object.keys(r.provincial_assembly_votes).length > 0;
+  const municipalHas = r.municipal_council_votes && Object.keys(r.municipal_council_votes).length > 0;
+  const referendumHas = r.referendum_votes && Object.keys(r.referendum_votes).some(k => r.referendum_votes[k] > 0);
+  const partyHas = r.party_votes && Object.keys(r.party_votes).length > 0;
+  const cbSoloHas = (r.cb_votes && Object.keys(r.cb_votes).length > 0) || !!r.signed_protocol_photo;
+  const mvSoloHas = (r.mv_votes && Object.keys(r.mv_votes).length > 0) || !!r.signed_mv_protocol_photo;
+  const has = mayorHas || provincialHas || municipalHas || referendumHas || partyHas || cbSoloHas || mvSoloHas;
+  if (!has) return { status: 'not_entered', reason: null };
+  if (r.approval_status === 'approved') return { status: 'approved', reason: null };
+  return { status: 'pending', reason: null };
+};
+
+const STATUS_META = {
+  not_entered: { label: 'Henüz Girilmedi', icon: '⏳', bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200' },
+  pending:     { label: 'Onay Bekliyor',   icon: '🟡', bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-900 dark:text-yellow-100' },
+  approved:    { label: 'Onaylandı',       icon: '✅', bg: 'bg-green-100 dark:bg-green-900/40',  text: 'text-green-900 dark:text-green-100' },
+  rejected:    { label: 'Reddedildi — Tekrar Gir', icon: '🔴', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-900 dark:text-red-100' },
+};
+
+const StatusBadge = ({ status, prefix, reason }) => {
+  const meta = STATUS_META[status] || STATUS_META.not_entered;
+  return (
+    <div className={`inline-flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg ${meta.bg} ${meta.text} font-semibold text-xs`}>
+      <span className="flex items-center gap-1.5">
+        <span>{meta.icon}</span>
+        {prefix && <span className="opacity-80">{prefix}:</span>}
+        <span>{meta.label}</span>
+      </span>
+      {status === 'rejected' && reason && (
+        <span className="font-normal opacity-90 text-[11px] leading-tight">
+          Sebep: {reason}
+        </span>
+      )}
+    </div>
+  );
+};
+
 const NativeChiefObserverDashboard = ({
   elections = [],
   electionResults = {},
@@ -18,7 +75,24 @@ const NativeChiefObserverDashboard = ({
   getDaysUntil = (d) => null,
   loading = false
 }) => {
-  const completedCount = elections.filter(e => electionResults[e.id]).length;
+  const electionStatusFor = (election) => {
+    const r = electionResults[election.id];
+    if (election?.type === 'genel') {
+      return { type: 'multi', cb: getCategoryStatus(r, 'cb'), mv: getCategoryStatus(r, 'mv') };
+    }
+    return { type: 'single', overall: getCategoryStatus(r, null) };
+  };
+
+  const isElectionDone = (e) => {
+    const s = electionStatusFor(e);
+    if (s.type === 'multi') {
+      const ok = (st) => st === 'pending' || st === 'approved';
+      return ok(s.cb.status) && ok(s.mv.status);
+    }
+    return s.overall.status === 'pending' || s.overall.status === 'approved';
+  };
+
+  const completedCount = elections.filter(isElectionDone).length;
   const pendingCount = elections.length - completedCount;
 
   return (
@@ -129,9 +203,9 @@ const NativeChiefObserverDashboard = ({
         ) : (
           <div className="space-y-3">
             {elections.map((election) => {
-              const hasResult = electionResults[election.id] !== undefined;
               const daysUntil = getDaysUntil(election.date);
-              
+              const electionStatus = electionStatusFor(election);
+
               return (
                 <NativeCard
                   key={election.id}
@@ -161,15 +235,14 @@ const NativeChiefObserverDashboard = ({
                           )}
                         </div>
                       )}
-                      <div className="flex items-center space-x-2 mt-2">
-                        {hasResult ? (
-                          <span className="px-2 py-1 text-xs font-semibold bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">
-                            ✅ Sonuç Girildi
-                          </span>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {electionStatus.type === 'multi' ? (
+                          <>
+                            <StatusBadge status={electionStatus.cb.status} prefix="CB" reason={electionStatus.cb.reason} />
+                            <StatusBadge status={electionStatus.mv.status} prefix="MV" reason={electionStatus.mv.reason} />
+                          </>
                         ) : (
-                          <span className="px-2 py-1 text-xs font-semibold bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded-lg">
-                            ⏳ Bekliyor
-                          </span>
+                          <StatusBadge status={electionStatus.overall.status} reason={electionStatus.overall.reason} />
                         )}
                       </div>
                     </div>

@@ -35,10 +35,8 @@ const LoginEnhanced = () => {
   const [twoFACode, setTwoFACode] = useState('');
   const [tempToken, setTempToken] = useState('');
 
-  const [ballotNumber, setBallotNumber] = useState('');
   const [tc, setTc] = useState('');
-  const [chiefObserverDistrictId, setChiefObserverDistrictId] = useState('');
-  const [chiefObserverDistricts, setChiefObserverDistricts] = useState([]);
+  const [chiefObserverPhone, setChiefObserverPhone] = useState('');
   const [chiefObserverLoading, setChiefObserverLoading] = useState(false);
   const [chiefObserverError, setChiefObserverError] = useState('');
   const [rememberChiefObserver, setRememberChiefObserver] = useState(false);
@@ -71,18 +69,8 @@ const LoginEnhanced = () => {
     else setActiveTab('admin-member');
   }, [searchParams]);
 
-  // Başmüşahit tab'ı açıldığında ilçeleri yükle (dropdown için)
-  useEffect(() => {
-    if (activeTab !== 'chief-observer' || chiefObserverDistricts.length > 0) return;
-    (async () => {
-      try {
-        const list = await ApiService.getDistricts();
-        setChiefObserverDistricts(Array.isArray(list) ? list : (list?.districts || []));
-      } catch (e) {
-        console.warn('Districts fetch failed:', e);
-      }
-    })();
-  }, [activeTab, chiefObserverDistricts.length]);
+  // Başmüşahit girişi artık TC + telefon ile yapılıyor (capabilities model).
+  // Eskiden ilçe + sandık no soruluyordu — kaldırıldı.
 
   const handleAdminMemberSubmit = async (e) => {
     e.preventDefault();
@@ -98,18 +86,31 @@ const LoginEnhanced = () => {
       if (success) {
         setShowSuccess(true);
         const savedUser = localStorage.getItem('user');
+        let userData = null;
         let role = null;
         if (savedUser) {
-          const userData = JSON.parse(savedUser);
+          userData = JSON.parse(savedUser);
           role = userData.role || userData.userRole || userData.user_type;
         }
         setTimeout(() => {
-          switch (role) {
-            case 'admin': navigate('/dashboard'); break;
-            case 'member': navigate('/member-dashboard'); break;
-            case 'district_president': navigate('/district-president-dashboard'); break;
-            case 'chief_observer': navigate('/chief-observer-dashboard'); break;
-            default: navigate('/dashboard'); break;
+          // Capabilities-aware yönlendirme: aktif yetki varsa onun paneline git.
+          // Öncelik sırası: admin > observer (aktif görev) > coordinator > diğer roller.
+          if (role === 'admin') {
+            navigate('/dashboard');
+          } else if (userData && userData.observerId) {
+            navigate('/chief-observer-dashboard');
+          } else if (userData && userData.coordinatorId) {
+            navigate('/coordinator-dashboard');
+          } else {
+            switch (role) {
+              case 'member': navigate('/member-dashboard'); break;
+              case 'district_president': navigate('/district-president-dashboard'); break;
+              case 'town_president': navigate('/town-president-dashboard'); break;
+              case 'chief_observer':
+              case 'musahit': navigate('/chief-observer-dashboard'); break;
+              case 'coordinator': navigate('/coordinator-dashboard'); break;
+              default: navigate('/dashboard'); break;
+            }
           }
         }, 1000);
       } else {
@@ -125,23 +126,31 @@ const LoginEnhanced = () => {
   const handleChiefObserverSubmit = async (e) => {
     e.preventDefault();
     setChiefObserverError('');
-    if (!chiefObserverDistrictId) {
-      setChiefObserverError('Lütfen ilçe seçin');
-      return;
-    }
     setChiefObserverLoading(true);
     try {
-      const res = await ApiService.loginChiefObserver(ballotNumber, tc, chiefObserverDistrictId);
-      if (res?.success && res?.user) {
-        setUserFromLogin(res.user);
-        if (res.token) localStorage.setItem('token', res.token);
-        setShowSuccess(true);
-        setTimeout(() => navigate('/chief-observer-dashboard'), 800);
-      } else {
-        setChiefObserverError(res?.message || 'Başmüşahit girişi başarısız');
+      // Capabilities Model: TC + telefon ile ana login → user.observerId varsa giriş başarılı
+      const phoneNorm = (chiefObserverPhone || '').toString().replace(/\D/g, '');
+      const tcNorm = (tc || '').toString().replace(/\D/g, '').slice(0, 11);
+      if (tcNorm.length !== 11) {
+        setChiefObserverError('Geçerli bir TC kimlik numarası girin (11 hane)');
+        return;
       }
+      // login() helper'ı kullan — userData.observerId Faz 1'de eklendi
+      const success = await login(tcNorm, phoneNorm || tcNorm);
+      if (!success) {
+        setChiefObserverError('Giriş başarısız. TC ve telefonunuzu kontrol edin.');
+        return;
+      }
+      const savedUser = localStorage.getItem('user');
+      const userData = savedUser ? JSON.parse(savedUser) : null;
+      if (!userData || !userData.observerId) {
+        setChiefObserverError('Bu hesabın müşahit yetkisi yok. Yöneticinize başvurun.');
+        return;
+      }
+      setShowSuccess(true);
+      setTimeout(() => navigate('/chief-observer-dashboard'), 800);
     } catch (err) {
-      setChiefObserverError('Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.');
+      setChiefObserverError(err?.message || 'Giriş yapılamadı. Bilgilerinizi kontrol edin.');
     } finally {
       setChiefObserverLoading(false);
     }
@@ -229,31 +238,6 @@ const LoginEnhanced = () => {
                 <motion.div key="chief" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                   <form onSubmit={handleChiefObserverSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">İlçe</label>
-                      <select
-                        value={chiefObserverDistrictId}
-                        onChange={(e) => setChiefObserverDistrictId(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
-                      >
-                        <option value="">İlçe seçin</option>
-                        {chiefObserverDistricts.map(d => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Sandık Numarası</label>
-                      <input
-                        type="text"
-                        value={ballotNumber}
-                        onChange={(e) => setBallotNumber(e.target.value)}
-                        required
-                        placeholder="Örn: 1001"
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TC Kimlik No</label>
                       <input
                         type="text"
@@ -263,6 +247,17 @@ const LoginEnhanced = () => {
                         maxLength={11}
                         placeholder="11 haneli TC"
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Telefon</label>
+                      <input
+                        type="tel"
+                        value={chiefObserverPhone}
+                        onChange={(e) => setChiefObserverPhone(e.target.value)}
+                        required
+                        placeholder="05XX XXX XX XX"
+                        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
                       />
                     </div>
                     {chiefObserverError && (

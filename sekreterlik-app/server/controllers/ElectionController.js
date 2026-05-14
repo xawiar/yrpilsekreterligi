@@ -262,8 +262,11 @@ class ElectionController {
         return res.status(404).json({ message: 'Seçim bulunamadı' });
       }
 
+      // Önce ilgili sonuçları sil
+      await db.run('DELETE FROM election_results WHERE election_id = ?', [id]);
+      // Sonra seçimi sil
       await db.run('DELETE FROM elections WHERE id = ?', [id]);
-      
+
       // Audit log
       await db.run(
         `INSERT INTO audit_logs (user_id, user_type, action, entity_type, entity_id, old_data) 

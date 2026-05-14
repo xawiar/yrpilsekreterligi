@@ -18,20 +18,13 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
   const { confirm, confirmDialogProps } = useConfirm();
   const navigate = useNavigate();
 
-  // Early return if member is not provided
-  if (!member || !member.id) {
-    return (
-      <div className="p-4 text-center text-gray-500">
-        <p>Üye bilgileri yükleniyor...</p>
-      </div>
-    );
-  }
-  
-  const formattedName = formatMemberName(member.name || '');
-  const [photo, setPhoto] = useState(member.photo || null);
+  // NOT: Hook'lar her render'da AYNI sırada çağrılmalı. Early return en alt'a alındı.
+  // Hook initializer'larında member.X yerine member?.X — member undefined olabilir.
+  const formattedName = formatMemberName(member?.name || '');
+  const [photo, setPhoto] = useState(member?.photo || null);
   const [isUploading, setIsUploading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [notes, setNotes] = useState(member.notes || '');
+  const [notes, setNotes] = useState(member?.notes || '');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [memberPositions, setMemberPositions] = useState([]);
@@ -45,7 +38,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
   const isDistrictPresident = user && user.role === 'district_president';
   const canSetStars = isAdmin || isDistrictPresident;
   
-  const [manualStars, setManualStars] = useState(member.manual_stars !== null && member.manual_stars !== undefined ? parseInt(member.manual_stars) : null);
+  const [manualStars, setManualStars] = useState(member?.manual_stars !== null && member?.manual_stars !== undefined ? parseInt(member.manual_stars) : null);
   const [isSavingStars, setIsSavingStars] = useState(false);
   const [performanceScore, setPerformanceScore] = useState(null);
   const [maxScore, setMaxScore] = useState(null);
@@ -198,8 +191,8 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
     return memberRegs.reduce((sum, reg) => sum + reg.count, 0);
   };
   
-  const registrations = calculateMemberRegistrations(member.id);
-  const memberRegistrationRows = (memberRegistrations || []).filter(r => r.memberId === member.id)
+  const registrations = calculateMemberRegistrations(member?.id);
+  const memberRegistrationRows = (memberRegistrations || []).filter(r => r.memberId === member?.id)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   // Fetch member positions
@@ -434,7 +427,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
     };
   };
 
-  const eventStats = calculateEventStats(member.id);
+  const eventStats = calculateEventStats(member?.id);
 
   // Calculate excuse count for meetings
   const calculateExcuseCount = (memberId) => {
@@ -467,7 +460,7 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
     return excuseCount;
   };
 
-  const excuseCount = calculateExcuseCount(member.id);
+  const excuseCount = calculateExcuseCount(member?.id);
 
   // Load member positions on component mount
   useEffect(() => {
@@ -705,6 +698,15 @@ const MemberDetails = ({ member, meetings = [], events = [], memberRegistrations
       setIsExporting(false);
     }
   };
+
+  // Safety check: tüm hook'lar yukarıda — burada early return Rules of Hooks'a uyar.
+  if (!member || !member.id) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        <p>Üye bilgileri yükleniyor...</p>
+      </div>
+    );
+  }
 
   return (
     <div id="member-details-container" className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">

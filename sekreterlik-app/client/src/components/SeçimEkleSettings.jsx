@@ -430,8 +430,18 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
     }
 
     try {
+      const wasEditing = !!editingElection;
+
+      // [DEBUG] Firestore'a gönderilen payload
+      console.log('%c[Seçim Kaydet] GÖNDERİLEN PAYLOAD', 'background:#222;color:#bada55;font-weight:bold', JSON.parse(JSON.stringify({
+        parties: formData.parties,
+        mayor_parties: formData.mayor_parties,
+        provincial_assembly_parties: formData.provincial_assembly_parties,
+        municipal_council_parties: formData.municipal_council_parties,
+      })));
+
       let savedElection;
-      if (editingElection) {
+      if (wasEditing) {
         await ApiService.updateElection(editingElection.id, formData);
         setMessage('Seçim başarıyla güncellendi');
         savedElection = { ...editingElection, ...formData };
@@ -442,10 +452,30 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
       }
       setMessageType('success');
 
-      if (editingElection && onElectionUpdated) onElectionUpdated(savedElection);
-      else if (!editingElection && onElectionCreated) onElectionCreated(savedElection);
+      // [DEBUG] Kayıt sonrası DB'den geri oku, gerçek yazılan veriyi göster
+      try {
+        const { default: FirebaseService } = await import('../services/FirebaseService');
+        const verifyDoc = await FirebaseService.getById('elections', savedElection.id, false);
+        console.log('%c[Seçim Kaydet] DB OKUNAN (geri verify)', 'background:#222;color:#ff9999;font-weight:bold', verifyDoc ? {
+          parties: verifyDoc.parties,
+          mayor_parties: verifyDoc.mayor_parties,
+          provincial_assembly_parties: verifyDoc.provincial_assembly_parties,
+          municipal_council_parties: verifyDoc.municipal_council_parties,
+        } : 'DOC YOK!');
+      } catch (vErr) {
+        console.error('[Seçim Kaydet] verify okuma hatası:', vErr);
+      }
 
-      if (savedElection && savedElection.id) {
+      if (wasEditing && onElectionUpdated) onElectionUpdated(savedElection);
+      else if (!wasEditing && onElectionCreated) onElectionCreated(savedElection);
+
+      if (wasEditing) {
+        // EDIT: form kapansın
+        resetForm();
+        setShowForm(false);
+        setEditingElection(null);
+      } else if (savedElection && savedElection.id) {
+        // YENİ EKLEME: edit moduna geç (ittifak yönetimi için form açık kalsın)
         setEditingElection(savedElection);
         try {
           const alliancesData = await ApiService.getAlliances(savedElection.id);
@@ -461,8 +491,13 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
 
       fetchElections();
 
-      if (onClose && !editingElection) {
-        setTimeout(() => { onClose(); }, 1500);
+      if (onClose) {
+        if (wasEditing) {
+          // Edit sonrası: kullanıcı mesajı görsün, sonra parent'ı kapat
+          setTimeout(() => { onClose(); }, 800);
+        } else {
+          setTimeout(() => { onClose(); }, 1500);
+        }
       }
     } catch (error) {
       console.error('Error saving election:', error);
@@ -500,7 +535,11 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
     setFormData({
       name: election.name || '', date: dateValue, type: election.type || 'genel',
       status: election.status || 'draft', is_metropolitan: election.is_metropolitan || false,
-      cb_candidates: election.cb_candidates || [], parties: election.parties || [],
+      cb_candidates: election.cb_candidates || [],
+      parties: (election.parties || []).map(p => {
+        const obj = typeof p === 'string' ? { name: p } : { ...p };
+        return { ...obj, mv_candidates: obj.mv_candidates || [] };
+      }),
       independent_cb_candidates: election.independent_cb_candidates || [],
       independent_mv_candidates: election.independent_mv_candidates || [],
       mv_total_seats: election.mv_total_seats || '',
@@ -532,6 +571,82 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
     } catch (error) {
       console.error('Error deleting election:', error);
       toast.error(error.message || 'Seçim silinirken hata oluştu');
+    }
+  };
+
+  // Test seçimi oluştur — validation bypass için _test:true flag ile.
+  // Müşahit, sisteme özel doldurulmuş herhangi bir tutanak yükleyip test edebilir.
+  const handleCreateTestElection = async () => {
+    const ok = await confirm({
+      title: 'Test Seçimi Oluştur',
+      message:
+        'İsim: "TEST — Genel Seçim"\n' +
+        'Tür: Genel (CB + MV)\n' +
+        'Tarih: Bugün\n' +
+        'Baraj: %7, MV sayısı: 5\n' +
+        'CB: 4 aday (14 May 2023)\n' +
+        'Partiler: AKP, CHP, MHP, YRP, YSP (HDP), İYİ\n' +
+        'Diğer parti/bağımsız oyları otomatik "Diğer" alanına toplanır.\n\n' +
+        'Oluşturulsun mu?',
+      confirmText: 'Evet, oluştur',
+      variant: 'danger'
+    });
+    if (!ok) return;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // 14 Mayıs 2023 — Elazığ Merkez tutanaklarıyla birebir uyumlu test verisi.
+    // Sadece 6 büyük parti tanımlı; diğer partiler ve bağımsız adaylar
+    // ProtocolOCRService.filterDataByFormDefinitions tarafından
+    // otomatik "Diğer" alanına toplanır.
+    const cbCandidates = [
+      'Recep Tayyip Erdoğan',
+      'Muharrem İnce',
+      'Kemal Kılıçdaroğlu',
+      'Sinan Oğan'
+    ];
+
+    const parties = [
+      'ADALET VE KALKINMA PARTİSİ',
+      'CUMHURİYET HALK PARTİSİ',
+      'MİLLİYETÇİ HAREKET PARTİSİ',
+      'YENİDEN REFAH PARTİSİ',
+      'YEŞİLLER VE SOL GELECEK PARTİSİ',
+      'İYİ PARTİ'
+    ];
+
+    const payload = {
+      name: 'TEST — Genel Seçim',
+      date: today,
+      type: 'genel',
+      status: 'active',
+      is_metropolitan: false,
+      cb_candidates: cbCandidates,
+      parties: parties.map(name => ({ name, mv_candidates: [] })),
+      independent_cb_candidates: [],
+      independent_mv_candidates: [],
+      mv_total_seats: 5,
+      threshold_percent: 7
+    };
+
+    try {
+      setMessage('Test seçimi oluşturuluyor...');
+      setMessageType('success');
+      const result = await ApiService.createElection(payload);
+      if (result?.success !== false) {
+        toast.success('Test seçimi oluşturuldu');
+        setMessage('Test seçimi başarıyla oluşturuldu. Müşahit herhangi bir tutanak görseli ile test edebilir.');
+        setMessageType('success');
+        if (onElectionCreated) onElectionCreated();
+        fetchElections();
+      } else {
+        throw new Error(result?.message || 'Oluşturma hatası');
+      }
+    } catch (err) {
+      console.error('Test election create error:', err);
+      toast.error('Test seçimi oluşturulamadı: ' + err.message);
+      setMessage('Hata: ' + err.message);
+      setMessageType('error');
     }
   };
 
@@ -646,12 +761,21 @@ const SeçimEkleSettings = ({ onElectionCreated, onElectionUpdated, onClose }) =
             Genel seçim, yerel seçim ve referandum ekleyebilirsiniz
           </p>
         </div>
-        <button
-          onClick={() => { setShowForm(!showForm); setEditingElection(null); resetForm(); }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          {showForm ? 'İptal' : '+ Yeni Seçim Ekle'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleCreateTestElection}
+            className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            title="Müşahit testi için 14 Mayıs 2023 verileriyle bir seçim oluşturur. Validation bypass edilir."
+          >
+            🧪 Test Seçimi Oluştur
+          </button>
+          <button
+            onClick={() => { setShowForm(!showForm); setEditingElection(null); resetForm(); }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            {showForm ? 'İptal' : '+ Yeni Seçim Ekle'}
+          </button>
+        </div>
       </div>
 
       {message && (

@@ -6,6 +6,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { maskTC } from '../utils/maskingUtils';
+import { findZombiBallotBoxes, formatBallotBoxLabel } from '../utils/ballotBoxLabel';
+import BallotBoxDocumentsPanel from '../components/BallotBoxDocumentsPanel';
 
 const BallotBoxesPage = () => {
   const toast = useToast();
@@ -251,6 +253,59 @@ const BallotBoxesPage = () => {
     } catch (error) {
       console.error('Bulk delete error:', error);
       setError('Toplu silme sırasında hata oluştu: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Zombi sandıkları (silinmiş ilçeye referans veren) tespit et ve sil
+  const handleCleanZombies = async () => {
+    const zombies = findZombiBallotBoxes(ballotBoxes, districts);
+    if (zombies.length === 0) {
+      toast.success('Zombi sandık yok — tüm kayıtlar geçerli ilçelere bağlı.');
+      return;
+    }
+
+    // Önizleme: en fazla 5 örnek göster
+    const samples = zombies.slice(0, 5).map(bb =>
+      `• ${bb.ballot_number || '?'} — ${bb.institution_name || 'isimsiz'} (district_id: ${bb.district_id})`
+    ).join('\n');
+
+    const ok = await confirm({
+      title: `${zombies.length} Zombi Sandık Bulundu`,
+      message:
+        `Sistemde mevcut OLMAYAN ilçelere referans veren ${zombies.length} sandık var.\n\n` +
+        `Örnekler:\n${samples}\n${zombies.length > 5 ? `... ve ${zombies.length - 5} tane daha` : ''}\n\n` +
+        `Bu sandıklar silinecek. Devam edilsin mi?`,
+      confirmText: `Evet, ${zombies.length} zombi sandığı sil`,
+      cancelText: 'Vazgeç',
+      variant: 'danger'
+    });
+    if (!ok) return;
+
+    try {
+      setLoading(true);
+      setError('');
+      let done = 0;
+      const errors = [];
+      for (const bb of zombies) {
+        try {
+          await ApiService.deleteBallotBox(bb.id);
+          done++;
+        } catch (e) {
+          errors.push((bb.ballot_number || bb.id) + ': ' + (e.message || 'hata'));
+        }
+      }
+      await fetchBallotBoxes();
+      if (errors.length === 0) {
+        toast.success(`${done} zombi sandık silindi.`);
+      } else {
+        toast.error(`${done} silindi, ${errors.length} hata. Detay konsolda.`);
+        console.error('Zombi delete errors:', errors.slice(0, 20));
+      }
+    } catch (error) {
+      console.error('Zombi cleanup error:', error);
+      setError('Zombi temizlik sırasında hata: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -943,6 +998,18 @@ const BallotBoxesPage = () => {
                 <span className="sm:hidden">Şablon</span>
               </button>
               <button
+                onClick={handleCleanZombies}
+                disabled={loading || ballotBoxes.length === 0}
+                title="Silinmiş ilçeye referans veren zombi sandıkları temizle"
+                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="hidden sm:inline">Zombi Sandık Temizle</span>
+                <span className="sm:hidden">🧹 Zombi</span>
+              </button>
+              <button
                 onClick={handleDeleteAll}
                 disabled={loading || ballotBoxes.length === 0}
                 title="Tüm sandıkları sil"
@@ -1389,51 +1456,65 @@ const BallotBoxesPage = () => {
               </div>
             ) : (
               <>
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-4">
+                {/* Card Grid (tüm ekranlarda) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredBallotBoxes.map((ballotBox) => {
                     const status = getBallotBoxStatus(ballotBox.id);
                     const locationInfo = getLocationInfo(ballotBox);
+                    const Dot = ({ ok }) => (
+                      <span className={`inline-block w-2 h-2 rounded-full ${ok ? 'bg-green-500' : 'bg-red-500'}`} />
+                    );
                     return (
                       <div key={ballotBox.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                         <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">Sandık {ballotBox.ballot_number}</h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{ballotBox.institution_name || '-'}</p>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1 truncate">
+                                Sandık {ballotBox.ballot_number}
+                              </h3>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                {ballotBox.institution_name || '-'}
+                              </p>
+                            </div>
+                            {/* Durum noktaları */}
+                            <div className="flex items-center gap-1 shrink-0" title={`İlçe: ${status.hasDistrict ? '✓' : '✗'} | Mah/Köy: ${status.hasNeighborhoodOrVillage ? '✓' : '✗'} | Başmüşahit: ${status.hasChiefObserver ? '✓' : '✗'} | Müşahit: ${status.hasObservers ? status.observersCount : 0}`}>
+                              <Dot ok={status.hasDistrict} />
+                              <Dot ok={status.hasNeighborhoodOrVillage} />
+                              <Dot ok={status.hasChiefObserver} />
+                              <Dot ok={status.hasObservers} />
                             </div>
                           </div>
-                          
+
                           {/* Konum Bilgileri */}
-                          <div className="space-y-1.5 border-t border-gray-200 dark:border-gray-700 pt-3">
+                          <div className="space-y-1 border-t border-gray-200 dark:border-gray-700 pt-3 text-sm">
                             {locationInfo.region && (
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="text-gray-600 dark:text-gray-400">
                                 <span className="font-medium">İl:</span> {locationInfo.region}
-                                </div>
-                              )}
+                              </div>
+                            )}
                             {locationInfo.district && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="text-gray-600 dark:text-gray-400">
                                 <span className="font-medium">İlçe:</span> {locationInfo.district}
-                                </div>
-                              )}
+                              </div>
+                            )}
                             {locationInfo.town && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="text-gray-600 dark:text-gray-400">
                                 <span className="font-medium">Belde:</span> {locationInfo.town}
-                                </div>
-                              )}
+                              </div>
+                            )}
                             {(locationInfo.neighborhood || locationInfo.village) && (
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="text-gray-600 dark:text-gray-400">
                                 <span className="font-medium">Mahalle/Köy:</span> {locationInfo.neighborhood || locationInfo.village}
-                                    </div>
-                                  )}
+                              </div>
+                            )}
                             {locationInfo.chiefObserver && (
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="text-gray-600 dark:text-gray-400">
                                 <span className="font-medium">Başmüşahit:</span> {locationInfo.chiefObserver}
                               </div>
                             )}
                           </div>
-                          
-                          <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+
+                          <div className="flex justify-end space-x-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                             <button
                               onClick={() => handleShowDetail(ballotBox)}
                               className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
@@ -1458,7 +1539,7 @@ const BallotBoxesPage = () => {
                     );
                   })}
                   {filteredBallotBoxes.length === 0 && (
-                    <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="col-span-full text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                       <p className="text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'Arama kriterlerine uygun sandık bulunamadı' : 'Henüz sandık eklenmemiş'}
                       </p>
@@ -1466,189 +1547,6 @@ const BallotBoxesPage = () => {
                   )}
                 </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Sandık No
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Kurum Adı
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        İl
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        İlçe
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Belde
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Mahalle/Köy
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Başmüşahit
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        İşlemler
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredBallotBoxes.map((ballotBox) => {
-                      const status = getBallotBoxStatus(ballotBox.id);
-                      const locationInfo = getLocationInfo(ballotBox);
-                      return (
-                        <tr key={ballotBox.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {ballotBox.ballot_number}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {ballotBox.institution_name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {locationInfo.region || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {locationInfo.district || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {locationInfo.town || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {locationInfo.neighborhood || locationInfo.village || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {locationInfo.chiefObserver || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium relative">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleShowDetail(ballotBox)}
-                                className="text-indigo-600 hover:text-indigo-900"
-                                title="Detay"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleEdit(ballotBox)}
-                                className="text-indigo-600 hover:text-indigo-900"
-                                title="Düzenle"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(ballotBox.id)}
-                                className="text-red-600 hover:text-red-900"
-                                title="Sil"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                              <div className="relative">
-                                <button
-                                  onClick={() => setOpenMenuId(openMenuId === ballotBox.id ? null : ballotBox.id)}
-                                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900"
-                                  title="Durum"
-                                >
-                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                  </svg>
-                                </button>
-                                {openMenuId === ballotBox.id && (
-                                  <>
-                                    <div 
-                                      className="fixed inset-0 z-10" 
-                                      onClick={() => setOpenMenuId(null)}
-                                    ></div>
-                                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-700">
-                                      <div className="py-2">
-                                        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                                          <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Durum Bilgileri</h4>
-                                        </div>
-                                        <div className="px-4 py-2 space-y-2">
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                              <div className={`w-3 h-3 rounded-full ${status.hasDistrict ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                              <span className="text-xs text-gray-700 dark:text-gray-300">İlçe</span>
-                                            </div>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{status.hasDistrict ? 'Atanmış' : 'Atanmamış'}</span>
-                                          </div>
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                              <div className={`w-3 h-3 rounded-full ${status.hasNeighborhoodOrVillage ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                              <span className="text-xs text-gray-700 dark:text-gray-300">Mahalle/Köy</span>
-                                            </div>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{status.hasNeighborhoodOrVillage ? 'Atanmış' : 'Atanmamış'}</span>
-                                          </div>
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                              <div className={`w-3 h-3 rounded-full ${status.hasChiefObserver ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                              <span className="text-xs text-gray-700 dark:text-gray-300">Başmüşahit</span>
-                                            </div>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{status.hasChiefObserver ? 'Atanmış' : 'Atanmamış'}</span>
-                                          </div>
-                                          <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-2">
-                                              <div className={`w-3 h-3 rounded-full ${status.hasObservers ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                              <span className="text-xs text-gray-700 dark:text-gray-300">Müşahit</span>
-                                            </div>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{status.hasObservers ? `${status.observersCount} kişi` : 'Atanmamış'}</span>
-                                          </div>
-                                          {(status.hasSignedProtocolPhoto || status.hasObjectionProtocolPhoto) && (
-                                            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                                              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tutanaklar:</div>
-                                              <div className="flex items-center space-x-3">
-                                                {status.hasSignedProtocolPhoto && (
-                                                  <div className="flex items-center space-x-1" title="Seçim Tutanağı Yüklendi">
-                                                    <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    <span className="text-xs text-gray-600 dark:text-gray-400">Seçim</span>
-                                                  </div>
-                                                )}
-                                                {status.hasObjectionProtocolPhoto && (
-                                                  <div className="flex items-center space-x-1" title="İtiraz Tutanağı Yüklendi">
-                                                    <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                    </svg>
-                                                    <span className="text-xs text-gray-600 dark:text-gray-400">İtiraz</span>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                    {filteredBallotBoxes.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 dark:text-gray-400">
-                          {searchTerm ? 'Arama kriterlerine uygun sandık bulunamadı' : 'Henüz sandık eklenmemiş'}
-                    </p>
-                  </div>
-                    )}
-              </div>
               </>
             )}
           </div>
@@ -1804,6 +1702,18 @@ const BallotBoxesPage = () => {
                         </div>
                       );
                     })()}
+                  </div>
+
+                  {/* Yüklenen Evraklar */}
+                  <div className="mt-6">
+                    <BallotBoxDocumentsPanel
+                      ballotBoxId={selectedBallotBox.id}
+                      ballotNumber={selectedBallotBox.ballot_number}
+                      canUpload={true}
+                      canDelete={true}
+                      uploaderName="Admin"
+                      uploaderRole="admin"
+                    />
                   </div>
                 </div>
               </div>

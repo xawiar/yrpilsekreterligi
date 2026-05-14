@@ -327,30 +327,61 @@ const CoordinatorsListPage = () => {
     return neighborhoodCount + villageCount;
   };
 
-  // Üst sorumluyu bul (parent_coordinator_id ile + kurum sorumlusu fallback)
+  // Üst sorumluyu bul
+  // Kurum sorumlusu → DAİMA bölge zincirinden çıkar (mahalle/köy → bölge → bölge sorumlusu)
+  // Diğer roller → parent_coordinator_id (manuel atama)
   const getParentCoordinator = (coordinator) => {
-    let parent = null;
-    if (coordinator.parent_coordinator_id !== null && coordinator.parent_coordinator_id !== undefined) {
-      parent = coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id));
-    }
-    // Kurum sorumlusu için fallback: institution_name'den bölge sorumlusunu bul
-    if (coordinator.role === 'institution_supervisor' && !parent && coordinator.institution_name) {
-      const institutionBBs = ballotBoxes.filter(bb => bb.institution_name === coordinator.institution_name);
-      if (institutionBBs.length > 0) {
-        const firstBox = institutionBBs[0];
-        for (const region of regions) {
-          const { neighborhoodIds, villageIds } = parseRegionIds(region);
-          if ((firstBox.neighborhood_id && neighborhoodIds.includes(firstBox.neighborhood_id)) ||
-              (firstBox.village_id && villageIds.includes(firstBox.village_id))) {
-            if (region.supervisor_id) {
-              parent = coordinators.find(c => String(c.id) === String(region.supervisor_id));
+    if (coordinator.role === 'institution_supervisor') {
+      const targetName = (coordinator.institution_name || '').trim().toLowerCase();
+      if (targetName) {
+        const institutionBBs = ballotBoxes.filter(bb =>
+          (bb.institution_name || '').trim().toLowerCase() === targetName
+        );
+
+        // Debug: zincirin nerede koptuğunu göster
+        if (institutionBBs.length === 0) {
+          console.warn(`[Üst Sorumlu] "${coordinator.name}" (kurum sorumlusu) → "${coordinator.institution_name}" adında sandık bulunamadı.`);
+        }
+
+        for (const bb of institutionBBs) {
+          for (const region of regions) {
+            const { neighborhoodIds, villageIds } = parseRegionIds(region);
+            const matchN = bb.neighborhood_id && (
+              neighborhoodIds.includes(bb.neighborhood_id) ||
+              neighborhoodIds.includes(String(bb.neighborhood_id)) ||
+              neighborhoodIds.map(String).includes(String(bb.neighborhood_id))
+            );
+            const matchV = bb.village_id && (
+              villageIds.includes(bb.village_id) ||
+              villageIds.includes(String(bb.village_id)) ||
+              villageIds.map(String).includes(String(bb.village_id))
+            );
+            if (matchN || matchV) {
+              if (region.supervisor_id) {
+                const parent = coordinators.find(c => String(c.id) === String(region.supervisor_id));
+                if (parent) return parent;
+                console.warn(`[Üst Sorumlu] "${coordinator.name}" → "${region.name}" bölgesi bulundu ama supervisor_id (${region.supervisor_id}) listede yok.`);
+              } else {
+                console.warn(`[Üst Sorumlu] "${coordinator.name}" → "${region.name}" bölgesine bağlı ama bölge sorumlusu atanmamış.`);
+              }
             }
-            break;
           }
         }
+
+        // Bölge zincirinden bulunamadı → kayıt sırasında atanmış parent_coordinator_id'ye düş
+        if (coordinator.parent_coordinator_id != null) {
+          const fallback = coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id));
+          if (fallback) return fallback;
+        }
       }
+      return null;
     }
-    return parent;
+
+    // Diğer roller (district/region): parent_coordinator_id ile
+    if (coordinator.parent_coordinator_id !== null && coordinator.parent_coordinator_id !== undefined) {
+      return coordinators.find(c => String(c.id) === String(coordinator.parent_coordinator_id)) || null;
+    }
+    return null;
   };
 
   // Bölge sorumlusu: bölge bilgisi ve sandık sayısı

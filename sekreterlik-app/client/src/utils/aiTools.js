@@ -132,8 +132,13 @@ export async function executeToolCall(toolName, args, siteData, userRole) {
   }
   switch (toolName) {
     case 'hesaplaDHondt': {
-      const { calculateDHondtDetailed } = await import('./dhondt');
-      const result = calculateDHondtDetailed(args.partyVotes, args.totalSeats);
+      // AI bot D'Hondt çağrısı — args.alliances varsa ittifaklı versiyonu kullan
+      const { calculateDHondtDetailed, calculateDHondtWithAlliancesDetailed } = await import('./dhondt');
+      const alliances = Array.isArray(args.alliances) ? args.alliances : [];
+      const threshold = parseFloat(args.thresholdPercent) || 7.0;
+      const result = alliances.length > 0
+        ? calculateDHondtWithAlliancesDetailed(args.partyVotes, args.totalSeats, alliances, threshold, args.parties || [])
+        : calculateDHondtDetailed(args.partyVotes, args.totalSeats);
       return JSON.stringify(result, null, 2);
     }
 

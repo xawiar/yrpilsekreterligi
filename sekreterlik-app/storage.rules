@@ -25,12 +25,46 @@ service firebase.storage {
         && request.resource.contentType.matches('application/pdf|image/.*');
     }
 
+    // Branding (logo/icon/favicon) — public read (PWA install için gerekli)
+    match /branding/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     // Election protocol photos
     match /election-protocols/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+    }
+
+    // Election result photos (başmüşahit sandık sonucu görselleri)
+    match /election_results/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Sandık başına yüklenen evraklar (tutanak fotoğrafları, itiraz, diğer)
+    // Başmüşahit kendi sandığına yükler; sorumlu ve admin okur.
+    match /ballot-box-documents/{ballotBoxId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    // Eğitim materyalleri (video + PDF) — public read (landing'den anonim erişim için),
+    // authenticated write (admin yükler/siler).
+    match /training-materials/{kind}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 200 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*|application/pdf|image/.*');
     }
 
     // Başvuru ek dosyaları (PDF/resim)

@@ -19,6 +19,12 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// iOS Safari userAgent — actions/image strip için
+function isIOSAgent() {
+  const ua = (self.navigator && self.navigator.userAgent) || '';
+  return /iPhone|iPad|iPod/i.test(ua) && !/CriOS|FxiOS/i.test(ua);
+}
+
 // Arka plan mesajlarini isle
 messaging.onBackgroundMessage(function(payload) {
   console.log('[firebase-messaging-sw.js] Background message received:', payload);
@@ -26,23 +32,30 @@ messaging.onBackgroundMessage(function(payload) {
   const title = payload.notification?.title || payload.data?.title || 'Yeni Bildirim';
   const body = payload.notification?.body || payload.data?.body || '';
   const data = payload.data || {};
+  const isIOS = isIOSAgent();
+
+  // Unique tag tercih edilir → bildirimler birbirini ezmesin
+  const tagValue = data.notificationId || data.id || data.type || 'fcm-general';
 
   const notificationOptions = {
     body: body,
-    icon: '/icon-192x192.png',
-    badge: '/badge-72x72.png',
+    icon: data.icon || '/icon-192x192.png',
+    badge: data.badge || '/badge-72x72.png',
+    // image alanı: iOS'ta gözükmüyor → bandwidth tasarrufu için strip
+    image: !isIOS ? (data.image || undefined) : undefined,
     data: {
       ...data,
       timestamp: Date.now()
     },
     vibrate: [200, 100, 200],
-    requireInteraction: true,
-    tag: data.type || 'fcm-general',
-    renotify: true,
-    actions: [
-      { action: 'view', title: 'Goruntule' },
+    // requireInteraction default false → masaüstü kalıcılığı kapat
+    requireInteraction: data.requireInteraction === 'true' || data.requireInteraction === true,
+    tag: tagValue,
+    renotify: false,
+    actions: !isIOS ? [
+      { action: 'view', title: 'Görüntüle' },
       { action: 'close', title: 'Kapat' }
-    ]
+    ] : []
   };
 
   return self.registration.showNotification(title, notificationOptions);

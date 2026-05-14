@@ -299,8 +299,6 @@ const SyncToFirebasePage = () => {
             if (collection.name === 'member_users') {
               if (firebaseData.member_id && !firebaseData.memberId) {
                 firebaseData.memberId = String(firebaseData.member_id);
-              } else if (!firebaseData.memberId && firebaseData.member_id) {
-                firebaseData.memberId = String(firebaseData.member_id);
               }
               // Also ensure userType is set from user_type
               if (firebaseData.user_type && !firebaseData.userType) {

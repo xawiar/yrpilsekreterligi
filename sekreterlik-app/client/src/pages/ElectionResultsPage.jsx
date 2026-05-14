@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
+import FirebaseApiService from '../utils/FirebaseApiService';
 import { useToast } from '../contexts/ToastContext';
 import PublicApiService from '../utils/PublicApiService';
 import OfflineIndicator from '../components/OfflineIndicator';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 // html2canvas and jsPDF are loaded dynamically in export functions to reduce bundle size
 import * as XLSX from 'xlsx';
-import { calculateDHondt, calculateDHondtDetailed, calculateMunicipalCouncilSeats, calculateProvincialAssemblySeats } from '../utils/dhondt';
+import { calculateDHondt, calculateDHondtDetailed, calculateDHondtWithAlliancesDetailed, calculateMunicipalCouncilSeats, calculateProvincialAssemblySeats } from '../utils/dhondt';
 
 import { PARTY_COLORS, getPartyColor, getPartyChartColor } from '../utils/partyColors';
 
@@ -131,6 +132,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [villages, setVillages] = useState([]);
   const [observers, setObservers] = useState([]);
+  const [alliances, setAlliances] = useState([]); // İttifaklı D'Hondt için
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   
@@ -154,6 +156,12 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
   const [modalPhoto, setModalPhoto] = useState(null);
   const [modalTitle, setModalTitle] = useState('');
   
+  // Publish (Yayinla) state
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [lastPublished, setLastPublished] = useState(null);
+  const [autoPublish, setAutoPublish] = useState(false);
+  const autoPublishRef = useRef(null);
+
   // Refs for export
   const chartContainerRef = useRef(null);
 
@@ -173,7 +181,11 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
         const { collection, query, where, onSnapshot } = await import('firebase/firestore');
         if (!firestoreDb) return;
         const resultsRef = collection(firestoreDb, 'election_results');
-        const q = query(resultsRef, where('election_id', '==', Number(electionId)));
+        // electionId string veya number olabilir, her ikisini de dinle
+        const numId = Number(electionId);
+        const q = isNaN(numId)
+          ? query(resultsRef, where('election_id', '==', String(electionId)))
+          : query(resultsRef, where('election_id', '==', numId));
         let initialLoad = true;
         unsubscribe = onSnapshot(q, (snapshot) => {
           if (initialLoad) {
@@ -182,12 +194,12 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
           }
           // Yeni sonuc veya degisiklik var, veriyi yenile
           const hasChanges = snapshot.docChanges().some(
-            change => change.type === 'added' || change.type === 'modified'
+            change => change.type === 'added' || change.type === 'modified' || change.type === 'removed'
           );
           if (hasChanges) {
             fetchData();
             if (toast) {
-              toast.info('Yeni secim sonucu girisi tespit edildi, veriler guncellendi.');
+              toast.info('Secim sonuclarinda degisiklik tespit edildi, veriler guncellendi.');
             }
           }
         }, (error) => {
@@ -203,6 +215,66 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
       if (unsubscribe) unsubscribe();
     };
   }, [electionId]);
+
+  // Otomatik yayinlama interval'i (5dk)
+  useEffect(() => {
+    if (autoPublish && electionId && !readOnly) {
+      const publish = async () => {
+        try {
+          const res = await FirebaseApiService.publishElectionResults(electionId, {
+            existingResults: results,
+            existingElection: election,
+            existingBallotBoxes: ballotBoxes,
+            existingDistricts: districts,
+            existingTowns: towns,
+            existingNeighborhoods: neighborhoods,
+            existingVillages: villages,
+          });
+          if (res.success) {
+            setLastPublished(new Date().toLocaleTimeString('tr-TR'));
+          }
+        } catch {}
+      };
+      publish();
+      autoPublishRef.current = setInterval(publish, 5 * 60 * 1000);
+    }
+    return () => {
+      if (autoPublishRef.current) {
+        clearInterval(autoPublishRef.current);
+        autoPublishRef.current = null;
+      }
+    };
+  }, [autoPublish, electionId, readOnly, results, election, ballotBoxes, districts, towns, neighborhoods, villages]);
+
+  // Publish handler — sayfada zaten yuklu olan veriyi gonder
+  const handlePublishResults = useCallback(async () => {
+    if (!electionId || isPublishing) {
+      return;
+    }
+    setIsPublishing(true);
+    try {
+      const res = await FirebaseApiService.publishElectionResults(electionId, {
+        existingResults: results,
+        existingElection: election,
+        existingBallotBoxes: ballotBoxes,
+        existingDistricts: districts,
+        existingTowns: towns,
+        existingNeighborhoods: neighborhoods,
+        existingVillages: villages,
+      });
+      if (res.success) {
+        setLastPublished(new Date().toLocaleTimeString('tr-TR'));
+        if (toast) toast.success(res.message || 'Sonuclar yayinlandi');
+      } else {
+        if (toast) toast.error(res.message || 'Yayinlama hatasi');
+      }
+    } catch (err) {
+      console.error('Yayinlama hatasi:', err);
+      if (toast) toast.error('Yayinlama hatasi: ' + (err.message || ''));
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [electionId, isPublishing, toast, results, election, ballotBoxes, districts, towns, neighborhoods, villages]);
 
   const fetchData = async () => {
     try {
@@ -221,7 +293,8 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
         townsData,
         neighborhoodsData,
         villagesData,
-        observersData
+        observersData,
+        alliancesData
       ] = await Promise.all([
         apiService.getElections(),
         apiService.getElectionResults(electionId, null),
@@ -230,11 +303,12 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
         apiService.getTowns(),
         apiService.getNeighborhoods(),
         apiService.getVillages(),
-        apiService.getBallotBoxObservers()
+        apiService.getBallotBoxObservers(),
+        apiService.getAlliances ? apiService.getAlliances(electionId).catch(() => []) : Promise.resolve([])
       ]);
 
       const selectedElection = electionsData.find(e => String(e.id) === String(electionId));
-      
+
       setElection(selectedElection);
       setResults(resultsData || []);
       setBallotBoxes(ballotBoxesData || []);
@@ -243,6 +317,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
       setNeighborhoods(neighborhoodsData || []);
       setVillages(villagesData || []);
       setObservers(observersData || []);
+      setAlliances(Array.isArray(alliancesData) ? alliancesData : (alliancesData?.alliances || []));
     } catch (error) {
       console.error('❌ Error fetching data:', error);
       if (import.meta.env.DEV) {
@@ -259,7 +334,23 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
 
   // Get filtered results based on location filters and search query (memoized)
   const filteredResultsMemo = useMemo(() => {
-    let filtered = results;
+    // Önce soft-delete edilmiş (içeriği boş) kayıtları çıkar.
+    // Reddetme = silme yapıldığında doc Firestore'da kalır ama tüm oy/tutanak
+    // alanları null olur; bu kayıtların listede görünmemesi gerek.
+    let filtered = (results || []).filter(r => {
+      const cbHas = r.cb_votes && typeof r.cb_votes === 'object' && Object.keys(r.cb_votes).length > 0;
+      const mvHas = r.mv_votes && typeof r.mv_votes === 'object' && Object.keys(r.mv_votes).length > 0;
+      const mayorHas = r.mayor_votes && typeof r.mayor_votes === 'object' && Object.keys(r.mayor_votes).length > 0;
+      const provincialHas = r.provincial_assembly_votes && typeof r.provincial_assembly_votes === 'object' && Object.keys(r.provincial_assembly_votes).length > 0;
+      const municipalHas = r.municipal_council_votes && typeof r.municipal_council_votes === 'object' && Object.keys(r.municipal_council_votes).length > 0;
+      const partyHas = r.party_votes && typeof r.party_votes === 'object' && Object.keys(r.party_votes).length > 0;
+      const refHas = r.referendum_votes && typeof r.referendum_votes === 'object' &&
+        Object.values(r.referendum_votes).some(v => (parseInt(v) || 0) > 0);
+      const photoHas = !!r.signed_protocol_photo || !!r.signedProtocolPhoto ||
+        !!r.signed_mv_protocol_photo || !!r.signedMvProtocolPhoto ||
+        !!r.objection_protocol_photo || !!r.objectionProtocolPhoto;
+      return cbHas || mvHas || mayorHas || provincialHas || municipalHas || partyHas || refHas || photoHas;
+    });
 
     // Arama sorgusu ile filtrele
     if (searchQuery.trim()) {
@@ -348,7 +439,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     // Sadece tutanak olanlar filtresi (protocol photo var ama veri yok)
     if (filterByProtocolOnly) {
       filtered = filtered.filter(r => {
-        const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
+        const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.signed_mv_protocol_photo || r.signedMvProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
         const hasData = !!(r.used_votes || r.valid_votes || r.invalid_votes || 
           (r.cb_votes && Object.keys(r.cb_votes).length > 0) ||
           (r.mv_votes && Object.keys(r.mv_votes).length > 0) ||
@@ -365,7 +456,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
     // Hiç tutanak yüklenmemiş filtresi
     if (filterByNoProtocol) {
       filtered = filtered.filter(r => {
-        const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
+        const hasProtocol = !!(r.signed_protocol_photo || r.signedProtocolPhoto || r.signed_mv_protocol_photo || r.signedMvProtocolPhoto || r.objection_protocol_photo || r.objectionProtocolPhoto);
         return !hasProtocol;
       });
     }
@@ -1140,7 +1231,12 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
       partyVotes[item.name] = item.value;
     });
     
-    const dhondtData = calculateDHondtDetailed(partyVotes, totalSeats);
+    // İttifak varsa 2 aşamalı D'Hondt (ittifaklar arası + ittifak içi),
+    // yoksa klasik tek-aşamalı.
+    const thresholdPercent = parseFloat(election?.baraj_percent) || parseFloat(election?.threshold_percent) || 7.0;
+    const dhondtData = (Array.isArray(alliances) && alliances.length > 0)
+      ? calculateDHondtWithAlliancesDetailed(partyVotes, totalSeats, alliances, thresholdPercent, election?.parties || [])
+      : calculateDHondtDetailed(partyVotes, totalSeats);
     
     // chartData'dan partySeats array'ini oluştur
     const partySeats = (dhondtData.chartData || []).map(item => ({
@@ -1446,7 +1542,37 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
           </p>
             </div>
             {!readOnly && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 items-center">
+                {/* Sonuclari Yayinla butonu */}
+                <button
+                  onClick={handlePublishResults}
+                  disabled={isPublishing}
+                  className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isPublishing ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
+                  title="Secim sonuclarini public sayfaya yayinla"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {isPublishing ? 'Yayinlaniyor...' : 'Sonuclari Yayinla'}
+                </button>
+                {/* Otomatik Guncelle toggle */}
+                <label
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 cursor-pointer select-none text-sm"
+                  title="Aktifken her 5 dakikada sonuclar otomatik yayinlanir"
+                >
+                  <input
+                    type="checkbox"
+                    checked={autoPublish}
+                    onChange={(e) => setAutoPublish(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">Oto. Guncelle (5dk)</span>
+                </label>
+                {lastPublished && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Son: {lastPublished}
+                  </span>
+                )}
                 <button
                   onClick={handleExportPDF}
                   disabled={isExporting}
@@ -2014,6 +2140,53 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                 Toplam: {dhondtResults.totalSeats} Milletvekili
               </span>
             </h2>
+
+            {/* İttifak Sandalye Özeti — sadece ittifak tanımlı seçimlerde gözükür.
+                2 aşamalı D'Hondt'ta önce ittifaklar arası dağılım, sonra ittifak içi dağılım yapılır. */}
+            {dhondtResults.allianceSeats &&
+              Object.keys(dhondtResults.allianceSeats).length > 0 &&
+              Array.isArray(alliances) && alliances.length > 0 && (
+              <div className="mb-4 p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10">
+                <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-3 flex items-center gap-2">
+                  🤝 İttifak Sandalye Dağılımı (1. Aşama)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {alliances.map(alliance => {
+                    const seats = parseInt(dhondtResults.allianceSeats[alliance.id]) || 0;
+                    if (seats === 0) return null;
+                    const partyIds = alliance.party_ids || alliance.partyIds || [];
+                    const partyNames = partyIds.map(p => typeof p === 'string' ? p : (p?.name || String(p)));
+                    // İttifak içi parti dağılımları (distribution'dan kategorize et)
+                    const innerSeats = partyNames.map(pname => ({
+                      party: pname,
+                      seats: parseInt(dhondtResults.distribution?.[pname]) || 0
+                    })).filter(p => p.seats > 0);
+                    return (
+                      <div key={alliance.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-amber-300 dark:border-amber-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{alliance.name}</span>
+                          <span className="font-bold text-lg text-amber-600 dark:text-amber-400">{seats} MV</span>
+                        </div>
+                        {innerSeats.length > 0 && (
+                          <div className="text-xs space-y-1 pt-2 border-t border-gray-200 dark:border-gray-700">
+                            <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">İttifak içi dağılım:</div>
+                            {innerSeats.map(p => (
+                              <div key={p.party} className="flex justify-between">
+                                <span className="text-gray-700 dark:text-gray-300">{p.party}</span>
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">{p.seats}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-3 italic">
+                  Önce ittifak toplam oylarına D'Hondt uygulanır, sonra her ittifak kazandığı sandalyeleri içindeki partilere D'Hondt ile dağıtır.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Distribution Chart */}
               <div>
@@ -2700,27 +2873,98 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                       </div>
                     )}
 
-                    {/* Oy Sayıları */}
-                    <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
-                          {result.used_votes || 0}
+                    {/* Oy Sayıları — Genel seçimde CB ve MV ayrı bloklar. Tek tutanaklı
+                        seçimlerde tek blok. Eski kayıtlarda paylaşılan alanlar boş olabilir;
+                        fallback sırası: kategori bazlı, sonra parti oy toplamı. */}
+                    {(() => {
+                      const sumOf = (obj) =>
+                        obj && typeof obj === 'object'
+                          ? Object.values(obj).reduce((s, v) => s + (parseInt(v) || 0), 0)
+                          : 0;
+                      const cbVotesTotal = sumOf(result.cb_votes);
+                      const mvVotesTotal = sumOf(result.mv_votes);
+
+                      if (election.type === 'genel') {
+                        // CB tarafı sayıları
+                        const cbUsed = parseInt(result.cb_used_votes) || parseInt(result.used_votes) || 0;
+                        const cbInvalid = parseInt(result.cb_invalid_votes) || parseInt(result.invalid_votes) || 0;
+                        const cbValid = parseInt(result.cb_valid_votes) || parseInt(result.valid_votes) || cbVotesTotal || 0;
+                        const cbHasAny = cbUsed > 0 || cbInvalid > 0 || cbValid > 0 || cbVotesTotal > 0;
+
+                        // MV tarafı sayıları
+                        const mvUsed = parseInt(result.mv_used_votes) || parseInt(result.used_votes) || 0;
+                        const mvInvalid = parseInt(result.mv_invalid_votes) || parseInt(result.invalid_votes) || 0;
+                        const mvValid = parseInt(result.mv_valid_votes) || parseInt(result.valid_votes) || mvVotesTotal || 0;
+                        const mvHasAny = mvUsed > 0 || mvInvalid > 0 || mvValid > 0 || mvVotesTotal > 0;
+
+                        return (
+                          <div className="mb-3 space-y-2">
+                            {cbHasAny && (
+                              <div className="border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-900/10 rounded p-2">
+                                <div className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">🗳️ Cumhurbaşkanı (CB)</div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">{cbUsed}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">{cbInvalid}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">{cbValid}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {mvHasAny && (
+                              <div className="border border-purple-200 dark:border-purple-800 bg-purple-50/40 dark:bg-purple-900/10 rounded p-2">
+                                <div className="text-xs font-semibold text-purple-800 dark:text-purple-200 mb-1">🏛️ Milletvekili (MV)</div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">{mvUsed}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">{mvInvalid}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">{mvValid}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {!cbHasAny && !mvHasAny && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 italic">Henüz oy sayıları girilmemiş</div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Tek tutanaklı seçim (cb, mv tek başına, yerel, vb.)
+                      const usedVotes = parseInt(result.used_votes) || 0;
+                      const invalidVotes = parseInt(result.invalid_votes) || 0;
+                      const validVotes = parseInt(result.valid_votes) || cbVotesTotal || mvVotesTotal || 0;
+                      return (
+                        <div className="mb-3 grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <div className="text-gray-500 dark:text-gray-400">Kullanılan</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{usedVotes}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{invalidVotes}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{validVotes}</div>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Geçersiz</div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
-                          {result.invalid_votes || 0}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Geçerli</div>
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
-                          {result.valid_votes || 0}
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
                     {/* Parti/Aday Oyları - Yeni Seçim Sistemine Göre */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
@@ -2927,7 +3171,7 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                     </div>
 
                     {/* Seçim Tutanak Fotoğrafları */}
-                    {(result.signed_protocol_photo || result.signedProtocolPhoto || result.objection_protocol_photo || result.objectionProtocolPhoto) && (
+                    {(result.signed_protocol_photo || result.signedProtocolPhoto || result.signed_mv_protocol_photo || result.signedMvProtocolPhoto || result.objection_protocol_photo || result.objectionProtocolPhoto) && (
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                         <div className="flex items-center space-x-3">
                           <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Tutanaklar:</span>
@@ -2936,15 +3180,30 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                               <button
                                 onClick={() => handlePhotoClick(
                                   result.signed_protocol_photo || result.signedProtocolPhoto,
-                                  `Seçim Tutanağı - Sandık ${result.ballot_number}`
+                                  `CB Tutanağı - Sandık ${result.ballot_number}`
                                 )}
                                 className="flex items-center space-x-1 hover:opacity-80 transition-opacity cursor-pointer"
-                                title="Seçim Tutanağını Görüntüle"
+                                title="CB Tutanağını Görüntüle"
                               >
-                                <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Seçim</span>
+                                <span className="text-xs text-gray-600 dark:text-gray-400">CB</span>
+                              </button>
+                            )}
+                            {(result.signed_mv_protocol_photo || result.signedMvProtocolPhoto) && (
+                              <button
+                                onClick={() => handlePhotoClick(
+                                  result.signed_mv_protocol_photo || result.signedMvProtocolPhoto,
+                                  `MV Tutanağı - Sandık ${result.ballot_number}`
+                                )}
+                                className="flex items-center space-x-1 hover:opacity-80 transition-opacity cursor-pointer"
+                                title="MV Tutanağını Görüntüle"
+                              >
+                                <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-xs text-gray-600 dark:text-gray-400">MV</span>
                               </button>
                             )}
                             {(result.objection_protocol_photo || result.objectionProtocolPhoto) && (

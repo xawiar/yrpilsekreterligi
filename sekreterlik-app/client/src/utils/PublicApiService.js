@@ -1,132 +1,161 @@
 /**
- * Public API Service
- * Authentication gerektirmeyen, sadece okuma (read-only) endpoint'leri icin
- * Firebase modunda: Firestore'dan dogrudan okur
- * Backend modunda: REST API kullanir
+ * Public API Service — Cloud Function endpoint uzerinden veri okur
+ * Rules ile ugrasma yok — Admin SDK her zaman erisir
+ * CDN cache ile hizli (60sn)
  */
 
-import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
-
-const USE_FIREBASE = import.meta.env.VITE_USE_FIREBASE === 'true' ||
-                     import.meta.env.VITE_USE_FIREBASE === true ||
-                     String(import.meta.env.VITE_USE_FIREBASE).toLowerCase() === 'true';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sekreterlik-backend.onrender.com/api';
-
-async function firestoreGetAll(collectionName) {
-  if (!db) return [];
-  try {
-    var snapshot = await getDocs(collection(db, collectionName));
-    return snapshot.docs.map(function(d) { return { id: d.id, ...d.data() }; });
-  } catch (e) {
-    console.warn('Firestore read error (' + collectionName + '):', e.message);
-    return [];
-  }
-}
+const ELECTION_API = '/api/election-results';
 
 class PublicApiService {
-  static async getElections() {
-    if (USE_FIREBASE) {
-      return firestoreGetAll('elections');
+
+  // Tek secimin detayli sonuclari (aggregate + sandik bazli)
+  static async getElectionDetail(electionId) {
+    try {
+      var response = await fetch(ELECTION_API + '?id=' + encodeURIComponent(electionId));
+      if (!response.ok) return null;
+      var json = await response.json();
+      if (json.success && json.data) {
+        this._lastDetail = json.data;
+        return json.data;
+      }
+      return null;
+    } catch (e) {
+      console.warn('getElectionDetail error:', e.message);
+      return null;
     }
-    var response = await fetch(API_BASE_URL + '/public/election-results/elections');
-    if (!response.ok) throw new Error('Failed to fetch elections');
-    return response.json();
+  }
+
+  // Secim listesi
+  static async getElections() {
+    try {
+      var response = await fetch(ELECTION_API);
+      if (!response.ok) return [];
+      var json = await response.json();
+      return json.success ? json.data : [];
+    } catch (e) {
+      console.warn('getElections error:', e.message);
+      return [];
+    }
+  }
+
+  // Uyumluluk — ElectionResultsPage bu metodu cagiriyor
+  static async getElectionResults(electionId, ballotBoxId) {
+    var detail = this._lastDetail && String(this._lastDetail.election?.id) === String(electionId)
+      ? this._lastDetail
+      : await this.getElectionDetail(electionId);
+    if (!detail || !detail.ballotBoxResults) return [];
+    // election_results formatina cevir (uyumluluk)
+    return detail.ballotBoxResults.map(function(bbr) {
+      return {
+        id: bbr.resultId || bbr.ballotBoxId,
+        election_id: electionId,
+        ballot_box_id: bbr.ballotBoxId,
+        ballot_number: bbr.ballotNumber,
+        district_name: bbr.districtName,
+        town_name: bbr.townName,
+        neighborhood_name: bbr.neighborhoodName,
+        village_name: bbr.villageName,
+        total_voters: bbr.totalVoters,
+        used_votes: bbr.usedVotes,
+        valid_votes: bbr.validVotes,
+        invalid_votes: bbr.invalidVotes,
+        cb_votes: bbr.cbVotes || {},
+        mv_votes: bbr.mvVotes || {},
+        mayor_votes: bbr.mayorVotes || {},
+        approval_status: 'approved',
+      };
+    });
   }
 
   static async getElectionById(id) {
-    if (USE_FIREBASE && db) {
-      // Firestore'da ID ile veya id alanı ile ara
-      var docRef = doc(db, 'elections', String(id));
-      var docSnap = await getDoc(docRef);
-      if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
-      // ID alani ile ara
-      var allElections = await firestoreGetAll('elections');
-      return allElections.find(function(e) { return String(e.id) === String(id); }) || null;
-    }
-    var response = await fetch(API_BASE_URL + '/public/election-results/elections/' + id);
-    if (!response.ok) throw new Error('Failed to fetch election');
-    return response.json();
-  }
-
-  static async getElectionResults(electionId, ballotBoxId) {
-    if (USE_FIREBASE) {
-      var results = await firestoreGetAll('election_results');
-      var filtered = results;
-      if (electionId) {
-        filtered = filtered.filter(function(r) {
-          return String(r.election_id) === String(electionId);
-        });
-      }
-      if (ballotBoxId) {
-        filtered = filtered.filter(function(r) {
-          return String(r.ballot_box_id) === String(ballotBoxId);
-        });
-      }
-      // Public: sadece onaylanmis sonuclar
-      return filtered.filter(function(r) {
-        return r.approval_status === 'approved' || r.approval_status == null;
-      });
-    }
-    var params = new URLSearchParams();
-    if (electionId) params.append('election_id', electionId);
-    if (ballotBoxId) params.append('ballot_box_id', ballotBoxId);
-    var response = await fetch(API_BASE_URL + '/public/election-results/results?' + params);
-    if (!response.ok) throw new Error('Failed to fetch results');
-    var data = await response.json();
-    if (Array.isArray(data)) {
-      return data.filter(function(r) { return r.approval_status === 'approved' || r.approval_status == null; });
-    }
-    return data;
+    var detail = await this.getElectionDetail(id);
+    return detail ? detail.election : null;
   }
 
   static async getBallotBoxes() {
-    if (USE_FIREBASE) return firestoreGetAll('ballot_boxes');
-    var response = await fetch(API_BASE_URL + '/public/election-results/ballot-boxes');
-    if (!response.ok) throw new Error('Failed to fetch ballot boxes');
-    return response.json();
+    // API'den gelen son detaydan sandik listesi olustur
+    if (this._lastDetail && this._lastDetail.ballotBoxResults) {
+      var seen = {};
+      return this._lastDetail.ballotBoxResults.map(function(bbr) {
+        if (!bbr.ballotBoxId || seen[bbr.ballotBoxId]) return null;
+        seen[bbr.ballotBoxId] = true;
+        return {
+          id: bbr.ballotBoxId,
+          ballot_number: bbr.ballotNumber,
+          number: bbr.ballotNumber,
+          district_id: bbr.districtName,
+          district_name: bbr.districtName,
+          town_id: bbr.townName,
+          town_name: bbr.townName,
+          neighborhood_id: bbr.neighborhoodName,
+          neighborhood_name: bbr.neighborhoodName,
+          village_id: bbr.villageName,
+          village_name: bbr.villageName,
+          voter_count: bbr.totalVoters,
+        };
+      }).filter(Boolean);
+    }
+    return [];
   }
 
   static async getDistricts() {
-    if (USE_FIREBASE) return firestoreGetAll('districts');
-    var response = await fetch(API_BASE_URL + '/public/election-results/districts');
-    if (!response.ok) throw new Error('Failed to fetch districts');
-    return response.json();
+    if (this._lastDetail && this._lastDetail.ballotBoxResults) {
+      var seen = {};
+      return this._lastDetail.ballotBoxResults.map(function(bbr) {
+        if (!bbr.districtName || seen[bbr.districtName]) return null;
+        seen[bbr.districtName] = true;
+        return { id: bbr.districtName, name: bbr.districtName };
+      }).filter(Boolean);
+    }
+    return [];
   }
 
   static async getTowns() {
-    if (USE_FIREBASE) return firestoreGetAll('towns');
-    var response = await fetch(API_BASE_URL + '/public/election-results/towns');
-    if (!response.ok) throw new Error('Failed to fetch towns');
-    return response.json();
+    if (this._lastDetail && this._lastDetail.ballotBoxResults) {
+      var seen = {};
+      return this._lastDetail.ballotBoxResults.map(function(bbr) {
+        if (!bbr.townName || seen[bbr.townName]) return null;
+        seen[bbr.townName] = true;
+        return { id: bbr.townName, name: bbr.townName };
+      }).filter(Boolean);
+    }
+    return [];
   }
 
   static async getNeighborhoods() {
-    if (USE_FIREBASE) return firestoreGetAll('neighborhoods');
-    var response = await fetch(API_BASE_URL + '/public/election-results/neighborhoods');
-    if (!response.ok) throw new Error('Failed to fetch neighborhoods');
-    return response.json();
+    if (this._lastDetail && this._lastDetail.ballotBoxResults) {
+      var seen = {};
+      return this._lastDetail.ballotBoxResults.map(function(bbr) {
+        if (!bbr.neighborhoodName || seen[bbr.neighborhoodName]) return null;
+        seen[bbr.neighborhoodName] = true;
+        return { id: bbr.neighborhoodName, name: bbr.neighborhoodName };
+      }).filter(Boolean);
+    }
+    return [];
   }
 
   static async getVillages() {
-    if (USE_FIREBASE) return firestoreGetAll('villages');
-    var response = await fetch(API_BASE_URL + '/public/election-results/villages');
-    if (!response.ok) throw new Error('Failed to fetch villages');
-    return response.json();
+    if (this._lastDetail && this._lastDetail.ballotBoxResults) {
+      var seen = {};
+      return this._lastDetail.ballotBoxResults.map(function(bbr) {
+        if (!bbr.villageName || seen[bbr.villageName]) return null;
+        seen[bbr.villageName] = true;
+        return { id: bbr.villageName, name: bbr.villageName };
+      }).filter(Boolean);
+    }
+    return [];
   }
 
-  static async getBallotBoxObservers() {
-    if (USE_FIREBASE) {
-      var observers = await firestoreGetAll('ballot_box_observers');
-      // Hassas verileri filtrele (public)
-      return observers.map(function(o) {
-        return { id: o.id, name: o.name, ballot_box_id: o.ballot_box_id, is_chief_observer: o.is_chief_observer };
-      });
-    }
-    var response = await fetch(API_BASE_URL + '/public/election-results/observers');
-    if (!response.ok) throw new Error('Failed to fetch observers');
-    return response.json();
+  static async getBallotBoxObservers() { return []; }
+
+  // Landing sayfasi icin — getCachedElectionResult uyumluluk
+  static async getCachedElectionResult(electionId) {
+    return await this.getElectionDetail(electionId);
+  }
+
+  static async getAllCachedElections() {
+    var elections = await this.getElections();
+    return elections || [];
   }
 }
 

@@ -13,6 +13,37 @@ service cloud.firestore {
         get(/databases/$(database)/documents/admin/main).data.uid == request.auth.uid;
     }
 
+    // Coordinator role'lerinden biri mi? (admin / provincial / district /
+    // region / institution_supervisor). Sandık atama, bölge tanımı gibi
+    // hassas yetkili işlemler için.
+    function isCoordinator() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/member_users/$(request.auth.uid)) &&
+        (
+          get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.userType == 'admin' ||
+          get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.userType == 'coordinator' ||
+          get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.coordinatorId != null ||
+          get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.coordinator_id != null
+        );
+    }
+
+    // Bildirim doc id'si memberId/coordinatorId/observerId/auth.uid olabilir.
+    // Caller'ın member_users doc'undan bu alanlarla eşleşme kontrol et.
+    function isOwnNotification(userId) {
+      return isAuthenticated() && (
+        request.auth.uid == userId ||
+        (
+          exists(/databases/$(database)/documents/member_users/$(request.auth.uid)) &&
+          (
+            get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.memberId == userId ||
+            get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.coordinatorId == userId ||
+            get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.observerId == userId ||
+            get(/databases/$(database)/documents/member_users/$(request.auth.uid)).id == userId
+          )
+        )
+      );
+    }
+
     // Admin settings - authenticated can read, admin can write
     // First-time setup: admin/main can only be created if it doesn't already exist
     match /admin/{document} {
@@ -22,9 +53,16 @@ service cloud.firestore {
     }
 
     // Push tokens — authenticated users can save their own token
-    match /push_tokens/{userId} {
+    // Anonim ziyaretciler "anon_*" doc id'siyle kendi token'larini olusturabilir/guncelleyebilir
+    // (push aboneligi icin gerekli — landing page banner)
+    match /push_tokens/{tokenId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.auth.uid != null;
+      // Anonim create + update: doc id 'anon_' ile basliyorsa ve isAnonymous=true ise
+      allow create: if (isAuthenticated() && request.auth.uid != null) ||
+        (tokenId.matches('anon_.*') && request.resource.data.isAnonymous == true);
+      allow update: if (isAuthenticated() && request.auth.uid != null) ||
+        (tokenId.matches('anon_.*') && request.resource.data.isAnonymous == true);
+      allow delete: if isAuthenticated() && (request.auth.uid == tokenId || isAdmin());
     }
 
     // FCM tokens
@@ -83,15 +121,30 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Towns / Neighborhoods / Villages - public read (cascade dropdown for application form)
+    match /towns/{townId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /neighborhoods/{nbId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /villages/{villageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Membership applications - public create, admin read/update
     match /membership_applications/{applicationId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }
 
-    // Master notifications - admin read/write, authenticated create for system events
+    // Master notifications - admin only
+    // (Üye-üye spam'ı engellemek için create de admin'e kısıtlandı)
     match /master_notifications/{notifId} {
-      allow create: if isAuthenticated();
+      allow create: if isAdmin();
       allow read, update, delete: if isAdmin();
     }
 
@@ -113,12 +166,97 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Election results - public read (halka açık seçim sonuçları için)
-    // Write: admin + coordinators
+    // Secimler - public read (secim sonuclari sayfasi icin gerekli)
+    match /elections/{electionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Sandiklar - public read; yazım sadece admin (kötü niyetli kullanıcı
+    // sandık konumunu değiştiremesin). ElectionPreparationPage AdminRoute
+    // korumalı — sadece admin erişebilir. secim-sandik projesinden uyarlandı.
+    match /ballot_boxes/{boxId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Sandik musahitleri - public read; yazım sadece admin (atama hassas).
+    // ObserversPage AdminRoute korumalı.
+    match /ballot_box_observers/{observerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Sandık başına yüklenen evraklar (tutanak fotoğrafları, itiraz tutanakları, diğer)
+    // SIKILAŞTIRILDI:
+    //  - Read: authenticated (UI tarafında scope filtreleme var)
+    //  - Create/Update: authenticated AMA ballot_box_id'si kendi sandığı olmalı
+    //    (chief_observer için; sorumlular ve admin için cloud function kullanılır)
+    //  - Delete: sadece admin
+    match /ballot_box_documents/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() ||
+        (isAuthenticated() &&
+          exists(/databases/$(database)/documents/member_users/$(request.auth.uid)) &&
+          (
+            get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.ballotBoxId == request.resource.data.ballot_box_id ||
+            get(/databases/$(database)/documents/member_users/$(request.auth.uid)).data.ballot_box_id == request.resource.data.ballot_box_id
+          )
+        );
+      allow delete: if isAdmin();
+    }
+
+    // Sorumlular (coordinator'lar) — login akışı için public read.
+    // SIKILAŞTIRILDI: write sadece admin (sorumlu atama hassas yetki).
+    match /election_coordinators/{coordinatorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Bölgeler — sorumlu dashboard'ı login öncesi okumaz ama coordinator
+    // bilgisinin tutarlı görünümü için aynı seviyede public read
+    // SIKILAŞTIRILDI: write sadece admin (sorumlu yetki kontrolünün temeli —
+    // biri bunu değiştirirse başka sorumlunun yazma yetkisi yapay genişler).
+    match /election_regions/{regionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Eğitim materyalleri — public read (anonim ziyaretçiler de erişir),
+    // SIKILAŞTIRILDI: write sadece admin (sahte materyal upload riski).
+    match /training_materials/{materialId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Eğitim tamamlama kayıtları — kullanıcı kendi kaydını yazabilir,
+    // admin tüm kayıtları okur. Doc id format: `${userId}_${materialId}`
+    match /training_completions/{completionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Secim ziyaretci takibi - anonim read/write (visitor tracking)
+    match /election_visitors/{visitorId} {
+      allow read, write: if true;
+    }
+
+    // Election results - halka açık okuma (sonuç yayınları için).
+    // SIKILAŞTIRILDI: write sadece admin (cloud function admin SDK kullanıyor → geçer).
+    // Client doğrudan yazamaz; submitElectionResult cloud function üzerinden gider,
+    // function rol+zincir kontrolü yapar (chief_observer kendi sandığı, coordinator
+    // kapsamı, admin tümü).
     match /election_results/{resultId} {
       allow read: if true;
-      allow write: if isAdmin() ||
-        (isAuthenticated() && request.auth.token.role in ['chief_observer', 'provincial_coordinator', 'district_supervisor', 'region_supervisor', 'institution_supervisor']);
+      allow write: if isAdmin();
+    }
+
+    // Public election cache — aggregate edilmiş seçim sonuçları.
+    // SIKILAŞTIRILDI: write sadece admin.
+    match /public_election_cache/{cacheId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Meeting RSVP - authenticated users can read/write their own
@@ -146,7 +284,10 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     match /gemini_api_config/{doc} {
-      allow read, write: if isAdmin();
+      // Giriş yapmış tüm kullanıcılar okuyabilir (OCR servisi için key lazım).
+      // Key zaten .env fallback olarak client bundle'ında, ekstra risk değil.
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
     match /chatgpt_api_config/{doc} {
       allow read, write: if isAdmin();
@@ -158,17 +299,29 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // User notifications — subcollection items
-    match /user_notifications/{userId}/items/{itemId} {
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == userId;
-      allow delete: if isAuthenticated() && request.auth.uid == userId;
-    }
-    // User notifications — parent doc
-    match /user_notifications/{userId} {
+    // Notification preferences — userId burada da Auth uid değil olabilir.
+    // GERİ ALINDI: authenticated yeter (kötü niyet senaryosu zayıf).
+    match /notification_preferences/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+
+    // User notifications — subcollection items
+    // NOT: userId = member.id (Firestore member doc id), Auth UID değil.
+    // Bu yüzden request.auth.uid == userId koşulu işe yaramaz; üye kendi
+    // bildirimlerini okumak/silmek/işaretlemek için authentication yeterli.
+    // (Üye her durumda sadece kendi memberId'sine ait bildirimleri açar.)
+    match /user_notifications/{userId}/items/{itemId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+    // GERİ ALINDI: userId burada memberId (Firestore doc id), Auth uid'inden
+    // farklı olabilir → owner-match çalışmıyor, listener kırılıyordu.
+    // Tam owner kontrolü cloud function ile yapılana kadar authenticated yeter.
+    match /user_notifications/{userId} {
+      allow read, write: if isAuthenticated();
+      match /items/{itemId} {
+        allow read, write: if isAuthenticated();
+      }
     }
 
     // App settings (branding, theme, etc.)
@@ -177,7 +330,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /settings/{docId} {
-      allow read: if isAuthenticated();
+      // Public read — landing page tema/branding'i anonim ziyaretçilere de uygulanır
+      allow read: if true;
       allow write: if isAdmin();
     }
 
@@ -194,9 +348,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Audit logs - admin read, authenticated create, immutable
+    // Audit logs - authenticated kullanıcılar okuyabilir (işlem geçmişi UI için).
+    // Sorumlu/başmüşahit kendi sandığının log'larını görür; admin tüm log'lara
+    // erişir. Filtreleme uygulama tarafında entity_id ile yapılır.
     match /audit_logs/{logId} {
-      allow read: if isAdmin();
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update, delete: if false;
     }
@@ -243,19 +399,19 @@ service cloud.firestore {
     // Yetki kontrolü UI'da manage_landing_page üzerinden yapılır.
     match /landing_content/{docId} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Landing page haberler/duyurular — public read, authenticated write (UI-gated)
     match /landing_news/{docId} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Landing page galeri — public read, authenticated write (UI-gated)
     match /landing_gallery/{docId} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Seçmen listesi (YSK CSV import) — authenticated read, admin write

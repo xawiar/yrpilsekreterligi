@@ -12,10 +12,22 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    this.setState({
-      error,
-      errorInfo
-    });
+    this.setState({ error, errorInfo });
+
+    // Sentry'ye explicit gönder — sayfa crash etse bile geliştirici görsün.
+    // Sentry main.jsx'te initialize ediliyor; init etmemişse no-op.
+    try {
+      import('@sentry/react').then(({ captureException }) => {
+        captureException(error, {
+          contexts: {
+            react: { componentStack: errorInfo?.componentStack || 'unknown' },
+          },
+          tags: {
+            errorBoundary: this.props.boundaryName || 'global',
+          },
+        });
+      }).catch(() => { /* Sentry yüklenemedi, sessiz geç */ });
+    } catch (_) { /* defansif */ }
   }
 
   handleRetry = () => {

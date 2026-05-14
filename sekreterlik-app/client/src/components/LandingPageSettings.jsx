@@ -22,6 +22,12 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 const DEFAULT_CONTENT = {
+  // Üst banner (header üstü, geniş yatay görsel — duyuru/kampanya için)
+  bannerEnabled: false,
+  bannerImage: '',
+  bannerLink: '',
+  bannerText: '',
+
   heroTitle: '',
   heroSubtitle: '',
   heroImage: '',
@@ -267,6 +273,73 @@ const LandingPageSettings = () => {
           </button>
         </div>
       </div>
+
+      {/* KART 0: ÜST BANNER (Header üstü, geniş yatay duyuru) */}
+      <details className={cardCls}>
+        <summary className={summaryCls}>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">0. Üst Banner (Duyuru)</span>
+            {!content.bannerEnabled && (
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Gizli</span>
+            )}
+          </div>
+          <SectionToggle
+            checked={!!content.bannerEnabled}
+            onChange={(v) => setField('bannerEnabled', v)}
+            ariaLabel="Üst banner'ı göster/gizle"
+          />
+        </summary>
+        <div className={cardBodyCls}>
+          <p className="text-xs text-gray-600 dark:text-gray-400 -mt-2 mb-2">
+            Sayfanın en üstünde, header'ın üstünde geniş yatay banner. Duyuru, kampanya veya etkinlik için.
+            Önerilen boyut: <strong>1920x300 px</strong> (mobilde otomatik küçülür).
+          </p>
+          <div>
+            <label className={labelCls} htmlFor="lp-banner-image">Banner Görseli (jpg/png/webp, maks 5MB)</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <input
+                id="lp-banner-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={!!uploading.bannerImage}
+                onChange={(e) => handleImageUpload('bannerImage', e.target.files?.[0], 'banner')}
+                className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/40 dark:file:text-primary-200 hover:file:bg-primary-100"
+              />
+              {uploading.bannerImage && <span className="text-xs text-primary-600 animate-pulse">Yükleniyor...</span>}
+              {content.bannerImage && (
+                <img
+                  src={content.bannerImage}
+                  alt="Banner önizleme"
+                  className="h-12 w-auto max-w-[160px] object-cover rounded border border-gray-200 dark:border-gray-700"
+                  loading="lazy"
+                />
+              )}
+            </div>
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="lp-banner-text">Banner Üstü Yazı (opsiyonel)</label>
+            <input
+              id="lp-banner-text"
+              type="text"
+              className={inputCls}
+              value={content.bannerText || ''}
+              onChange={(e) => setField('bannerText', e.target.value)}
+              placeholder="Örn: 14 Mayıs Mitingine Hep Birlikte"
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="lp-banner-link">Tıklanınca Açılacak URL (opsiyonel)</label>
+            <input
+              id="lp-banner-link"
+              type="url"
+              className={inputCls}
+              value={content.bannerLink || ''}
+              onChange={(e) => setField('bannerLink', e.target.value)}
+              placeholder="https://... veya /events"
+            />
+          </div>
+        </div>
+      </details>
 
       {/* KART 1: HERO */}
       <details className={cardCls} open>

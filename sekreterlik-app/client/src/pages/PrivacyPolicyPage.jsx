@@ -5,7 +5,7 @@ import { db } from '../config/firebase';
 
 const defaultPrivacyText = `
 <h2>1. Veri Sorumlusu</h2>
-<p>Kisisel verileriniz, 6698 sayili Kisisel Verilerin Korunmasi Kanunu ("KVKK") kapsaminda veri sorumlusu sifatiyla <strong>YRP Elazig Il Baskanligi</strong> tarafindan islenmektedir.</p>
+<p>Kisisel verileriniz, 6698 sayili Kisisel Verilerin Korunmasi Kanunu ("KVKK") kapsaminda veri sorumlusu sifatiyla <strong>Yeniden Refah Partisi Elazig Il Baskanligi</strong> tarafindan islenmektedir.</p>
 <p><strong>Adres:</strong> Elazig Il Baskanligi<br/>
 <strong>Telefon:</strong> Il baskanliginiz ile iletisime geciniz<br/>
 <strong>E-posta:</strong> Il baskanliginiz ile iletisime geciniz</p>

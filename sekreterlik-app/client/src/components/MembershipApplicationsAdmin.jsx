@@ -18,8 +18,18 @@ const MembershipApplicationsAdmin = () => {
   const [actionLoading, setActionLoading] = useState(null);
   const [noteModal, setNoteModal] = useState({ open: false, appId: null, action: null });
   const [note, setNote] = useState('');
+  const [approvedLevel, setApprovedLevel] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [toast, setToast] = useState(null);
+
+  const LEVEL_LABELS = {
+    il_yonetimi: 'İl Yönetimi',
+    ilce_yonetimi: 'İlçe Yönetimi',
+    kadin_kollari: 'Kadın Kolları',
+    genclik_kollari: 'Gençlik Kolları',
+    mahalle_temsilcisi: 'Mahalle Temsilcisi',
+    basmusahit: 'Başmüşahit',
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -76,11 +86,18 @@ const MembershipApplicationsAdmin = () => {
   const openNoteModal = (appId, action) => {
     setNoteModal({ open: true, appId, action });
     setNote('');
+    if (action === 'approved') {
+      const app = applications.find(a => a.id === appId);
+      setApprovedLevel(app?.application_level || 'il_yonetimi');
+    } else {
+      setApprovedLevel('');
+    }
   };
 
   const closeNoteModal = () => {
     setNoteModal({ open: false, appId: null, action: null });
     setNote('');
+    setApprovedLevel('');
   };
 
   const handleAction = async () => {
@@ -96,35 +113,83 @@ const MembershipApplicationsAdmin = () => {
         updated_at: serverTimestamp(),
       };
 
+      // Onay sırasında seçilen kademeyi de application'a yaz
+      if (action === 'approved' && approvedLevel) {
+        updateData.approved_level = approvedLevel;
+      }
+
       await updateDoc(appRef, updateData);
 
-      // If approved, create member and member_user
+      // If approved, kategoriye göre doğru koleksiyona kayıt
       if (action === 'approved') {
         const app = applications.find(a => a.id === appId);
         if (app) {
+          let categoryLabel = 'Üye';
+          let approvalSuccess = false;
+
           try {
-            // Create member via FirebaseApiService
-            const memberData = {
-              name: app.name,
-              tc: app.tc,
-              phone: app.phone,
-              district_id: app.district_id || '',
-              status: 'active',
-              membership_date: new Date().toISOString().split('T')[0],
-              source: 'online_application',
-            };
-
-            const newMember = await FirebaseApiService.createMember(memberData);
-            const memberId = newMember?.id || newMember;
-
-            if (memberId) {
-              showToast(`${app.name} basariyla uye olarak kaydedildi ve kullanici hesabi olusturuldu.`);
+            if (approvedLevel === 'basmusahit') {
+              // ballot_box_observers koleksiyonuna kayıt
+              await FirebaseApiService.createBallotBoxObserver({
+                tc: app.tc,
+                name: app.name,
+                phone: app.phone,
+                district_id: app.district_id || null,
+                town_id: app.town_id || null,
+                neighborhood_id: app.neighborhood_id || null,
+                village_id: app.village_id || null,
+                ballot_box_id: null,
+                is_chief_observer: true,
+              });
+              categoryLabel = 'Başmüşahit';
+              approvalSuccess = true;
+            } else if (approvedLevel === 'mahalle_temsilcisi') {
+              // neighborhood_representatives koleksiyonuna kayıt
+              await FirebaseApiService.createNeighborhoodRepresentative({
+                tc: app.tc,
+                name: app.name,
+                phone: app.phone,
+                district_id: app.district_id || '',
+                neighborhood_id: app.neighborhood_id || '',
+              });
+              categoryLabel = 'Mahalle Temsilcisi';
+              approvalSuccess = true;
             } else {
-              showToast(`${app.name} uye olarak kaydedildi.`);
+              // il_yonetimi, ilce_yonetimi, kadin_kollari, genclik_kollari → members
+              const memberData = {
+                name: app.name,
+                tc: app.tc,
+                phone: app.phone,
+                district_id: app.district_id || '',
+                status: 'active',
+                membership_date: new Date().toISOString().split('T')[0],
+                source: 'online_application',
+                application_level: approvedLevel || app.application_level || '',
+              };
+
+              await FirebaseApiService.createMember(memberData);
+              categoryLabel = LEVEL_LABELS[approvedLevel] || 'Üye';
+              approvalSuccess = true;
             }
+
+            showToast(`${app.name} ${categoryLabel} olarak kaydedildi.`);
           } catch (memberErr) {
-            console.error('Uye olusturma hatasi:', memberErr);
-            showToast('Basvuru onaylandi ancak uye olusturulurken hata olustu: ' + memberErr.message, 'error');
+            console.error('Kayit hatasi:', memberErr);
+            showToast('Basvuru onaylandi ancak kayit yapilirken hata olustu: ' + memberErr.message, 'error');
+          }
+
+          // Onay başarılıysa SMS gönder (non-blocking)
+          if (approvalSuccess && app.phone) {
+            try {
+              const SmsService = (await import('../services/SmsService')).default;
+              await SmsService.loadConfig();
+              await SmsService.sendSms(
+                app.phone,
+                `Sayın ${app.name}, başvurunuz onaylanmıştır. Yeniden Refah Partisi.`
+              );
+            } catch (e) {
+              console.warn('SMS error (non-blocking):', e);
+            }
           }
         }
       } else if (action === 'rejected') {
@@ -264,7 +329,9 @@ const MembershipApplicationsAdmin = () => {
                             il_yonetimi: 'İl Yönetimi',
                             ilce_yonetimi: 'İlçe Yönetimi',
                             kadin_kollari: 'Kadın Kolları',
-                            genclik_kollari: 'Gençlik Kolları'
+                            genclik_kollari: 'Gençlik Kolları',
+                            mahalle_temsilcisi: 'Mahalle Temsilcisi',
+                            basmusahit: 'Başmüşahit'
                           }[app.application_level] || app.application_level}
                         </span>
                       )}
@@ -324,10 +391,32 @@ const MembershipApplicationsAdmin = () => {
               {noteModal.action === 'interview' && 'Gorusmeye Cagir'}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {noteModal.action === 'approved' && 'Basvuruyu onayladiginizda otomatik olarak uye kaydedilecek ve kullanici hesabi olusturulacaktir.'}
+              {noteModal.action === 'approved' && 'Basvuruyu onayladiginizda secilen kademeye gore ilgili koleksiyona kayit yapilir ve onay SMS\'i gonderilir.'}
               {noteModal.action === 'rejected' && 'Bu basvuruyu reddetmek istediginizden emin misiniz?'}
               {noteModal.action === 'interview' && 'Basvuru sahibi gorusmeye cagrilacaktir.'}
             </p>
+            {noteModal.action === 'approved' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Hangi kademe için onaylanıyor?
+                </label>
+                <select
+                  value={approvedLevel}
+                  onChange={(e) => setApprovedLevel(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="il_yonetimi">İl Yönetimi</option>
+                  <option value="ilce_yonetimi">İlçe Yönetimi</option>
+                  <option value="kadin_kollari">Kadın Kolları</option>
+                  <option value="genclik_kollari">Gençlik Kolları</option>
+                  <option value="mahalle_temsilcisi">Mahalle Temsilcisi</option>
+                  <option value="basmusahit">Başmüşahit</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Başvuruda belirtilen kademe önceden seçildi, gerekirse değiştirebilirsiniz.
+                </p>
+              </div>
+            )}
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}

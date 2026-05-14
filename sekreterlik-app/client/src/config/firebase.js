@@ -5,6 +5,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging";
+import { getFunctions } from "firebase/functions";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -84,6 +85,9 @@ if (typeof window !== 'undefined') {
 
 // FCM messaging nesnesini lazy olarak al (async init sebebiyle)
 export const getFirebaseMessaging = () => messaging;
+
+// Cloud Functions — europe-west1 region
+export const functions = app ? getFunctions(app, 'europe-west1') : null;
 
 export { analytics, auth, db, storage, messaging };
 

@@ -52,6 +52,9 @@ class FirebaseApiService {
     TOWN_MANAGEMENT_MEMBERS: 'town_management_members',
     BALLOT_BOXES: 'ballot_boxes',
     BALLOT_BOX_OBSERVERS: 'ballot_box_observers',
+    BALLOT_BOX_DOCUMENTS: 'ballot_box_documents',
+    TRAINING_MATERIALS: 'training_materials',
+    TRAINING_COMPLETIONS: 'training_completions',
     POLLS: 'polls',
     POLL_VOTES: 'poll_votes',
     MEMBER_DASHBOARD_ANALYTICS: 'member_dashboard_analytics',
@@ -82,8 +85,7 @@ class FirebaseApiService {
     YOUTH_BRANCH_PRESIDENTS: 'youth_branch_presidents',
     WOMEN_BRANCH_MANAGEMENT: 'women_branch_management',
     YOUTH_BRANCH_MANAGEMENT: 'youth_branch_management',
-    ELECTIONS: 'elections',
-    ELECTION_RESULTS: 'election_results'
+    // ELECTIONS ve ELECTION_RESULTS yukarıda zaten tanımlı (satır 67-68)
   };
 
   // Auth API
@@ -96,169 +98,69 @@ class FirebaseApiService {
         ? username
         : `${toEmailSafeUsername(username)}@ilsekreterlik.local`;
 
-      let userCredential = null;
       let user = null;
       let memberUser = null;
 
+      // --- SADELEŞTİRİLMİŞ LOGIN AKIŞI ---
+      // Eski kod 4+ API call yapıyordu (signIn/signUp/signIn/update) → rate limit.
+      // Yeni: maks 2 signIn denemesi, Auth senkron değilse admin'e yönlendir.
+
+      // 1) Firestore'dan kullanıcıyı bul
+      const memberUsers = await FirebaseService.findByField(
+        this.COLLECTIONS.MEMBER_USERS, 'username', username
+      );
+      if (memberUsers && memberUsers.length > 0) {
+        memberUser = memberUsers[0];
+      }
+
+      // 2) Firestore şifresini decrypt et
+      let firestorePassword = '';
+      if (memberUser) {
+        let decrypted = memberUser.password;
+        if (decrypted && typeof decrypted === 'string' && decrypted.startsWith('U2FsdGVkX1')) {
+          try { decrypted = decryptData(decrypted); } catch (_) {}
+        }
+        const normDec = (decrypted || '').toString().replace(/\D/g, '');
+        const normRaw = (memberUser.password || '').toString().replace(/\D/g, '');
+        firestorePassword = normDec || normRaw;
+      }
+      const normalizedInput = password.toString().replace(/\D/g, '');
+
+      // 3) İlk deneme: kullanıcının girdiği şifre ile
       try {
-        // Önce Firebase Auth'da kullanıcıyı bulmaya çalış
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-        user = userCredential.user;
-      } catch (authError) {
-        // Firebase Auth'da kullanıcı bulunamadı veya şifre hatalı
+        const uc = await signInWithEmailAndPassword(auth, email, password);
+        user = uc.user;
+      } catch (authError1) {
+        const fatalCodes = ['auth/too-many-requests', 'auth/user-disabled', 'auth/network-request-failed'];
+        if (fatalCodes.includes(authError1.code)) {
+          throw authError1;
+        }
 
-        // Eğer kullanıcı bulunamadıysa, Firestore'dan kontrol et
-        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
-          // Firestore'dan kullanıcıyı bul
-          const memberUsers = await FirebaseService.findByField(
-            this.COLLECTIONS.MEMBER_USERS,
-            'username',
-            username
+        // Kullanıcı Firestore'da yoksa: kullanıcı adı yanlış
+        if (!memberUser) {
+          throw new Error('Kullanıcı adı veya şifre hatalı');
+        }
+
+        // Firestore şifresi kullanıcının girdiği ile eşleşiyor mu?
+        const passwordMatches = firestorePassword === normalizedInput;
+        if (!passwordMatches) {
+          throw new Error('Kullanıcı adı veya şifre hatalı');
+        }
+
+        // 4) İkinci deneme: Firestore'daki (normalize) şifre ile — belki Auth ona kayıtlı
+        try {
+          const uc2 = await signInWithEmailAndPassword(auth, email, firestorePassword);
+          user = uc2.user;
+        } catch (authError2) {
+          // Auth senkron değil — Cloud Function tarafında Auth Sıfırla yapılmalı
+          // Client-side createUser denemesi yapmıyoruz (rate limit ve döngü yaratır)
+          const err = new Error(
+            'Hesap Firebase Auth ile senkron değil. Yöneticinize başvurun: ' +
+            'Admin → Üye Kullanıcıları → bu kullanıcı için "Auth Sıfırla" tıklasın. ' +
+            'Ardından tekrar giriş deneyin.'
           );
-
-          if (memberUsers && memberUsers.length > 0) {
-            memberUser = memberUsers[0];
-            // FirebaseService.findByField zaten decrypt ediyor (decrypt = true default)
-            // Ama password field'ı SENSITIVE_FIELDS içinde olduğu için decrypt edilmiş olmalı
-            // Eğer hala encrypted görünüyorsa, manuel decrypt et
-            let decryptedPassword = memberUser.password;
-
-
-            // Eğer password şifrelenmiş görünüyorsa (U2FsdGVkX1 ile başlıyorsa), decrypt et
-            if (decryptedPassword && typeof decryptedPassword === 'string' && decryptedPassword.startsWith('U2FsdGVkX1')) {
-              decryptedPassword = decryptData(decryptedPassword);
-            }
-
-            // Password'ları normalize et (sadece rakamlar) - karşılaştırma için
-            const normalizedInputPassword = password.toString().replace(/\D/g, '');
-            const normalizedDecryptedPassword = (decryptedPassword || '').toString().replace(/\D/g, '');
-            const normalizedMemberUserPassword = (memberUser.password || '').toString().replace(/\D/g, '');
-
-
-            // Şifre doğru mu kontrol et (normalize edilmiş password ile karşılaştır)
-            if (normalizedDecryptedPassword === normalizedInputPassword || normalizedMemberUserPassword === normalizedInputPassword) {
-              // Şifre doğru, Firebase Auth ile senkronize et
-              // ÖNEMLİ: Firebase Auth'a kaydederken normalize edilmiş şifreyi kullan (sadece rakamlar)
-              // Firestore'da password normalize edilmiş olarak saklanıyor (sadece rakamlar)
-              const firestorePassword = normalizedMemberUserPassword || normalizedDecryptedPassword || (decryptedPassword || memberUser.password);
-
-
-              // Eğer authUid varsa ama email/username değişmişse, yeni email ile giriş yapmayı dene
-              // Eğer authUid yoksa, yeni kullanıcı oluştur
-
-              try {
-                // Önce mevcut email ile giriş yapmayı dene (eğer authUid varsa)
-                if (memberUser.authUid) {
-                  try {
-                    // Eski email ile giriş yapmayı dene (Firestore'daki şifre ile)
-                    const oldEmail = memberUser.username.includes('@') ? memberUser.username : `${memberUser.username}@ilsekreterlik.local`;
-                    userCredential = await signInWithEmailAndPassword(auth, oldEmail, firestorePassword);
-                    user = userCredential.user;
-
-                    // Firestore'daki kullanıcıyı güncelle (username ve authUid senkronizasyonu)
-                    await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                      authUid: user.uid,
-                      username: username // Username'i güncelle (eğer değiştiyse)
-                    }, false);
-
-                  } catch (oldEmailError) {
-                    // Eski email ile giriş yapılamadı, yeni email ile dene
-                    try {
-                      userCredential = await signInWithEmailAndPassword(auth, email, firestorePassword);
-                      user = userCredential.user;
-
-                      // Firestore'daki kullanıcıyı güncelle
-                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                        authUid: user.uid,
-                        username: username
-                      }, false);
-
-                    } catch (newEmailError) {
-                      // Yeni email ile de giriş yapılamadı, yeni kullanıcı oluştur (Firestore'daki şifre ile)
-                      userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
-                      user = userCredential.user;
-
-                      // Firestore'daki kullanıcıyı güncelle
-                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                        authUid: user.uid,
-                        username: username
-                      }, false);
-
-                    }
-                  }
-                } else {
-                  // AuthUid yok, yeni kullanıcı oluştur (Firestore'daki şifre ile - telefon numarası)
-                  userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
-                  user = userCredential.user;
-
-                  // Firestore'daki kullanıcıyı güncelle (authUid ekle)
-                  await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                    authUid: user.uid,
-                    username: username
-                  }, false);
-
-                }
-              } catch (createError) {
-                // Email zaten kullanılıyorsa (başka bir kullanıcı tarafından veya aynı kullanıcı farklı şifre ile)
-                if (createError.code === 'auth/email-already-in-use') {
-                  try {
-                    // Firestore'daki şifre ile giriş yapmayı dene
-                    userCredential = await signInWithEmailAndPassword(auth, email, firestorePassword);
-                    user = userCredential.user;
-
-                    // Firestore'daki kullanıcıyı güncelle (authUid ekle)
-                    await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                      authUid: user.uid,
-                      username: username
-                    }, false);
-
-                  } catch (signInError2) {
-                    // Firestore şifresi doğru ama Auth şifresi eski
-                    // authUid temizle → yeni Auth kullanıcısı oluşturulacak
-                    console.warn('Auth password mismatch, resetting authUid for re-creation');
-                    await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                      authUid: null,
-                      username: username
-                    }, false);
-
-                    // Yeni Firebase Auth kullanıcısı oluştur (Firestore şifresiyle)
-                    try {
-                      userCredential = await createUserWithEmailAndPassword(auth, email, firestorePassword);
-                      user = userCredential.user;
-                      await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser.id, {
-                        authUid: user.uid,
-                        username: username
-                      }, false);
-                    } catch (recreateErr) {
-                      if (recreateErr.code === 'auth/email-already-in-use') {
-                        // Email zaten kullanılıyor — eski Auth hesabını kaldıramıyoruz
-                        // Firestore şifresi doğruysa kullanıcıyı yine de giriş yaptır
-                        // authUid null bırakılacak, bir sonraki login'de düzelir
-                        console.warn('Could not recreate Auth user, proceeding with Firestore auth only');
-                      } else {
-                        throw recreateErr;
-                      }
-                    }
-                  }
-                } else {
-                  throw createError;
-                }
-              }
-            } else {
-              // Şifre hatalı
-              console.error('❌ Password mismatch!', {
-                username: memberUser.username,
-                memberId: memberUser.memberId
-              });
-              throw new Error('Şifre hatalı');
-            }
-          } else {
-            // Firestore'da da kullanıcı bulunamadı
-            throw authError; // Orijinal hatayı fırlat
-          }
-        } else {
-          // Diğer hatalar (wrong-password, invalid-email, vb.)
-          throw authError;
+          err.code = 'auth-sync-required';
+          throw err;
         }
       }
 
@@ -304,27 +206,52 @@ class FirebaseApiService {
           // memberId alanını kontrol et - hem memberId hem member_id olabilir
           let memberId = getMemberId(memberUser[0]);
 
-          // Eğer memberId yoksa ve userType 'member' ise, username (TC) ile member bul
+          // Eğer memberId yoksa ve userType 'member' ise, username (TC) ile member bul.
+          // ÖNCE direkt where query — plain TC için tek doc okuma.
+          // Başarısızsa (encrypted TC) getAll fallback (5dk cache).
           if (!memberId && memberUser[0].userType === 'member' && memberUser[0].username) {
+            const tc = memberUser[0].username;
             try {
-              // Tüm üyeleri al ve TC'ye göre bul
-              const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
-              const memberByTc = allMembers.find(m => {
-                // TC şifrelenmiş olabilir, decrypt etmeye çalış
-                try {
-                  const decryptedTc = decryptData(m.tc || m.tcNo || '');
-                  return decryptedTc === memberUser[0].username || m.tc === memberUser[0].username || m.tcNo === memberUser[0].username;
-                } catch (e) {
-                  // Decrypt başarısız, direkt karşılaştır
-                  return m.tc === memberUser[0].username || m.tcNo === memberUser[0].username;
-                }
-              });
-
-              if (memberByTc) {
-                memberId = memberByTc.id;
+              const fastResults = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+                where: [{ field: 'tc', value: tc }],
+                limit: 1
+              }, false);
+              if (fastResults && fastResults.length > 0) {
+                memberId = fastResults[0].id;
+              } else {
+                const fastResults2 = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+                  where: [{ field: 'tcNo', value: tc }],
+                  limit: 1
+                }, false);
+                if (fastResults2 && fastResults2.length > 0) memberId = fastResults2[0].id;
               }
-            } catch (e) {
-              console.warn('Member lookup by TC failed:', e);
+            } catch (e) { /* ignore — fallback'e düş */ }
+
+            // Plain TC bulunamazsa encrypted için tam tarama (legacy path)
+            if (!memberId) {
+              try {
+                const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS);
+                const memberByTc = allMembers.find(m => {
+                  try {
+                    const decryptedTc = decryptData(m.tc || m.tcNo || '');
+                    return decryptedTc === tc || m.tc === tc || m.tcNo === tc;
+                  } catch (e) {
+                    return m.tc === tc || m.tcNo === tc;
+                  }
+                });
+                if (memberByTc) memberId = memberByTc.id;
+              } catch (e) {
+                console.warn('Member lookup by TC failed:', e);
+              }
+            }
+
+            // Bulunduysa member_users'a memberId yaz → sonraki login fast olur
+            if (memberId) {
+              try {
+                await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, memberUser[0].id, {
+                  memberId: String(memberId)
+                });
+              } catch (_) { /* önemli değil */ }
             }
           }
 
@@ -343,6 +270,29 @@ class FirebaseApiService {
 
           userData.memberId = memberId ? String(memberId) : null;
           userData.id = memberUser[0].id;
+
+          // Capabilities Model: yetki ID'leri ve metaveri member_users kaydından okunur
+          // (handleCreateObserverUsers sandık bilgilerini de kayda yazıyor — ek Firestore
+          // query yapmaya ve izin sorunlarına gerek yok)
+          if (memberUser[0].name) {
+            userData.name = memberUser[0].name;
+          }
+          if (memberUser[0].observerId) {
+            userData.observerId = memberUser[0].observerId;
+          }
+          const bbId = memberUser[0].ballotBoxId || memberUser[0].ballot_box_id;
+          if (bbId) {
+            userData.ballotBoxId = bbId;
+            userData.ballot_box_id = bbId;
+          }
+          const bbNum = memberUser[0].ballotNumber || memberUser[0].ballot_number;
+          if (bbNum) {
+            userData.ballotNumber = bbNum;
+            userData.ballot_number = bbNum;
+          }
+          if (memberUser[0].coordinatorId || memberUser[0].coordinator_id) {
+            userData.coordinatorId = memberUser[0].coordinatorId || memberUser[0].coordinator_id;
+          }
 
           // Belde başkanı veya ilçe başkanı ise townId veya districtId ekle
           if (memberUser[0].userType === 'town_president' && memberUser[0].townId) {
@@ -446,9 +396,57 @@ class FirebaseApiService {
         throw new Error('Geçersiz TC kimlik numarası veya telefon numarası');
       }
 
+      // Firebase Auth oturumu aç — submitElectionResult/getCoordinatorDashboard
+      // gibi cloud function'lar request.auth ister. Auth olmadan 401 alıyordu.
+      try {
+        const username = matchedUser.username || tcStr;
+        const email = username.includes('@')
+          ? username
+          : `${username}@ilsekreterlik.local`;
+
+        // Password adayları: phone (raw + padded), TC, fallback member_users.password
+        const candidatePasswords = [];
+        candidatePasswords.push(phoneStr);
+        candidatePasswords.push(String(phone).replace(/\D/g, ''));
+        candidatePasswords.push(tcStr);
+        if (matchedUser.password) {
+          let pw = matchedUser.password;
+          if (typeof pw === 'string' && pw.startsWith('U2FsdGVkX1')) {
+            try { pw = decryptData(pw); } catch (_) {}
+          }
+          if (pw) candidatePasswords.push(String(pw));
+        }
+        const seen = new Set();
+        let authSuccess = false;
+        let firebaseUid = null;
+        for (const pw of candidatePasswords) {
+          if (!pw || seen.has(pw)) continue;
+          seen.add(pw);
+          try {
+            const uc = await signInWithEmailAndPassword(auth, email, pw);
+            firebaseUid = uc.user?.uid || null;
+            authSuccess = true;
+            break;
+          } catch (_) { /* sıradaki şifre */ }
+        }
+        if (!authSuccess) {
+          console.warn('[loginCoordinator] Firebase Auth açılamadı — submit/dashboard fonksiyonları 401 alabilir');
+        } else if (firebaseUid && firebaseUid !== matchedUser.authUid) {
+          // member_users'a authUid yaz → fonksiyonlar bulabilir
+          try {
+            await FirebaseService.update(this.COLLECTIONS.MEMBER_USERS, matchedUser.id, {
+              authUid: firebaseUid
+            });
+          } catch (_) { /* önemsiz */ }
+        }
+      } catch (authErr) {
+        console.warn('[loginCoordinator] Auth hatası (devam ediliyor):', authErr.message);
+      }
+
       return {
         success: true,
         user: {
+          uid: auth?.currentUser?.uid || null,
           username: matchedUser.username,
           name: matchedCoordinator.name,
           role: matchedCoordinator.role,
@@ -469,8 +467,27 @@ class FirebaseApiService {
     }
   }
 
-  // Coordinator Dashboard
+  // Coordinator Dashboard — Cloud Function (server-side filter)
+  // Eski client-side path getAll fan-out yapıyordu (~460K read 200 sorumlu).
+  // Bu çağrı tek HTTP, server'da filtrelenir (~50 read).
+  // Function fail olursa eski client koduna düşer.
   static async getCoordinatorDashboard(coordinatorId) {
+    try {
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Functions yüklenemedi');
+      const fn = httpsCallable(functions, 'getCoordinatorDashboard');
+      const res = await fn({ coordinatorId: String(coordinatorId) });
+      if (res?.data?.success) return res.data;
+      throw new Error('Server-side dashboard başarısız');
+    } catch (fnErr) {
+      console.warn('[getCoordinatorDashboard] Function fail, client fallback:', fnErr.message);
+      return await this._getCoordinatorDashboardClientSide(coordinatorId);
+    }
+  }
+
+  // Eski client-side implementasyon — Cloud Function fail olursa fallback.
+  static async _getCoordinatorDashboardClientSide(coordinatorId) {
     try {
       const coordinators = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_COORDINATORS);
       const coordinator = coordinators.find(c => String(c.id) === String(coordinatorId));
@@ -481,6 +498,7 @@ class FirebaseApiService {
 
       const allBallotBoxes = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOXES);
       const allRegions = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_REGIONS);
+      const allDistricts = await FirebaseService.getAll(this.COLLECTIONS.DISTRICTS);
 
       let ballotBoxes = [];
 
@@ -591,11 +609,47 @@ class FirebaseApiService {
 
         ballotBoxes = allBallotBoxes.filter(bb => ballotBoxIds.has(bb.id));
       } else if (coordinator.role === 'institution_supervisor' && coordinator.institution_name) {
-        // Kurum Sorumlusu: Kendi kurumundaki sandıklar
-        ballotBoxes = allBallotBoxes.filter(bb =>
-          bb.institution_name === coordinator.institution_name
-        );
+        // Kurum Sorumlusu: Kendi kurumundaki sandıklar.
+        // ÖNEMLİ: Aynı kurum adı (örn. "CUMHURİYET ORTAOKULU") farklı ilçelerde
+        // olabildiği için sadece institution_name yeterli değil. Eğer
+        // coordinator.district_id varsa ilçe filtresi de uygulanır.
+        // Yoksa parent_coordinator_id (bölge) üzerinden bölge sınırlaması.
+        ballotBoxes = allBallotBoxes.filter(bb => {
+          if (bb.institution_name !== coordinator.institution_name) return false;
+          // İlçe kontrolü
+          if (coordinator.district_id) {
+            return String(bb.district_id) === String(coordinator.district_id);
+          }
+          // Parent (bölge) sorumlusu üzerinden bölge sınırlaması
+          if (coordinator.parent_coordinator_id) {
+            const region = allRegions.find(r =>
+              String(r.supervisor_id) === String(coordinator.parent_coordinator_id)
+            );
+            if (region) {
+              const nbIds = Array.isArray(region.neighborhood_ids)
+                ? region.neighborhood_ids
+                : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+              const vlIds = Array.isArray(region.village_ids)
+                ? region.village_ids
+                : (region.village_ids ? JSON.parse(region.village_ids) : []);
+              const inNb = nbIds.length > 0 && nbIds.includes(bb.neighborhood_id);
+              const inVl = vlIds.length > 0 && vlIds.includes(bb.village_id);
+              return inNb || inVl;
+            }
+          }
+          return true;
+        });
       }
+
+      // ZOMBİ SANDIK FİLTRESİ — Capabilities Model: district_id districts koleksiyonunda
+      // bulunmayan sandıkları sorumluya gösterme. Bu, silinmiş ilçeye referans veren
+      // eski/zombi kayıtları kullanıcıdan saklar (admin sayfası ayrı endpoint kullanır).
+      const validDistrictIds = new Set(allDistricts.map(d => String(d.id)));
+      ballotBoxes = ballotBoxes.filter(bb => {
+        // district_id yoksa veya geçerli districts'te varsa kabul
+        if (!bb.district_id) return true; // konum bilgisi olmayan sandık
+        return validDistrictIds.has(String(bb.district_id));
+      });
 
       // Bölge, mahalle, köy bilgilerini topla
       let regionInfo = null;
@@ -668,16 +722,69 @@ class FirebaseApiService {
         return ballotBoxes.some(bb => String(bb.id) === String(ballotBoxId));
       });
 
+      // Sorumlu olduğu bölgeleri rol bazlı çıkar
+      let myRegions = [];
+      if (coordinator.role === 'provincial_coordinator') {
+        // İl sorumlusu: tüm bölgeler
+        myRegions = allRegions.map(r => ({ id: r.id, name: r.name }));
+      } else if (coordinator.role === 'district_supervisor') {
+        // İlçe sorumlusu: bağlı bölge sorumlularının bölgeleri
+        const regionSupIds = coordinators
+          .filter(c => c.role === 'region_supervisor' && String(c.parent_coordinator_id) === String(coordinator.id))
+          .map(c => String(c.id));
+        myRegions = allRegions
+          .filter(r => regionSupIds.includes(String(r.supervisor_id)))
+          .map(r => ({ id: r.id, name: r.name }));
+      } else if (coordinator.role === 'region_supervisor') {
+        // Bölge sorumlusu: kendi bölgesi
+        const myRegion = allRegions.find(r => String(r.supervisor_id) === String(coordinator.id));
+        if (myRegion) myRegions = [{ id: myRegion.id, name: myRegion.name }];
+      } else if (coordinator.role === 'institution_supervisor') {
+        // Kurum sorumlusu: kurumun sandıklarının bağlı olduğu bölgeler (unique)
+        const targetName = (coordinator.institution_name || '').trim().toLowerCase();
+        if (targetName) {
+          const institutionBBs = allBallotBoxes.filter(bb =>
+            (bb.institution_name || '').trim().toLowerCase() === targetName
+          );
+          const seen = new Set();
+          for (const bb of institutionBBs) {
+            for (const region of allRegions) {
+              const nbIds = Array.isArray(region.neighborhood_ids)
+                ? region.neighborhood_ids
+                : (region.neighborhood_ids ? JSON.parse(region.neighborhood_ids) : []);
+              const vlIds = Array.isArray(region.village_ids)
+                ? region.village_ids
+                : (region.village_ids ? JSON.parse(region.village_ids) : []);
+              const matchN = bb.neighborhood_id && (
+                nbIds.includes(bb.neighborhood_id) ||
+                nbIds.map(String).includes(String(bb.neighborhood_id))
+              );
+              const matchV = bb.village_id && (
+                vlIds.includes(bb.village_id) ||
+                vlIds.map(String).includes(String(bb.village_id))
+              );
+              if ((matchN || matchV) && !seen.has(String(region.id))) {
+                seen.add(String(region.id));
+                myRegions.push({ id: region.id, name: region.name });
+              }
+            }
+          }
+        }
+      }
+
       return {
         success: true,
         coordinator: {
           id: coordinator.id,
           name: coordinator.name,
+          tc: coordinator.tc || '',
+          phone: coordinator.phone || '',
           role: coordinator.role,
           institutionName: coordinator.institution_name
         },
         ballotBoxes: ballotBoxes || [],
         regionInfo,
+        regions: myRegions,
         neighborhoods,
         villages,
         parentCoordinators,
@@ -717,21 +824,20 @@ class FirebaseApiService {
       const snap = await getDocs(collection(db, 'member_users'));
       const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Sıra: prefixed → ballotNumber (legacy) → tc
-      let memberUsers = [];
-      if (prefixedUsername) {
+      // Capabilities Model: müşahit yetkisi → userType='musahit' VEYA observerId dolu
+      // Sıra: TC (yeni format) → prefixed (legacy) → ballotNumber (legacy)
+      const isObserverUser = (u) => u.userType === 'musahit' || !!u.observerId;
+      let memberUsers = allUsers.filter(u =>
+        isObserverUser(u) && u.username === tcStr
+      );
+      if (!memberUsers.length && prefixedUsername) {
         memberUsers = allUsers.filter(u =>
-          u.userType === 'musahit' && u.username === prefixedUsername
+          isObserverUser(u) && u.username === prefixedUsername
         );
       }
       if (!memberUsers.length) {
         memberUsers = allUsers.filter(u =>
-          u.userType === 'musahit' && u.username === ballotNumberStr
-        );
-      }
-      if (!memberUsers.length) {
-        memberUsers = allUsers.filter(u =>
-          u.userType === 'musahit' && u.username === tcStr
+          isObserverUser(u) && u.username === ballotNumberStr
         );
       }
 
@@ -766,52 +872,36 @@ class FirebaseApiService {
         throw new Error('Geçersiz TC kimlik numarası');
       }
 
-      // Firebase Auth ile giriş yapmayı dene
+      // Firebase Auth ile giriş yapmayı dene (basitleştirilmiş — signUp/retry yok)
       const username = memberUser.username;
-      // Username Türkçe karakter içerebilir (örn. eski kayıtlar) — ASCII'ye çevir
       const { toEmailSafeUsername } = await import('./districtCode');
       const emailLocal = toEmailSafeUsername(username);
       const email = `${emailLocal}@ilsekreterlik.local`;
-      let userCredential = null;
       let user = null;
 
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-        user = userCredential.user;
-      } catch (authError) {
+      // Firestore password'dan padded versiyonu hazırla (Auth min 6 hane)
+      const candidatePasswords = [password];
+      if (password.length < 6) candidatePasswords.push(password.padStart(6, '0'));
 
-        // Auth'da kullanıcı yoksa oluştur
-        // Yeni Firebase Auth versiyonu 'user-not-found' yerine 'invalid-credential' dönebilir
-        if (authError.code === 'auth/user-not-found' ||
-            authError.code === 'auth/invalid-credential' ||
-            authError.code === 'auth/invalid-login-credentials') {
-          try {
-            userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            user = userCredential.user;
-            // authUid'yi Firestore'a kaydet — rules fail ederse sessiz geç
-            try {
-              await FirebaseService.update(
-                this.COLLECTIONS.MEMBER_USERS,
-                memberUser.id,
-                { authUid: user.uid },
-                false
-              );
-            } catch (updateErr) {
-              console.warn('authUid Firestore update fail (rules):', updateErr.message);
-              // Login yine de başarılı — Auth hesabı oluşturuldu
-            }
-          } catch (createError) {
-            // Email zaten kullanılıyorsa sessiz geç
-            if (createError.code === 'auth/email-already-in-use') {
-              user = null;
-            } else {
-              console.error('Failed to create Firebase Auth user:', createError);
-              throw new Error('Giriş yapılamadı: ' + createError.message);
-            }
+      let lastError = null;
+      for (const pw of candidatePasswords) {
+        try {
+          const uc = await signInWithEmailAndPassword(auth, email, pw);
+          user = uc.user;
+          lastError = null;
+          break;
+        } catch (authError) {
+          lastError = authError;
+          if (['auth/too-many-requests', 'auth/user-disabled', 'auth/network-request-failed'].includes(authError.code)) {
+            throw authError;
           }
-        } else {
-          throw new Error('Giriş yapılamadı: ' + authError.message);
         }
+      }
+
+      if (!user) {
+        const err = new Error('Hesap Firebase Auth ile senkron değil. Yöneticinize başvurun: Admin → Üye Kullanıcıları → bu başmüşahit için "Auth Sıfırla" tıklasın. Ardından tekrar giriş deneyin.');
+        err.code = 'auth-sync-required';
+        throw err;
       }
 
       // Başmüşahit bilgilerini al
@@ -2087,77 +2177,25 @@ class FirebaseApiService {
         description: descriptionValue // Şifrelenmeden sakla (null veya değer)
       });
 
-      // Planlanan toplantı için otomatik SMS gönder
+      // Planlanan toplantı için otomatik SMS + bildirim (in-app + push)
       if (meetingDataWithoutNotesAndDescription.isPlanned && meetingDataWithoutNotesAndDescription.regions) {
+        const meetingPayload = {
+          name: meetingDataWithoutNotesAndDescription.name,
+          date: meetingDataWithoutNotesAndDescription.date
+        };
+        const regions = meetingDataWithoutNotesAndDescription.regions;
+
+        // SMS ve bildirim paralel — biri hata verse de diğeri etkilenmez
         try {
-          await this.sendAutoSmsForScheduled('meeting', {
-            name: meetingDataWithoutNotesAndDescription.name,
-            date: meetingDataWithoutNotesAndDescription.date
-          }, meetingDataWithoutNotesAndDescription.regions);
+          await this.sendAutoSmsForScheduled('meeting', meetingPayload, regions);
         } catch (smsError) {
           console.error('Auto SMS error (non-blocking):', smsError);
-          // SMS hatası toplantı oluşturmayı engellemez
         }
-      }
-
-      // In-app notification oluştur (tüm aktif üyelere)
-      try {
-        const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
-          where: [{ field: 'archived', operator: '==', value: false }]
-        }, false);
-
-        if (!allMembers || allMembers.length === 0) {
-          console.warn('⚠️ No active members found for notification');
-          return { success: true, id: docId, message: 'Toplantı oluşturuldu' };
+        try {
+          await this.sendAutoNotificationForScheduled('meeting', meetingPayload, regions, docId);
+        } catch (notificationError) {
+          console.error('Auto notification error (non-blocking):', notificationError);
         }
-
-        const notificationData = {
-          title: 'Yeni Toplantı Oluşturuldu',
-          body: `${meetingDataWithoutNotesAndDescription.name} - ${meetingDataWithoutNotesAndDescription.date || 'Tarih belirtilmemiş'}`,
-          type: 'meeting',
-          data: JSON.stringify({
-            meetingId: docId,
-            meetingName: meetingDataWithoutNotesAndDescription.name,
-            date: meetingDataWithoutNotesAndDescription.date
-          }),
-          read: false,
-          createdAt: new Date().toISOString(),
-          expiresAt: meetingDataWithoutNotesAndDescription.date
-            ? new Date(new Date(meetingDataWithoutNotesAndDescription.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
-            : null
-        };
-
-        // Her üye için notification oluştur
-        let successCount = 0;
-        for (const member of allMembers) {
-          try {
-            const memberId = getMemberId(member);
-            if (!memberId) {
-              console.warn('⚠️ Member without ID skipped:', member);
-              continue;
-            }
-
-            const normalizedMemberId = String(memberId).trim();
-
-            const notificationId = await FirebaseService.create(
-              this.COLLECTIONS.NOTIFICATIONS,
-              null,
-              {
-                ...notificationData,
-                memberId: normalizedMemberId
-              },
-              false
-            );
-
-            successCount++;
-          } catch (memberError) {
-            console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
-          }
-        }
-
-      } catch (notificationError) {
-        console.error('Error creating in-app notification (non-blocking):', notificationError);
-        // Notification hatası toplantı oluşturmayı engellemez
       }
 
       return { success: true, id: docId, message: 'Toplantı oluşturuldu' };
@@ -2302,77 +2340,24 @@ class FirebaseApiService {
         false // encrypt = false (artık şifreleme yapılmıyor)
       );
 
-      // Planlanan etkinlik için otomatik SMS gönder
+      // Planlanan etkinlik için otomatik SMS + bildirim (in-app + push)
       if (finalEventData.isPlanned && finalEventData.regions) {
+        const eventPayload = {
+          name: finalEventData.name || finalEventData.category_name,
+          date: finalEventData.date
+        };
+        const regions = finalEventData.regions;
+
         try {
-          await this.sendAutoSmsForScheduled('event', {
-            name: finalEventData.name || finalEventData.category_name,
-            date: finalEventData.date
-          }, finalEventData.regions);
+          await this.sendAutoSmsForScheduled('event', eventPayload, regions);
         } catch (smsError) {
           console.error('Auto SMS error (non-blocking):', smsError);
-          // SMS hatası etkinlik oluşturmayı engellemez
         }
-      }
-
-      // In-app notification oluştur (tüm aktif üyelere)
-      try {
-        const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
-          where: [{ field: 'archived', operator: '==', value: false }]
-        }, false);
-
-        if (!allMembers || allMembers.length === 0) {
-          console.warn('⚠️ No active members found for notification');
-          return { success: true, id: docId, message: 'Etkinlik oluşturuldu' };
+        try {
+          await this.sendAutoNotificationForScheduled('event', eventPayload, regions, docId);
+        } catch (notificationError) {
+          console.error('Auto notification error (non-blocking):', notificationError);
         }
-
-        const notificationData = {
-          title: 'Yeni Etkinlik Oluşturuldu',
-          body: `${finalEventData.name} - ${finalEventData.date || 'Tarih belirtilmemiş'}`,
-          type: 'event',
-          data: JSON.stringify({
-            eventId: docId,
-            eventName: finalEventData.name,
-            date: finalEventData.date
-          }),
-          read: false,
-          createdAt: new Date().toISOString(),
-          expiresAt: finalEventData.date
-            ? new Date(new Date(finalEventData.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 gün sonra expire
-            : null
-        };
-
-        // Her üye için notification oluştur
-        let successCount = 0;
-        for (const member of allMembers) {
-          try {
-            const memberId = getMemberId(member);
-            if (!memberId) {
-              console.warn('⚠️ Member without ID skipped:', member);
-              continue;
-            }
-
-            const normalizedMemberId = String(memberId).trim();
-
-            const notificationId = await FirebaseService.create(
-              this.COLLECTIONS.NOTIFICATIONS,
-              null,
-              {
-                ...notificationData,
-                memberId: normalizedMemberId
-              },
-              false
-            );
-
-            successCount++;
-          } catch (memberError) {
-            console.error(`❌ Error creating notification for member ${member.id}:`, memberError);
-          }
-        }
-
-      } catch (notificationError) {
-        console.error('Error creating in-app notification (non-blocking):', notificationError);
-        // Notification hatası etkinlik oluşturmayı engellemez
       }
 
       // Process visit counts for selected locations (Firebase)
@@ -3074,27 +3059,20 @@ class FirebaseApiService {
         if (memberUsers && memberUsers.length > 0) {
           for (const memberUser of memberUsers) {
 
-            // Firebase Auth'dan da sil (eğer authUid varsa) - Backend üzerinden
-            if (memberUser.authUid) {
+            // Firebase Auth'dan da sil (eğer authUid varsa) - Backend üzerinden.
+            // Production hosting'de Express backend yok → Cloud Function trigger
+            // (onMemberUserDelete) Auth'u senkronize ediyor; client-side fetch'i atla.
+            const _hasBackend = typeof window !== 'undefined' &&
+              !/\.(web\.app|firebaseapp\.com)$/i.test(window.location.hostname);
+            if (memberUser.authUid && _hasBackend) {
               try {
-                // Backend endpoint'ini kullanarak Firebase Auth kullanıcısını sil
                 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-                const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
+                await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
                   method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
+                  headers: { 'Content-Type': 'application/json' }
                 });
-
-                if (response.ok) {
-                } else {
-                  const errorData = await response.json().catch(() => ({}));
-                  console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
-                }
               } catch (authError) {
-                console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
-                // Firestore'dan member_user silindiğinde, login sırasında kontrol edilip Firebase Auth'daki kullanıcı da geçersiz sayılır
-                // Bu yüzden kritik bir hata değil
+                // Sessizce yut — Cloud Function trigger devreye girer
               }
             }
 
@@ -4055,10 +4033,12 @@ class FirebaseApiService {
 
   static async updateElection(id, electionData) {
     try {
+      // Önce doküman var mı kontrol et (QUIC silent-fail veya silinme durumlarında)
+      const currentElection = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, id, false);
+
       // Seçim durumu geçiş kontrolü
-      if (electionData.status) {
-        const currentElection = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, id, false);
-        const currentStatus = currentElection?.status;
+      if (electionData.status && currentElection) {
+        const currentStatus = currentElection.status;
         const allowedTransitions = {
           'draft': ['active'],
           'active': ['closed'],
@@ -4071,13 +4051,34 @@ class FirebaseApiService {
         }
       }
 
+      const payload = {
+        ...electionData,
+        date: electionData.date ? new Date(electionData.date).toISOString() : null
+      };
+
+      // Doküman yoksa: önceki create sırasında kayboldu (QUIC vs.).
+      // Aynı ID ile yeniden oluştur ki kullanıcının state'i bozulmasın.
+      if (!currentElection) {
+        console.warn(`⚠️ Election ${id} bulunamadı; aynı ID ile yeniden oluşturuluyor.`);
+        const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        const docRef = doc(db, this.COLLECTIONS.ELECTIONS, id);
+        await setDoc(docRef, {
+          ...payload,
+          id,
+          round: payload.round || 1,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          _collection: this.COLLECTIONS.ELECTIONS,
+          _recreated: true
+        });
+        return { success: true, message: 'Seçim kaydedildi (kayıp kayıt geri yüklendi)' };
+      }
+
       await FirebaseService.update(
         this.COLLECTIONS.ELECTIONS,
         id,
-        {
-          ...electionData,
-          date: electionData.date ? new Date(electionData.date).toISOString() : null
-        },
+        payload,
         false // Şifreleme yok
       );
       return { success: true, message: 'Seçim güncellendi' };
@@ -4089,8 +4090,43 @@ class FirebaseApiService {
 
   static async deleteElection(id) {
     try {
+      // 1. Bu seçime ait tüm election_results kayıtlarını sil
+      try {
+        const { collection, query, where, getDocs, writeBatch } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        const resultsRef = collection(db, 'election_results');
+        const q = query(resultsRef, where('election_id', '==', id));
+        const snapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(d => batch.delete(d.ref));
+
+        // Alternatif alan adları da kontrol et
+        const q2 = query(resultsRef, where('electionId', '==', id));
+        const snapshot2 = await getDocs(q2);
+        snapshot2.docs.forEach(d => batch.delete(d.ref));
+
+        if (snapshot.docs.length > 0 || snapshot2.docs.length > 0) {
+          await batch.commit();
+        }
+      } catch (e) {
+        console.warn('election_results temizleme hatasi:', e);
+      }
+
+      // 2. featuredElectionId temizle (eğer bu seçimse)
+      try {
+        const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('../config/firebase');
+        const landingDoc = await getDoc(doc(db, 'landing_content', 'main'));
+        if (landingDoc.exists() && landingDoc.data().featuredElectionId === id) {
+          await updateDoc(doc(db, 'landing_content', 'main'), { featuredElectionId: '' });
+        }
+      } catch (e) {
+        console.warn('featuredElectionId temizleme hatasi:', e);
+      }
+
+      // 3. Seçimi sil
       await FirebaseService.delete(this.COLLECTIONS.ELECTIONS, id);
-      return { success: true, message: 'Seçim silindi' };
+      return { success: true, message: 'Seçim ve ilgili sonuçlar silindi' };
     } catch (error) {
       console.error('Delete election error:', error);
       throw new Error('Seçim silinirken hata oluştu');
@@ -4236,25 +4272,15 @@ class FirebaseApiService {
   // Election Results API
   static async getElectionResults(electionId, ballotBoxId) {
     try {
-      const allResults = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS, {}, false);
+      // Server-side filter ile gereksiz okuma yapmamak için where clause.
+      // 2000 sandık × 200 sorumlu yükünde getAll fan-out katlanıyordu.
+      const where = [];
+      if (electionId) where.push({ field: 'election_id', value: String(electionId) });
+      if (ballotBoxId) where.push({ field: 'ballot_box_id', value: String(ballotBoxId) });
 
-      let filtered = allResults || [];
-
-      // Filter by election ID
-      if (electionId) {
-        filtered = filtered.filter(result =>
-          String(result.election_id || result.electionId) === String(electionId)
-        );
-      }
-
-      // Filter by ballot box ID
-      if (ballotBoxId) {
-        filtered = filtered.filter(result =>
-          String(result.ballot_box_id || result.ballotBoxId) === String(ballotBoxId)
-        );
-      }
-
-      return filtered;
+      const options = where.length > 0 ? { where } : {};
+      const results = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS, options, false);
+      return results || [];
     } catch (error) {
       console.error('Get election results error:', error);
       return [];
@@ -4270,41 +4296,90 @@ class FirebaseApiService {
     }
   }
 
-  static validateVoteData(data) {
+  // category: 'cb' | 'mv' | null
+  // Genel seçimde CB ve MV TUTANAKLARI farklı sayılara sahip olabilir (CB valid=315,
+  // MV valid=309). Kategori save'inde sadece o kategorinin alanları validate edilir.
+  // category=null + cb_*/mv_* doluysa (genel seçim "Hepsini Kaydet"), her ikisi
+  // ayrı ayrı kendi sayı setine göre kontrol edilir — paylaşılan valid_votes
+  // kullanılmaz.
+  static validateVoteData(data, category = null) {
     const errors = [];
-    const totalVoters = parseInt(data.total_voters) || 0;
-    const usedVotes = parseInt(data.used_votes) || 0;
-    const validVotes = parseInt(data.valid_votes) || 0;
-    const invalidVotes = parseInt(data.invalid_votes) || 0;
+    const hasCbCategory = data.cb_valid_votes != null && data.cb_valid_votes !== '';
+    const hasMvCategory = data.mv_valid_votes != null && data.mv_valid_votes !== '';
 
-    if (totalVoters < 0 || usedVotes < 0 || validVotes < 0 || invalidVotes < 0) {
-      errors.push('Oy değerleri negatif olamaz');
-    }
-    if (usedVotes > totalVoters) {
-      errors.push('Kullanılan oy toplam seçmenden fazla olamaz');
-    }
-    if (validVotes + invalidVotes !== usedVotes) {
-      errors.push('Geçerli + Geçersiz oylar kullanılan oy sayısına eşit olmalı');
-    }
-
-    // Check party vote totals for each category present (only when category has data)
-    const voteCategories = ['cb_votes', 'mv_votes', 'mayor_votes', 'municipal_council_votes', 'provincial_assembly_votes'];
-    voteCategories.forEach(cat => {
-      if (data[cat] && typeof data[cat] === 'object' && Object.keys(data[cat]).length > 0) {
-        const total = Object.values(data[cat]).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
-        if (total !== validVotes) {
-          errors.push(`Parti oy toplamı (${total}) geçerli oy sayısından (${validVotes}) farklı`);
-        }
+    const checkOne = (cat) => {
+      let totalVoters, usedVotes, validVotes, invalidVotes, votesField;
+      if (cat === 'cb') {
+        totalVoters = parseInt(data.cb_total_voters ?? data.total_voters) || 0;
+        usedVotes = parseInt(data.cb_used_votes ?? data.used_votes) || 0;
+        validVotes = parseInt(data.cb_valid_votes ?? data.valid_votes) || 0;
+        invalidVotes = parseInt(data.cb_invalid_votes ?? data.invalid_votes) || 0;
+        votesField = 'cb_votes';
+      } else if (cat === 'mv') {
+        totalVoters = parseInt(data.mv_total_voters ?? data.total_voters) || 0;
+        usedVotes = parseInt(data.mv_used_votes ?? data.used_votes) || 0;
+        validVotes = parseInt(data.mv_valid_votes ?? data.valid_votes) || 0;
+        invalidVotes = parseInt(data.mv_invalid_votes ?? data.invalid_votes) || 0;
+        votesField = 'mv_votes';
+      } else {
+        totalVoters = parseInt(data.total_voters) || 0;
+        usedVotes = parseInt(data.used_votes) || 0;
+        validVotes = parseInt(data.valid_votes) || 0;
+        invalidVotes = parseInt(data.invalid_votes) || 0;
+        votesField = null;
       }
-    });
+
+      // Sadece temel mantık kontrolleri: negatif değer ve kullanılan > toplam_seçmen.
+      // Parti/aday toplam vs valid_votes karşılaştırması KALDIRILDI — AI okuma payı ve
+      // tutanaktaki sayılar arasında doğal farklar olabiliyor; kullanıcı manuel
+      // kontrol edip save ediyor, validation save'i engellememeli.
+      if (totalVoters < 0 || usedVotes < 0 || validVotes < 0 || invalidVotes < 0) {
+        errors.push(`${cat ? cat.toUpperCase() + ': ' : ''}Oy değerleri negatif olamaz`);
+      }
+      if (totalVoters > 0 && usedVotes > totalVoters) {
+        errors.push(`${cat ? cat.toUpperCase() + ': ' : ''}Kullanılan oy toplam seçmenden fazla olamaz`);
+      }
+    };
+
+    if (category === 'cb' || category === 'mv') {
+      checkOne(category);
+    } else if (hasCbCategory || hasMvCategory) {
+      // Genel seçim "Hepsini Kaydet" — kategori-bazlı setleri ayrı ayrı kontrol et
+      if (hasCbCategory) checkOne('cb');
+      if (hasMvCategory) checkOne('mv');
+    } else {
+      // Genel seçim ama cb_*/mv_* alanları boş VE cb_votes/mv_votes dolu
+      // (eski format kayıt, henüz kategori-bazlı sayılar girilmemiş) — paylaşılan
+      // valid_votes ile parti total karşılaştırmasını atla; kullanıcı hatasız save edebilsin.
+      const hasGeneralCategoryVotes =
+        (data.cb_votes && Object.keys(data.cb_votes).length > 0) ||
+        (data.mv_votes && Object.keys(data.mv_votes).length > 0);
+      if (hasGeneralCategoryVotes) {
+        // Sadece temel mantık (negatif değer, kullanılan>toplam_seçmen)
+        const totalVoters = parseInt(data.total_voters) || 0;
+        const usedVotes = parseInt(data.used_votes) || 0;
+        const validVotes = parseInt(data.valid_votes) || 0;
+        const invalidVotes = parseInt(data.invalid_votes) || 0;
+        if (totalVoters < 0 || usedVotes < 0 || validVotes < 0 || invalidVotes < 0) {
+          errors.push('Oy değerleri negatif olamaz');
+        }
+        if (totalVoters > 0 && usedVotes > totalVoters) {
+          errors.push('Kullanılan oy toplam seçmenden fazla olamaz');
+        }
+      } else {
+        checkOne(null);
+      }
+    }
 
     return errors;
   }
 
   static async createElectionResult(resultData) {
     try {
-      // Vote data validation
-      const validationErrors = FirebaseApiService.validateVoteData(resultData);
+      // Kategori bilgisi (cb/mv) — kategori-bazlı validation için
+      const category = resultData._category || null;
+      delete resultData._category; // Firestore'a yazma
+      const validationErrors = FirebaseApiService.validateVoteData(resultData, category);
       if (validationErrors.length > 0) {
         return { success: false, errors: validationErrors, message: validationErrors.join(', ') };
       }
@@ -4313,31 +4388,75 @@ class FirebaseApiService {
       const filledByAI = resultData.filled_by_ai === true || resultData.filled_by_ai === 1;
       const approvalStatus = filledByAI ? 'pending' : (resultData.approval_status || 'approved');
 
+      // Editor tracking (kim kaydetti)
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || user.uid || null;
+      const userName = user.name || user.fullName || user.displayName || null;
+      const userRole = user.role || user.userType || localStorage.getItem('userRole') || null;
+      const nowIso = new Date().toISOString();
+
       const dataToSave = {
         ...resultData,
         filled_by_ai: filledByAI,
         approval_status: approvalStatus,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_by: userId,
+        created_by_name: userName,
+        created_by_role: userRole,
+        created_by_at: nowIso,
+        created_at: nowIso,
+        updated_at: nowIso
       };
 
-      const docId = await FirebaseService.create(
-        this.COLLECTIONS.ELECTION_RESULTS,
-        null,
-        dataToSave
-      );
+      // Kategori-bazlı son düzenleyici alanları (create de bir edit)
+      if (category === 'cb' || category === null) {
+        dataToSave.cb_last_edited_by = userId;
+        dataToSave.cb_last_edited_by_name = userName;
+        dataToSave.cb_last_edited_by_role = userRole;
+        dataToSave.cb_last_edited_at = nowIso;
+      }
+      if (category === 'mv' || category === null) {
+        dataToSave.mv_last_edited_by = userId;
+        dataToSave.mv_last_edited_by_name = userName;
+        dataToSave.mv_last_edited_by_role = userRole;
+        dataToSave.mv_last_edited_at = nowIso;
+      }
 
-      // Audit log
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      // Cloud Function üzerinden güvenli yazma (rol+zincir kontrolü server-side).
+      // Rules sıkılaştırıldıktan sonra TEK yazma yolu bu.
+      const ballotBoxId = String(
+        dataToSave.ballot_box_id || dataToSave.ballotBoxId || ''
+      );
+      if (!ballotBoxId) {
+        return { success: false, message: 'ballot_box_id eksik' };
+      }
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Functions yüklenemedi');
+      const submitFn = httpsCallable(functions, 'submitElectionResult');
+      const submitRes = await submitFn({
+        ballotBoxId,
+        mode: 'create',
+        payload: dataToSave
+      });
+      const docId = submitRes?.data?.id;
+      if (!docId) {
+        return { success: false, message: 'Server-side yazma başarısız' };
+      }
+
+      // Audit log — kategori bilgili, zenginleştirilmiş
+      const auditAction = category ? `create_${category}` : 'create';
       const auditData = {
-        user_id: user.id || user.uid || null,
-        user_type: localStorage.getItem('userRole') || 'observer',
-        action: 'create',
+        user_id: userId,
+        user_name: userName,
+        user_role: userRole,
+        user_type: localStorage.getItem('userRole') || userRole || 'observer',
+        category: category,
+        action: auditAction,
         entity_type: 'election_result',
         entity_id: docId,
         new_data: dataToSave,
         user_agent: navigator.userAgent,
-        created_at: new Date().toISOString()
+        created_at: nowIso
       };
       await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
 
@@ -4350,8 +4469,9 @@ class FirebaseApiService {
 
   static async updateElectionResult(id, resultData) {
     try {
-      // Vote data validation
-      const validationErrors = FirebaseApiService.validateVoteData(resultData);
+      const category = resultData._category || null;
+      delete resultData._category;
+      const validationErrors = FirebaseApiService.validateVoteData(resultData, category);
       if (validationErrors.length > 0) {
         return { success: false, errors: validationErrors, message: validationErrors.join(', ') };
       }
@@ -4359,10 +4479,53 @@ class FirebaseApiService {
       // Get old data for audit
       const oldResult = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
 
-      await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, resultData);
+      // Editor tracking (kim güncelledi)
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || user.uid || null;
+      const userName = user.name || user.fullName || user.displayName || null;
+      const userRole = user.role || user.userType || localStorage.getItem('userRole') || null;
+      const nowIso = new Date().toISOString();
+
+      // resultData'ya kategori-bazlı son düzenleyici alanları ekle
+      // Böylece Firestore'a yazılan tek update payload'unda olur ve audit changes'e de yansır
+      if (category === 'cb' || category === null) {
+        resultData.cb_last_edited_by = userId;
+        resultData.cb_last_edited_by_name = userName;
+        resultData.cb_last_edited_by_role = userRole;
+        resultData.cb_last_edited_at = nowIso;
+      }
+      if (category === 'mv' || category === null) {
+        resultData.mv_last_edited_by = userId;
+        resultData.mv_last_edited_by_name = userName;
+        resultData.mv_last_edited_by_role = userRole;
+        resultData.mv_last_edited_at = nowIso;
+      }
+      // updated_at her güncellemede yenilensin
+      resultData.updated_at = nowIso;
+
+      // Cloud Function üzerinden güvenli yazma. ballotBoxId mevcut doc'tan
+      // ya da yeni payload'dan alınır (saldırgan değiştiremez — server zorlar).
+      const ballotBoxId = String(
+        oldResult?.ballot_box_id ||
+        resultData.ballot_box_id ||
+        resultData.ballotBoxId ||
+        ''
+      );
+      if (!ballotBoxId) {
+        throw new Error('ballot_box_id bulunamadı (update için gerekli)');
+      }
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Functions yüklenemedi');
+      const submitFn = httpsCallable(functions, 'submitElectionResult');
+      await submitFn({
+        ballotBoxId,
+        mode: 'update',
+        docId: String(id),
+        payload: resultData
+      });
 
       // Audit log with change tracking
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
       const changes = {};
 
       // Track which fields changed (undefined değerleri filtrele)
@@ -4384,17 +4547,21 @@ class FirebaseApiService {
         });
       }
 
+      const auditAction = category ? `update_${category}` : 'update';
       const auditData = {
-        user_id: user.id || user.uid || null,
-        user_type: localStorage.getItem('userRole') || 'observer',
-        action: 'update',
+        user_id: userId,
+        user_name: userName,
+        user_role: userRole,
+        user_type: localStorage.getItem('userRole') || userRole || 'observer',
+        category: category,
+        action: auditAction,
         entity_type: 'election_result',
         entity_id: id,
         old_data: oldResult,
         new_data: resultData,
         changes: changes,
         user_agent: navigator.userAgent,
-        created_at: new Date().toISOString()
+        created_at: nowIso
       };
       await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
 
@@ -4434,61 +4601,66 @@ class FirebaseApiService {
   }
 
   // Get pending election results (for chief observer)
+  // Capabilities Model: Genel seçim sonuçlarında CB ve MV ayrı onay sürecinden geçer.
+  // Her pending entry, kayıt + kategori (cb|mv|null) içerir. Aynı kayıt hem CB hem MV
+  // pending ise listede 2 entry olarak gözükür — admin her birini ayrı onaylayabilir.
   static async getPendingElectionResults(ballotBoxId = null) {
     try {
       const allResults = await FirebaseService.getAll(this.COLLECTIONS.ELECTION_RESULTS, false);
 
-      // Filter pending results
-      let pendingResults = allResults.filter(result =>
-        result.approval_status === 'pending'
-      );
-
-      // Sandık izolasyonu: Eğer ballotBoxId verilmişse, sadece o sandığın sonuçlarını göster
+      let baseResults = allResults;
       if (ballotBoxId) {
-        pendingResults = pendingResults.filter(result =>
-          String(result.ballot_box_id) === String(ballotBoxId)
-        );
+        baseResults = baseResults.filter(r => String(r.ballot_box_id) === String(ballotBoxId));
+      }
+
+      // Pending entries oluştur: genel seçimde CB ve MV ayrı kayıtmış gibi davran
+      const pendingEntries = [];
+      for (const result of baseResults) {
+        const hasCategoryStatus = result.cb_status || result.mv_status;
+        if (hasCategoryStatus) {
+          if (result.cb_status === 'pending') {
+            pendingEntries.push({ ...result, category: 'cb' });
+          }
+          if (result.mv_status === 'pending') {
+            pendingEntries.push({ ...result, category: 'mv' });
+          }
+        } else if (result.approval_status === 'pending') {
+          // Eski tip kayıtlar (genel seçim olmayan veya migration öncesi)
+          pendingEntries.push({ ...result, category: null });
+        }
       }
 
       // Enrich with election and ballot box data
       const enrichedResults = await Promise.all(
-        pendingResults.map(async (result) => {
+        pendingEntries.map(async (entry) => {
           let election = null;
           let ballotBox = null;
           let creator = null;
 
-          if (result.election_id) {
+          if (entry.election_id) {
             try {
-              election = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, result.election_id, false);
-            } catch (e) {
-              console.warn('Election not found:', result.election_id);
-            }
+              election = await FirebaseService.getById(this.COLLECTIONS.ELECTIONS, entry.election_id, false);
+            } catch (e) { /* sessiz */ }
           }
-
-          if (result.ballot_box_id) {
+          if (entry.ballot_box_id) {
             try {
-              ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, result.ballot_box_id, false);
-            } catch (e) {
-              console.warn('Ballot box not found:', result.ballot_box_id);
-            }
+              ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, entry.ballot_box_id, false);
+            } catch (e) { /* sessiz */ }
           }
-
-          if (result.created_by) {
+          if (entry.created_by) {
             try {
-              creator = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, result.created_by, false);
-            } catch (e) {
-              console.warn('Creator not found:', result.created_by);
-            }
+              creator = await FirebaseService.getById(this.COLLECTIONS.MEMBERS, entry.created_by, false);
+            } catch (e) { /* sessiz */ }
           }
 
           return {
-            ...result,
+            ...entry,
             election_name: election?.name || null,
             election_type: election?.type || null,
             election_date: election?.date || null,
-            ballot_number: ballotBox?.ballot_number || result.ballot_number || null,
+            ballot_number: ballotBox?.ballot_number || entry.ballot_number || null,
             voter_count: ballotBox?.voter_count || null,
-            creator_name: creator?.name || null
+            creator_name: creator?.name || null,
           };
         })
       );
@@ -4500,94 +4672,236 @@ class FirebaseApiService {
     }
   }
 
-  // Approve election result (chief observer only)
-  static async approveElectionResult(id) {
+  // Approve election result — kategori-bazlı (genel seçimde 'cb' veya 'mv' ayrı onay).
+  // category null ise eski tip (approval_status) kullanılır.
+  // options.auto_approve_reason: opsiyonel, sorumlu auto-approve sebebi (örn 'no_observer')
+  static async approveElectionResult(id, category = null, options = {}) {
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const userId = user.id || user.uid || null;
+      const autoApproveReason = options && options.auto_approve_reason ? options.auto_approve_reason : null;
 
-      // Get the result
-      const result = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
-      if (!result) {
-        throw new Error('Seçim sonucu bulunamadı');
-      }
+      // Cloud Function üzerinden — election_results write rule sıkı (admin only),
+      // function admin SDK ile yazar + canWriteToBallotBox yetki kontrolü yapar.
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Functions yüklenemedi');
+      const fn = httpsCallable(functions, 'approveElectionResult');
+      await fn({
+        resultId: String(id),
+        category,
+        autoApproveReason,
+        mode: 'approve'
+      });
 
-      // Check if already approved
-      if (result.approval_status === 'approved') {
-        throw new Error('Bu sonuç zaten onaylanmış');
-      }
+      // Audit log client-side (function başarılıysa)
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userId = user.id || user.uid || null;
+        const userName = user.name || user.fullName || user.displayName || null;
+        const userRole = user.role || user.userType || localStorage.getItem('userRole') || null;
+        const auditData = {
+          user_id: userId,
+          user_name: userName,
+          user_role: userRole,
+          user_type: localStorage.getItem('userRole') || userRole || 'chief_observer',
+          category: category,
+          action: category ? `approve_${category}` : 'approve',
+          auto_approve_reason: autoApproveReason,
+          entity_type: 'election_result',
+          entity_id: id,
+          user_agent: navigator.userAgent,
+          created_at: new Date().toISOString(),
+        };
+        await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+      } catch (_) { /* audit log şart değil */ }
 
-      // Update approval status
-      await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, {
-        approval_status: 'approved',
-        approved_by: userId,
-        approved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, false);
-
-      // Audit log
-      const auditData = {
-        user_id: userId,
-        user_type: localStorage.getItem('userRole') || 'chief_observer',
-        action: 'approve',
-        entity_type: 'election_result',
-        entity_id: id,
-        new_data: { approval_status: 'approved' },
-        user_agent: navigator.userAgent,
-        created_at: new Date().toISOString()
-      };
-      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
-
-      return { success: true, message: 'Seçim sonucu başarıyla onaylandı' };
+      const label = category === 'cb' ? 'CB' : (category === 'mv' ? 'MV' : 'Sonuç');
+      return { success: true, message: `${label} başarıyla onaylandı` };
     } catch (error) {
       console.error('Approve election result error:', error);
       throw new Error(error.message || 'Sonuç onaylanırken hata oluştu');
     }
   }
 
-  // Reject election result (chief observer only)
-  static async rejectElectionResult(id, rejectionReason = '') {
+  /**
+   * Bir seçim sonucuna ait audit_logs kayıtlarını getir.
+   * created_at'a göre eskiden yeniye sıralanır.
+   * @param {string} electionResultId
+   * @returns {Promise<{success: boolean, logs: Array}>}
+   */
+  static async getElectionResultAuditLogs(electionResultId) {
+    try {
+      if (!electionResultId) {
+        return { success: true, logs: [] };
+      }
+      const allLogs = await FirebaseService.getAll(this.COLLECTIONS.AUDIT_LOGS, false);
+      const filtered = (allLogs || [])
+        .filter(l =>
+          l && l.entity_type === 'election_result' &&
+          String(l.entity_id) === String(electionResultId)
+        )
+        .map(l => ({
+          id: l.id,
+          action: l.action || null,
+          user_id: l.user_id || null,
+          user_name: l.user_name || null,
+          user_role: l.user_role || l.user_type || null,
+          category: l.category || null,
+          new_data: l.new_data || null,
+          created_at: l.created_at || null,
+        }))
+        .sort((a, b) => {
+          const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return ta - tb;
+        });
+
+      return { success: true, logs: filtered };
+    } catch (error) {
+      console.error('Get election result audit logs error:', error);
+      throw new Error('Denetim kayıtları alınırken hata oluştu');
+    }
+  }
+
+  // Reject = oy verilerini TEMİZLE ama kategoriye 'rejected' status koy.
+  // Müşahit dashboard'da "Reddedildi - Tekrar Gir" görsün; sebep kayıtlı olsun.
+  // category='cb' → CB oy alanları null, cb_status='rejected', sebep ve reddeden korunur.
+  // category='mv' → aynısı MV için.
+  // category=null → eski tip (genel olmayan) seçimler için approval_status='rejected'.
+  // Müşahit yeniden girip submit edince status='pending' olur, onaya tekrar gider.
+  static async rejectElectionResult(id, rejectionReason = '', category = null) {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const userId = user.id || user.uid || null;
+      const userName = user.name || user.fullName || user.displayName || null;
+      const userRole = user.role || user.userType || localStorage.getItem('userRole') || null;
+      const nowIso = new Date().toISOString();
 
-      // Get the result
       const result = await FirebaseService.getById(this.COLLECTIONS.ELECTION_RESULTS, id, false);
-      if (!result) {
-        throw new Error('Seçim sonucu bulunamadı');
-      }
+      if (!result) throw new Error('Seçim sonucu bulunamadı');
 
-      // Check if already approved
-      if (result.approval_status === 'approved') {
-        throw new Error('Onaylanmış sonuç reddedilemez. Önce onayı kaldırın.');
-      }
+      const hasCbData = (result.cb_votes && typeof result.cb_votes === 'object' && Object.keys(result.cb_votes).length > 0)
+        || !!result.signed_protocol_photo
+        || !!result.cb_valid_votes;
+      const hasMvData = (result.mv_votes && typeof result.mv_votes === 'object' && Object.keys(result.mv_votes).length > 0)
+        || !!result.signed_mv_protocol_photo
+        || !!result.mv_valid_votes;
+      const hasObjection = !!result.objection_protocol_photo;
 
-      // Update rejection status - Reddedilen sonuçlar seçim alanına geri düşer (pending olur)
-      await FirebaseService.update(this.COLLECTIONS.ELECTION_RESULTS, id, {
-        approval_status: 'pending', // Reddedilen sonuçlar tekrar düzenlenebilir olmalı
-        rejected_by: userId,
-        rejected_at: new Date().toISOString(),
-        rejection_reason: rejectionReason || 'Reddedilme nedeni belirtilmedi',
-        updated_at: new Date().toISOString()
-      }, false);
+      let action = '';
+      let auditNewData = {};
+
+      // NOT: Firestore rules `delete`'i sadece admin'e açtığı için müşahit
+      // dokümanı silemez. Bu yüzden alanları null yaparak "soft delete" yapıyoruz.
+      // ÖNEMLİ: cb_status / mv_status 'rejected' kalıyor → müşahit dashboard'da
+      // "Reddedildi - Tekrar Gir" badge görür. Yeniden submit'te 'pending'e döner.
+      const cbClearAlanlar = {
+        cb_votes: null,
+        signed_protocol_photo: null,
+        cb_status: 'rejected',
+        cb_total_voters: null,
+        cb_used_votes: null,
+        cb_valid_votes: null,
+        cb_invalid_votes: null,
+        cb_submitted_at: null,
+        cb_approved_by: null,
+        cb_approved_at: null,
+        cb_rejection_reason: rejectionReason || 'Sebep belirtilmedi',
+        cb_rejected_by: userId,
+        cb_rejected_by_name: userName,
+        cb_rejected_by_role: userRole,
+        cb_rejected_at: nowIso,
+      };
+      const mvClearAlanlar = {
+        mv_votes: null,
+        signed_mv_protocol_photo: null,
+        mv_status: 'rejected',
+        mv_total_voters: null,
+        mv_used_votes: null,
+        mv_valid_votes: null,
+        mv_invalid_votes: null,
+        mv_submitted_at: null,
+        mv_approved_by: null,
+        mv_approved_at: null,
+        mv_rejection_reason: rejectionReason || 'Sebep belirtilmedi',
+        mv_rejected_by: userId,
+        mv_rejected_by_name: userName,
+        mv_rejected_by_role: userRole,
+        mv_rejected_at: nowIso,
+      };
+
+      let updates;
+      if (category === 'cb') {
+        if (result.cb_status === 'approved') throw new Error('Onaylanmış CB sonucu reddedilemez. Önce onayı kaldırın.');
+        updates = { ...cbClearAlanlar, updated_at: new Date().toISOString() };
+        action = 'reject_cb';
+      } else if (category === 'mv') {
+        if (result.mv_status === 'approved') throw new Error('Onaylanmış MV sonucu reddedilemez. Önce onayı kaldırın.');
+        updates = { ...mvClearAlanlar, updated_at: new Date().toISOString() };
+        action = 'reject_mv';
+      } else {
+        // Eski tip seçim — tüm oy alanlarını + tutanakları temizle, status='rejected' tut
+        if (result.approval_status === 'approved') throw new Error('Onaylanmış sonuç reddedilemez. Önce onayı kaldırın.');
+        updates = {
+          ...cbClearAlanlar,
+          ...mvClearAlanlar,
+          mayor_votes: null,
+          provincial_assembly_votes: null,
+          municipal_council_votes: null,
+          referendum_votes: null,
+          party_votes: null,
+          candidate_votes: null,
+          objection_protocol_photo: null,
+          has_objection: false,
+          objection_reason: null,
+          total_voters: null,
+          used_votes: null,
+          valid_votes: null,
+          invalid_votes: null,
+          approval_status: 'rejected',
+          rejection_reason: rejectionReason || 'Sebep belirtilmedi',
+          rejected_by: userId,
+          rejected_by_name: userName,
+          rejected_by_role: userRole,
+          rejected_at: nowIso,
+          updated_at: nowIso,
+        };
+        action = 'reject';
+      }
+      // Cloud Function üzerinden — election_results write rule sıkı (admin only),
+      // submitElectionResult mode='update' admin SDK ile yazar + yetki kontrolü yapar.
+      const ballotBoxId = String(result.ballot_box_id || result.ballotBoxId || '');
+      if (!ballotBoxId) throw new Error('ballot_box_id bulunamadı');
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Functions yüklenemedi');
+      const fn = httpsCallable(functions, 'submitElectionResult');
+      await fn({
+        ballotBoxId,
+        mode: 'update',
+        docId: String(id),
+        payload: updates
+      });
+      auditNewData = updates;
 
       // Audit log
       const auditData = {
         user_id: userId,
         user_type: localStorage.getItem('userRole') || 'chief_observer',
-        action: 'reject',
+        action,
         entity_type: 'election_result',
         entity_id: id,
-        new_data: { approval_status: 'rejected', rejection_reason: rejectionReason },
+        new_data: auditNewData,
+        rejection_reason: rejectionReason || '',
         user_agent: navigator.userAgent,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
-      await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false);
+      try { await FirebaseService.create(this.COLLECTIONS.AUDIT_LOGS, null, auditData, false); } catch (_) {}
 
-      return { success: true, message: 'Seçim sonucu reddedildi' };
+      const label = category === 'cb' ? 'CB sonucu' : (category === 'mv' ? 'MV sonucu' : 'Sonuç');
+      return { success: true, message: `${label} silindi (müşahit yeniden girebilir)` };
     } catch (error) {
       console.error('Reject election result error:', error);
-      throw new Error(error.message || 'Sonuç reddedilirken hata oluştu');
+      throw new Error(error.message || 'Sonuç silinirken hata oluştu');
     }
   }
 
@@ -4946,34 +5260,31 @@ class FirebaseApiService {
             return memberTc === tc;
           });
 
-          if (member && member.id) {
-            // Sandık numarasını kontrol et
-            let username, password;
-            const ballotBoxId = observerData.ballot_box_id || null;
-            if (ballotBoxId) {
-              const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, ballotBoxId);
-              if (ballotBox && ballotBox.ballot_number) {
-                // Farklı ilçeler aynı sandık no kullanabildiği için username = İlçeKodu + SandıkNo
-                const { observerUsername } = await import('./districtCode');
-                let districtName = '';
-                if (ballotBox.district_id) {
-                  const district = await FirebaseService.getById(this.COLLECTIONS.DISTRICTS, ballotBox.district_id);
-                  districtName = district?.name || '';
-                }
-                username = observerUsername(districtName, ballotBox.ballot_number);
-                password = tc;
-              } else {
-                // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
-                username = tc;
-                password = tc;
-              }
-            } else {
-              // Sandık numarası yok - Kullanıcı adı: TC, Şifre: TC
-              username = tc;
-              password = tc;
-            }
+          // Sandık metaverisini hazırla — login sırasında ek query yapmamak için
+          // member_users kaydında doğrudan tutulur. (Tek müşahit atamasında
+          // "Tüm Kullanıcıları Oluştur"'a basmaya gerek kalmasın.)
+          const ballotBoxId = observerData.ballot_box_id || null;
+          let ballotNumber = null;
+          if (ballotBoxId) {
+            try {
+              const bb = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, ballotBoxId);
+              if (bb && bb.ballot_number) ballotNumber = bb.ballot_number;
+            } catch (e) { /* sessiz */ }
+          }
 
-            // Mevcut kullanıcıyı bul
+          if (member && member.id) {
+            // Capabilities Model: username = TC, password = telefon (yoksa TC fallback)
+            const username = tc;
+            let phone = member.phone || '';
+            try {
+              if (phone && typeof phone === 'string' && phone.startsWith('U2FsdGVkX1')) {
+                phone = decryptData(phone);
+              }
+            } catch (e) {}
+            phone = (phone || '').toString().replace(/\D/g, '');
+            const password = (phone && phone.length >= 6) ? phone : tc;
+
+            // Üye için mevcut kullanıcıyı bul ve observerId'yi bağla
             const existingUsers = await FirebaseService.findByField(
               this.COLLECTIONS.MEMBER_USERS,
               'memberId',
@@ -4981,17 +5292,57 @@ class FirebaseApiService {
             );
 
             if (!existingUsers || existingUsers.length === 0) {
-              // Kullanıcı yoksa oluştur
               await this.createMemberUser(member.id, username, password);
+              const created = await FirebaseService.findByField(
+                this.COLLECTIONS.MEMBER_USERS, 'memberId', member.id
+              );
+              if (created && created[0]) {
+                await FirebaseService.update(
+                  this.COLLECTIONS.MEMBER_USERS, created[0].id,
+                  {
+                    observerId: id,
+                    ballotBoxId,
+                    ballot_box_id: ballotBoxId,
+                    ballotNumber,
+                    ballot_number: ballotNumber,
+                  },
+                  false
+                );
+              }
             } else {
               const existingUser = existingUsers[0];
-              if (existingUser.username !== username) {
-                // Kullanıcı varsa ama kullanıcı adı farklıysa güncelle
-                await this.updateMemberUser(existingUser.id, username, password);
-              }
+              const updateData = {
+                observerId: id,
+                ballotBoxId,
+                ballot_box_id: ballotBoxId,
+                ballotNumber,
+                ballot_number: ballotNumber,
+              };
+              if (existingUser.username !== username) updateData.username = username;
+              await FirebaseService.update(
+                this.COLLECTIONS.MEMBER_USERS, existingUser.id, updateData, false
+              );
             }
           } else {
-            console.warn(`⚠️ Başmüşahit için üye bulunamadı (TC: ${tc}), kullanıcı oluşturulmadı`);
+            // Üye olmayan saf müşahit — TC'li mevcut kullanıcıyı bul ve sandık metaverisini güncelle
+            const existingByTc = await FirebaseService.findByField(
+              this.COLLECTIONS.MEMBER_USERS, 'username', tc
+            );
+            if (existingByTc && existingByTc.length > 0) {
+              await FirebaseService.update(
+                this.COLLECTIONS.MEMBER_USERS, existingByTc[0].id,
+                {
+                  observerId: id,
+                  ballotBoxId,
+                  ballot_box_id: ballotBoxId,
+                  ballotNumber,
+                  ballot_number: ballotNumber,
+                },
+                false
+              );
+            } else {
+              console.warn(`⚠️ Başmüşahit için kullanıcı bulunamadı (TC: ${tc}). "Tüm Kullanıcıları Oluştur" gerekli.`);
+            }
           }
         } catch (userError) {
           console.error('❌ Başmüşahit kullanıcısı güncellenirken hata:', userError);
@@ -5015,91 +5366,44 @@ class FirebaseApiService {
         throw new Error('Müşahit bulunamadı');
       }
 
-      // Müşahite ait member_user kayıtlarını bul (userType='musahit' ve observerId ile)
+      // Capabilities Model: observerId ile eşleşen member_user kayıtlarını bul
+      // - Hibrit (üye+müşahit): SADECE observerId'yi temizle, kullanıcıyı silme.
+      // - Saf müşahit (userType='musahit', member_id yok): tamamen sil.
       try {
-        // observerId ile eşleşen member_user kayıtlarını bul
         const memberUsers = await FirebaseService.findByField(
           this.COLLECTIONS.MEMBER_USERS,
           'observerId',
           id
         );
 
-        // Username ile de kontrol et (observerId yoksa)
-        let memberUsersByUsername = [];
-        if (!memberUsers || memberUsers.length === 0) {
-          // TC'yi decrypt et
-          let tc = observer.tc || '';
+        for (const memberUser of (memberUsers || [])) {
           try {
-            if (tc && tc.startsWith('U2FsdGVkX1')) {
-              const { decryptData } = await import('../utils/crypto');
-              tc = decryptData(tc);
-            }
-          } catch (e) {
-            console.error('TC decrypt hatası:', e);
-          }
-
-          // Sandık numarasını bul (username olarak kullanılıyor)
-          let username = tc; // Varsayılan olarak TC
-          if (observer.ballot_box_id) {
-            const ballotBox = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, observer.ballot_box_id);
-            if (ballotBox && ballotBox.ballot_number) {
-              const { observerUsername } = await import('./districtCode');
-              let districtName = '';
-              if (ballotBox.district_id) {
-                const district = await FirebaseService.getById(this.COLLECTIONS.DISTRICTS, ballotBox.district_id);
-                districtName = district?.name || '';
+            const isHybrid = memberUser.member_id || memberUser.memberId;
+            if (isHybrid) {
+              await FirebaseService.update(
+                this.COLLECTIONS.MEMBER_USERS, memberUser.id,
+                { observerId: null }, false
+              );
+            } else {
+              const _hasBackend = typeof window !== 'undefined' &&
+                !/\.(web\.app|firebaseapp\.com)$/i.test(window.location.hostname);
+              if (memberUser.authUid && _hasBackend) {
+                try {
+                  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                  await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                } catch (authError) { /* Cloud Function trigger devreye girer */ }
               }
-              username = observerUsername(districtName, ballotBox.ballot_number);
+              await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, memberUser.id);
             }
-          }
-
-          // Username ile eşleşen member_user kayıtlarını bul
-          const allMemberUsers = await FirebaseService.getAll(this.COLLECTIONS.MEMBER_USERS);
-          memberUsersByUsername = (allMemberUsers || []).filter(u =>
-            u.userType === 'musahit' && u.username === username
-          );
-        }
-
-        // Tüm müşahit kullanıcılarını birleştir
-        const allMusahitUsers = [
-          ...(memberUsers || []),
-          ...memberUsersByUsername
-        ];
-
-        // Her kullanıcı için Firebase Auth kullanıcısını sil ve member_user'ı sil
-        for (const memberUser of allMusahitUsers) {
-          try {
-            // Firebase Auth kullanıcısını sil (eğer varsa) - Backend üzerinden
-            if (memberUser.authUid) {
-              try {
-                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-                const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
-                  method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
-                });
-
-                if (response.ok) {
-                } else {
-                  const errorData = await response.json().catch(() => ({}));
-                  console.warn('⚠️ Firebase Auth deletion via backend failed:', errorData.message || response.statusText);
-                }
-              } catch (authError) {
-                console.warn('⚠️ Firebase Auth deletion failed (non-critical):', authError);
-              }
-            }
-
-            // Firestore'dan member_user'ı sil
-            await FirebaseService.delete(this.COLLECTIONS.MEMBER_USERS, memberUser.id);
           } catch (userError) {
-            console.error('❌ Error deleting member user for observer:', userError);
-            // Devam et, diğer kullanıcıları da silmeyi dene
+            console.error('❌ Error processing member user for observer:', userError);
           }
         }
       } catch (userError) {
         console.error('❌ Error deleting member users for observer:', userError);
-        // Devam et, müşahit silme işlemini tamamla
       }
 
       // Müşahiti sil
@@ -5660,11 +5964,18 @@ class FirebaseApiService {
         return { success: false, message: 'Kullanıcı bulunamadı' };
       }
 
-      // Firebase Auth'dan silme işlemi - Backend servisi gerektirir
+      // Firebase Auth'dan silme işlemi - Backend servisi gerektirir.
+      // Production hosting'de (web.app/firebaseapp.com) Express backend yok;
+      // onMemberUserDelete Cloud Function trigger'ı Auth'u senkronize ediyor.
       let authDeleted = false;
-      if (memberUser.authUid) {
+      const hasBackend = (() => {
+        if (typeof window === 'undefined') return false;
+        const host = window.location.hostname;
+        if (/\.web\.app$/i.test(host) || /\.firebaseapp\.com$/i.test(host)) return false;
+        return true;
+      })();
+      if (memberUser.authUid && hasBackend) {
         try {
-          // Backend URL'ini belirle
           let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
           if (!API_BASE_URL) {
             if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
@@ -5676,40 +5987,17 @@ class FirebaseApiService {
             }
           }
 
-          // Backend endpoint'ini kullanarak Firebase Auth kullanıcısını sil
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
-
           const response = await fetch(`${API_BASE_URL}/auth/firebase-auth-user/${memberUser.authUid}`, {
             method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             signal: controller.signal
           });
-
           clearTimeout(timeoutId);
-
-          if (response.ok) {
-            authDeleted = true;
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMsg = errorData.message || response.statusText;
-            console.warn('⚠️ Firebase Auth deletion via backend failed:', errorMsg);
-            // Backend yoksa veya hata varsa, Firestore'dan silmeye devam et
-            // Ama kullanıcıya bilgi ver
-            if (errorMsg.includes('CORS') || errorMsg.includes('Failed to fetch') || response.status === 0) {
-              console.warn('⚠️ Backend servisi erişilemiyor, sadece Firestore\'dan siliniyor');
-            }
-          }
+          authDeleted = !!response.ok;
         } catch (authError) {
-          if (authError.name === 'AbortError') {
-            console.warn('⚠️ Backend servisi timeout, sadece Firestore\'dan siliniyor');
-          } else if (authError.message?.includes('CORS') || authError.message?.includes('Failed to fetch')) {
-            console.warn('⚠️ Backend servisi erişilemiyor (CORS/Network), sadece Firestore\'dan siliniyor');
-          } else {
-            console.warn('⚠️ Firebase Auth deletion failed:', authError.message);
-          }
+          // Sessizce yut — Cloud Function trigger Auth'u senkronize ediyor
         }
       }
 
@@ -6045,6 +6333,92 @@ class FirebaseApiService {
     } catch (error) {
       console.error('Send auto SMS error:', error);
       return { success: false, message: 'Otomatik SMS gönderilirken hata oluştu: ' + error.message };
+    }
+  }
+
+  /**
+   * Otomatik bildirim gönder (in-app + push) — toplantı/etkinlik planlandığında.
+   * SMS akışıyla paralel çalışır, aynı bölge filtresini kullanır.
+   * @param {'meeting'|'event'} type
+   * @param {{name: string, date?: string}} data — Başlık/açıklama için
+   * @param {string[]} regions — Hedef bölge isimleri (member.region eşleşmesi)
+   * @param {string} docId — Toplantı/etkinlik dokuman ID'si (notification data için)
+   * @returns {Promise<{success: boolean, sent?: number, failed?: number}>}
+   */
+  static async sendAutoNotificationForScheduled(type, data, regions, docId) {
+    try {
+      // Bölgesel üye listesini bul
+      const allMembers = await FirebaseService.getAll(this.COLLECTIONS.MEMBERS, {
+        where: [{ field: 'archived', operator: '==', value: false }]
+      }, false);
+
+      const targets = (allMembers || []).filter(m =>
+        m.region && Array.isArray(regions) && regions.includes(m.region)
+      );
+
+      if (targets.length === 0) {
+        return { success: false, message: 'Seçili bölgelerde üye yok' };
+      }
+
+      const isMeeting = type === 'meeting';
+      const title = isMeeting ? 'Yeni Toplantı Oluşturuldu' : 'Yeni Etkinlik Oluşturuldu';
+      const body = `${data.name || (isMeeting ? 'Toplantı' : 'Etkinlik')} - ${data.date || 'Tarih belirtilmemiş'}`;
+
+      const notificationData = {
+        title,
+        body,
+        type,
+        data: JSON.stringify({
+          ...(isMeeting ? { meetingId: docId, meetingName: data.name } : { eventId: docId, eventName: data.name }),
+          date: data.date
+        }),
+        read: false,
+        createdAt: new Date().toISOString(),
+        expiresAt: data.date
+          ? new Date(new Date(data.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          : null
+      };
+
+      // 1) In-app notifications (her hedef üye için Firestore kaydı)
+      let inAppSent = 0;
+      const memberIds = [];
+      for (const member of targets) {
+        try {
+          const memberId = getMemberId(member);
+          if (!memberId) continue;
+          const normalizedMemberId = String(memberId).trim();
+          memberIds.push(normalizedMemberId);
+          await FirebaseService.create(
+            this.COLLECTIONS.NOTIFICATIONS,
+            null,
+            { ...notificationData, memberId: normalizedMemberId },
+            false
+          );
+          inAppSent++;
+        } catch (err) {
+          console.error('In-app notification error for member:', err);
+        }
+      }
+
+      // 2) Push notifications (tek toplu çağrı, NotificationService üzerinden)
+      try {
+        const { sendPushNotifications } = await import('../services/NotificationService');
+        if (typeof sendPushNotifications === 'function' && memberIds.length > 0) {
+          await sendPushNotifications(memberIds, {
+            title,
+            body,
+            type,
+            url: isMeeting ? `/meetings` : `/events`
+          });
+        }
+      } catch (pushError) {
+        console.error('Push notification error (non-blocking):', pushError);
+      }
+
+      return { success: true, sent: inAppSent, total: targets.length };
+    } catch (error) {
+      console.error('Send auto notification error:', error);
+      return { success: false, message: error.message };
     }
   }
 
@@ -8314,7 +8688,9 @@ class FirebaseApiService {
         updated_at: new Date().toISOString()
       };
 
-      const docId = await FirebaseService.create(this.COLLECTIONS.ALLIANCES, alliance);
+      // FirebaseService.create signature: (collection, docId, data, encrypt)
+      // docId=null → otomatik ID üretilir
+      const docId = await FirebaseService.create(this.COLLECTIONS.ALLIANCES, null, alliance);
 
       return {
         id: docId,
@@ -9464,6 +9840,635 @@ class FirebaseApiService {
     } catch (e) {
       console.error('deleteAllVoters:', e);
       return { success: false, message: e?.message || 'Silme hatası', deleted: 0 };
+    }
+  }
+  // ─── Public Election Cache ───────────────────────────────────────────
+  // Admin panelinden seçim sonuçlarını public_election_cache koleksiyonuna
+  // aggregate edip yazar. Public sayfalar buradan okur (allow read: if true).
+
+  /**
+   * Seçim sonuçlarını aggregate edip public_election_cache/{electionId}'ye yazar.
+   * @param {string} electionId - elections koleksiyonundaki doc id
+   * @returns {{ success: boolean, message: string, data?: object }}
+   */
+  static async publishElectionResults(electionId, existingData = {}) {
+    try {
+      const { db } = await import('../config/firebase');
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
+
+      if (!db || !electionId) {
+        return { success: false, message: 'Geçersiz parametre' };
+      }
+
+      // Sayfa'dan gelen mevcut veriyi kullan (admin panelinde zaten yuklu)
+      const electionData = existingData.existingElection || {};
+      const allResults = existingData.existingResults || [];
+      const matchedResults = allResults.filter(r => {
+        const isApproved = r.approval_status === 'approved' || r.approval_status == null;
+        return isApproved;
+      });
+      const allBallotBoxes = existingData.existingBallotBoxes || [];
+
+      console.log('[PUBLISH DEBUG]', {
+        electionId,
+        electionName: electionData.name || electionData.title,
+        totalResultsReceived: allResults.length,
+        approvedResults: matchedResults.length,
+        ballotBoxes: allBallotBoxes.length,
+        firstResult: allResults[0] ? { id: allResults[0].id, election_id: allResults[0].election_id, cb_votes: allResults[0].cb_votes, fields: Object.keys(allResults[0]).slice(0, 10) } : 'YOK',
+      });
+
+      // Konum bilgileri
+      const districtsMap = {};
+      (existingData.existingDistricts || []).forEach(d => { districtsMap[d.id] = d.name || ''; });
+      const townsMap = {};
+      (existingData.existingTowns || []).forEach(d => { townsMap[d.id] = d.name || ''; });
+      const neighborhoodsMap = {};
+      (existingData.existingNeighborhoods || []).forEach(d => { neighborhoodsMap[d.id] = d.name || ''; });
+      const villagesMap = {};
+      (existingData.existingVillages || []).forEach(d => { villagesMap[d.id] = d.name || ''; });
+
+      // 5. Aggregate et
+      const safeParseVotes = (val) => {
+        if (!val) return {};
+        if (typeof val === 'string') {
+          try { return JSON.parse(val); } catch { return {}; }
+        }
+        if (typeof val === 'object') return val;
+        return {};
+      };
+
+      // CB, MV, Mayor, Provincial Assembly, Municipal Council aggregate
+      const cbTotals = {};
+      const mvTotals = {};
+      const mayorTotals = {};
+      const provincialTotals = {};
+      const municipalTotals = {};
+      const referandumTotals = {};
+
+      let totalVoters = 0;
+      let totalUsedVotes = 0;
+      let totalValidVotes = 0;
+      let totalInvalidVotes = 0;
+      const openedBallotBoxIds = new Set();
+
+      const ballotBoxResults = [];
+
+      matchedResults.forEach(result => {
+        // Sayısal tutanak değerleri
+        const voters = parseInt(result.total_voters || result.cb_total_voters || 0) || 0;
+        const used = parseInt(result.used_votes || result.cb_used_votes || 0) || 0;
+        const valid = parseInt(result.valid_votes || result.cb_valid_votes || 0) || 0;
+        const invalid = parseInt(result.invalid_votes || result.cb_invalid_votes || 0) || 0;
+
+        totalVoters += voters;
+        totalUsedVotes += used;
+        totalValidVotes += valid;
+        totalInvalidVotes += invalid;
+
+        // Sandık bilgisi
+        const bbId = result.ballot_box_id || result.ballotBoxId;
+        if (bbId) openedBallotBoxIds.add(String(bbId));
+
+        const bb = allBallotBoxes.find(b => String(b.id) === String(bbId));
+        const bbNumber = bb ? (bb.ballot_number || bb.number || bb.box_number || '') : '';
+        const districtName = bb && bb.district_id ? (districtsMap[bb.district_id] || '') : '';
+        const townName = bb && bb.town_id ? (townsMap[bb.town_id] || '') : '';
+        const neighborhoodName = bb && bb.neighborhood_id ? (neighborhoodsMap[bb.neighborhood_id] || '') : '';
+        const villageName = bb && bb.village_id ? (villagesMap[bb.village_id] || '') : '';
+
+        // Oy dağılımları
+        const cbVotes = safeParseVotes(result.cb_votes);
+        const mvVotes = safeParseVotes(result.mv_votes);
+        const mayorVotes = safeParseVotes(result.mayor_votes);
+        const provincialVotes = safeParseVotes(result.provincial_assembly_votes);
+        const municipalVotes = safeParseVotes(result.municipal_council_votes);
+        const referandumVotes = safeParseVotes(result.referendum_votes);
+
+        Object.entries(cbVotes).forEach(([k, v]) => {
+          cbTotals[k] = (cbTotals[k] || 0) + (parseInt(v) || 0);
+        });
+        Object.entries(mvVotes).forEach(([k, v]) => {
+          mvTotals[k] = (mvTotals[k] || 0) + (parseInt(v) || 0);
+        });
+        Object.entries(mayorVotes).forEach(([k, v]) => {
+          mayorTotals[k] = (mayorTotals[k] || 0) + (parseInt(v) || 0);
+        });
+        Object.entries(provincialVotes).forEach(([k, v]) => {
+          provincialTotals[k] = (provincialTotals[k] || 0) + (parseInt(v) || 0);
+        });
+        Object.entries(municipalVotes).forEach(([k, v]) => {
+          municipalTotals[k] = (municipalTotals[k] || 0) + (parseInt(v) || 0);
+        });
+        Object.entries(referandumVotes).forEach(([k, v]) => {
+          referandumTotals[k] = (referandumTotals[k] || 0) + (parseInt(v) || 0);
+        });
+
+        // Sandık bazlı detay
+        ballotBoxResults.push({
+          resultId: result.id,
+          ballotBoxId: bbId || '',
+          ballotNumber: bbNumber,
+          districtName,
+          townName,
+          neighborhoodName,
+          villageName,
+          totalVoters: voters,
+          usedVotes: used,
+          validVotes: valid,
+          invalidVotes: invalid,
+          cbVotes,
+          mvVotes,
+          mayorVotes,
+          provincialAssemblyVotes: provincialVotes,
+          municipalCouncilVotes: municipalVotes,
+          referandumVotes,
+        });
+      });
+
+      // Yardımcı: totals objesinden sorted array oluştur
+      const toSortedArray = (totalsObj) => {
+        const grandTotal = Object.values(totalsObj).reduce((s, v) => s + v, 0);
+        return Object.entries(totalsObj)
+          .map(([name, votes]) => ({
+            name,
+            votes,
+            percent: grandTotal > 0 ? parseFloat(((votes / grandTotal) * 100).toFixed(2)) : 0,
+          }))
+          .sort((a, b) => b.votes - a.votes);
+      };
+
+      // Seçim türüne göre ana sonuç belirleme (landing için)
+      let primaryResults = [];
+      const electionType = electionData.type || '';
+      if (electionType === 'genel' || electionType === 'cb') {
+        if (Object.keys(cbTotals).length > 0) primaryResults = toSortedArray(cbTotals);
+        else if (Object.keys(mvTotals).length > 0) primaryResults = toSortedArray(mvTotals);
+      } else if (electionType === 'yerel') {
+        if (Object.keys(mayorTotals).length > 0) primaryResults = toSortedArray(mayorTotals);
+        else if (Object.keys(municipalTotals).length > 0) primaryResults = toSortedArray(municipalTotals);
+        else if (Object.keys(provincialTotals).length > 0) primaryResults = toSortedArray(provincialTotals);
+      } else if (electionType === 'referandum') {
+        if (Object.keys(referandumTotals).length > 0) primaryResults = toSortedArray(referandumTotals);
+      }
+      // Fallback: herhangi bir dolu alan
+      if (primaryResults.length === 0) {
+        for (const t of [cbTotals, mvTotals, mayorTotals, provincialTotals, municipalTotals, referandumTotals]) {
+          if (Object.keys(t).length > 0) { primaryResults = toSortedArray(t); break; }
+        }
+      }
+
+      const totalBallotBoxes = allBallotBoxes.filter(bb => {
+        const eid = String(bb.election_id || bb.electionId || '');
+        return eid === String(electionId);
+      }).length;
+
+      const cacheData = {
+        electionId: String(electionId),
+        electionName: electionData.name || electionData.title || '',
+        electionDate: electionData.date || electionData.election_date || '',
+        electionType: electionType,
+        electionRound: electionData.round || 1,
+        lastUpdated: new Date().toISOString(),
+        totalBallotBoxes: totalBallotBoxes || matchedResults.length,
+        openedBallotBoxes: openedBallotBoxIds.size,
+        totalVoters,
+        usedVotes: totalUsedVotes,
+        validVotes: totalValidVotes,
+        invalidVotes: totalInvalidVotes,
+        // Aggregate sonuçlar
+        cbResults: Object.keys(cbTotals).length > 0 ? { candidates: toSortedArray(cbTotals) } : null,
+        mvResults: Object.keys(mvTotals).length > 0 ? { parties: toSortedArray(mvTotals) } : null,
+        mayorResults: Object.keys(mayorTotals).length > 0 ? { candidates: toSortedArray(mayorTotals) } : null,
+        provincialAssemblyResults: Object.keys(provincialTotals).length > 0 ? { parties: toSortedArray(provincialTotals) } : null,
+        municipalCouncilResults: Object.keys(municipalTotals).length > 0 ? { parties: toSortedArray(municipalTotals) } : null,
+        referandumResults: Object.keys(referandumTotals).length > 0 ? { options: toSortedArray(referandumTotals) } : null,
+        // Landing page için hazır sonuç (ElectionSummarySection'ın beklediği format)
+        results: primaryResults,
+        total_votes: primaryResults.reduce((s, r) => s + r.votes, 0),
+        total_ballot_boxes: totalBallotBoxes || matchedResults.length,
+        participation_rate: totalVoters > 0 ? parseFloat(((totalUsedVotes / totalVoters) * 100).toFixed(2)) : null,
+        // Sandık bazlı detaylar
+        ballotBoxResults,
+        autoRefresh: true,
+      };
+
+      // 6. landing_content/election_results dokümanına yaz (allow read: if true — public okuyabilir)
+      await setDoc(doc(db, 'landing_content', 'election_results'), cacheData);
+
+      // 7. landing_content/main dokümanına featuredElectionId + sonuç özeti yaz
+      try {
+        const mainRef = doc(db, 'landing_content', 'main');
+        await setDoc(mainRef, {
+          featuredElectionId: String(electionId),
+          electionCache: cacheData,
+          electionCacheUpdatedAt: new Date().toISOString(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn('landing_content/main güncellenemedi:', e.message);
+      }
+
+      return {
+        success: true,
+        message: `Seçim sonuçları yayınlandı (${matchedResults.length} sandık, ${primaryResults.length} aday/parti)`,
+        data: cacheData,
+      };
+    } catch (error) {
+      console.error('publishElectionResults error:', error);
+      return { success: false, message: error?.message || 'Yayınlama hatası' };
+    }
+  }
+
+  /**
+   * Public election cache'den veri okur.
+   * @param {string} electionId
+   * @returns {object|null}
+   */
+  static async getPublicElectionCache(electionId) {
+    try {
+      const { db } = await import('../config/firebase');
+      const { doc, getDoc } = await import('firebase/firestore');
+      if (!db) return null;
+
+      // 1. landing_content/main'den electionCache oku (en hızlı, tek doküman)
+      const mainSnap = await getDoc(doc(db, 'landing_content', 'main'));
+      if (mainSnap.exists()) {
+        const mainData = mainSnap.data();
+        if (mainData.electionCache && (!electionId || String(mainData.featuredElectionId) === String(electionId))) {
+          return { id: mainData.featuredElectionId, ...mainData.electionCache, _fromCache: true };
+        }
+      }
+
+      // 2. landing_content/election_results'tan oku
+      const snap = await getDoc(doc(db, 'landing_content', 'election_results'));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (!electionId || String(data.electionId) === String(electionId)) {
+          return { id: snap.id, ...data, _fromCache: true };
+        }
+      }
+
+      return null;
+    } catch (e) {
+      console.warn('getPublicElectionCache error:', e.message);
+      return null;
+    }
+  }
+
+  // ===== Ballot Box Documents (Yüklenen Evraklar) =====
+
+  /**
+   * Sandık başına evrak yükle.
+   * @param {string} ballotBoxId
+   * @param {File} file
+   * @param {object} opts - { documentType?, aiClassifiedType?, aiConfidence?, aiReasoning?, notes?, manualOverride? }
+   */
+  static async uploadBallotBoxDocument(ballotBoxId, file, opts = {}) {
+    const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+    const { auth } = await import('../config/firebase');
+
+    const safeName = (file.name || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `ballot-box-documents/${ballotBoxId}/${Date.now()}_${safeName}`;
+    const downloadUrl = await FirebaseStorageService.uploadFile(file, path, {
+      contentType: file.type || 'image/jpeg',
+      customMetadata: {
+        ballotBoxId: String(ballotBoxId),
+        uploadedBy: auth.currentUser?.uid || 'anonymous',
+        uploadedAt: new Date().toISOString()
+      }
+    });
+
+    // Sandık no'yu hızlı görüntüleme için ekle
+    let ballotNumber = '';
+    try {
+      const bb = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOXES, ballotBoxId, false);
+      ballotNumber = bb?.ballot_number || '';
+    } catch (_) { /* ignore */ }
+
+    const docData = {
+      ballot_box_id: ballotBoxId,
+      ballot_number: ballotNumber,
+      uploaded_by_id: auth.currentUser?.uid || null,
+      uploaded_by_name: opts.uploadedByName || '',
+      uploaded_by_role: opts.uploadedByRole || '',
+      document_type: opts.documentType || opts.aiClassifiedType || 'other',
+      ai_classified_type: opts.aiClassifiedType || null,
+      ai_confidence: typeof opts.aiConfidence === 'number' ? opts.aiConfidence : null,
+      ai_reasoning: opts.aiReasoning || '',
+      manual_override: !!opts.manualOverride,
+      storage_path: path,
+      download_url: downloadUrl,
+      file_name: file.name || safeName,
+      file_size: file.size || 0,
+      file_type: file.type || '',
+      notes: opts.notes || ''
+    };
+
+    const docId = await FirebaseService.create(this.COLLECTIONS.BALLOT_BOX_DOCUMENTS, null, docData, false);
+    return { success: true, id: docId, ...docData };
+  }
+
+  /**
+   * Bir sandığın tüm evraklarını getir.
+   */
+  static async getBallotBoxDocuments(ballotBoxId) {
+    try {
+      const all = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOX_DOCUMENTS, {}, false);
+      return (all || [])
+        .filter(d => String(d.ballot_box_id) === String(ballotBoxId))
+        .sort((a, b) => {
+          const ta = new Date(a.createdAt?.toDate?.() || a.createdAt || 0).getTime();
+          const tb = new Date(b.createdAt?.toDate?.() || b.createdAt || 0).getTime();
+          return tb - ta;
+        });
+    } catch (error) {
+      console.error('Get ballot box documents error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Birden fazla sandık için evrakları getir (sorumlu/admin görünümü için).
+   */
+  static async getBallotBoxDocumentsForBoxes(ballotBoxIds) {
+    try {
+      if (!Array.isArray(ballotBoxIds) || ballotBoxIds.length === 0) return [];
+      const idSet = new Set(ballotBoxIds.map(id => String(id)));
+      const all = await FirebaseService.getAll(this.COLLECTIONS.BALLOT_BOX_DOCUMENTS, {}, false);
+      return (all || []).filter(d => idSet.has(String(d.ballot_box_id)));
+    } catch (error) {
+      console.error('Get ballot box documents for boxes error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Evrak metadata güncelle (örn. document_type manuel düzeltme).
+   */
+  static async updateBallotBoxDocument(docId, data) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.BALLOT_BOX_DOCUMENTS, docId, {
+        ...data,
+        manual_override: data.document_type ? true : !!data.manual_override
+      }, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Update ballot box document error:', error);
+      throw new Error('Evrak güncellenirken hata oluştu');
+    }
+  }
+
+  // ===== Training Materials (Eğitim Materyalleri) =====
+
+  /**
+   * Tüm eğitim materyallerini getir. Filtreleme audience'e göre yapılır.
+   * @param {string} audience - 'chief_observer' | 'public' | undefined (tümü)
+   * @param {boolean} onlyActive - sadece active=true olanlar
+   */
+  static async getTrainingMaterials(audience = undefined, onlyActive = true) {
+    try {
+      const all = await FirebaseService.getAll(this.COLLECTIONS.TRAINING_MATERIALS, {}, false);
+      return (all || [])
+        .filter((m) => {
+          if (onlyActive && m.active === false) return false;
+          if (!audience) return true;
+          return m.audience === audience || m.audience === 'both';
+        })
+        .sort((a, b) => {
+          const oa = typeof a.order === 'number' ? a.order : 999;
+          const ob = typeof b.order === 'number' ? b.order : 999;
+          if (oa !== ob) return oa - ob;
+          const ta = new Date(a.createdAt?.toDate?.() || a.createdAt || 0).getTime();
+          const tb = new Date(b.createdAt?.toDate?.() || b.createdAt || 0).getTime();
+          return tb - ta;
+        });
+    } catch (error) {
+      console.error('Get training materials error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Materyal oluştur.
+   */
+  static async createTrainingMaterial(data) {
+    try {
+      const id = await FirebaseService.create(this.COLLECTIONS.TRAINING_MATERIALS, null, {
+        title: data.title || '',
+        description: data.description || '',
+        audience: data.audience || 'chief_observer',
+        content_type: data.content_type || 'text',
+        video_source: data.video_source || null,
+        video_url: data.video_url || null,
+        video_storage_path: data.video_storage_path || null,
+        pdf_url: data.pdf_url || null,
+        pdf_storage_path: data.pdf_storage_path || null,
+        text_content: data.text_content || '',
+        thumbnail_url: data.thumbnail_url || null,
+        order: typeof data.order === 'number' ? data.order : 0,
+        active: data.active !== false
+      }, false);
+      return { success: true, id };
+    } catch (error) {
+      console.error('Create training material error:', error);
+      throw new Error('Eğitim materyali eklenirken hata oluştu');
+    }
+  }
+
+  /**
+   * Materyal güncelle.
+   */
+  static async updateTrainingMaterial(id, data) {
+    try {
+      await FirebaseService.update(this.COLLECTIONS.TRAINING_MATERIALS, id, data, false);
+      return { success: true };
+    } catch (error) {
+      console.error('Update training material error:', error);
+      throw new Error('Eğitim materyali güncellenirken hata oluştu');
+    }
+  }
+
+  /**
+   * Materyal sil (Storage'daki video/pdf de temizlenir).
+   */
+  static async deleteTrainingMaterial(id) {
+    try {
+      const doc = await FirebaseService.getById(this.COLLECTIONS.TRAINING_MATERIALS, id, false);
+      const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+      if (doc?.video_storage_path) {
+        try { await FirebaseStorageService.deleteFile(doc.video_storage_path); } catch (e) { console.warn('Video silinemedi:', e.message); }
+      }
+      if (doc?.pdf_storage_path) {
+        try { await FirebaseStorageService.deleteFile(doc.pdf_storage_path); } catch (e) { console.warn('PDF silinemedi:', e.message); }
+      }
+      await FirebaseService.delete(this.COLLECTIONS.TRAINING_MATERIALS, id);
+      return { success: true };
+    } catch (error) {
+      console.error('Delete training material error:', error);
+      throw new Error('Eğitim materyali silinirken hata oluştu');
+    }
+  }
+
+  // ===== Training Completions (İzleme Takibi) =====
+
+  /**
+   * Doc ID = `${userId}_${materialId}` — her kullanıcı her materyal için TEK kayıt.
+   * İlk açılışta create, sonraki ilerlemede update.
+   */
+  static _trainingCompletionId(userId, materialId) {
+    return `${userId}_${materialId}`;
+  }
+
+  /**
+   * Materyal açıldığında çağrılır. Eğer kayıt yoksa oluşturur, varsa opened_at güncelleyebilir.
+   */
+  static async markTrainingOpened(userId, materialId, userInfo = {}) {
+    if (!userId || !materialId) return;
+    try {
+      const docId = this._trainingCompletionId(userId, materialId);
+      const existing = await FirebaseService.getById(this.COLLECTIONS.TRAINING_COMPLETIONS, docId, false).catch(() => null);
+      if (existing) return existing; // Daha önce açılmış, dokunma
+      await FirebaseService.create(this.COLLECTIONS.TRAINING_COMPLETIONS, docId, {
+        user_id: String(userId),
+        material_id: String(materialId),
+        user_name: userInfo.name || '',
+        user_role: userInfo.role || '',
+        user_phone: userInfo.phone || '',
+        ballot_box_id: userInfo.ballot_box_id || null,
+        ballot_number: userInfo.ballot_number || '',
+        watched_seconds: 0,
+        total_seconds: 0,
+        progress_percent: 0,
+        completed_at: null,
+        opened_at: new Date().toISOString()
+      }, false);
+      return { id: docId };
+    } catch (e) {
+      console.warn('markTrainingOpened error:', e.message);
+    }
+  }
+
+  /**
+   * Video ilerlemesi güncelle. Throttling caller tarafında yapılmalı (her 5-10 sn bir).
+   * %80'e ulaşırsa otomatik completed işaretler.
+   */
+  static async updateTrainingProgress(userId, materialId, watchedSeconds, totalSeconds) {
+    if (!userId || !materialId) return;
+    try {
+      const docId = this._trainingCompletionId(userId, materialId);
+      const percent = totalSeconds > 0 ? Math.min(100, Math.round((watchedSeconds / totalSeconds) * 100)) : 0;
+      const data = {
+        watched_seconds: Math.round(watchedSeconds),
+        total_seconds: Math.round(totalSeconds),
+        progress_percent: percent
+      };
+      // %80 + ve completed_at yoksa otomatik tamamla
+      if (percent >= 80) {
+        const existing = await FirebaseService.getById(this.COLLECTIONS.TRAINING_COMPLETIONS, docId, false).catch(() => null);
+        if (!existing?.completed_at) {
+          data.completed_at = new Date().toISOString();
+          data.completion_method = 'auto_80';
+        }
+      }
+      await FirebaseService.update(this.COLLECTIONS.TRAINING_COMPLETIONS, docId, data, false);
+    } catch (e) {
+      console.warn('updateTrainingProgress error:', e.message);
+    }
+  }
+
+  /**
+   * Manual "İzledim/Okudum" butonuna basıldı.
+   */
+  static async markTrainingCompleted(userId, materialId) {
+    if (!userId || !materialId) return;
+    try {
+      const docId = this._trainingCompletionId(userId, materialId);
+      await FirebaseService.update(this.COLLECTIONS.TRAINING_COMPLETIONS, docId, {
+        completed_at: new Date().toISOString(),
+        completion_method: 'manual',
+        progress_percent: 100
+      }, false);
+      return { success: true };
+    } catch (e) {
+      console.error('markTrainingCompleted error:', e);
+      throw e;
+    }
+  }
+
+  /**
+   * Bir kullanıcının bir materyaldeki ilerleme kaydı.
+   */
+  static async getUserTrainingProgress(userId, materialId) {
+    if (!userId || !materialId) return null;
+    try {
+      const docId = this._trainingCompletionId(userId, materialId);
+      return await FirebaseService.getById(this.COLLECTIONS.TRAINING_COMPLETIONS, docId, false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Bir materyalin tüm tamamlama kayıtları (admin için).
+   */
+  static async getTrainingCompletions(materialId) {
+    try {
+      const all = await FirebaseService.getAll(this.COLLECTIONS.TRAINING_COMPLETIONS, {}, false);
+      return (all || []).filter((c) => String(c.material_id) === String(materialId));
+    } catch (e) {
+      console.error('getTrainingCompletions error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Tüm tamamlama kayıtları (özet için).
+   */
+  static async getAllTrainingCompletions() {
+    try {
+      return await FirebaseService.getAll(this.COLLECTIONS.TRAINING_COMPLETIONS, {}, false);
+    } catch (e) {
+      console.error('getAllTrainingCompletions error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Eğitim için video veya PDF yükle.
+   * @param {File} file
+   * @param {'video'|'pdf'} kind
+   * @returns {Promise<{url, path}>}
+   */
+  static async uploadTrainingFile(file, kind) {
+    const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+    const safeName = (file.name || `${kind}-${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `training-materials/${kind}/${Date.now()}_${safeName}`;
+    const url = await FirebaseStorageService.uploadFile(file, path, {
+      contentType: file.type || (kind === 'video' ? 'video/mp4' : 'application/pdf'),
+      customMetadata: { kind, uploadedAt: new Date().toISOString() }
+    });
+    return { url, path };
+  }
+
+  /**
+   * Evrak sil (Storage + Firestore).
+   */
+  static async deleteBallotBoxDocument(docId) {
+    try {
+      const doc = await FirebaseService.getById(this.COLLECTIONS.BALLOT_BOX_DOCUMENTS, docId, false);
+      if (doc?.storage_path) {
+        try {
+          const FirebaseStorageService = (await import('./FirebaseStorageService')).default;
+          await FirebaseStorageService.deleteFile(doc.storage_path);
+        } catch (e) {
+          console.warn('Storage dosya silinemedi (devam):', e.message);
+        }
+      }
+      await FirebaseService.delete(this.COLLECTIONS.BALLOT_BOX_DOCUMENTS, docId);
+      return { success: true };
+    } catch (error) {
+      console.error('Delete ballot box document error:', error);
+      throw new Error('Evrak silinirken hata oluştu');
     }
   }
 }

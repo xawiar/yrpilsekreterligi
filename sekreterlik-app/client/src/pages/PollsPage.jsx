@@ -146,16 +146,20 @@ const PollsPage = () => {
         createdBy: user?.id || null
       };
       
-      await ApiService.createPoll(pollData);
+      const created = await ApiService.createPoll(pollData);
+      const newPollId = created?.id || null;
 
-      // Bildirim gonder
+      // Bildirim gonder — POLL_INVITE tipinde pollId + options geç
+      // ki bildirim üzerinde Evet/Hayır butonları gözüksün (Soapbox pattern).
       try {
         await NotificationService.createNotification({
-          title: `Yeni Anket: ${pollData.title}`,
-          body: pollData.description || 'Yeni bir anket olusturuldu. Oyunuzu kullanin.',
+          title: `🗳️ Yeni Anket: ${pollData.title}`,
+          body: pollData.description || 'Görüşünüzü bildirin',
           type: NOTIFICATION_TYPES.POLL_INVITE,
           target: { type: TARGET_TYPES.ALL },
-          url: '/member-dashboard',
+          url: newPollId ? `/polls/${newPollId}` : '/polls',
+          pollId: newPollId,
+          pollOptions: pollData.options,
         });
       } catch (notifErr) {
         console.warn('Poll notification error (non-blocking):', notifErr);

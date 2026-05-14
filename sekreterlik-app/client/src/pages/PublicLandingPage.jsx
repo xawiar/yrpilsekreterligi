@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { collection, doc, getDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { collection, doc, getDoc, getDocs, query, orderBy, limit, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
+// Anonim push banner artık app-shell'de (AnonymousPushBanner) — burada import yok
 
 import PublicHeader from '../components/public/PublicHeader';
 import PublicFooter from '../components/public/PublicFooter';
@@ -12,6 +13,7 @@ import GallerySection from '../components/public/landing/GallerySection';
 import ElectionSummarySection from '../components/public/landing/ElectionSummarySection';
 import ApplyCTASection from '../components/public/landing/ApplyCTASection';
 import ContactSection from '../components/public/landing/ContactSection';
+import TrainingSection from '../components/public/landing/TrainingSection';
 
 /**
  * PublicLandingPage
@@ -102,6 +104,9 @@ const PublicLandingPage = () => {
   const [news, setNews] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Anonim push aboneligi banner state
+  // Push state'leri kaldırıldı — AnonymousPushBanner app-shell'de yönetiyor
 
   // Dark mode auto-detect
   useEffect(() => {
@@ -237,110 +242,153 @@ const PublicLandingPage = () => {
           }
         }
 
-        // 3) Secim sonucu — election_results sandik bazli, aggregate et
+        // 3) Secim sonucu — public_election_cache'den hazir aggregate oku
+        //    Cache yoksa fallback: election_results'tan aggregate et
         if (merged.sections?.electionSummary !== false && merged.electionSummaryEnabled !== false) {
           try {
-            const aggregateResults = (docs, electionMeta = {}) => {
-              // Tum oy alanlarini birlestir (cb_votes, mv_votes, mayor_votes,
-              // provincial_assembly_votes, municipal_council_votes)
-              const voteFields = ['cb_votes', 'mv_votes', 'mayor_votes',
-                'provincial_assembly_votes', 'municipal_council_votes'];
-              // Oncelik: cb_votes > mayor_votes > mv_votes > diger
-              // Hangi alan dolu ise onu kullan
-              const totals = {};
-              let pickedField = null;
-              for (const field of voteFields) {
-                let fieldTotal = {};
-                let hasData = false;
-                docs.forEach(d => {
-                  const data = d.data ? d.data() : d;
-                  const votes = data[field];
-                  if (votes && typeof votes === 'object') {
-                    Object.entries(votes).forEach(([key, val]) => {
-                      const n = parseInt(val) || 0;
-                      if (n > 0) {
-                        fieldTotal[key] = (fieldTotal[key] || 0) + n;
-                        hasData = true;
-                      }
+            let cacheLoaded = false;
+
+            // Cloud Function API'den seçim sonuçlarını çek (rules bypass, CDN cache)
+            try {
+              const eid = merged.featuredElectionId;
+              const apiUrl = eid ? '/api/election-results?id=' + encodeURIComponent(eid) : '/api/election-results';
+              const apiResp = await fetch(apiUrl);
+              if (apiResp.ok) {
+                const apiJson = await apiResp.json();
+                if (apiJson.success && apiJson.data) {
+                  const d = apiJson.data;
+                  // Eger tek secim detayi geldiyse
+                  if (d.election) {
+                    const allResults = [
+                      ...(d.cbResults || []),
+                      ...(d.mvResults || []),
+                      ...(d.mayorResults || []),
+                    ];
+                    // En dolu sonucu bul
+                    let primaryResults = d.cbResults && d.cbResults.length > 0 ? d.cbResults : (d.mvResults && d.mvResults.length > 0 ? d.mvResults : d.mayorResults || []);
+                    setElection({
+                      id: d.election.id || eid,
+                      title: d.election.name || d.election.title || 'Secim Sonuclari',
+                      date: d.election.date || '',
+                      results: primaryResults,
+                      total_votes: primaryResults.reduce((s, r) => s + (r.votes || 0), 0),
+                      total_ballot_boxes: d.totalBallotBoxes || 0,
+                      opened_ballot_boxes: d.openedBallotBoxes || 0,
+                      participation_rate: d.totalVoters > 0 ? parseFloat(((d.usedVotes / d.totalVoters) * 100).toFixed(2)) : null,
+                      _fromApi: true,
                     });
+                    cacheLoaded = true;
                   }
-                });
-                if (hasData && !pickedField) {
-                  Object.assign(totals, fieldTotal);
-                  pickedField = field;
-                }
-              }
-              if (Object.keys(totals).length === 0) return null;
-              const results = Object.entries(totals)
-                .map(([name, votes]) => ({ name, votes }))
-                .sort((a, b) => b.votes - a.votes);
-              return {
-                ...electionMeta,
-                results,
-                total_votes: results.reduce((s, r) => s + r.votes, 0),
-                total_ballot_boxes: docs.length,
-              };
-            };
-
-            if (merged.featuredElectionId) {
-              // featuredElectionId genellikle 'elections' koleksiyonunun doc id'si
-              // election_results'ta election_id, electionId veya election alanina match et
-              let electionMeta = {};
-              try {
-                const eSnap = await getDoc(doc(db, 'elections', merged.featuredElectionId));
-                if (eSnap.exists()) {
-                  const d = eSnap.data() || {};
-                  electionMeta = {
-                    id: eSnap.id,
-                    title: d.name || d.title || 'Secim Sonuclari',
-                    date: d.date || d.election_date || '',
-                  };
-                }
-              } catch {}
-
-              try {
-                const allResults = await getDocs(collection(db, 'election_results'));
-                const matched = allResults.docs.filter(d => {
-                  const data = d.data();
-                  return String(data.electionId || data.election_id || data.election) === String(merged.featuredElectionId);
-                });
-                if (matched.length > 0) {
-                  const agg = aggregateResults(matched, electionMeta);
-                  if (agg) setElection(agg);
-                } else {
-                  // Fallback: featuredElectionId tek bir result doc id olabilir
-                  const single = await getDoc(doc(db, 'election_results', merged.featuredElectionId));
-                  if (single.exists()) {
-                    setElection({ id: single.id, ...single.data(), ...electionMeta });
+                  // Eger secim listesi geldiyse, ilk secimin detayini cek
+                  if (!cacheLoaded && Array.isArray(apiJson.data) && apiJson.data.length > 0) {
+                    const firstId = apiJson.data[0].id;
+                    const detailResp = await fetch('/api/election-results?id=' + encodeURIComponent(firstId));
+                    if (detailResp.ok) {
+                      const detailJson = await detailResp.json();
+                      if (detailJson.success && detailJson.data && detailJson.data.election) {
+                        const dd = detailJson.data;
+                        let pr = dd.cbResults && dd.cbResults.length > 0 ? dd.cbResults : (dd.mvResults && dd.mvResults.length > 0 ? dd.mvResults : dd.mayorResults || []);
+                        setElection({
+                          id: dd.election.id || firstId,
+                          title: dd.election.name || 'Secim Sonuclari',
+                          date: dd.election.date || '',
+                          results: pr,
+                          total_votes: pr.reduce((s, r) => s + (r.votes || 0), 0),
+                          total_ballot_boxes: dd.totalBallotBoxes || 0,
+                          opened_ballot_boxes: dd.openedBallotBoxes || 0,
+                          participation_rate: dd.totalVoters > 0 ? parseFloat(((dd.usedVotes / dd.totalVoters) * 100).toFixed(2)) : null,
+                          _fromApi: true,
+                        });
+                        cacheLoaded = true;
+                      }
+                    }
                   }
                 }
-              } catch (err) {
-                console.warn('Election aggregate failed:', err.message);
               }
-            } else {
-              // En son eklenen (created_at desc, yoksa date desc)
-              let loaded = null;
-              try {
-                const q1 = query(collection(db, 'election_results'), orderBy('created_at', 'desc'), limit(1));
-                const s1 = await getDocs(q1);
-                if (!s1.empty) {
-                  const d = s1.docs[0];
-                  loaded = { id: d.id, ...d.data() };
-                }
-              } catch {
-                // orderBy hata verirse basit getDocs
-                const s2 = await getDocs(collection(db, 'election_results'));
-                if (!s2.empty) {
-                  const arr = s2.docs.map(d => ({ id: d.id, ...d.data() }));
-                  arr.sort((a, b) => {
-                    const da = new Date(a.date || a.election_date || 0).getTime();
-                    const dbb = new Date(b.date || b.election_date || 0).getTime();
-                    return dbb - da;
+            } catch (apiErr) {
+              // API hatasi — sessiz devam, fallback'e dusecek
+            }
+
+            // Oncelik 2: Fallback — election_results koleksiyonundan aggregate et
+            if (!cacheLoaded) {
+              const aggregateResults = (docs, electionMeta = {}) => {
+                const voteFields = ['cb_votes', 'mv_votes', 'mayor_votes',
+                  'provincial_assembly_votes', 'municipal_council_votes'];
+                const totals = {};
+                let pickedField = null;
+                for (const field of voteFields) {
+                  let fieldTotal = {};
+                  let hasData = false;
+                  docs.forEach(d => {
+                    const data = d.data ? d.data() : d;
+                    const votes = data[field];
+                    if (votes && typeof votes === 'object') {
+                      Object.entries(votes).forEach(([key, val]) => {
+                        const n = parseInt(val) || 0;
+                        if (n > 0) {
+                          fieldTotal[key] = (fieldTotal[key] || 0) + n;
+                          hasData = true;
+                        }
+                      });
+                    }
                   });
-                  loaded = arr[0] || null;
+                  if (hasData && !pickedField) {
+                    Object.assign(totals, fieldTotal);
+                    pickedField = field;
+                  }
                 }
+                if (Object.keys(totals).length === 0) return null;
+                const results = Object.entries(totals)
+                  .map(([name, votes]) => ({ name, votes }))
+                  .sort((a, b) => b.votes - a.votes);
+                return {
+                  ...electionMeta,
+                  results,
+                  total_votes: results.reduce((s, r) => s + r.votes, 0),
+                  total_ballot_boxes: docs.length,
+                };
+              };
+
+              // Seçim sonucu sadece admin Settings'te featuredElectionId açıkça
+              // seçtiyse gösterilir. Boş ise public sayfada hiç görünmez.
+              // (Eskiden boş ise otomatik en son seçim yükleniyordu — admin
+              // kontrolünü kırıyordu, kaldırıldı.)
+              if (merged.featuredElectionId) {
+                let electionMeta = {};
+                try {
+                  const eSnap = await getDoc(doc(db, 'elections', merged.featuredElectionId));
+                  if (eSnap.exists()) {
+                    const d = eSnap.data() || {};
+                    electionMeta = {
+                      id: eSnap.id,
+                      title: d.name || d.title || 'Secim Sonuclari',
+                      date: d.date || d.election_date || '',
+                    };
+                  }
+                } catch {}
+
+                try {
+                  const allResults = await getDocs(collection(db, 'election_results'));
+                  const matched = allResults.docs.filter(d => {
+                    const data = d.data();
+                    return String(data.electionId || data.election_id || data.election) === String(merged.featuredElectionId);
+                  });
+                  if (matched.length > 0) {
+                    const agg = aggregateResults(matched, electionMeta);
+                    if (agg) setElection(agg);
+                  } else {
+                    const single = await getDoc(doc(db, 'election_results', merged.featuredElectionId));
+                    if (single.exists()) {
+                      setElection({ id: single.id, ...single.data(), ...electionMeta });
+                    }
+                  }
+                } catch (err) {
+                  console.warn('Election aggregate failed:', err.message);
+                }
+              } else {
+                // featuredElectionId boş → public'te seçim sonucu gösterme
+                setElection(null);
               }
-              if (loaded) setElection(loaded);
             }
           } catch (err) {
             console.warn('Secim sonucu yuklenemedi:', err.message);
@@ -390,6 +438,204 @@ const PublicLandingPage = () => {
     fetchAll();
   }, []);
 
+  // Secim sonuclari real-time listener — public_election_cache'i dinle
+  // Cache yoksa election_results'a fallback (30sn polling)
+  useEffect(() => {
+    if (!db) return;
+    const featuredId = content?.featuredElectionId;
+
+    // Cache'den hizli refresh
+    const refreshFromCache = async () => {
+      if (!featuredId) return false;
+      try {
+        const cacheSnap = await getDoc(doc(db, 'public_election_cache', featuredId));
+        if (cacheSnap.exists()) {
+          const cacheData = cacheSnap.data();
+          setElection({
+            id: cacheData.electionId || cacheSnap.id,
+            title: cacheData.electionName || 'Secim Sonuclari',
+            date: cacheData.electionDate || '',
+            results: cacheData.results || [],
+            total_votes: cacheData.total_votes || 0,
+            total_ballot_boxes: cacheData.total_ballot_boxes || cacheData.totalBallotBoxes || 0,
+            participation_rate: cacheData.participation_rate || null,
+            _fromCache: true,
+          });
+          return true;
+        }
+      } catch {}
+      return false;
+    };
+
+    // aggregateResults — fallback icin
+    const aggregateResults = (docs, electionMeta = {}) => {
+      const voteFields = ['cb_votes', 'mv_votes', 'mayor_votes',
+        'provincial_assembly_votes', 'municipal_council_votes'];
+      const totals = {};
+      let pickedField = null;
+      for (const field of voteFields) {
+        let fieldTotal = {};
+        let hasData = false;
+        docs.forEach(d => {
+          const data = d.data ? d.data() : d;
+          const votes = data[field];
+          if (votes && typeof votes === 'object') {
+            Object.entries(votes).forEach(([key, val]) => {
+              const n = parseInt(val) || 0;
+              if (n > 0) {
+                fieldTotal[key] = (fieldTotal[key] || 0) + n;
+                hasData = true;
+              }
+            });
+          }
+        });
+        if (hasData && !pickedField) {
+          Object.assign(totals, fieldTotal);
+          pickedField = field;
+        }
+      }
+      if (Object.keys(totals).length === 0) return null;
+      const results = Object.entries(totals)
+        .map(([name, votes]) => ({ name, votes }))
+        .sort((a, b) => b.votes - a.votes);
+      return {
+        ...electionMeta,
+        results,
+        total_votes: results.reduce((s, r) => s + r.votes, 0),
+        total_ballot_boxes: docs.length,
+      };
+    };
+
+    const refreshElection = async (electionMeta) => {
+      // Oncelik: cache'den oku
+      const fromCache = await refreshFromCache();
+      if (fromCache) return;
+
+      // Fallback: election_results'tan aggregate
+      try {
+        if (featuredId) {
+          const allResults = await getDocs(collection(db, 'election_results'));
+          const matched = allResults.docs.filter(d => {
+            const data = d.data();
+            return String(data.electionId || data.election_id || data.election) === String(featuredId);
+          });
+          if (matched.length > 0) {
+            const agg = aggregateResults(matched, electionMeta);
+            if (agg) setElection(agg);
+          }
+        } else {
+          let loaded = null;
+          try {
+            const q1 = query(collection(db, 'election_results'), orderBy('created_at', 'desc'), limit(1));
+            const s1 = await getDocs(q1);
+            if (!s1.empty) {
+              const d = s1.docs[0];
+              loaded = { id: d.id, ...d.data() };
+            }
+          } catch {
+            const s2 = await getDocs(collection(db, 'election_results'));
+            if (!s2.empty) {
+              const arr = s2.docs.map(d => ({ id: d.id, ...d.data() }));
+              arr.sort((a, b) => {
+                const da = new Date(a.date || a.election_date || 0).getTime();
+                const dbb = new Date(b.date || b.election_date || 0).getTime();
+                return dbb - da;
+              });
+              loaded = arr[0] || null;
+            }
+          }
+          if (loaded) setElection(loaded);
+        }
+      } catch (err) {
+        console.warn('Election polling refresh error:', err.message);
+      }
+    };
+
+    let electionMeta = {};
+    let unsubscribe = null;
+    let pollingInterval = null;
+    let cancelled = false;
+
+    // featuredId boş ise listener/polling kurma — public sayfada
+    // hiç seçim sonucu gösterilmesin (admin Settings'te seçmeden eski
+    // davranış otomatik en son sonucu gösteriyordu, kaldırıldı).
+    if (!featuredId) {
+      setElection(null);
+      return () => { cancelled = true; };
+    }
+
+    const setup = async () => {
+      try {
+        const eSnap = await getDoc(doc(db, 'elections', featuredId));
+        if (eSnap.exists()) {
+          const d = eSnap.data() || {};
+          electionMeta = {
+            id: eSnap.id,
+            title: d.name || d.title || 'Secim Sonuclari',
+            date: d.date || d.election_date || '',
+          };
+        }
+      } catch {}
+
+      if (cancelled) return;
+
+      // Oncelik: landing_content/main dokümanini dinle (electionCache alani)
+      // Admin "Sonuçları Yayınla" butonuna bastığında bu doc güncellenir.
+      // TEK doc dinleniyor — fan-out yok. 1000 ziyaretçi olsa da Firestore
+      // aynı doc'u tek aboneliğe push'lar.
+      try {
+        const mainDocRef = doc(db, 'landing_content', 'main');
+        let initialCacheLoad = true;
+        unsubscribe = onSnapshot(mainDocRef, (snap) => {
+          if (initialCacheLoad) {
+            initialCacheLoad = false;
+            return;
+          }
+          if (snap.exists() && snap.data().electionCache) {
+            const cacheData = snap.data().electionCache;
+            setElection({
+              id: cacheData.electionId || snap.data().featuredElectionId,
+              title: cacheData.electionName || 'Secim Sonuclari',
+              date: cacheData.electionDate || '',
+              results: cacheData.results || [],
+              total_votes: cacheData.total_votes || 0,
+              total_ballot_boxes: cacheData.total_ballot_boxes || cacheData.totalBallotBoxes || 0,
+              participation_rate: cacheData.participation_rate || null,
+              _fromCache: true,
+            });
+          }
+        }, () => {
+          // Cache listener fail — election_results 2000 doc fan-out'u
+          // YERINE düşük frekanslı polling. 1000 ziyaretçi senaryosunda
+          // election_results'ı dinlemek 2M push event/sn yaratıyordu.
+          if (!pollingInterval && !cancelled) {
+            pollingInterval = setInterval(
+              () => refreshElection(electionMeta), 30000,
+            );
+          }
+        });
+        return;
+      } catch {
+        // Cache listener kurulamadi, fallback polling
+        if (!cancelled) {
+          pollingInterval = setInterval(
+            () => refreshElection(electionMeta), 30000,
+          );
+        }
+      }
+    };
+
+    setup();
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
+  }, [content?.featuredElectionId]);
+
+  // Anonim push akışı app-shell'e (AnonymousPushBanner) taşındı
+
   // Loading bloğu kaldırıldı — içerik DEFAULTS ile anında render, fetch geldikçe güncellenir
   if (false) {
     return (
@@ -408,20 +654,81 @@ const PublicLandingPage = () => {
   const s = content.sections || {};
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
       <PublicHeader appName={content.appName} />
 
       <main className="flex-1">
+        {/* Üst duyuru banner'ı — full-width section, kurumsal palette,
+            diğer landing section'larıyla aynı geçiş tarzında */}
+        {content.bannerEnabled && content.bannerImage && (
+          <section className="relative bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 pt-24 sm:pt-28 pb-12 sm:pb-16 overflow-hidden">
+            {/* Dekoratif arka plan dokusu — hero ile aynı dil */}
+            <svg
+              className="absolute inset-0 w-full h-full opacity-10 pointer-events-none"
+              xmlns="http://www.w3.org/2000/svg"
+              preserveAspectRatio="none"
+              viewBox="0 0 1200 400"
+              aria-hidden="true"
+            >
+              <defs>
+                <pattern id="banner-grid" width="64" height="64" patternUnits="userSpaceOnUse">
+                  <path d="M 64 0 L 0 0 0 64" fill="none" stroke="white" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect width="1200" height="400" fill="url(#banner-grid)" />
+            </svg>
+
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <a
+                href={content.bannerLink || '#'}
+                target={content.bannerLink && content.bannerLink.startsWith('http') ? '_blank' : '_self'}
+                rel={content.bannerLink && content.bannerLink.startsWith('http') ? 'noopener noreferrer' : undefined}
+                className="block relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 hover:ring-white/40 transition-all"
+                onClick={(e) => { if (!content.bannerLink) e.preventDefault(); }}
+              >
+                <img
+                  src={content.bannerImage}
+                  alt={content.bannerText || 'Duyuru'}
+                  className="w-full h-auto block"
+                  loading="eager"
+                  decoding="async"
+                />
+                {content.bannerText && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16 pb-6 px-4 sm:px-8">
+                    <p className="text-white text-base sm:text-2xl md:text-3xl font-bold drop-shadow-lg max-w-4xl">
+                      {content.bannerText}
+                    </p>
+                  </div>
+                )}
+              </a>
+            </div>
+
+            {/* Alt geçiş dalgası — hero/about pattern'i ile uyumlu */}
+            <svg
+              className="absolute bottom-0 left-0 right-0 w-full h-12 sm:h-16 text-white dark:text-gray-900"
+              xmlns="http://www.w3.org/2000/svg"
+              preserveAspectRatio="none"
+              viewBox="0 0 1440 100"
+              aria-hidden="true"
+            >
+              <path
+                d="M0,60 C240,100 480,20 720,40 C960,60 1200,100 1440,60 L1440,100 L0,100 Z"
+                fill="currentColor"
+              />
+            </svg>
+          </section>
+        )}
+
         {s.hero !== false && (
           <HeroSection
             title={content.heroTitle || DEFAULTS.heroTitle}
-            subtitle={content.heroSubtitle || DEFAULTS.heroSubtitle}
             image={content.heroImage || ''}
             ctaText={content.heroCtaText || DEFAULTS.heroCtaText}
             ctaLink="/public/apply"
             chairmanPhoto={content.chairmanPhoto || ''}
             chairmanName={content.chairmanName || ''}
             chairmanTitle={content.chairmanTitle || DEFAULTS.chairmanTitle}
+            social={content.social || {}}
           />
         )}
 
@@ -441,7 +748,13 @@ const PublicLandingPage = () => {
           <GallerySection gallery={gallery} />
         )}
 
-        {s.electionSummary !== false && (
+        {/* Eğitim ve Bilgilendirme — admin public materyal yüklediyse görünür */}
+        <TrainingSection />
+
+
+        {/* Seçim özeti yalnızca admin Settings'te featuredElectionId
+            seçtiyse VE veri yüklendiyse görünür. Aksi halde tamamen gizli. */}
+        {s.electionSummary !== false && election && content.featuredElectionId && (
           <ElectionSummarySection electionResult={election} />
         )}
 
@@ -478,6 +791,10 @@ const PublicLandingPage = () => {
         email={content.email || ''}
         social={content.social || {}}
       />
+
+      {/* Anonim push banner ve toast artık app-shell-level'da
+          (App.jsx → AnonymousPushBanner). Tüm route'larda görünür,
+          iOS standalone değilse "Add to Home Screen" yönergesi gösterilir. */}
     </div>
   );
 };

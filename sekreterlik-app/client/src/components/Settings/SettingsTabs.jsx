@@ -54,6 +54,7 @@ const SettingsTabs = ({ activeTab, setActiveTab, grantedPermissions = [], isAdmi
         { id: 'authorization', name: 'Yetkilendirme' },
         { id: 'push-notifications', name: 'Bildirim Ayarlari' },
         { id: 'notification-panel', name: 'Bildirim Gonder' },
+        { id: 'anon-push', name: 'Anonim Bildirim' },
       ]
     },
     {

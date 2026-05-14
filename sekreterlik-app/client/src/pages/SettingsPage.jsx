@@ -40,6 +40,7 @@ import DataBreachProcedure from '../components/DataBreachProcedure';
 import VerbisGuide from '../components/VerbisGuide';
 import AuditLogSettings from '../components/AuditLogSettings';
 import AdminNotificationPanel from '../components/AdminNotificationPanel';
+import AnonymousPushPanel from '../components/AnonymousPushPanel';
 import MembershipApplicationsAdmin from '../components/MembershipApplicationsAdmin';
 import LandingPageSettings from '../components/LandingPageSettings';
 import {
@@ -173,6 +174,7 @@ const SettingsPage = ({ tab, grantedPermissions: grantedPermissionsProp }) => {
     // Admin-only tabs
     if (isAdmin) {
       tabs.push(
+        { id: 'anon-push', name: 'Anonim Bildirim', description: 'Tanitim sayfasi abonelerine bildirim', permission: false },
         { id: 'gemini-api', name: 'Gemini AI', description: 'Gemini AI API ayarları', permission: false },
         { id: 'firebase-config', name: 'Firebase Config', description: 'Firebase yapılandırması', permission: false },
         { id: 'deployment-config', name: 'Deployment Config', description: 'Deployment ayarları', permission: false },
@@ -265,6 +267,7 @@ const SettingsPage = ({ tab, grantedPermissions: grantedPermissionsProp }) => {
                   {activeTab === 'data-breach-procedure' && hasPermission('data-breach-procedure') && <DataBreachProcedure />}
                   {activeTab === 'verbis-guide' && hasPermission('verbis-guide') && <VerbisGuide />}
                   {activeTab === 'audit-log' && hasPermission('audit-log') && <AuditLogSettings />}
+                  {activeTab === 'anon-push' && hasPermission('anon-push') && <AnonymousPushPanel />}
                 </>
               )}
             </div>
@@ -431,6 +434,7 @@ const SettingsPage = ({ tab, grantedPermissions: grantedPermissionsProp }) => {
                     {activeTab === 'data-breach-procedure' && hasPermission('data-breach-procedure') && <DataBreachProcedure />}
                     {activeTab === 'verbis-guide' && hasPermission('verbis-guide') && <VerbisGuide />}
                     {activeTab === 'audit-log' && hasPermission('audit-log') && <AuditLogSettings />}
+                    {activeTab === 'anon-push' && hasPermission('anon-push') && <AnonymousPushPanel />}
                   </>
                 )}
               </>
