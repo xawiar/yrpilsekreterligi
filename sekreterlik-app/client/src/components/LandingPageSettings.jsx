@@ -46,6 +46,49 @@ const DEFAULT_CONTENT = {
   applyCtaTitle: '',
   applyCtaText: '',
 
+  // Stats strip — 4 büyük sayı (Hero altında)
+  statsEnabled: true,
+  stats: [
+    { value: '13', label: 'İlçe Teşkilatı', suffix: '' },
+    { value: '248', label: 'Mahalle', suffix: '' },
+    { value: '2400', label: 'Aktif Üye', suffix: '+' },
+    { value: '36', label: 'Kadın Kolları Yöneticisi', suffix: '' },
+  ],
+
+  // Vision (sticky scroll) — 4 panel narrative
+  visionEnabled: true,
+  visionTitle: 'Vizyonumuz',
+  visionPanels: [
+    {
+      kicker: 'Birinci ilke',
+      title: 'Yerelden başlayan {italic:kalkınma}.',
+      body: 'Her mahalle, her sokak için ayrı çözüm. Elazığ\'ın doğal değerlerini koruyup ekonomik fırsata dönüştüren projelerle başlıyoruz.',
+      image: '',
+      meta: 'Harput · Tarihi şehir merkezi',
+    },
+    {
+      kicker: 'İkinci ilke',
+      title: 'Aileyi {italic:güçlendiren} politika.',
+      body: 'Gençlerin geleceğe güvenle bakacağı, ailelerin huzurla yaşayacağı bir Elazığ için sosyal politikalar üretiyoruz.',
+      image: '',
+      meta: 'Sahada · Kadın Kolları buluşması',
+    },
+    {
+      kicker: 'Üçüncü ilke',
+      title: 'Şeffaf, hesap {italic:verebilir} yönetim.',
+      body: 'Her kararı vatandaşla paylaşan, her kuruşu açıkça gösteren bir belediye anlayışı. Dijital yönetim, açık veri.',
+      image: '',
+      meta: 'Dijital yönetim · Açık veri',
+    },
+    {
+      kicker: 'Dördüncü ilke',
+      title: 'Tarih ve {italic:kültür} mirası.',
+      body: 'Harput\'tan Keban\'a, Palu\'dan Sivrice\'ye — şehrimizin köklerini koruyup dünyaya tanıtacak kültür projeleri.',
+      image: '',
+      meta: 'Keban · Baraj gölü',
+    },
+  ],
+
   address: '',
   phone: '',
   email: '',
@@ -58,6 +101,8 @@ const DEFAULT_CONTENT = {
 
   sections: {
     hero: true,
+    stats: true,
+    vision: true,
     about: true,
     leaders: true,
     electionSummary: true,
@@ -148,7 +193,7 @@ const LandingPageSettings = () => {
   };
 
   // ========= IMAGE UPLOAD =========
-  const handleImageUpload = async (field, file, storagePrefix) => {
+  const handleImageUpload = async (field, file, storagePrefix, returnUrl = false) => {
     if (!file) return;
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -175,11 +220,13 @@ const LandingPageSettings = () => {
           resized: String(toUpload.size !== file.size)
         }
       });
-      setField(field, url);
+      if (!returnUrl) setField(field, url);
       toast.success('Görsel yüklendi');
+      return url;
     } catch (err) {
       console.error('Landing gorsel yukleme hatasi:', err);
       toast.error('Görsel yüklenemedi: ' + (err?.message || 'bilinmeyen hata'));
+      return null;
     } finally {
       setUploading((prev) => ({ ...prev, [field]: false }));
     }
@@ -465,6 +512,183 @@ const LandingPageSettings = () => {
               </div>
             </div>
           </div>
+        </div>
+      </details>
+
+      {/* KART 1B: STATS — 4 büyük sayı strip */}
+      <details className={cardCls}>
+        <summary className={summaryCls}>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">1B. İstatistik Şeridi</span>
+            {!content.sections?.stats && (
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Gizli</span>
+            )}
+          </div>
+          <SectionToggle
+            checked={!!content.sections?.stats}
+            onChange={(v) => setSection('stats', v)}
+            ariaLabel="İstatistik şeridini göster/gizle"
+          />
+        </summary>
+        <div className={cardBodyCls}>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Hero altında 4 büyük sayı görünür. Counter animasyonu otomatik çalışır.</p>
+          {(content.stats || []).map((s, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Sayı (yalnızca rakam)</label>
+                <input
+                  type="text" inputMode="numeric" className={inputCls}
+                  value={s.value || ''}
+                  onChange={(e) => {
+                    const arr = [...(content.stats || [])];
+                    arr[i] = { ...arr[i], value: e.target.value.replace(/[^\d]/g, '') };
+                    setField('stats', arr);
+                  }}
+                  placeholder="13"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Etiket</label>
+                <input
+                  type="text" className={inputCls}
+                  value={s.label || ''}
+                  onChange={(e) => {
+                    const arr = [...(content.stats || [])];
+                    arr[i] = { ...arr[i], label: e.target.value };
+                    setField('stats', arr);
+                  }}
+                  placeholder="İlçe Teşkilatı"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Sonek (örn. +, %)</label>
+                <input
+                  type="text" maxLength={3} className={inputCls}
+                  value={s.suffix || ''}
+                  onChange={(e) => {
+                    const arr = [...(content.stats || [])];
+                    arr[i] = { ...arr[i], suffix: e.target.value };
+                    setField('stats', arr);
+                  }}
+                  placeholder="+"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      {/* KART 1C: VIZYON — 4 panel sticky scroll narrative */}
+      <details className={cardCls}>
+        <summary className={summaryCls}>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">1C. Vizyon (Sticky Scroll)</span>
+            {!content.sections?.vision && (
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Gizli</span>
+            )}
+          </div>
+          <SectionToggle
+            checked={!!content.sections?.vision}
+            onChange={(v) => setSection('vision', v)}
+            ariaLabel="Vizyon bölümünü göster/gizle"
+          />
+        </summary>
+        <div className={cardBodyCls}>
+          <div>
+            <label className={labelCls} htmlFor="lp-vision-title">Bölüm Başlığı</label>
+            <input
+              id="lp-vision-title" type="text" className={inputCls}
+              value={content.visionTitle || ''}
+              onChange={(e) => setField('visionTitle', e.target.value)}
+              placeholder="Vizyonumuz"
+            />
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            4 panel, scroll ile sırayla görünür. Başlık metnindeki {'{italic:KELIME}'} kısmı amber/italik gösterilir.
+          </p>
+          {(content.visionPanels || []).map((p, i) => (
+            <div key={i} className="space-y-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="text-xs font-bold text-primary-600 dark:text-primary-400">PANEL {i + 1}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Kicker (üst yazı)</label>
+                  <input
+                    type="text" className={inputCls}
+                    value={p.kicker || ''}
+                    onChange={(e) => {
+                      const arr = [...(content.visionPanels || [])];
+                      arr[i] = { ...arr[i], kicker: e.target.value };
+                      setField('visionPanels', arr);
+                    }}
+                    placeholder="Birinci ilke"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Görsel altı meta</label>
+                  <input
+                    type="text" className={inputCls}
+                    value={p.meta || ''}
+                    onChange={(e) => {
+                      const arr = [...(content.visionPanels || [])];
+                      arr[i] = { ...arr[i], meta: e.target.value };
+                      setField('visionPanels', arr);
+                    }}
+                    placeholder="Harput · Tarihi şehir merkezi"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Başlık (italikleştirmek için {'{italic:KELIME}'})</label>
+                <input
+                  type="text" className={inputCls}
+                  value={p.title || ''}
+                  onChange={(e) => {
+                    const arr = [...(content.visionPanels || [])];
+                    arr[i] = { ...arr[i], title: e.target.value };
+                    setField('visionPanels', arr);
+                  }}
+                  placeholder="Yerelden başlayan {italic:kalkınma}."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Açıklama</label>
+                <textarea
+                  rows={3} className={inputCls}
+                  value={p.body || ''}
+                  onChange={(e) => {
+                    const arr = [...(content.visionPanels || [])];
+                    arr[i] = { ...arr[i], body: e.target.value };
+                    setField('visionPanels', arr);
+                  }}
+                  placeholder="Açıklama metni"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Arka plan görseli (maks 5MB)</label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <input
+                    type="file" accept="image/jpeg,image/png,image/webp"
+                    disabled={!!uploading[`vision_${i}`]}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const url = await handleImageUpload(`vision_${i}`, file, `vision-${i}`, true);
+                      if (url) {
+                        const arr = [...(content.visionPanels || [])];
+                        arr[i] = { ...arr[i], image: url };
+                        setField('visionPanels', arr);
+                      }
+                    }}
+                    className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/40 dark:file:text-primary-200 hover:file:bg-primary-100"
+                  />
+                  {uploading[`vision_${i}`] && <span className="text-xs text-primary-600 animate-pulse">Yükleniyor...</span>}
+                  {p.image && (
+                    <img src={p.image} alt={`Panel ${i + 1}`} className="h-16 w-28 object-cover rounded border border-gray-200 dark:border-gray-700" loading="lazy" />
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </details>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ApiService from '../utils/ApiService';
 import ElectionResultForm from '../components/ElectionResultForm';
 import ChiefObserverQuickForm from '../components/ChiefObserverQuickForm';
+import ChiefObserverHero from '../components/ChiefObserver/HeroCard';
 import BallotBoxDocumentsPanel from '../components/BallotBoxDocumentsPanel';
 import TrainingMaterialList from '../components/TrainingMaterialList';
 import NotificationBell from '../components/NotificationBell';
@@ -359,36 +360,39 @@ const ChiefObserverDashboardPage = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: COLORS.bg }}>
+      {/* CSS — pulse animasyonu (canlı badge için) */}
+      <style>{`@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }`}</style>
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px' }}>
 
-        {/* HEADER — kompakt yatay bar */}
+        {/* HEADER — açık tema, "Merhaba" karşılama + LIVE badge */}
         <header style={{
-          background: `linear-gradient(135deg, ${COLORS.primaryDark} 0%, ${COLORS.primary} 100%)`,
-          borderRadius: 8, padding: '14px 20px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, color: 'white',
-          boxShadow: '0 2px 8px rgba(220,38,38,.2)',
+          marginBottom: 16,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            <div style={{ width: 38, height: 38, background: 'rgba(255,255,255,.2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+          <div style={{ minWidth: 0, flex: '1 1 260px' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(227,6,19,0.08)', color: COLORS.primary,
+              fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS.primary, animation: 'pulse 1.5s infinite' }} />
+              CANLI · GÖREV AKTİF
             </div>
-            <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>Başmüşahit Dashboard</h1>
-              <p style={{ fontSize: 12, opacity: 0.9, margin: '2px 0 0' }}>
-                {user.name || 'Kullanıcı'}{ballotNumber && <> &middot; Sandık <strong>{ballotNumber}</strong></>}
-              </p>
-            </div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, margin: '6px 0 0', color: '#0f172a', lineHeight: 1.1, letterSpacing: -0.5 }}>
+              Merhaba {(user.name || 'Başmüşahit').split(' ')[0]}
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+              Başmüşahit{ballotNumber && <> &middot; <span style={{ color: '#0f172a', fontWeight: 600 }}>Sandık {ballotNumber}</span></>}
+            </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <NotificationBell
-              className="notification-bell-header"
-              iconClassName=""
-            />
+            <NotificationBell className="notification-bell-header" iconClassName="" />
             <button
               onClick={handleLogout}
               style={{
-                padding: '8px 14px', background: 'rgba(255,255,255,.2)', color: 'white',
-                border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                padding: '8px 14px', background: '#fff', color: '#475569',
+                border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
@@ -412,13 +416,99 @@ const ChiefObserverDashboardPage = () => {
           </div>
         )}
 
-        {/* STATS — 4 kompakt kart */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-          <StatCard label="Toplam Seçim" value={elections.length} color="#2563eb" />
-          <StatCard label="Tamamlanan" value={completedCount} color="#10b981" />
-          <StatCard label="Bekleyen" value={pendingCount} color="#f97316" />
-          <StatCard label="Onay Bekleyen" value={pendingApprovals.length} color="#dc2626" onClick={() => setActiveTab('approvals')} />
+        {/* HERO — durum rozeti + sandık + 4 inline stat */}
+        <div style={{ marginBottom: 16 }}>
+          <ChiefObserverHero
+            ballotNumber={ballotNumber}
+            institutionName={institutionSupervisor?.institution_name || ''}
+            stats={{
+              totalElections: elections.length,
+              completed: completedCount,
+              pending: pendingCount,
+              awaitingApproval: pendingApprovals.length,
+            }}
+            onApprovalsClick={() => setActiveTab('approvals')}
+          />
         </div>
+
+        {/* BIG CTA — Sonuç Gir (primary) + Bekleyen Onaylar (varsa) */}
+        {elections.length > 0 && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: pendingApprovals.length > 0 ? '2fr 1fr' : '1fr',
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            <button
+              onClick={() => { const e = elections[0]; if (e) handleElectionClick(e); }}
+              style={{
+                background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`,
+                color: 'white', border: 'none', borderRadius: 12,
+                padding: '20px 24px',
+                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', alignItems: 'center', gap: 14,
+                boxShadow: '0 4px 14px rgba(227,6,19,0.25), inset 0 1px 0 rgba(255,255,255,0.18)',
+                transition: 'transform .12s',
+              }}
+              onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(.985)')}
+              onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              <div style={{
+                width: 48, height: 48, borderRadius: 10,
+                background: 'rgba(255,255,255,0.18)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 26, flexShrink: 0,
+              }}>📸</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, letterSpacing: 1, textTransform: 'uppercase' }}>
+                  Ana Görevin
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
+                  Tutanak Yükle &amp; Sonuç Gir
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.9, marginTop: 3 }}>
+                  Foto çek → AI sayıları okusun → onayla
+                </div>
+              </div>
+            </button>
+
+            {pendingApprovals.length > 0 && (
+              <button
+                onClick={() => setActiveTab('approvals')}
+                style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fcd34d',
+                  borderRadius: 12,
+                  padding: '20px 24px',
+                  cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  color: '#78350f',
+                }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 10,
+                  background: 'rgba(217,119,6,0.15)', color: '#b45309',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, flexShrink: 0,
+                }}>⏳</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', letterSpacing: 1, textTransform: 'uppercase' }}>
+                    Bekleyen
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2, lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }}>
+                    {pendingApprovals.length} Onay
+                  </div>
+                  <div style={{ fontSize: 12, marginTop: 3 }}>
+                    Sorumlu sonuçlarını gözden geçir
+                  </div>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* MAIN LAYOUT — flex 2/1 (sol içerik / sağ panel) */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
