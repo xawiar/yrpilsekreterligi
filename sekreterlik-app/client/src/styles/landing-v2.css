@@ -12,9 +12,19 @@
   color: var(--lv-ink);
   font-family: 'Inter Tight', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  /* clip yatay scroll'u kesip dikey sticky'yi (vision) bozmuyor */
-  overflow-x: clip;
+  /* NOT: overflow-x: hidden/clip BURADA YOK — sticky positioning'i (vision
+     section) bozuyordu. Yatay taşma her section kendi içinde overflow:hidden
+     ile kesiyor (hero, news, cta zaten var). */
   min-height: 100vh;
+}
+
+/* Snap scroll — her aşağı kaydırmada bir sonraki section'a yapışsın.
+   `proximity` yumuşak: kullanıcı section ortasında scroll'u bıraksa zorlamaz,
+   yakına gelince yapışır. `mandatory` denenmedi — Lenis smooth scroll ile çatışır. */
+html { scroll-snap-type: y proximity; }
+.landing-v2 > section:not(.lv-vision) { scroll-snap-align: start; scroll-snap-stop: normal; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-snap-type: none; }
 }
 .landing-v2 * { box-sizing: border-box; }
 .landing-v2 a { color: inherit; text-decoration: none; }
@@ -579,8 +589,18 @@
     radial-gradient(ellipse at 85% 100%, rgba(245,158,11,0.05) 0%, transparent 50%),
     linear-gradient(180deg, #F7F4ED 0%, var(--lv-paper) 50%, #F7F4ED 100%);
   color: var(--lv-ink);
-  padding: 80px 40px;
+  padding: 64px 40px;
   position: relative;
+}
+/* Hakkımızda — viewport'a sığsın */
+.lv-light-section#hakkimizda {
+  min-height: 100vh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding-top: 40px; padding-bottom: 40px;
+}
+.lv-light-section#hakkimizda .lv-section-head { margin-bottom: 24px; }
+.lv-light-section#hakkimizda .lv-about-body p {
+  font-size: 15px; line-height: 1.55; margin: 0 0 0.7em;
 }
 .lv-light-section.alt {
   background:
@@ -594,25 +614,34 @@
 }
 .lv-light-section .lv-section-eyebrow { color: var(--lv-red); }
 .lv-light-section .lv-section-eyebrow::before { background: var(--lv-red); }
-.lv-light-section .lv-section-title { color: var(--lv-ink); }
+.lv-light-section .lv-section-title {
+  color: var(--lv-ink);
+  font-size: clamp(36px, 4.5vw, 64px);
+  line-height: 1.04;
+}
 .lv-light-section .lv-section-title em { color: var(--lv-red); }
 .lv-light-section .lv-section-sub { color: var(--lv-muted); }
-.lv-light-section .lv-section-head { color: var(--lv-ink); margin-bottom: 48px; }
+.lv-light-section .lv-section-head { color: var(--lv-ink); margin-bottom: 36px; }
 
 .lv-about-grid {
   max-width: 1400px; margin: 0 auto;
-  display: grid; grid-template-columns: 1.05fr 1fr; gap: 64px; align-items: start;
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 80px; align-items: center;
 }
 @media (max-width: 1000px) { .lv-about-grid { grid-template-columns: 1fr; gap: 40px; } }
-.lv-about-body { position: relative; padding-left: 22px; }
+.lv-about-body { position: relative; padding-left: 22px; max-width: 620px; }
 .lv-about-body::before {
   content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px;
   background: linear-gradient(180deg, var(--lv-red) 0%, var(--lv-amber) 100%);
   border-radius: 2px;
 }
 .lv-about-body p {
-  font-size: 17px; line-height: 1.65; color: #2A2A2F;
-  max-width: 560px; margin: 0 0 0.9em;
+  font-size: 16px; line-height: 1.65; color: #2A2A2F;
+  margin: 0 0 0.85em;
+}
+.lv-about-image-wrap {
+  position: relative; justify-self: end;
+  width: 100%; max-width: 460px;
 }
 .lv-about-image {
   position: relative;
@@ -620,15 +649,27 @@
   background: var(--lv-paper-2) center / cover no-repeat;
   box-shadow: 0 30px 60px -30px rgba(11,11,15,0.35), 0 2px 8px rgba(11,11,15,0.06);
 }
-.lv-about-image::before {
-  content: ''; position: absolute; top: -14px; left: -14px; width: 60px; height: 60px;
+.lv-about-image-wrap::before {
+  content: ''; position: absolute; top: -16px; left: -16px; width: 64px; height: 64px;
   border-top: 2px solid var(--lv-amber); border-left: 2px solid var(--lv-amber);
   border-top-left-radius: 18px; pointer-events: none;
 }
-.lv-about-image::after {
-  content: ''; position: absolute; bottom: -14px; right: -14px; width: 60px; height: 60px;
+.lv-about-image-wrap::after {
+  content: ''; position: absolute; bottom: -16px; right: -16px; width: 64px; height: 64px;
   border-bottom: 2px solid var(--lv-red); border-right: 2px solid var(--lv-red);
   border-bottom-right-radius: 18px; pointer-events: none;
+}
+.lv-about-image-meta {
+  position: absolute; left: -8px; bottom: 24px; z-index: 2;
+  padding: 8px 14px; border-radius: 999px;
+  background: white; border: 1px solid var(--lv-line);
+  box-shadow: 0 8px 20px -8px rgba(11,11,15,0.18);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--lv-red);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.lv-about-image-meta::before {
+  content: ''; width: 14px; height: 1px; background: var(--lv-red);
 }
 
 /* Leaders — group label (eyebrow with amber line + counter) */
@@ -652,22 +693,25 @@
 
 /* Leaders grid (Divan & İl Yönetim) */
 .lv-leaders-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 22px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px;
+}
+.lv-leaders-grid--sm {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px;
 }
 .lv-leader-card {
   position: relative;
-  background: white; border-radius: 18px; overflow: hidden;
+  background: white; border-radius: 16px; overflow: hidden;
   border: 1px solid var(--lv-line);
   transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s, border-color 0.3s;
 }
 .lv-leader-card::before {
-  content: ''; position: absolute; inset: 0; border-radius: 18px;
+  content: ''; position: absolute; inset: 0; border-radius: 16px;
   box-shadow: inset 0 0 0 1px transparent; pointer-events: none;
   transition: box-shadow 0.4s;
 }
 .lv-leader-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 24px 50px -22px rgba(11,11,15,0.28);
+  transform: translateY(-5px);
+  box-shadow: 0 22px 44px -22px rgba(11,11,15,0.28);
   border-color: rgba(227,6,19,0.25);
 }
 .lv-leader-card:hover::before { box-shadow: inset 0 0 0 1px rgba(245,158,11,0.45); }
@@ -683,36 +727,41 @@
 }
 .lv-leader-card:hover .lv-leader-photo::after { opacity: 1; }
 .lv-leader-info {
-  padding: 14px 16px 16px;
+  padding: 12px 14px 14px;
   background: linear-gradient(180deg, white 0%, #FBFAF6 100%);
 }
 .lv-leader-name {
   font-family: 'Fraunces', serif; font-weight: 600;
-  font-size: 17px; line-height: 1.2; margin: 0 0 4px;
+  font-size: 15px; line-height: 1.2; margin: 0 0 4px;
   color: var(--lv-ink);
 }
+.lv-leaders-grid--sm .lv-leader-name { font-size: 13px; }
 .lv-leader-role {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--lv-red);
 }
+.lv-leaders-grid--sm .lv-leader-role { font-size: 9.5px; }
 .lv-leader-region {
-  font-size: 12px; color: var(--lv-muted); margin-top: 2px;
+  font-size: 11.5px; color: var(--lv-muted); margin-top: 2px;
 }
 
-/* President — editorial: large portrait + side info */
+/* President — editorial: large portrait + side info, sayfayı ortalı */
 .lv-president-grid {
-  max-width: 1200px; margin: 0 auto;
-  display: grid; grid-template-columns: 0.85fr 1fr; gap: 48px; align-items: center;
+  max-width: 1080px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 56px;
+  align-items: center; justify-items: center;
 }
-@media (max-width: 900px) { .lv-president-grid { grid-template-columns: 1fr; gap: 32px; } }
+@media (max-width: 900px) { .lv-president-grid { grid-template-columns: 1fr; gap: 32px; justify-items: center; } }
 .lv-president-portrait {
   position: relative;
+  width: 100%; max-width: 380px; justify-self: end;
   aspect-ratio: 4/5; border-radius: 22px; overflow: hidden;
   background: var(--lv-paper-2) center / cover no-repeat;
   box-shadow: 0 40px 80px -30px rgba(11,11,15,0.45);
   cursor: pointer;
   transition: transform 0.55s cubic-bezier(0.16,1,0.3,1);
 }
+@media (max-width: 900px) { .lv-president-portrait { justify-self: center; } }
 .lv-president-portrait:hover { transform: translateY(-4px) scale(1.01); }
 .lv-president-portrait::before {
   content: ''; position: absolute; top: -16px; left: -16px; width: 70px; height: 70px;
@@ -851,27 +900,28 @@
 }
 .lv-social-pill:hover { background: var(--lv-ink); color: white; border-color: var(--lv-ink); }
 
-/* ===== Üst duyuru banner ===== */
+/* ===== Üst duyuru banner — light/paper, diğer ışıklı section'larla uyumlu ===== */
 .lv-banner-section {
   position: relative;
-  padding: 90px 24px 36px;
+  padding: 90px 24px 28px;
   background:
-    radial-gradient(ellipse at 50% 100%, rgba(245,158,11,0.10) 0%, transparent 55%),
-    linear-gradient(135deg, var(--lv-ink) 0%, #1A1518 60%, var(--lv-ink) 100%);
+    radial-gradient(ellipse at 20% 0%, rgba(227,6,19,0.05) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #F7F4ED 0%, var(--lv-paper) 60%, #F7F4ED 100%);
   overflow: hidden;
 }
 .lv-banner-section::before {
-  content: ''; position: absolute; inset: 0; opacity: 0.06; pointer-events: none;
+  content: ''; position: absolute; inset: 0; opacity: 0.04; pointer-events: none;
   background-image:
-    linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px);
+    linear-gradient(rgba(11,11,15,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11,11,15,0.5) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
 }
 .lv-banner-section::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(11,11,15,0.10), transparent);
   pointer-events: none;
 }
 .lv-banner-wrap {
@@ -879,29 +929,31 @@
 }
 .lv-banner-card {
   display: block; position: relative;
-  border-radius: 24px; overflow: hidden;
-  box-shadow: 0 24px 60px -20px rgba(0,0,0,0.45);
-  outline: 1px solid rgba(255,255,255,0.15);
+  border-radius: 22px; overflow: hidden;
+  background: white;
+  box-shadow: 0 20px 50px -22px rgba(11,11,15,0.22), 0 2px 8px rgba(11,11,15,0.04);
+  outline: 1px solid var(--lv-line);
   transition: outline-color 0.35s, transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s;
 }
 .lv-banner-card:hover {
-  outline-color: rgba(245,158,11,0.55);
+  outline-color: rgba(227,6,19,0.35);
   transform: translateY(-3px);
-  box-shadow: 0 32px 72px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(245,158,11,0.12);
+  box-shadow: 0 32px 60px -22px rgba(11,11,15,0.30);
 }
 .lv-banner-badge {
   position: absolute; top: 16px; left: 16px; z-index: 2;
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 14px; border-radius: 999px;
-  background: rgba(11,11,15,0.72); backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(245,158,11,0.45);
-  color: var(--lv-amber);
+  border: 1px solid rgba(227,6,19,0.35);
+  color: var(--lv-red);
   font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(11,11,15,0.08);
 }
 .lv-banner-badge::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--lv-amber); box-shadow: 0 0 8px var(--lv-amber);
+  background: var(--lv-red); box-shadow: 0 0 8px var(--lv-red);
   animation: lv-banner-dot 2s ease-in-out infinite;
 }
 @keyframes lv-banner-dot {
@@ -911,16 +963,17 @@
 .lv-banner-arrow {
   position: absolute; top: 16px; right: 16px; z-index: 2;
   width: 40px; height: 40px; border-radius: 50%;
-  background: rgba(11,11,15,0.72); backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid var(--lv-line);
   display: flex; align-items: center; justify-content: center;
-  color: white;
-  transition: background 0.3s, border-color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  color: var(--lv-ink);
+  box-shadow: 0 4px 12px rgba(11,11,15,0.08);
+  transition: background 0.3s, border-color 0.3s, color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
 }
 .lv-banner-card:hover .lv-banner-arrow {
-  background: var(--lv-amber); border-color: var(--lv-amber);
-  color: var(--lv-ink); transform: rotate(-45deg);
+  background: var(--lv-red); border-color: var(--lv-red);
+  color: white; transform: rotate(-45deg);
 }
 .lv-banner-img { display: block; width: 100%; height: auto; }
 .lv-banner-text {
@@ -943,5 +996,7 @@ html[data-landing-v2],
 body[data-landing-v2] {
   height: auto !important;
   min-height: 100% !important;
-  overflow-y: visible !important;
+  /* overflow visible — sticky positioning'in viewport'a yapışması için
+     ancestor'ların hiçbirinde overflow hidden/clip/auto/scroll olmamalı. */
+  overflow: visible !important;
 }

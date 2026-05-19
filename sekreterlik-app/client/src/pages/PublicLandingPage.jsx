@@ -486,7 +486,10 @@ const PublicLandingPage = () => {
               ))}
             </div>
             {content.aboutImage && (
-              <div className="lv-about-image" style={{ backgroundImage: `url(${content.aboutImage})` }} />
+              <div className="lv-about-image-wrap">
+                <div className="lv-about-image" style={{ backgroundImage: `url(${content.aboutImage})` }} />
+                <span className="lv-about-image-meta">YRP Elazığ</span>
+              </div>
             )}
           </div>
         </section>
@@ -505,11 +508,7 @@ const PublicLandingPage = () => {
                     data-panel-idx={i}
                     data-has-image={p.image ? 'true' : undefined}
                     style={p.image ? { backgroundImage: `url(${p.image})` } : undefined}
-                  >
-                    {!p.image && (
-                      <div className="lv-vision-image-tag">Panel {i + 1} · görsel yok</div>
-                    )}
-                  </div>
+                  />
                 ))}
               </div>
 
@@ -627,14 +626,14 @@ const PublicLandingPage = () => {
             </div>
           )}
 
-          {/* Grup 3 — İl Yönetimi */}
+          {/* Grup 3 — İl Yönetimi (daha küçük kartlar) */}
           {leaders.filter((m) => m._group === 'ilYonetim').length > 0 && (
             <div className="lv-leader-group" style={{ marginBottom: 0 }}>
               <div className="lv-leader-group-head">
                 İl Yönetim Kurulu
                 <span className="count">{String(leaders.filter((m) => m._group === 'ilYonetim').length).padStart(2, '0')}</span>
               </div>
-              <div className="lv-leaders-grid">
+              <div className="lv-leaders-grid lv-leaders-grid--sm">
                 {leaders.filter((m) => m._group === 'ilYonetim').map((m) => (
                   <div className="lv-leader-card" key={m.id} data-cursor="hover" style={{ cursor: 'pointer' }} onClick={() => setOpenLeader(m)}>
                     <div className="lv-leader-photo" style={m.photo ? { backgroundImage: `url(${m.photo})` } : undefined} />

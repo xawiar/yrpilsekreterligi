@@ -180,60 +180,71 @@ export const useHeroParallax = (heroSelector = '.lv-hero') => {
   }, [heroSelector]);
 };
 
-// Vision sticky scroll panel switcher
+// Vision sticky scroll panel switcher.
+// Basit ve sağlam — rAF loop scroll position izler, panel/image classList'i
+// senkronize tutar. Önceki retry-based setup race condition üretiyordu.
 export const useVisionScroll = (panelCount = 4) => {
   useEffect(() => {
     if (panelCount < 1) return undefined;
-    // setup'ı veri/DOM hazır olunca yap — kısa gecikmeyle birkaç deneme
-    let cleanup = () => {};
-    const tryAttach = () => {
-      const track = document.querySelector('.lv-vision-track');
-      if (!track) return false;
-      const panels = track.querySelectorAll('.lv-vision-panel');
-      const images = track.querySelectorAll('.lv-vision-image');
-      if (panels.length === 0 || images.length === 0) return false;
-      const stepEl = track.querySelector('#lv-vision-step');
-      const barEl = track.querySelector('.lv-vision-progress-bar');
+    let rafId;
+    let alive = true;
+    let lastCur = -2;
 
-      // Tüm görselleri preload et (browser lazy etmesin)
-      images.forEach((img) => {
+    const tick = () => {
+      if (!alive) return;
+      const track = document.querySelector('.lv-vision-track');
+      if (track) {
+        const panels = track.querySelectorAll('.lv-vision-panel');
+        const images = track.querySelectorAll('.lv-vision-image');
+        const stepEl = track.querySelector('#lv-vision-step');
+        const barEl = track.querySelector('.lv-vision-progress-bar');
+        const count = Math.min(panels.length, images.length);
+        if (count >= 1) {
+          const rect = track.getBoundingClientRect();
+          const total = track.offsetHeight - window.innerHeight;
+          let cur = 0;
+          let progress = 0;
+          if (total > 0) {
+            const passed = Math.max(0, -rect.top);
+            progress = Math.min(Math.max(passed / total, 0), 1);
+            cur = Math.min(Math.floor(progress * count), count - 1);
+          }
+          if (barEl) barEl.style.setProperty('--vp', `${progress * 100}%`);
+          if (cur !== lastCur) {
+            // Önce tüm is-active'leri kaldır (yarış engelle), sonra doğru olana ekle
+            for (let i = 0; i < count; i++) {
+              if (i === cur) {
+                panels[i].classList.add('is-active');
+                images[i].classList.add('is-active');
+              } else {
+                panels[i].classList.remove('is-active');
+                images[i].classList.remove('is-active');
+              }
+            }
+            if (stepEl) stepEl.textContent = String(cur + 1).padStart(2, '0');
+            lastCur = cur;
+          }
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    // Görselleri preload et — browser lazy etmesin
+    setTimeout(() => {
+      document.querySelectorAll('.lv-vision-image').forEach((img) => {
         const bg = img.style.backgroundImage;
         if (bg && bg !== 'none') {
           const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
-          const preload = new Image();
-          preload.src = url;
+          const pre = new Image();
+          pre.src = url;
         }
       });
+    }, 200);
 
-      let last = -2;
-      const onScroll = () => {
-        const rect = track.getBoundingClientRect();
-        const total = track.offsetHeight - window.innerHeight;
-        if (total <= 0) return;
-        const passed = Math.max(0, -rect.top);
-        const progress = Math.min(Math.max(passed / total, 0), 1);
-        const cur = Math.min(Math.floor(progress * panelCount), panelCount - 1);
-        if (barEl) barEl.style.setProperty('--vp', `${progress * 100}%`);
-        if (cur !== last) {
-          panels.forEach((p, i) => p.classList.toggle('is-active', i === cur));
-          images.forEach((img, i) => img.classList.toggle('is-active', i === cur));
-          if (stepEl) stepEl.textContent = String(cur + 1).padStart(2, '0');
-          last = cur;
-        }
-      };
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-      cleanup = () => window.removeEventListener('scroll', onScroll);
-      return true;
+    return () => {
+      alive = false;
+      if (rafId) cancelAnimationFrame(rafId);
     };
-    // Hemen dene, başarısızsa kısa gecikmelerle tekrar
-    if (!tryAttach()) {
-      const t1 = setTimeout(() => { if (!tryAttach()) {
-        const t2 = setTimeout(tryAttach, 800);
-        cleanup = () => clearTimeout(t2);
-      }}, 200);
-      return () => { clearTimeout(t1); cleanup(); };
-    }
-    return () => cleanup();
   }, [panelCount]);
 };
