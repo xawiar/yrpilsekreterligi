@@ -503,8 +503,13 @@ const PublicLandingPage = () => {
                     key={i}
                     className="lv-vision-image"
                     data-panel-idx={i}
+                    data-has-image={p.image ? 'true' : undefined}
                     style={p.image ? { backgroundImage: `url(${p.image})` } : undefined}
-                  />
+                  >
+                    {!p.image && (
+                      <div className="lv-vision-image-tag">Panel {i + 1} · görsel yok</div>
+                    )}
+                  </div>
                 ))}
               </div>
 
