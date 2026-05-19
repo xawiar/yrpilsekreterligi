@@ -373,8 +373,10 @@ const PublicLandingPage = () => {
       {/* Nav */}
       <nav className="lv-nav" id="lv-nav">
         <a href="/" className="lv-brand" data-cursor="hover">
-          <div className="lv-brand-mark">Y</div>
-          YRP Elazığ
+          <span className="lv-brand-logo-wrap">
+            <img src="/yrp-logo.png" alt="Yeniden Refah Partisi" className="lv-brand-logo" />
+          </span>
+          Yeniden Refah Partisi Elazığ İl Başkanlığı
         </a>
         <div className="lv-nav-links">
           <a href="#hero" data-cursor="hover">Anasayfa</a>
@@ -385,7 +387,6 @@ const PublicLandingPage = () => {
           <a href="#iletisim" data-cursor="hover">İletişim</a>
           <a href="/login" data-cursor="hover">Giriş</a>
         </div>
-        <a href="#basvuru" className="lv-nav-cta" data-cursor="hover">Aday Başvurusu</a>
       </nav>
 
       {/* Üst Duyuru Banner — admin Settings: bannerEnabled + bannerImage + bannerLink + bannerText */}
@@ -576,7 +577,7 @@ const PublicLandingPage = () => {
                     aria-label={`${m.name} özgeçmişini aç`}
                   />
                   <div className="lv-president-info">
-                    <div className="lv-president-eyebrow">{m.position || 'İl Başkanı'}</div>
+                    <div className="lv-president-eyebrow">İl Başkanı</div>
                     <h3 className="lv-president-name">{m.name}</h3>
                     {m.position && <p className="lv-president-role">{m.position}</p>}
                     {m.region && (
@@ -588,13 +589,21 @@ const PublicLandingPage = () => {
                         {m.region}
                       </span>
                     )}
+                    <div className="lv-president-bio-card">
+                      <div className="lv-president-bio-card-label">Özgeçmiş</div>
+                      {m.biography && String(m.biography).trim() ? (
+                        <p className="lv-president-bio">{String(m.biography).trim()}</p>
+                      ) : (
+                        <p className="lv-president-bio-empty">Henüz özgeçmiş bilgisi eklenmemiş.</p>
+                      )}
+                    </div>
                     <button
                       type="button"
                       className="lv-president-cta"
                       data-cursor="hover"
                       onClick={() => setOpenLeader(m)}
                     >
-                      Özgeçmiş
+                      Tam Özgeçmiş
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5-5 5M6 12h12" />
                       </svg>

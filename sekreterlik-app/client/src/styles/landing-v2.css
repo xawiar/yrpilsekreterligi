@@ -90,13 +90,42 @@ html { scroll-snap-type: y proximity; }
   padding: 14px 40px; color: var(--lv-ink);
   border-bottom-color: var(--lv-line);
 }
-.lv-brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: -0.02em; font-size: 18px; }
-.lv-brand-mark {
-  width: 36px; height: 36px; border-radius: 8px;
-  background: var(--lv-red); color: white;
+.lv-brand {
+  display: flex; align-items: center; gap: 14px;
+  font-weight: 700; letter-spacing: -0.01em; font-size: 14px;
+  line-height: 1.15; max-width: 360px;
+}
+.lv-brand-logo-wrap {
+  position: relative; flex-shrink: 0;
+  width: 52px; height: 52px; border-radius: 14px;
+  background: white;
+  border: 1px solid var(--lv-line);
+  box-shadow: 0 8px 22px -8px rgba(227,6,19,0.32), 0 1px 3px rgba(11,11,15,0.06);
   display: grid; place-items: center;
-  font-family: 'Fraunces', serif; font-weight: 800; font-size: 18px;
-  box-shadow: 0 6px 24px -8px rgba(227,6,19,0.6);
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s, border-color 0.3s;
+}
+.lv-brand-logo-wrap::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 25%, rgba(227,6,19,0.08), transparent 60%);
+  pointer-events: none;
+}
+.lv-brand:hover .lv-brand-logo-wrap {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 14px 32px -10px rgba(227,6,19,0.45), 0 2px 6px rgba(11,11,15,0.08);
+  border-color: rgba(227,6,19,0.35);
+}
+.lv-brand-logo {
+  width: 42px; height: 42px; object-fit: contain; object-position: center;
+  position: relative; z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(11,11,15,0.08));
+}
+.lv-nav.is-scrolled .lv-brand-logo-wrap { width: 44px; height: 44px; border-radius: 12px; }
+.lv-nav.is-scrolled .lv-brand-logo { width: 36px; height: 36px; }
+@media (max-width: 768px) {
+  .lv-brand { font-size: 12px; max-width: 240px; gap: 10px; }
+  .lv-brand-logo-wrap { width: 42px; height: 42px; border-radius: 11px; }
+  .lv-brand-logo { width: 34px; height: 34px; }
 }
 .lv-nav-links { display: flex; gap: 28px; font-size: 14px; font-weight: 500; }
 .lv-nav-links a { opacity: 0.85; transition: opacity 0.2s; }
@@ -532,21 +561,23 @@ html { scroll-snap-type: y proximity; }
 .lv-news-detail.is-open .lv-news-detail-close { opacity: 1; transform: scale(1); }
 .lv-news-detail-close:hover { background: rgba(255,255,255,0.22); }
 
-/* CTA */
+/* CTA — viewport'a sığsın */
 .lv-cta-section { position: relative; background: var(--lv-ink); color: white;
-  padding: 160px 40px; overflow: hidden; }
+  padding: 64px 40px; overflow: hidden;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+}
 .lv-cta-bg { position: absolute; inset: 0;
   background: radial-gradient(ellipse at 30% 50%, rgba(227,6,19,0.50) 0%, transparent 50%),
               radial-gradient(ellipse at 70% 50%, rgba(245,158,11,0.30) 0%, transparent 50%);
 }
 .lv-cta-content { position: relative; max-width: 1100px; margin: 0 auto; text-align: center; }
 .lv-cta-title { font-family: 'Fraunces', serif; font-weight: 600;
-  font-size: clamp(54px, 8vw, 144px); line-height: 0.96; letter-spacing: -0.035em;
-  margin: 0 0 32px;
+  font-size: clamp(40px, 5.5vw, 88px); line-height: 1.02; letter-spacing: -0.03em;
+  margin: 0 0 24px;
 }
 .lv-cta-title em { font-style: italic; color: var(--lv-amber); font-weight: 500; }
-.lv-cta-sub { font-size: 20px; line-height: 1.55; color: rgba(255,255,255,0.75);
-  max-width: 620px; margin: 0 auto 50px; }
+.lv-cta-sub { font-size: 17px; line-height: 1.55; color: rgba(255,255,255,0.75);
+  max-width: 620px; margin: 0 auto 32px; }
 .lv-cta-btn { display: inline-flex; align-items: center; gap: 14px;
   padding: 22px 40px; border-radius: 999px;
   background: white; color: var(--lv-ink);
@@ -745,23 +776,22 @@ html { scroll-snap-type: y proximity; }
   font-size: 11.5px; color: var(--lv-muted); margin-top: 2px;
 }
 
-/* President — editorial: large portrait + side info, sayfayı ortalı */
+/* President — editorial: portre sola yanaşık, sağda özgeçmiş */
 .lv-president-grid {
-  max-width: 1080px; margin: 0 auto;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 56px;
-  align-items: center; justify-items: center;
+  max-width: 1400px; margin: 0;
+  display: grid; grid-template-columns: minmax(320px, 380px) minmax(0, 1fr); gap: 56px;
+  align-items: start;
 }
-@media (max-width: 900px) { .lv-president-grid { grid-template-columns: 1fr; gap: 32px; justify-items: center; } }
+@media (max-width: 900px) { .lv-president-grid { grid-template-columns: 1fr; gap: 32px; margin: 0 auto; max-width: 480px; } }
 .lv-president-portrait {
   position: relative;
-  width: 100%; max-width: 380px; justify-self: end;
+  width: 100%;
   aspect-ratio: 4/5; border-radius: 22px; overflow: hidden;
   background: var(--lv-paper-2) center / cover no-repeat;
   box-shadow: 0 40px 80px -30px rgba(11,11,15,0.45);
   cursor: pointer;
   transition: transform 0.55s cubic-bezier(0.16,1,0.3,1);
 }
-@media (max-width: 900px) { .lv-president-portrait { justify-self: center; } }
 .lv-president-portrait:hover { transform: translateY(-4px) scale(1.01); }
 .lv-president-portrait::before {
   content: ''; position: absolute; top: -16px; left: -16px; width: 70px; height: 70px;
@@ -774,12 +804,55 @@ html { scroll-snap-type: y proximity; }
   border-bottom-right-radius: 22px; pointer-events: none;
 }
 .lv-president-info {
-  position: relative; padding-left: 22px;
+  position: relative; padding-left: 22px; padding-top: 12px;
 }
 .lv-president-info::before {
-  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px;
+  content: ''; position: absolute; left: 0; top: 18px; bottom: 18px; width: 2px;
   background: linear-gradient(180deg, var(--lv-red) 0%, var(--lv-amber) 100%);
   border-radius: 2px;
+}
+.lv-president-bio-card {
+  position: relative;
+  margin: 22px 0 22px;
+  padding: 22px 24px 24px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--lv-line);
+  box-shadow: 0 16px 36px -20px rgba(11,11,15,0.18), 0 1px 4px rgba(11,11,15,0.04);
+  max-width: 680px;
+}
+.lv-president-bio-card::before {
+  content: '“';
+  position: absolute; top: -14px; left: 20px;
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 64px; line-height: 1; color: var(--lv-red);
+  background: white; padding: 0 8px;
+}
+.lv-president-bio-card-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--lv-red);
+  margin-bottom: 10px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.lv-president-bio-card-label::after {
+  content: ''; width: 18px; height: 1px; background: var(--lv-red);
+}
+.lv-president-bio {
+  font-size: 14.5px; line-height: 1.7; color: #2A2A2F;
+  white-space: pre-line;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lv-line) transparent;
+}
+.lv-president-bio::-webkit-scrollbar { width: 6px; }
+.lv-president-bio::-webkit-scrollbar-track { background: transparent; }
+.lv-president-bio::-webkit-scrollbar-thumb { background: var(--lv-line); border-radius: 3px; }
+.lv-president-bio::-webkit-scrollbar-thumb:hover { background: var(--lv-muted); }
+.lv-president-bio-empty {
+  font-size: 13.5px; color: var(--lv-muted); font-style: italic; margin: 0;
 }
 .lv-president-eyebrow {
   font-size: 11px; font-weight: 700; letter-spacing: 0.22em;
@@ -900,60 +973,57 @@ html { scroll-snap-type: y proximity; }
 }
 .lv-social-pill:hover { background: var(--lv-ink); color: white; border-color: var(--lv-ink); }
 
-/* ===== Üst duyuru banner — light/paper, diğer ışıklı section'larla uyumlu ===== */
+/* ===== Üst duyuru banner — full-bleed ama daha kompakt ===== */
 .lv-banner-section {
   position: relative;
-  padding: 90px 24px 28px;
-  background:
-    radial-gradient(ellipse at 20% 0%, rgba(227,6,19,0.05) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.06) 0%, transparent 50%),
-    linear-gradient(180deg, #F7F4ED 0%, var(--lv-paper) 60%, #F7F4ED 100%);
+  width: 100%;
+  height: clamp(420px, 64vh, 620px);
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-}
-.lv-banner-section::before {
-  content: ''; position: absolute; inset: 0; opacity: 0.04; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(11,11,15,0.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(11,11,15,0.5) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-}
-.lv-banner-section::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(11,11,15,0.10), transparent);
-  pointer-events: none;
+  background: var(--lv-ink);
 }
 .lv-banner-wrap {
-  position: relative; max-width: 1400px; margin: 0 auto;
+  position: relative; width: 100%; height: 100%; margin: 0;
+  max-width: none;
 }
 .lv-banner-card {
   display: block; position: relative;
-  border-radius: 22px; overflow: hidden;
-  background: white;
-  box-shadow: 0 20px 50px -22px rgba(11,11,15,0.22), 0 2px 8px rgba(11,11,15,0.04);
-  outline: 1px solid var(--lv-line);
-  transition: outline-color 0.35s, transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s;
+  width: 100%; height: 100%;
+  border-radius: 0; overflow: hidden;
+  background: var(--lv-ink);
+  outline: none;
+  transition: none;
 }
-.lv-banner-card:hover {
-  outline-color: rgba(227,6,19,0.35);
-  transform: translateY(-3px);
-  box-shadow: 0 32px 60px -22px rgba(11,11,15,0.30);
+.lv-banner-card:hover { transform: none; }
+.lv-banner-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+}
+.lv-banner-text {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 80px 60px 36px;
+  background: linear-gradient(to top, rgba(11,11,15,0.85) 0%, rgba(11,11,15,0.50) 55%, transparent 100%);
+  color: white;
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(22px, 2.8vw, 38px);
+  line-height: 1.1; letter-spacing: -0.015em;
+  max-width: 980px;
 }
 .lv-banner-badge {
-  position: absolute; top: 16px; left: 16px; z-index: 2;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 7px 14px; border-radius: 999px;
-  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(227,6,19,0.35);
-  color: var(--lv-red);
-  font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
-  box-shadow: 0 4px 12px rgba(11,11,15,0.08);
+  position: absolute; top: 92px; left: 36px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 16px; border-radius: 999px;
+  background: rgba(11,11,15,0.55); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(245,158,11,0.55);
+  color: var(--lv-amber);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
 }
 .lv-banner-badge::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--lv-red); box-shadow: 0 0 8px var(--lv-red);
+  background: var(--lv-amber); box-shadow: 0 0 10px var(--lv-amber);
   animation: lv-banner-dot 2s ease-in-out infinite;
 }
 @keyframes lv-banner-dot {
@@ -961,33 +1031,24 @@ html { scroll-snap-type: y proximity; }
   50% { opacity: 1; transform: scale(1.25); }
 }
 .lv-banner-arrow {
-  position: absolute; top: 16px; right: 16px; z-index: 2;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--lv-line);
+  position: absolute; top: 92px; right: 36px; z-index: 2;
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(11,11,15,0.55); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.30);
   display: flex; align-items: center; justify-content: center;
-  color: var(--lv-ink);
-  box-shadow: 0 4px 12px rgba(11,11,15,0.08);
+  color: white;
   transition: background 0.3s, border-color 0.3s, color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
 }
 .lv-banner-card:hover .lv-banner-arrow {
-  background: var(--lv-red); border-color: var(--lv-red);
-  color: white; transform: rotate(-45deg);
+  background: var(--lv-amber); border-color: var(--lv-amber);
+  color: var(--lv-ink); transform: rotate(-45deg) scale(1.05);
 }
-.lv-banner-img { display: block; width: 100%; height: auto; }
-.lv-banner-text {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 60px 36px 28px 36px;
-  background: linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.40) 60%, transparent);
-  color: white;
-  font-family: 'Fraunces', serif; font-weight: 600;
-  font-size: clamp(20px, 2.6vw, 32px);
-  line-height: 1.15; letter-spacing: -0.015em;
-  max-width: 900px;
+@media (max-width: 700px) {
+  .lv-banner-badge { top: 84px; left: 20px; }
+  .lv-banner-arrow { top: 84px; right: 20px; width: 44px; height: 44px; }
+  .lv-banner-text { padding: 80px 20px 28px; font-size: clamp(20px, 5vw, 32px); }
 }
-@media (max-width: 700px) { .lv-banner-section { padding: 84px 16px 24px; } .lv-banner-text { padding: 36px 18px 18px; } }
-
 /* ===== KRITIK: global "html, body { height: 100% }" override =====
    Bu olmadan body 100vh'a sıkışıyor, içerik scroll edilemiyor (vizyon sticky
    scroll'u buna takılıyordu). data-landing-v2 attribute'u React useEffect'te
