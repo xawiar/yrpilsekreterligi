@@ -833,6 +833,189 @@ const MemberDashboardPage = () => {
                 />
               )}
 
+              {/* === V2 EK BÖLÜMLER === */}
+              <div className="space-y-5 mt-5">
+
+                {/* Tüm İşlemler — yetkilerine göre */}
+                {(() => {
+                  const HOME_VIEWS = new Set(['add-member', 'create-meeting', 'stk-events', 'meetings-page', 'members-page']);
+                  const allActions = [
+                    { perm: 'access_ballot_boxes', view: 'ballot-boxes', label: 'Sandıklar' },
+                    { perm: 'add_ballot_box', view: 'ballot-boxes', label: 'Sandık Ekle' },
+                    { perm: 'access_observers', view: 'observers', label: 'Müşahitler' },
+                    { perm: 'add_observer', view: 'observers', label: 'Müşahit Ekle' },
+                    { perm: 'add_stk', view: 'stk-management', label: 'STK Yönetimi' },
+                    { perm: 'manage_stk', view: 'stk-management', label: 'STK Yönetimi' },
+                    { perm: 'add_public_institution', view: 'public-institution-management', label: 'Kamu Kurumu' },
+                    { perm: 'view_member_list', view: 'member-list-page', label: 'Üye Listesi' },
+                    { perm: 'access_member_form_ocr', view: 'member-form-ocr-page', label: 'Üye Formu OCR' },
+                    { perm: 'access_calendar_page', view: 'calendar-page', label: 'Takvim' },
+                    { perm: 'access_districts_page', view: 'districts-page', label: 'İlçeler' },
+                    { perm: 'access_events_page', view: 'events-page', label: 'Etkinlikler' },
+                    { perm: 'access_archive_page', view: 'archive-page', label: 'Arşiv' },
+                    { perm: 'access_management_chart_page', view: 'management-chart-page', label: 'Yönetim Şeması' },
+                    { perm: 'access_election_preparation_page', view: 'election-preparation-page', label: 'Seçim Hazırlık' },
+                    { perm: 'access_representatives_page', view: 'representatives-page', label: 'Vekiller' },
+                    { perm: 'access_neighborhoods_page', view: 'neighborhoods-page', label: 'Mahalleler' },
+                    { perm: 'access_villages_page', view: 'villages-page', label: 'Köyler' },
+                    { perm: 'access_groups_page', view: 'groups-page', label: 'Gruplar' },
+                  ];
+                  const visible = allActions.filter((a) => grantedPermissions.includes(a.perm) && !HOME_VIEWS.has(a.view));
+                  const dedup = Array.from(new Map(visible.map((a) => [a.view, a])).values());
+                  if (dedup.length === 0) return null;
+                  return (
+                    <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <header className="px-5 pt-4 pb-3 flex items-baseline justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-gray-500 dark:text-gray-400 mb-1">Yetkilerin</div>
+                          <div className="font-serif font-semibold text-base text-gray-900 dark:text-gray-100">Tüm İşlemler</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAllSections((v) => !v)}
+                          className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          {showAllSections ? 'Gizle ›' : `${dedup.length} sayfa ›`}
+                        </button>
+                      </header>
+                      {showAllSections && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-gray-200 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-700">
+                          {dedup.map((a) => (
+                            <button
+                              key={a.view}
+                              type="button"
+                              onClick={() => setViewWithPermission(a.view)}
+                              className="bg-white dark:bg-gray-800 px-4 py-4 text-left hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{a.label}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })()}
+
+                {/* Taleplerim & Başvurularım */}
+                {member && (
+                  <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <header className="px-5 pt-4 pb-3">
+                      <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-gray-500 dark:text-gray-400 mb-1">İletişim</div>
+                      <div className="font-serif font-semibold text-base text-gray-900 dark:text-gray-100">Taleplerim & Başvurularım</div>
+                    </header>
+                    <div className="flex border-t border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                      <button
+                        type="button"
+                        onClick={() => setActionsTab('requests')}
+                        className={`flex-1 py-2.5 px-4 text-xs font-semibold tracking-wide transition-colors ${
+                          actionsTab === 'requests'
+                            ? 'text-red-600 dark:text-red-400 border-b-2 border-red-600 -mb-px bg-white dark:bg-gray-800'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                      >
+                        Taleplerim & Şikayetlerim
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActionsTab('applications')}
+                        className={`flex-1 py-2.5 px-4 text-xs font-semibold tracking-wide transition-colors ${
+                          actionsTab === 'applications'
+                            ? 'text-red-600 dark:text-red-400 border-b-2 border-red-600 -mb-px bg-white dark:bg-gray-800'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                      >
+                        Başvurular
+                      </button>
+                    </div>
+                    <div className="p-3 sm:p-4">
+                      {actionsTab === 'requests' && <MemberRequestsPage />}
+                      {actionsTab === 'applications' && <MemberApplicationsPanel member={member} />}
+                    </div>
+                  </section>
+                )}
+
+                {/* Kadın Kolları Yönetim */}
+                {isWomenBranchPresident && member && (
+                  <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <header className="px-5 pt-4 pb-3">
+                      <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-pink-600 dark:text-pink-400 mb-1">Kadın Kolları</div>
+                      <div className="font-serif font-semibold text-base text-gray-900 dark:text-gray-100">Yönetim Ekibim · {member.region}</div>
+                    </header>
+                    <div className="p-5 border-t border-gray-200 dark:border-gray-700">
+                      <BranchManagementSection
+                        branchType="women"
+                        memberRegion={member.region}
+                        memberId={member.id}
+                        management={womenBranchManagement}
+                        setManagement={setWomenBranchManagement}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {/* Gençlik Kolları Yönetim */}
+                {isYouthBranchPresident && member && (
+                  <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <header className="px-5 pt-4 pb-3">
+                      <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-blue-600 dark:text-blue-400 mb-1">Gençlik Kolları</div>
+                      <div className="font-serif font-semibold text-base text-gray-900 dark:text-gray-100">Yönetim Ekibim · {member.region}</div>
+                    </header>
+                    <div className="p-5 border-t border-gray-200 dark:border-gray-700">
+                      <BranchManagementSection
+                        branchType="youth"
+                        memberRegion={member.region}
+                        memberId={member.id}
+                        management={youthBranchManagement}
+                        setManagement={setYouthBranchManagement}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {/* Tanıtım Sayfası Yönetimi */}
+                {grantedPermissions.includes('manage_landing_page') && (
+                  <button
+                    type="button"
+                    onClick={() => setViewWithPermission('landing-page')}
+                    className="block w-full text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 hover:border-red-500 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-red-600 dark:text-red-400 mb-1">Admin</div>
+                        <div className="font-serif font-semibold text-base text-gray-900 dark:text-gray-100">Tanıtım Sayfası Yönetimi</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Halka açık landing sayfası içeriğini düzenle</div>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                  </button>
+                )}
+
+                {/* Seçmen Sorgulama */}
+                {grantedPermissions.includes('access_voter_list') && (
+                  <Link
+                    to="/voter-search"
+                    className="block w-full text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 hover:border-red-500 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-emerald-600 dark:text-emerald-400 mb-1">Saha</div>
+                        <div className="font-serif font-semibold text-base text-gray-900 dark:text-gray-100">Seçmen Sorgulama</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">TC, ad, soyad veya sandık no ile ara</div>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                  </Link>
+                )}
+
+                {/* KVKK - Veri Silme Talep Butonu */}
+                {member?.id && (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+                    <DataDeletionRequestButton memberId={member.id} />
+                  </div>
+                )}
+
+              </div>
+
               {/* === ESKİ DASHBOARD V1 — V2 onaylandıktan sonra silinecek === */}
               <div className="hidden">
             <div className="space-y-4 sm:space-y-6 md:space-y-8">
