@@ -4672,6 +4672,25 @@ class FirebaseApiService {
     }
   }
 
+  // Bir seçimin tüm sonuçlarını ve tutanak fotoğraflarını siler. Admin only.
+  // confirmToken === 'SIFIRLA' olmalı (kaza-önleyici).
+  static async resetElectionResults(electionId, confirmToken) {
+    try {
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Functions yüklenemedi');
+      const fn = httpsCallable(functions, 'resetElectionResults');
+      const res = await fn({
+        electionId: String(electionId),
+        confirmToken: String(confirmToken),
+      });
+      return res?.data || { success: false };
+    } catch (e) {
+      console.error('resetElectionResults error:', e);
+      throw new Error(e?.message || 'Sıfırlama hatası');
+    }
+  }
+
   // Approve election result — kategori-bazlı (genel seçimde 'cb' veya 'mv' ayrı onay).
   // category null ise eski tip (approval_status) kullanılır.
   // options.auto_approve_reason: opsiyonel, sorumlu auto-approve sebebi (örn 'no_observer')

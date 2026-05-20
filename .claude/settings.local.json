@@ -6,7 +6,25 @@
       "Bash(git push:*)",
       "Bash(npm run:*)",
       "Bash(firebase deploy:*)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(xargs -I {} dirname {})",
+      "Bash(cat ~/.git/worktrees/*/gitdir)",
+      "Bash(ls -la ~/.cursor/worktrees/*/)",
+      "Bash(du:*)",
+      "Bash(git -C ~ worktree remove --force ~/.cursor/worktrees/e-ticaret/tmg)",
+      "Bash(git -C ~ worktree remove --force ~/.cursor/worktrees/haber-pwa/dvu)",
+      "Bash(git -C ~ worktree remove --force ~/.cursor/worktrees/haber-pwa/evy)",
+      "Bash(git -C ~ worktree list)",
+      "Bash(git -C ~ count-objects -v)",
+      "WebSearch",
+      "WebFetch(domain:www.entegrabilisim.com)",
+      "WebFetch(domain:entegrapi.com)",
+      "WebFetch(domain:teknoreferans.com)",
+      "WebFetch(domain:www.trendyol.com)",
+      "WebFetch(domain:www.hepsiburada.com)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate"
     ]
   }
 }

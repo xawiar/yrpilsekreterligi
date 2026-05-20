@@ -925,37 +925,9 @@ const ElectionResultForm = ({ election, ballotBoxId, ballotNumber, onClose, onSu
       inconsistencyWarnings = warnings.slice(0, 5);
     }
 
-    // Check election date - allow result entry only on election day or after (with 7 days grace period)
-    if (election?.date) {
-      const electionDate = new Date(election.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      electionDate.setHours(0, 0, 0, 0);
-      
-      // Allow entry 1 day before election (for preparation) and up to 7 days after
-      const daysBefore = 1;
-      const daysAfter = 7;
-      const minDate = new Date(electionDate);
-      minDate.setDate(minDate.getDate() - daysBefore);
-      const maxDate = new Date(electionDate);
-      maxDate.setDate(maxDate.getDate() + daysAfter);
-      
-      // Use AuthContext instead of localStorage
-      const isAdmin = userRole === 'admin';
-      
-      if (today < minDate && !isAdmin) {
-        setMessage(`Seçim sonucu girişi seçim tarihinden ${daysBefore} gün önce başlayabilir. Seçim tarihi: ${new Date(election.date).toLocaleDateString('tr-TR')}`);
-        setMessageType('error');
-        setSaving(false);
-        return;
-      }
-      if (today > maxDate && !isAdmin) {
-        setMessage(`Seçim sonucu girişi seçim tarihinden sonra ${daysAfter} gün içinde yapılabilir. Sadece admin daha sonra giriş yapabilir.`);
-        setMessageType('error');
-        setSaving(false);
-        return;
-      }
-    }
+    // Tarih kısıtlaması KALDIRILDI — admin sadece status (active/closed)
+    // üzerinden açar/kapatır. Aktif seçimde tarih farkı önemli değil.
+    // (Eski 1 gün önce + 7 gün sonra limit'i kullanıcı isteğiyle kaldırıldı.)
 
     // Çevrimdışı kontrolü — internet yoksa IndexedDB kuyruğuna kaydet
     if (!navigator.onLine) {

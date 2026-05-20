@@ -125,22 +125,54 @@ const ChiefObserverQuickForm = ({
       };
       const extracted = await ProtocolOCRService.readProtocol(photoSource, electionInfo);
 
-      // Tutanak tipi mismatch uyarısı (block etmez, sadece banner)
+      // Tutanak tipi mismatch — BLOCKING kontrol.
+      // Yanlış tutanak tespit edilirse veriyi yazma, kullanıcıya sor.
       const detected = (extracted?.tutanak_tipi || '').toLowerCase().trim();
       const expectedMap = { cb: 'cb', mv: 'mv' };
       const expected = expectedMap[category || ''];
-      const newWarnings = [];
+      const lbl = {
+        cb: 'Cumhurbaşkanı', mv: 'Milletvekili',
+        mayor: 'Belediye Başkanı', provincial_assembly: 'İl Genel Meclisi',
+        municipal_council: 'Belediye Meclisi', muhtar: 'Muhtar',
+        referandum: 'Halk Oylaması', other: 'tanımsız bir belge',
+      };
       if (expected && detected && detected !== expected) {
-        const lbl = { cb: 'CB', mv: 'MV', mayor: 'Belediye Başkanı', other: 'tanımsız' };
-        newWarnings.push(
-          `⚠ Bu, ${lbl[expected]} tutanağı olması lazım ama AI "${lbl[detected] || detected}" gibi okudu. Tutanak doğru mu kontrol et.`
-        );
+        const msg =
+          `⚠ YANLIŞ TUTANAK TESPİT EDİLDİ\n\n` +
+          `Buraya "${lbl[expected]}" tutanağı yüklenmesi gerekiyor,\n` +
+          `ama AI yüklediğin görseli "${lbl[detected] || detected}" tutanağı olarak okudu.\n\n` +
+          `Yine de bu görselin sayılarıyla devam etmek istiyor musun?\n` +
+          `(İPTAL → doğru tutanağı yeniden çek)`;
+        const proceed = window.confirm(msg);
+        if (!proceed) {
+          setAiRunning(false);
+          setAiDone(false);
+          setStage('photo');
+          setPhotoDataUrl(null);
+          setPhotoUrl(null);
+          setUploadProgress(0);
+          setError(`Yanlış tutanak — doğru ${lbl[expected]} tutanağını çekin.`);
+          return;
+        }
+      } else if (expected && detected === 'other') {
+        const msg =
+          `⚠ Bu fotoğraf tutanak olarak tanınmadı\n\n` +
+          `AI bunu "tanımsız bir belge" olarak okudu. Yine de devam ister misin?`;
+        const proceed = window.confirm(msg);
+        if (!proceed) {
+          setStage('photo');
+          setPhotoDataUrl(null);
+          setPhotoUrl(null);
+          setAiDone(false);
+          setError('Lütfen geçerli bir tutanak fotoğrafı çekin.');
+          return;
+        }
       }
 
       const safe = { ...extracted };
       delete safe.tutanak_tipi;
       setFormData(safe);
-      setWarnings(newWarnings);
+      setWarnings([]);
       setAiDone(true);
     } catch (e) {
       console.error('[QuickForm] OCR error:', e);
@@ -355,7 +387,7 @@ const PhotoStage = ({ categoryLabel, isGenel, onPick, onSwitchToAdvanced }) => (
         type="file"
         accept="image/*"
         capture="environment"
-        className="hidden"
+        style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
         onChange={(e) => onPick(e.target.files?.[0])}
       />
     </label>

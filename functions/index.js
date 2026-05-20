@@ -3024,3 +3024,160 @@ exports.checkAdminClaim = onCall(
     },
 );
 
+// =============================================
+// RESET ELECTION RESULTS — Admin sıfırlama
+// =============================================
+/**
+ * Bir seçimin TÜM sonuçlarını ve imzalı tutanak fotoğraflarını siler.
+ * Seçim doc'unu silmez — sadece sonuç verilerini sıfırlar.
+ *
+ * Güvenlik:
+ *  - Sadece admin claim sahibi veya bootstrap email çağırabilir
+ *  - confirmToken === "SIFIRLA" zorunlu (client'tan literal string)
+ *
+ * Çağrı:
+ *   httpsCallable(functions, 'resetElectionResults')(
+ *     {electionId, confirmToken}
+ *   )
+ */
+exports.resetElectionResults = onCall(
+    {
+      region: "europe-west1",
+      secrets: [BOOTSTRAP_ADMIN_EMAIL_SECRET],
+      timeoutSeconds: 540,
+      memory: "512MiB",
+    },
+    async (request) => {
+      const callerUid = request.auth && request.auth.uid;
+      const callerToken = (request.auth && request.auth.token) || {};
+      const callerEmail = callerToken.email || null;
+
+      if (!callerUid) {
+        throw new HttpsError("unauthenticated", "Önce giriş yapın");
+      }
+
+      const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL || "";
+      const isBootstrap = bootstrapEmail && callerEmail &&
+        callerEmail.toLowerCase() === bootstrapEmail.toLowerCase();
+      const isCallerAdmin = callerToken.admin === true;
+      if (!isBootstrap && !isCallerAdmin) {
+        throw new HttpsError(
+            "permission-denied", "Bu işlem için admin yetkisi gerekli",
+        );
+      }
+
+      const electionId = String(request.data?.electionId || "").trim();
+      const confirmToken = String(request.data?.confirmToken || "");
+
+      if (!electionId) {
+        throw new HttpsError("invalid-argument", "electionId gerekli");
+      }
+      if (confirmToken !== "SIFIRLA") {
+        throw new HttpsError(
+            "failed-precondition",
+            "Onay metni hatalı — 'SIFIRLA' yazılmalı",
+        );
+      }
+
+      // 1) Election doc'u doğrula (audit için ad-tip kaydet)
+      const electionSnap = await db.collection("elections")
+          .doc(electionId).get();
+      if (!electionSnap.exists) {
+        throw new HttpsError("not-found", "Seçim bulunamadı");
+      }
+      const electionData = electionSnap.data() || {};
+      const electionName = electionData.name || "";
+
+      // 2) Tüm election_results doc'larını topla
+      // (her iki alan: election_id, electionId)
+      const resultsSnap1 = await db.collection("election_results")
+          .where("election_id", "==", electionId).get();
+      const resultsSnap2 = await db.collection("election_results")
+          .where("electionId", "==", electionId).get();
+      const allDocs = new Map();
+      resultsSnap1.docs.forEach((d) => allDocs.set(d.id, d));
+      resultsSnap2.docs.forEach((d) => allDocs.set(d.id, d));
+      const resultDocs = Array.from(allDocs.values());
+
+      // 3) Storage URL'lerini çıkar
+      const photoUrls = [];
+      resultDocs.forEach((d) => {
+        const data = d.data() || {};
+        if (data.signed_protocol_photo) {
+          photoUrls.push(String(data.signed_protocol_photo));
+        }
+        if (data.signed_mv_protocol_photo) {
+          photoUrls.push(String(data.signed_mv_protocol_photo));
+        }
+        if (data.objection_protocol_photo) {
+          photoUrls.push(String(data.objection_protocol_photo));
+        }
+      });
+
+      // 4) Storage delete — paralel, hata olsa devam et
+      let deletedPhotos = 0;
+      let photoFailures = 0;
+      const bucket = admin.storage().bucket();
+      await Promise.allSettled(photoUrls.map(async (url) => {
+        try {
+          // Firebase Storage URL parser: https://...firebasestorage.../o/{encodedPath}?...
+          const m = url.match(/\/o\/([^?]+)/);
+          if (!m) {
+            photoFailures++; return;
+          }
+          const path = decodeURIComponent(m[1]);
+          await bucket.file(path).delete({ignoreNotFound: true});
+          deletedPhotos++;
+        } catch (e) {
+          photoFailures++;
+          logger.warn("photo delete err:", e.message);
+        }
+      }));
+
+      // 5) Firestore batch delete — 500'lük gruplar
+      const BATCH_SIZE = 500;
+      let deletedResults = 0;
+      for (let i = 0; i < resultDocs.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const slice = resultDocs.slice(i, i + BATCH_SIZE);
+        slice.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+        deletedResults += slice.length;
+      }
+
+      // 6) Audit log
+      try {
+        await db.collection("audit_logs").add({
+          action: "reset_election_results",
+          entity_type: "election",
+          entity_id: electionId,
+          election_name: electionName,
+          performed_by: callerUid,
+          performed_by_email: callerEmail,
+          performed_by_role: isBootstrap ? "bootstrap" : "admin",
+          deleted_results: deletedResults,
+          deleted_photos: deletedPhotos,
+          photo_failures: photoFailures,
+          created_at: new Date().toISOString(),
+        });
+      } catch (auditErr) {
+        logger.warn("resetElectionResults audit log failed:", auditErr.message);
+      }
+
+      logger.info(
+          `resetElectionResults: election=${electionId} ` +
+          `results=${deletedResults} photos=${deletedPhotos} ` +
+          `failures=${photoFailures} by=${callerEmail}`,
+      );
+
+      return {
+        success: true,
+        electionId,
+        electionName,
+        deletedResults,
+        deletedPhotos,
+        photoFailures,
+      };
+    },
+);
+

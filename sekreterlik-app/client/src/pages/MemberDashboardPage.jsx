@@ -41,6 +41,7 @@ import ProfileUpdateRequestModal from '../components/ProfileUpdateRequestModal';
 import MemberProfileRequestsList from '../components/MemberProfileRequestsList';
 import MemberApplicationsPanel from '../components/MemberApplicationsPanel';
 import MemberRequestsPage from './MemberRequestsPage';
+import MemberDashboardHome from '../components/MemberDashboard/MemberDashboardHome';
 
 // URL path <-> view name mappings
 const viewToPathMap = {
@@ -779,6 +780,61 @@ const MemberDashboardPage = () => {
               loading={loading}
             />
           ) : (
+            <>
+              {/* === YENİ DASHBOARD V2 (Mayıs 2026) === */}
+              <MemberDashboardHome
+                member={member}
+                user={user}
+                grantedPermissions={grantedPermissions}
+                meetings={meetings}
+                events={events}
+                memberRegistrations={memberRegistrations}
+                unreadCount={unreadCount}
+                onViewChange={setViewWithPermission}
+                onLogout={handleLogout}
+                onNotifClick={() => setNotifDrawerOpen(true)}
+                onProfileClick={() => setProfileModalOpen(true)}
+                onToggleTheme={toggleTheme}
+                isDarkMode={isDarkMode}
+              />
+
+              {/* Profil Görüntüleme Modal (avatar tıklanınca) */}
+              {member && (
+                <Modal
+                  isOpen={profileModalOpen}
+                  onClose={() => setProfileModalOpen(false)}
+                  title="Profilim"
+                >
+                  <div className="space-y-4">
+                    <MemberProfilePanel
+                      member={member}
+                      onRequestChange={() => {
+                        setProfileModalOpen(false);
+                        setProfileRequestModalOpen(true);
+                      }}
+                      onPhotoUpdated={(newUrl) => setMember((m) => ({ ...m, photo: newUrl }))}
+                    />
+                    <MemberProfileRequestsList
+                      key={profileRequestsRefreshKey}
+                      memberId={member.id}
+                    />
+                    {member?.id && <PersonalDocuments memberId={member.id} />}
+                  </div>
+                </Modal>
+              )}
+
+              {/* Profil Değişiklik Talebi Modal */}
+              {member && (
+                <ProfileUpdateRequestModal
+                  isOpen={profileRequestModalOpen}
+                  onClose={() => setProfileRequestModalOpen(false)}
+                  member={member}
+                  onSubmitted={() => setProfileRequestsRefreshKey((k) => k + 1)}
+                />
+              )}
+
+              {/* === ESKİ DASHBOARD V1 — V2 onaylandıktan sonra silinecek === */}
+              <div className="hidden">
             <div className="space-y-4 sm:space-y-6 md:space-y-8">
           {/* Tema Toggle — sağ üst köşe */}
           <div className="flex justify-end">
@@ -1523,16 +1579,10 @@ const MemberDashboardPage = () => {
             </Modal>
           )}
 
-          {/* Profil Değişiklik Talebi Modal */}
-          {member && (
-            <ProfileUpdateRequestModal
-              isOpen={profileRequestModalOpen}
-              onClose={() => setProfileRequestModalOpen(false)}
-              member={member}
-              onSubmitted={() => setProfileRequestsRefreshKey((k) => k + 1)}
-            />
-          )}
+          {/* Profil Değişiklik Talebi Modal — eski kopya, V2'de yukarıda yeniden tanımlandı */}
         </div>
+              </div>
+            </>
           )}
         </>
         )}

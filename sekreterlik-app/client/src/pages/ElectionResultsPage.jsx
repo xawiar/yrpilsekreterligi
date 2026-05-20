@@ -162,6 +162,11 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
   const [autoPublish, setAutoPublish] = useState(false);
   const autoPublishRef = useRef(null);
 
+  // Reset election results state (admin only)
+  const [resetModalStage, setResetModalStage] = useState(0); // 0: closed, 1: warn, 2: typeConfirm
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+
   // Refs for export
   const chartContainerRef = useRef(null);
 
@@ -245,6 +250,30 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
       }
     };
   }, [autoPublish, electionId, readOnly, results, election, ballotBoxes, districts, towns, neighborhoods, villages]);
+
+  // Sonuçları sıfırla — admin only, 2 aşamalı onay
+  const handleResetResults = useCallback(async () => {
+    if (resetConfirmText.trim().toUpperCase() !== 'SIFIRLA') {
+      toast.error("Onaylamak için 'SIFIRLA' yazın");
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const res = await FirebaseApiService.resetElectionResults(electionId, 'SIFIRLA');
+      toast.success(
+        `Sıfırlandı — ${res.deletedResults || 0} sonuç + ${res.deletedPhotos || 0} fotoğraf silindi`
+      );
+      setResetModalStage(0);
+      setResetConfirmText('');
+      // Sayfayı yenile (sonuçlar boşalsın)
+      if (typeof window !== 'undefined') window.location.reload();
+    } catch (e) {
+      console.error('reset error:', e);
+      toast.error('Sıfırlama hatası: ' + (e?.message || 'bilinmeyen'));
+    } finally {
+      setIsResetting(false);
+    }
+  }, [electionId, resetConfirmText, toast]);
 
   // Publish handler — sayfada zaten yuklu olan veriyi gonder
   const handlePublishResults = useCallback(async () => {
@@ -1557,6 +1586,17 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 015.656 0l1.414 1.414a4 4 0 010 5.656l-2.828 2.828a4 4 0 01-5.656 0M10.172 13.828a4 4 0 01-5.656 0L3.1 12.414a4 4 0 010-5.656l2.828-2.828a4 4 0 015.656 0" />
                   </svg>
                   Halka Açık Sayfa
+                </button>
+                {/* SONUÇLARI SIFIRLA — tehlikeli, kırmızı buton, 2 aşamalı onay */}
+                <button
+                  onClick={() => setResetModalStage(1)}
+                  className="px-4 py-2 text-white rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2"
+                  title="Bu seçimin TÜM sandık sonuçlarını ve tutanak fotoğraflarını siler"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                  </svg>
+                  Sonuçları Sıfırla
                 </button>
                 {/* Sonuclari Yayinla butonu */}
                 <button
@@ -3367,6 +3407,96 @@ const ElectionResultsPage = ({ readOnly = false, electionIdProp }) => {
           </div>
         </div>
       )}
+      {/* SIFIRLA MODAL — 2 aşamalı onay (admin only) */}
+      {resetModalStage > 0 && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => !isResetting && setResetModalStage(0)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {resetModalStage === 1 ? (
+              <>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-2xl flex-shrink-0">
+                    ⚠️
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      Sonuçları Sıfırla
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <strong>{election?.name}</strong> seçimine ait:
+                    </p>
+                  </div>
+                </div>
+                <ul className="text-sm text-gray-700 dark:text-gray-300 ml-4 list-disc space-y-1 mb-4">
+                  <li>Tüm sandık sonuçları silinecek</li>
+                  <li>Tüm imzalı tutanak fotoğrafları silinecek</li>
+                  <li>İtiraz tutanakları silinecek</li>
+                </ul>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Seçim kendisi <strong>silinmez</strong>, sadece sonuçlar sıfırlanır. Bu işlem <strong>geri alınamaz</strong>.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setResetModalStage(0)}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-medium"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    onClick={() => setResetModalStage(2)}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
+                  >
+                    Devam et →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  Onaylamak için yazın
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Aşağıdaki kutuya <strong>SIFIRLA</strong> yazıp Sıfırla butonuna basın.
+                </p>
+                <input
+                  type="text"
+                  value={resetConfirmText}
+                  onChange={(e) => setResetConfirmText(e.target.value)}
+                  placeholder="SIFIRLA"
+                  autoFocus
+                  disabled={isResetting}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 mb-4 font-mono uppercase"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => { setResetModalStage(0); setResetConfirmText(''); }}
+                    disabled={isResetting}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    onClick={handleResetResults}
+                    disabled={isResetting || resetConfirmText.trim().toUpperCase() !== 'SIFIRLA'}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isResetting && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    )}
+                    {isResetting ? 'Siliniyor...' : 'SIFIRLA'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <OfflineIndicator />
     </div>
   );

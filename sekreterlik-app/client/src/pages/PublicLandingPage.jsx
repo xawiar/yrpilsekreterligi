@@ -134,6 +134,8 @@ const PublicLandingPage = () => {
   const [training, setTraining] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [openLeader, setOpenLeader] = useState(null);
+  const [openGalleryIdx, setOpenGalleryIdx] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Firestore: landing_content/main
   useEffect(() => {
@@ -352,6 +354,23 @@ const PublicLandingPage = () => {
     return () => clearTimeout(t);
   }, [leaders.length, news.length, gallery.length, training.length]);
 
+  // Galeri lightbox: Esc kapatır, ←/→ önceki/sonraki
+  useEffect(() => {
+    if (openGalleryIdx === null) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpenGalleryIdx(null);
+      else if (e.key === 'ArrowRight') setOpenGalleryIdx((i) => (i === null ? null : (i + 1) % gallery.length));
+      else if (e.key === 'ArrowLeft') setOpenGalleryIdx((i) => (i === null ? null : (i - 1 + gallery.length) % gallery.length));
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [openGalleryIdx, gallery.length]);
+
   // Hero title için italik kelime tespiti — son kelime italik olsun
   const heroWords = useMemo(() => {
     const t = content.heroTitle || DEFAULTS.heroTitle;
@@ -387,7 +406,33 @@ const PublicLandingPage = () => {
           <a href="#iletisim" data-cursor="hover">İletişim</a>
           <a href="/login" data-cursor="hover">Giriş</a>
         </div>
+        <button
+          type="button"
+          className={`lv-burger ${mobileMenuOpen ? 'is-open' : ''}`}
+          aria-label={mobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((v) => !v)}
+          data-cursor="hover"
+        >
+          <span /><span /><span />
+        </button>
       </nav>
+
+      {/* Mobile drawer */}
+      <div
+        className={`lv-mobile-drawer ${mobileMenuOpen ? 'is-open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        <div className="lv-mobile-drawer-panel" onClick={(e) => e.stopPropagation()}>
+          <a href="#hero" onClick={() => setMobileMenuOpen(false)}>Anasayfa</a>
+          <a href="#vizyon" onClick={() => setMobileMenuOpen(false)}>Vizyon</a>
+          <a href="#liderler" onClick={() => setMobileMenuOpen(false)}>Yönetim</a>
+          <a href="#haberler" onClick={() => setMobileMenuOpen(false)}>Haberler</a>
+          <a href="#galeri" onClick={() => setMobileMenuOpen(false)}>Galeri</a>
+          <a href="#iletisim" onClick={() => setMobileMenuOpen(false)}>İletişim</a>
+          <a href="/login">Giriş</a>
+        </div>
+      </div>
 
       {/* Üst Duyuru Banner — admin Settings: bannerEnabled + bannerImage + bannerLink + bannerText */}
       {content.bannerEnabled && content.bannerImage && (
@@ -430,13 +475,11 @@ const PublicLandingPage = () => {
             style={content.heroImage ? { '--lv-hero-image': `url(${content.heroImage})` } : undefined}
           />
           <div className="lv-hero-grid" />
-          <div className="lv-hero-stamp">2027</div>
 
           <div className="lv-hero-content">
             <div className="lv-hero-eyebrow">Yeniden Refah Partisi · Elazığ İl Teşkilatı</div>
-            <h1>{heroWords}</h1>
             <div className="lv-hero-row">
-              <p className="lv-hero-sub">{content.heroSubtitle || DEFAULTS.heroSubtitle}</p>
+              <div />
               <div className="lv-hero-actions">
                 <a href="#basvuru" className="lv-btn-primary" data-magnetic data-cursor="hover">
                   {content.heroCtaText || DEFAULTS.heroCtaText}
@@ -674,15 +717,14 @@ const PublicLandingPage = () => {
             maxWidth: 1400, margin: '0 auto',
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16,
           }}>
-            {gallery.map((g) => (
-              <a
+            {gallery.map((g, idx) => (
+              <button
                 key={g.id}
-                href={g.url || g.image || '#'}
-                target="_blank"
-                rel="noopener"
+                type="button"
+                onClick={() => setOpenGalleryIdx(idx)}
                 data-cursor="hover"
                 style={{
-                  display: 'block',
+                  display: 'block', border: 'none', padding: 0, cursor: 'pointer',
                   aspectRatio: '4/3',
                   borderRadius: 16,
                   overflow: 'hidden',
@@ -695,6 +737,7 @@ const PublicLandingPage = () => {
                 onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 title={g.title || ''}
+                aria-label={g.title || 'Galeri görseli'}
               />
             ))}
           </div>
@@ -922,61 +965,69 @@ const PublicLandingPage = () => {
           }}
         >
           <div
+            className="lv-leader-modal-card"
             onClick={(e) => e.stopPropagation()}
             style={{
+              position: 'relative',
               background: 'white', color: 'var(--lv-ink)',
               borderRadius: 24, overflow: 'hidden',
-              maxWidth: 900, width: '100%', maxHeight: '90vh',
+              maxWidth: 900, width: '100%', height: '90vh', maxHeight: '90vh',
               display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)',
               boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
               cursor: 'default',
             }}
           >
+            <button
+              onClick={() => setOpenLeader(null)}
+              style={{
+                position: 'absolute', top: 16, right: 16, zIndex: 5,
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.06)', border: 'none', cursor: 'pointer',
+                display: 'grid', placeItems: 'center', fontSize: 20, lineHeight: 1,
+              }}
+              aria-label="Kapat"
+              data-cursor="hover"
+            >×</button>
             <div style={{
-              aspectRatio: '3/4',
               backgroundColor: 'var(--lv-paper-2)',
               backgroundImage: openLeader.photo ? `url(${openLeader.photo})` : 'none',
               backgroundSize: 'cover', backgroundPosition: 'center',
               minHeight: 240,
             }} />
-            <div style={{ padding: '32px 36px', overflow: 'auto' }}>
-              <button
-                onClick={() => setOpenLeader(null)}
-                style={{
-                  position: 'absolute', top: 16, right: 16,
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.06)', border: 'none', cursor: 'pointer',
-                  display: 'grid', placeItems: 'center', fontSize: 18,
-                }}
-                aria-label="Kapat"
-                data-cursor="hover"
-              >×</button>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
-                textTransform: 'uppercase', color: 'var(--lv-red)', marginBottom: 8,
-              }}>
-                {openLeader.position}
+            <div style={{
+              display: 'flex', flexDirection: 'column',
+              minHeight: 0, overflow: 'hidden',
+            }}>
+              <div style={{ padding: '32px 36px 16px', flexShrink: 0 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
+                  textTransform: 'uppercase', color: 'var(--lv-red)', marginBottom: 8,
+                }}>
+                  {openLeader.position}
+                </div>
+                <h2 style={{
+                  fontFamily: "'Fraunces', serif", fontWeight: 600,
+                  fontSize: 'clamp(24px, 2.6vw, 34px)', lineHeight: 1.1,
+                  letterSpacing: '-0.02em', margin: '0 0 8px',
+                }}>
+                  {openLeader.name}
+                </h2>
+                {openLeader.region && (
+                  <div style={{ fontSize: 13, color: 'var(--lv-muted)', marginBottom: 4 }}>
+                    {openLeader.region}
+                  </div>
+                )}
+                {openLeader.muvefettislik && (
+                  <div style={{ fontSize: 13, color: 'var(--lv-muted)' }}>
+                    Müfettişlik: {openLeader.muvefettislik}
+                  </div>
+                )}
               </div>
-              <h2 style={{
-                fontFamily: "'Fraunces', serif", fontWeight: 600,
-                fontSize: 'clamp(28px, 3.4vw, 42px)', lineHeight: 1.1,
-                letterSpacing: '-0.02em', margin: '0 0 8px',
-              }}>
-                {openLeader.name}
-              </h2>
-              {openLeader.region && (
-                <div style={{ fontSize: 13, color: 'var(--lv-muted)', marginBottom: 4 }}>
-                  {openLeader.region}
-                </div>
-              )}
-              {openLeader.muvefettislik && (
-                <div style={{ fontSize: 13, color: 'var(--lv-muted)', marginBottom: 20 }}>
-                  Müfettişlik: {openLeader.muvefettislik}
-                </div>
-              )}
               <div style={{
-                borderTop: '1px solid var(--lv-line)', paddingTop: 20, marginTop: 12,
-                fontSize: 16, lineHeight: 1.65, color: '#2A2A2F',
+                flex: 1, minHeight: 0, overflowY: 'auto',
+                padding: '20px 36px 32px',
+                borderTop: '1px solid var(--lv-line)',
+                fontSize: 15, lineHeight: 1.7, color: '#2A2A2F',
                 whiteSpace: 'pre-wrap',
               }}>
                 {openLeader.biography
@@ -989,6 +1040,120 @@ const PublicLandingPage = () => {
           </div>
         </div>
       )}
+
+      {/* Galeri lightbox — okla gezilir */}
+      {openGalleryIdx !== null && gallery[openGalleryIdx] && (() => {
+        const g = gallery[openGalleryIdx];
+        const src = g.image || g.url;
+        const total = gallery.length;
+        const goNext = (e) => { e?.stopPropagation(); setOpenGalleryIdx((i) => (i + 1) % total); };
+        const goPrev = (e) => { e?.stopPropagation(); setOpenGalleryIdx((i) => (i - 1 + total) % total); };
+        return (
+          <div
+            onClick={() => setOpenGalleryIdx(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 220,
+              background: 'rgba(11,11,15,0.92)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setOpenGalleryIdx(null)}
+              aria-label="Kapat"
+              data-cursor="hover"
+              style={{
+                position: 'absolute', top: 24, right: 24, zIndex: 5,
+                width: 44, height: 44, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)',
+                color: 'white', fontSize: 22, lineHeight: 1, cursor: 'pointer',
+                display: 'grid', placeItems: 'center', backdropFilter: 'blur(8px)',
+              }}
+            >×</button>
+            {total > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  aria-label="Önceki"
+                  data-cursor="hover"
+                  style={{
+                    position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)',
+                    width: 56, height: 56, borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)',
+                    color: 'white', cursor: 'pointer',
+                    display: 'grid', placeItems: 'center', backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  aria-label="Sonraki"
+                  data-cursor="hover"
+                  style={{
+                    position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)',
+                    width: 56, height: 56, borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)',
+                    color: 'white', cursor: 'pointer',
+                    display: 'grid', placeItems: 'center', backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
+            )}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ position: 'relative', maxWidth: '92vw', maxHeight: '88vh', cursor: 'default' }}
+            >
+              <img
+                src={src}
+                alt={g.title || ''}
+                style={{
+                  display: 'block', maxWidth: '92vw', maxHeight: '88vh',
+                  width: 'auto', height: 'auto', objectFit: 'contain',
+                  borderRadius: 12, boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7)',
+                }}
+              />
+              {(g.title || g.description) && (
+                <div style={{
+                  position: 'absolute', left: 0, right: 0, bottom: 0,
+                  padding: '32px 24px 20px',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+                  borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
+                  color: 'white',
+                }}>
+                  {g.title && (
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+                      {g.title}
+                    </div>
+                  )}
+                  {g.description && (
+                    <div style={{ fontSize: 13, opacity: 0.8 }}>{g.description}</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div style={{
+              position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+              padding: '8px 16px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)',
+              backdropFilter: 'blur(8px)',
+              fontSize: 12, fontWeight: 600, letterSpacing: '0.1em',
+              color: 'white', fontVariantNumeric: 'tabular-nums',
+            }}>
+              {openGalleryIdx + 1} / {total}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Apply CTA — admin "applyCtaTitle/Text" alanlarından */}
       {content.sections?.applyCta !== false && (
