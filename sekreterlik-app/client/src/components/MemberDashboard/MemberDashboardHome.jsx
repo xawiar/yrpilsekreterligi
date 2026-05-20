@@ -112,6 +112,11 @@ export default function MemberDashboardHome({
             <div className="text-[11px] text-gray-500 dark:text-gray-400 tracking-wide">
               {[member?.position, member?.subPosition || member?.subBoard, member?.region].filter(Boolean).join(' · ')}
             </div>
+            {member?.inspectorTitle && (
+              <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-purple-600 dark:text-purple-400 mt-0.5">
+                {member.inspectorTitle}{member.inspectorDistrict ? ` · ${member.inspectorDistrict} İlçesi` : ''}
+              </div>
+            )}
           </div>
         </button>
 
