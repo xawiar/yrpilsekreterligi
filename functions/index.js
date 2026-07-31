@@ -3272,7 +3272,12 @@ function stripContactInfo(text) {
  */
 async function buildLandingLeaders() {
   const snap = await db.collection("members").get();
-  const raw = snap.docs.map((d) => ({id: d.id, ...d.data()}));
+  // Arşivlenmiş üyeler public sayfada görünmemeli. Filtre dedupe'dan ÖNCE:
+  // aksi halde arşivli bir klon dedupe'ta aktif kaydı gölgeleyebiliyor
+  // (bir kişi aynı TC ile 20 kez kayıtlı, 19'u arşivli).
+  const raw = snap.docs
+      .map((d) => ({id: d.id, ...d.data()}))
+      .filter((m) => m.archived !== true);
 
   // Dedupe: TC varsa TC, yoksa name+position+region (jsx:194-205)
   const seen = new Map();
@@ -3456,7 +3461,7 @@ exports.onMemberWriteSyncLeaders = onDocumentWritten(
       // Kadroyu ilgilendiren alan gerçekten değişti mi? (updatedAt/notes gibi
       // alanların değişmesi landing'i etkilemiyor.)
       const watched = ["name", "position", "region", "photo", "biography",
-        "muvefettislik", "tc", "tcNo"];
+        "muvefettislik", "tc", "tcNo", "archived"];
       const changed = !before || !after ||
         watched.some((f) => String(before[f] || "") !== String(after[f] || ""));
       if (!changed) return;
