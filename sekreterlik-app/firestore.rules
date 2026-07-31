@@ -16,6 +16,10 @@ service cloud.firestore {
     // Coordinator role'lerinden biri mi? (admin / provincial / district /
     // region / institution_supervisor). Sandık atama, bölge tanımı gibi
     // hassas yetkili işlemler için.
+    // UYARI: member_users doküman id'si Auth uid DEĞİL (ör. 1776847592723_vmxexuhtt),
+    // auth uid ayrı bir `authUid` alanında. Bu yüzden aşağıdaki exists() her zaman
+    // false döner ve bu fonksiyon fiilen çalışmaz. Kalıcı çözüm: custom claim
+    // eklemek ya da member_users doc id'lerini auth uid'ye taşımak.
     function isCoordinator() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/member_users/$(request.auth.uid)) &&
@@ -29,6 +33,8 @@ service cloud.firestore {
 
     // Bildirim doc id'si memberId/coordinatorId/observerId/auth.uid olabilir.
     // Caller'ın member_users doc'undan bu alanlarla eşleşme kontrol et.
+    // UYARI: yukarıdaki ile aynı sebeple exists() dalı çalışmıyor; sadece
+    // request.auth.uid == userId karşılaştırması etkili.
     function isOwnNotification(userId) {
       return isAuthenticated() && (
         request.auth.uid == userId ||
@@ -66,9 +72,12 @@ service cloud.firestore {
     }
 
     // FCM tokens
+    // DEĞİŞTİ: write artık sadece kendi token dokümanına ya da admin'e açık.
+    // Önce `if isAuthenticated()` idi — giriş yapan herkes başkasının token'ını
+    // değiştirip silebiliyordu.
     match /fcm_tokens/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     // FCM notification queue — system write
@@ -78,15 +87,19 @@ service cloud.firestore {
     }
 
     // Members - public read (landing page için gerekli), write sadece admin/başkan
-    // Hassas alanlar frontend'de `safeMember` helper'ı ile filtrelenir.
+    // NOT: Yorumda geçen `safeMember` helper'ı deploy edilen bundle'da mevcut değil;
+    // ayrıca frontend filtresi güvenlik sağlamaz (veri yine de istemciye iner).
+    // `allow read: if true` kaldırılması Adım 3'te landing page testine bağlı.
     match /members/{memberId} {
       allow read: if true;
       allow create: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
+      // DEĞİŞTİ: photo/biography dalı kaldırıldı. Sahiplik kontrolü içermediği için
+      // giriş yapan herhangi biri herhangi bir üyenin fotoğrafını/biyografisini
+      // değiştirebiliyordu. Üye kendi fotoğrafını değiştirme özelliği, member_users
+      // doc id'leri auth uid'ye taşındıktan sonra sahiplik şartıyla geri eklenecek.
       allow update: if isAdmin() ||
-        (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']) ||
-        (isAuthenticated() &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo', 'biography', 'updatedAt']));
+        (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
       allow delete: if isAdmin();
     }
 
@@ -95,6 +108,10 @@ service cloud.firestore {
     // (başmüşahit, sorumlu, üye) authenticate olmadan member_users'ı okumak
     // zorunda — bu yüzden read public. İleride Cloud Function ile
     // güvenli login mantığına taşınabilir.
+    // KRİTİK: Şifreleme anahtarı istemci bundle'ında düz metin olduğu için bu
+    // public read fiilen tüm hesap şifrelerini açığa çıkarıyor. loginCoordinator
+    // auth öncesi tüm koleksiyonu taradığından şimdilik kapatılamıyor —
+    // giriş akışı Cloud Function'a taşınınca `if isAuthenticated()` yapılmalı.
     match /member_users/{userId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -193,6 +210,8 @@ service cloud.firestore {
     //  - Create/Update: authenticated AMA ballot_box_id'si kendi sandığı olmalı
     //    (chief_observer için; sorumlular ve admin için cloud function kullanılır)
     //  - Delete: sadece admin
+    // UYARI: exists(/member_users/$(request.auth.uid)) dalı çalışmıyor (doc id
+    // auth uid değil) → pratikte create/update yalnızca admin'e açık.
     match /ballot_box_documents/{docId} {
       allow read: if isAuthenticated();
       allow create, update: if isAdmin() ||
@@ -237,9 +256,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Secim ziyaretci takibi - anonim read/write (visitor tracking)
+    // Secim ziyaretci takibi
+    // DEĞİŞTİ: önce `allow read, write: if true` idi. Bu koleksiyon deploy edilen
+    // bundle'da hiç kullanılmıyor (sıfır referans) ama anonim sınırsız yazmaya
+    // açıktı — fatura şişirme ve veri silme vektörü. Kapatıldı.
     match /election_visitors/{visitorId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Election results - halka açık okuma (sonuç yayınları için).
