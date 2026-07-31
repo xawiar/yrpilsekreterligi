@@ -3245,6 +3245,25 @@ function leaderStr(v) {
 }
 
 /**
+ * Public projeksiyona giden serbest metinden iletişim bilgisi temizler.
+ * `biography` admin tarafından serbest yazıldığı için içine telefon/e-posta/
+ * TC girebiliyor ve bu doküman herkese açık. Hasım denetiminde canlıda bir
+ * yöneticinin cep telefonu + e-postası bu yoldan anonim okunabiliyordu.
+ * @param {string} text Ham metin
+ * @return {string} Maskelenmiş metin
+ */
+function stripContactInfo(text) {
+  if (!text) return "";
+  return String(text)
+      .replace(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g, "[e-posta gizlendi]")
+      .replace(
+          /(?:\+90|0)?[\s(]*5\d{2}[\s)]*\d{3}[\s]*\d{2}[\s]*\d{2}/g,
+          "[telefon gizlendi]",
+      )
+      .replace(/\b[1-9]\d{10}\b/g, "[TC gizlendi]");
+}
+
+/**
  * members koleksiyonundan public landing için güvenli lider projeksiyonu
  * üretir. Hassas alanlar (tc/phone/address/email/notes) ASLA çıkmaz.
  * Okuma filtresiz yapılır: istemci de filtresiz okuyordu ve dedupe'ta hangi
@@ -3310,7 +3329,7 @@ async function buildLandingLeaders() {
     position: leaderStr(m.position),
     region: leaderStr(m.region),
     photo: leaderStr(m.photo),
-    biography: leaderStr(m.biography),
+    biography: stripContactInfo(leaderStr(m.biography)),
     muvefettislik: leaderStr(m.muvefettislik),
     _group: m._group,
   }));
@@ -3318,10 +3337,12 @@ async function buildLandingLeaders() {
 
 /**
  * Projeksiyonu landing_leaders/current dokümanına yazar.
- * @param {string} reason Tetikleyici (log ve teşhis için)
- * @return {Promise<Object>} Özet {count, sourceCount, groups, bytes}
+ * @param {string} reason Kaba tetikleyici etiketi — dokümana YAZILIR, doküman
+ *   herkese açık olduğu için uid/memberId gibi kimlik bilgisi KOYMA.
+ * @param {Object} detail Yalnızca log'a giden ayrıntı (uid, memberId vb.)
+ * @return {Promise<Object>} Özet {count, groups, bytes}
  */
-async function publishLandingLeaders(reason) {
+async function publishLandingLeaders(reason, detail) {
   const leaders = await buildLandingLeaders();
   const groups = {ilBaskani: 0, divan: 0, ilYonetim: 0};
   for (const l of leaders) {
@@ -3346,6 +3367,7 @@ async function publishLandingLeaders(reason) {
   });
   logger.info("landing_leaders yazıldı", {
     reason, count: leaders.length, groups, bytes,
+    detail: detail || null,
   });
   return {count: leaders.length, groups, bytes};
 }
@@ -3391,7 +3413,7 @@ exports.syncLandingLeaders = onCall(
       await assertLeadersAdmin(request);
       const callerUid = request.auth.uid;
       try {
-        const result = await publishLandingLeaders(`manual:${callerUid}`);
+        const result = await publishLandingLeaders("manual", {uid: callerUid});
         return {success: true, ...result};
       } catch (err) {
         logger.error("Manuel landing_leaders senkronu başarısız", {
@@ -3440,7 +3462,9 @@ exports.onMemberWriteSyncLeaders = onDocumentWritten(
       if (!changed) return;
 
       try {
-        await publishLandingLeaders(`member-write:${event.params.memberId}`);
+        await publishLandingLeaders("member-write", {
+          memberId: event.params.memberId,
+        });
       } catch (err) {
         logger.error("landing_leaders yeniden üretilemedi", {
           memberId: event.params.memberId, error: err.message,
