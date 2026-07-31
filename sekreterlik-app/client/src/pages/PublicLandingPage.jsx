@@ -105,25 +105,9 @@ const fmtDate = (d) => {
   } catch (_) { return ''; }
 };
 
-// Türkçe normalize — leaders gruplama için
-const normalizeTr = (s) => (s || '').toLocaleLowerCase('tr-TR')
-  .replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o')
-  .replace(/ü/g, 'u').replace(/ç/g, 'c').replace(/ğ/g, 'g');
-
-// Divan pozisyon önceliği (V1 ile aynı)
-const DIVAN_ORDER = [
-  'il sekreter', 'teskilat baskan', 'siyasi isler', 'mali isler',
-  'tanitim medya', 'secim isleri', 'sosyal isler', 'stk', 'hukuk',
-  'egitim', 'ar-ge', 'yurt disi', 'engelliler', 'halkla iliskiler',
-  'mahalli idareler', 'kadin kollari', 'genclik kollari',
-];
-const divanPriority = (pos) => {
-  const p = normalizeTr(pos);
-  for (let i = 0; i < DIVAN_ORDER.length; i++) {
-    if (p.includes(DIVAN_ORDER[i])) return i;
-  }
-  return 99;
-};
+// NOT: Türkçe normalize + divan sıralaması buradan kaldırıldı; artık
+// functions/index.js içindeki buildLandingLeaders yapıyor. Sıralamayı
+// değiştirmen gerekirse orayı düzenle, burada tekrar sıralama yapma.
 
 const PublicLandingPage = () => {
   const [content, setContent] = useState(DEFAULTS);
@@ -180,74 +164,32 @@ const PublicLandingPage = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // Firestore: members → İl Başkanı + Divan + İl Yönetimi (V1 mantığı)
+  // Firestore: landing_leaders/current → İl Başkanı + Divan + İl Yönetimi
+  //
+  // Bu sayfa eskiden `members` koleksiyonunun TAMAMINI çekip gruplamayı burada
+  // yapıyordu. Sayfa anonim olduğu için tüm üyelerin tc/phone/address/email/
+  // notes alanları her ziyaretçiye iniyordu. Artık gruplama Cloud Function'da
+  // (functions/index.js → buildLandingLeaders) yapılıyor ve buraya yalnızca
+  // ekranda gösterilen alanlar geliyor.
+  // Doküman zaten sıralı gelir; burada tekrar sıralama/gruplama YAPMA.
   useEffect(() => {
     if (content.sections?.leaders === false) return undefined;
     let cancelled = false;
     (async () => {
       try {
         if (!db) return;
-        const snap = await getDocs(collection(db, 'members'));
+        const snap = await getDoc(doc(db, 'landing_leaders', 'current'));
         if (cancelled) return;
-        const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-        // Dedupe: TC varsa TC, yoksa name+position+region
-        const seen = new Map();
-        const all = [];
-        for (const m of raw) {
-          const tc = String(m.tc || m.tcNo || '').trim();
-          const key = tc && tc.length >= 10
-            ? `tc:${tc}`
-            : `np:${normalizeTr(m.name)}|${normalizeTr(m.position)}|${normalizeTr(m.region)}`;
-          if (seen.has(key)) continue;
-          seen.set(key, true);
-          all.push(m);
+        if (!snap.exists()) {
+          console.warn('[Landing v2] landing_leaders/current yok — yönetim kadrosu boş kalacak. Admin panelinden "Yönetim kadrosunu şimdi yayınla" ile üretilir.');
+          return;
         }
-
-        // 1. İl Başkanı
-        const ilBaskani = all.filter((m) => {
-          const pos = normalizeTr(m.position);
-          return typeof m.position === 'string' && (pos.includes('il baskan') || pos === 'il baskani');
-        });
-        // 2. Divan üyeleri
-        const divan = all
-          .filter((m) =>
-            typeof m.region === 'string' &&
-            normalizeTr(m.region).includes('divan') &&
-            !ilBaskani.find((ib) => ib.id === m.id)
-          )
-          .sort((a, b) => {
-            const pa = divanPriority(a.position);
-            const pb = divanPriority(b.position);
-            if (pa !== pb) return pa - pb;
-            return (a.name || '').localeCompare(b.name || '', 'tr');
-          });
-        // 3. İl Yönetimi
-        const used = new Set([...ilBaskani.map((m) => m.id), ...divan.map((m) => m.id)]);
-        const ilYonetim = all
-          .filter((m) =>
-            !used.has(m.id) &&
-            typeof m.region === 'string' &&
-            normalizeTr(m.region).includes('il yonetim')
-          )
-          .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
-
-        const tagged = [
-          ...ilBaskani.map((m) => ({ ...m, _group: 'ilBaskani' })),
-          ...divan.map((m) => ({ ...m, _group: 'divan' })),
-          ...ilYonetim.map((m) => ({ ...m, _group: 'ilYonetim' })),
-        ].map((m) => ({
-          id: m.id,
-          name: m.name || '',
-          position: m.position || '',
-          region: m.region || '',
-          photo: m.photo || '',
-          biography: m.biography || '',
-          muvefettislik: m.muvefettislik || '',
-          _group: m._group,
-        }));
-
-        setLeaders(tagged);
+        const list = snap.data()?.leaders;
+        if (!Array.isArray(list)) {
+          console.warn('[Landing v2] landing_leaders/current beklenen biçimde değil:', typeof list);
+          return;
+        }
+        setLeaders(list);
       } catch (e) {
         console.warn('[Landing v2] leaders yüklenemedi:', e.message);
       }

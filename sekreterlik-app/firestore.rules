@@ -86,12 +86,15 @@ service cloud.firestore {
       allow create: if isAuthenticated();
     }
 
-    // Members - public read (landing page için gerekli), write sadece admin/başkan
-    // NOT: Yorumda geçen `safeMember` helper'ı deploy edilen bundle'da mevcut değil;
-    // ayrıca frontend filtresi güvenlik sağlamaz (veri yine de istemciye iner).
-    // `allow read: if true` kaldırılması Adım 3'te landing page testine bağlı.
+    // Members - write sadece admin/başkan
+    // DEĞİŞTİ (2026-07-31): `allow read: if true` kaldırıldı. Anonim landing
+    // sayfası tüm koleksiyonu çekiyordu ve 91 üyenin tc/phone/address/email/
+    // notes alanları her ziyaretçiye iniyordu. Landing artık yönetim kadrosunu
+    // `landing_leaders/current` projeksiyonundan okuyor (Cloud Function üretir).
+    // Giriş akışı members'ı auth'tan SONRA okuduğu için bu değişiklik login'i
+    // etkilemez.
     match /members/{memberId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create: if isAdmin() ||
         (isAuthenticated() && request.auth.token.role in ['district_president', 'town_president']);
       // DEĞİŞTİ: photo/biography dalı kaldırıldı. Sahiplik kontrolü içermediği için
@@ -433,6 +436,19 @@ service cloud.firestore {
 
     // Landing page galeri — public read, authenticated write (UI-gated)
     match /landing_gallery/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Landing page yönetim kadrosu — `members`'tan türetilmiş GÜVENLİ
+    // projeksiyon. Anonim landing sayfası yönetim kadrosunu artık buradan
+    // okuyor; eskiden tüm members koleksiyonunu (tc/phone/address/email/
+    // notes dahil) çekiyordu.
+    // Dokümanı yalnızca Cloud Function (Admin SDK) yazar: syncLandingLeaders
+    // ve onMemberWriteSyncLeaders. Client tarafı hiç yazmaz.
+    // UYARI: bu doküman herkese açık. functions/index.js'teki alan allowlist'i
+    // (buildLandingLeaders) genişletilirse hassas veri public olur.
+    match /landing_leaders/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }

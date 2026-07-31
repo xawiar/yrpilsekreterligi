@@ -139,6 +139,33 @@ const LandingPageSettings = () => {
   const [content, setContent] = useState(DEFAULT_CONTENT);
   const [elections, setElections] = useState([]);
   const [electionsLoading, setElectionsLoading] = useState(false);
+  const [syncingLeaders, setSyncingLeaders] = useState(false);
+
+  // Landing artik yonetim kadrosunu members'tan degil, Cloud Function'in
+  // urettigi landing_leaders/current dokumanindan okuyor. Uye eklendiginde
+  // /guncellendiginde trigger otomatik calisir; bu buton elle tetikleme icin.
+  const handleSyncLeaders = async () => {
+    setSyncingLeaders(true);
+    try {
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../config/firebase');
+      if (!functions) throw new Error('Firebase Functions baglantisi yok');
+      const fn = httpsCallable(functions, 'syncLandingLeaders');
+      const res = await fn({});
+      const d = res?.data || {};
+      const g = d.groups || {};
+      toast.success(
+        `Yönetim kadrosu yayınlandı: ${d.count ?? '?'} kişi ` +
+        `(İl Başkanı ${g.ilBaskani ?? 0}, Divan ${g.divan ?? 0}, ` +
+        `İl Yönetimi ${g.ilYonetim ?? 0})`
+      );
+    } catch (err) {
+      console.error('[LandingPageSettings] syncLandingLeaders hatasi:', err);
+      toast.error(`Yayınlama başarısız: ${err?.message || 'bilinmeyen hata'}`);
+    } finally {
+      setSyncingLeaders(false);
+    }
+  };
 
   // ========= YUKLEME =========
   useEffect(() => {
@@ -784,7 +811,19 @@ const LandingPageSettings = () => {
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
             Not: Liderler otomatik olarak divan üyelerinden çekilir. Ayrıca düzenleme gerekmez.
+            Üye eklendiğinde/güncellendiğinde site otomatik yenilenir; aşağıdaki buton
+            elle yenileme içindir.
           </p>
+          {user?.role === 'admin' && (
+            <button
+              type="button"
+              onClick={handleSyncLeaders}
+              disabled={syncingLeaders}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium"
+            >
+              {syncingLeaders ? 'Yayınlanıyor…' : 'Yönetim kadrosunu şimdi yayınla'}
+            </button>
+          )}
         </div>
       </details>
 

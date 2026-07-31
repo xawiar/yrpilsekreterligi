@@ -4,8 +4,8 @@
  * 2. Push Notification (web-push ile — maliisler referansi)
  */
 
-const {onDocumentCreated, onDocumentUpdated, onDocumentDeleted} =
-  require("firebase-functions/v2/firestore");
+const {onDocumentCreated, onDocumentUpdated, onDocumentDeleted,
+  onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {defineSecret} = require("firebase-functions/params");
@@ -3181,3 +3181,270 @@ exports.resetElectionResults = onCall(
     },
 );
 
+
+// ===========================================================================
+// LANDING YÖNETİM KADROSU PROJEKSİYONU
+// ===========================================================================
+// Public landing sayfası eskiden `members` koleksiyonunun TAMAMINI anonim
+// olarak çekiyordu (91 doküman; tc, phone, address, email, notes dahil) ve
+// gruplamayı istemcide yapıyordu. Aşağıdaki kod aynı listeyi Admin SDK ile
+// üretip YALNIZCA ekranda gösterilen 8 alanı `landing_leaders/current`
+// dokümanına yazar; landing artık o tek dokümanı okur.
+//
+// DİKKAT: Gruplama/sıralama mantığı PublicLandingPage.jsx:108-248 ile birebir
+// aynı olmak zorunda. Birini değiştirirsen diğerini de değiştir.
+// DİKKAT: `landing_leaders` public read'e açık. Alan listesi bilerek allowlist
+// olarak yazıldı — spread (`{...m}`) kullanma, yoksa members'a eklenen her
+// yeni alan sessizce herkese açılır.
+
+/**
+ * Türkçe normalize — PublicLandingPage.jsx:108-111 ile birebir aynı.
+ * toLowerCase() KULLANMA: "İl Yönetimi".toLowerCase() birleşik nokta (U+0307)
+ * üretir, includes("il yonetim") false döner ve kadro sessizce boşalır.
+ * @param {*} s Ham değer
+ * @return {string} Normalize edilmiş metin
+ */
+function normalizeTr(s) {
+  return String(s || "").toLocaleLowerCase("tr-TR")
+      .replace(/ş/g, "s").replace(/ı/g, "i").replace(/ö/g, "o")
+      .replace(/ü/g, "u").replace(/ç/g, "c").replace(/ğ/g, "g");
+}
+
+// PublicLandingPage.jsx:114-119 ile aynı (V1'deki 18 elemanlı liste DEĞİL).
+const DIVAN_ORDER = [
+  "il sekreter", "teskilat baskan", "siyasi isler", "mali isler",
+  "tanitim medya", "secim isleri", "sosyal isler", "stk", "hukuk",
+  "egitim", "ar-ge", "yurt disi", "engelliler", "halkla iliskiler",
+  "mahalli idareler", "kadin kollari", "genclik kollari",
+];
+
+/**
+ * Divan sıralamasında pozisyon önceliği.
+ * @param {*} pos Pozisyon metni
+ * @return {number} 0..16 arası öncelik, eşleşmezse 99
+ */
+function divanPriority(pos) {
+  const p = normalizeTr(pos);
+  for (let i = 0; i < DIVAN_ORDER.length; i++) {
+    if (p.includes(DIVAN_ORDER[i])) return i;
+  }
+  return 99;
+}
+
+/**
+ * Landing'e ham nesne sızmasın diye tip zorlaması. Modal biography'yi
+ * String() sarmalı olmadan render ediyor; obje gelirse React çöker.
+ * @param {*} v Ham değer
+ * @return {string} Güvenli string
+ */
+function leaderStr(v) {
+  if (typeof v === "string") return v;
+  if (v === null || v === undefined) return "";
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return "";
+}
+
+/**
+ * members koleksiyonundan public landing için güvenli lider projeksiyonu
+ * üretir. Hassas alanlar (tc/phone/address/email/notes) ASLA çıkmaz.
+ * Okuma filtresiz yapılır: istemci de filtresiz okuyordu ve dedupe'ta hangi
+ * klonun kaldığı __name__ sırasına bağlı — orderBy/where eklersen sonuç kayar.
+ * @return {Promise<Array<Object>>} Ekran sırasına dizilmiş lider listesi
+ */
+async function buildLandingLeaders() {
+  const snap = await db.collection("members").get();
+  const raw = snap.docs.map((d) => ({id: d.id, ...d.data()}));
+
+  // Dedupe: TC varsa TC, yoksa name+position+region (jsx:194-205)
+  const seen = new Map();
+  const all = [];
+  for (const m of raw) {
+    const tc = String(m.tc || m.tcNo || "").trim();
+    const key = tc && tc.length >= 10 ?
+      `tc:${tc}` :
+      `np:${normalizeTr(m.name)}|${normalizeTr(m.position)}` +
+        `|${normalizeTr(m.region)}`;
+    if (seen.has(key)) continue;
+    seen.set(key, true);
+    all.push(m);
+  }
+
+  const ilBaskani = all.filter((m) => {
+    const pos = normalizeTr(m.position);
+    return typeof m.position === "string" &&
+      (pos.includes("il baskan") || pos === "il baskani");
+  });
+  const divan = all
+      .filter((m) =>
+        typeof m.region === "string" &&
+        normalizeTr(m.region).includes("divan") &&
+        !ilBaskani.find((ib) => ib.id === m.id),
+      )
+      .sort((a, b) => {
+        const pa = divanPriority(a.position);
+        const pb = divanPriority(b.position);
+        if (pa !== pb) return pa - pb;
+        return String(a.name || "").localeCompare(String(b.name || ""), "tr");
+      });
+  const used = new Set([
+    ...ilBaskani.map((m) => m.id),
+    ...divan.map((m) => m.id),
+  ]);
+  const ilYonetim = all
+      .filter((m) =>
+        !used.has(m.id) &&
+        typeof m.region === "string" &&
+        normalizeTr(m.region).includes("il yonetim"),
+      )
+      .sort((a, b) =>
+        String(a.name || "").localeCompare(String(b.name || ""), "tr"),
+      );
+
+  return [
+    ...ilBaskani.map((m) => ({...m, _group: "ilBaskani"})),
+    ...divan.map((m) => ({...m, _group: "divan"})),
+    ...ilYonetim.map((m) => ({...m, _group: "ilYonetim"})),
+  ].map((m) => ({
+    id: leaderStr(m.id),
+    name: leaderStr(m.name),
+    position: leaderStr(m.position),
+    region: leaderStr(m.region),
+    photo: leaderStr(m.photo),
+    biography: leaderStr(m.biography),
+    muvefettislik: leaderStr(m.muvefettislik),
+    _group: m._group,
+  }));
+}
+
+/**
+ * Projeksiyonu landing_leaders/current dokümanına yazar.
+ * @param {string} reason Tetikleyici (log ve teşhis için)
+ * @return {Promise<Object>} Özet {count, sourceCount, groups, bytes}
+ */
+async function publishLandingLeaders(reason) {
+  const leaders = await buildLandingLeaders();
+  const groups = {ilBaskani: 0, divan: 0, ilYonetim: 0};
+  for (const l of leaders) {
+    groups[l._group] = (groups[l._group] || 0) + 1;
+  }
+  const bytes = Buffer.byteLength(JSON.stringify(leaders));
+  // Firestore doküman limiti 1 MiB. Sessizce kırpmak yerine hata veriyoruz:
+  // landing bayat kalır ama loglarda görünür.
+  if (bytes > 900000) {
+    const biggest = leaders
+        .map((l) => ({id: l.id, n: (l.biography || "").length}))
+        .sort((a, b) => b.n - a.n).slice(0, 5);
+    logger.error("landing_leaders 1 MiB limitine dayandı", {bytes, biggest});
+    throw new Error(`Projeksiyon çok büyük: ${bytes} byte`);
+  }
+  await db.collection("landing_leaders").doc("current").set({
+    leaders,
+    count: leaders.length,
+    groups,
+    updatedAt: new Date().toISOString(),
+    reason: String(reason || ""),
+  });
+  logger.info("landing_leaders yazıldı", {
+    reason, count: leaders.length, groups, bytes,
+  });
+  return {count: leaders.length, groups, bytes};
+}
+
+/**
+ * Çağıran admin mi? Üç yolu birden kabul eder çünkü projede üç ayrı admin
+ * tanımı var ve kesişmiyorlar: bootstrap e-posta (functions), custom claim
+ * (canlıda hiçbir hesapta YOK) ve admin/main.uid (Firestore kurallarının
+ * kullandığı yol).
+ * @param {Object} request onCall request nesnesi
+ * @return {Promise<void>} Yetkisizse HttpsError fırlatır
+ */
+async function assertLeadersAdmin(request) {
+  const callerUid = request.auth && request.auth.uid;
+  const callerToken = (request.auth && request.auth.token) || {};
+  const callerEmail = callerToken.email || null;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Önce giriş yapın");
+  }
+  const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL || "";
+  const isBootstrap = Boolean(bootstrapEmail) && Boolean(callerEmail) &&
+    callerEmail.toLowerCase() === bootstrapEmail.toLowerCase();
+  const isClaimAdmin = callerToken.admin === true;
+  let isDocAdmin = false;
+  if (!isBootstrap && !isClaimAdmin) {
+    const adminDoc = await db.collection("admin").doc("main").get();
+    isDocAdmin = adminDoc.exists && adminDoc.data().uid === callerUid;
+  }
+  if (!isBootstrap && !isClaimAdmin && !isDocAdmin) {
+    throw new HttpsError(
+        "permission-denied", "Bu işlem için admin yetkisi gerekli",
+    );
+  }
+}
+
+exports.syncLandingLeaders = onCall(
+    {
+      region: "europe-west1",
+      secrets: [BOOTSTRAP_ADMIN_EMAIL_SECRET],
+      timeoutSeconds: 120,
+    },
+    async (request) => {
+      await assertLeadersAdmin(request);
+      const callerUid = request.auth.uid;
+      try {
+        const result = await publishLandingLeaders(`manual:${callerUid}`);
+        return {success: true, ...result};
+      } catch (err) {
+        logger.error("Manuel landing_leaders senkronu başarısız", {
+          uid: callerUid, error: err.message,
+        });
+        throw new HttpsError("internal", `Senkron başarısız: ${err.message}`);
+      }
+    },
+);
+
+/**
+ * Bu üye dokümanı lider projeksiyonunu etkiliyor mu? Toplu üye importunda
+ * her yazımın 91 doküman okutmasını engellemek için erken çıkış filtresi.
+ * @param {Object} d Üye dokümanı verisi (yoksa null)
+ * @return {boolean} Etkiliyorsa true
+ */
+function isLeaderRelevant(d) {
+  if (!d) return false;
+  const region = normalizeTr(d.region);
+  const position = normalizeTr(d.position);
+  return region.includes("divan") || region.includes("il yonetim") ||
+    position.includes("il baskan");
+}
+
+exports.onMemberWriteSyncLeaders = onDocumentWritten(
+    {
+      document: "members/{memberId}",
+      database: "yrpilsekreterligi",
+      region: "europe-west1",
+    },
+    async (event) => {
+      const beforeSnap = event.data && event.data.before;
+      const afterSnap = event.data && event.data.after;
+      const before = beforeSnap && beforeSnap.exists ? beforeSnap.data() : null;
+      const after = afterSnap && afterSnap.exists ? afterSnap.data() : null;
+
+      // Kadroyla ilgisi olmayan üye yazımları rebuild tetiklemesin.
+      if (!isLeaderRelevant(before) && !isLeaderRelevant(after)) return;
+
+      // Kadroyu ilgilendiren alan gerçekten değişti mi? (updatedAt/notes gibi
+      // alanların değişmesi landing'i etkilemiyor.)
+      const watched = ["name", "position", "region", "photo", "biography",
+        "muvefettislik", "tc", "tcNo"];
+      const changed = !before || !after ||
+        watched.some((f) => String(before[f] || "") !== String(after[f] || ""));
+      if (!changed) return;
+
+      try {
+        await publishLandingLeaders(`member-write:${event.params.memberId}`);
+      } catch (err) {
+        logger.error("landing_leaders yeniden üretilemedi", {
+          memberId: event.params.memberId, error: err.message,
+        });
+      }
+    },
+);
